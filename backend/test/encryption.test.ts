@@ -1,0 +1,117 @@
+import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { test } from 'node:test';
+import { ownerIdFromSubject } from '../src/auth/owner.js';
+import { analyze, api, createHarness, grantConsent, login, samplePayload, tempDatabasePath } from './helpers.js';
+
+/**
+ * Contract §6 / §8 bullet 8: the database file must not contain the plaintext aggregate, analysis
+ * or plan. Distinctive amounts make a false negative impossible.
+ */
+const MARKER_AMOUNT = 123_456_789;
+const MARKER_TEXT = 'UNIK-tanda-baca-7f3a';
+
+test('sealed fields never appear in the database file, and decrypt correctly', async () => {
+  const databasePath = tempDatabasePath();
+  const harness = await createHarness({ databasePath });
+  try {
+    const token = await login(harness, 'google-sub-crypto');
+    await grantConsent(harness, token);
+    const payload = samplePayload({ grossInflowMinor: MARKER_AMOUNT, monthId: '2026-02' });
+
+    assert.equal(
+      (await api(harness, 'PUT', '/v1/summaries/2026-02', {
+        token,
+        body: { inputRevision: 1, payload },
+      })).status,
+      200,
+    );
+    const analysis = await analyze(harness, token, { payload, inputRevision: 1, idempotencyKey: 'crypto-1' });
+    assert.equal(analysis.status, 200);
+    assert.equal(
+      (await api(harness, 'PUT', '/v1/budget-plans/2026-03', {
+        token,
+        body: {
+          plan: {
+            expectedIncomeMinor: MARKER_AMOUNT,
+            plannedSavingsMinor: 1_000_000,
+            categoryLimitTotals: [],
+          },
+        },
+      })).status,
+      200,
+    );
+
+    // Write a marker into an analysis text by using a provider-free path: the fake's own prose is
+    // already distinctive, so assert on both the amount and a sentence fragment.
+    const ownerId = ownerIdFromSubject('google-sub-crypto');
+    const stored = harness.store.getSummary(ownerId, '2026-02');
+    assert.ok(stored);
+    assert.equal(stored.payload.grossInflowMinor, MARKER_AMOUNT);
+    assert.equal(harness.store.getBudgetPlan(ownerId, '2026-03')?.plan.expectedIncomeMinor, MARKER_AMOUNT);
+    assert.ok(harness.store.latestAnalysis(ownerId, '2026-02')?.analysis.observations.length);
+
+    const directory = dirname(databasePath);
+    const files = readdirSync(directory).filter((name) => name.includes('pam.db'));
+    assert.ok(files.length > 0, 'database files exist');
+    const bytes = Buffer.concat(files.map((name) => readFileSync(`${directory}/${name}`))).toString('latin1');
+
+    assert.ok(!bytes.includes(String(MARKER_AMOUNT)), 'the amount must not be plaintext');
+    assert.ok(!bytes.includes('123456789'), 'the amount must not be plaintext in any spelling');
+    assert.ok(!bytes.includes('grossInflowMinor'), 'the payload keys must not be plaintext');
+    assert.ok(!bytes.includes('mencatat'), 'the analysis prose must not be plaintext');
+    assert.ok(!bytes.includes('housing'), 'category codes from the sealed plan must not be plaintext');
+    assert.ok(!bytes.includes(MARKER_TEXT));
+  } finally {
+    await harness.close();
+  }
+});
+
+test('a ciphertext copied to another owner fails to decrypt (AAD binds the owner)', async () => {
+  const databasePath = tempDatabasePath();
+  const harness = await createHarness({ databasePath });
+  try {
+    const aliceToken = await login(harness, 'google-sub-crypto-a');
+    const bobToken = await login(harness, 'google-sub-crypto-b');
+    await grantConsent(harness, aliceToken);
+    await grantConsent(harness, bobToken);
+    const alicePayload = samplePayload({ grossInflowMinor: 555_000_000 });
+    const bobPayload = samplePayload({ grossInflowMinor: 111_000_000 });
+
+    for (const [token, payload] of [
+      [aliceToken, alicePayload],
+      [bobToken, bobPayload],
+    ] as const) {
+      assert.equal(
+        (await api(harness, 'PUT', '/v1/summaries/2026-02', {
+          token,
+          body: { inputRevision: 1, payload },
+        })).status,
+        200,
+      );
+    }
+
+    const aliceOwner = ownerIdFromSubject('google-sub-crypto-a');
+    const bobOwner = ownerIdFromSubject('google-sub-crypto-b');
+    const aliceRow = harness.store.getSummary(aliceOwner, '2026-02');
+    assert.ok(aliceRow);
+
+    // Copy Alice's sealed columns onto Bob's row, straight in the database.
+    const db = new DatabaseSync(databasePath);
+    const columns = db
+      .prepare('SELECT ciphertext, iv, tag, key_version FROM summaries WHERE owner_id = ?')
+      .get(aliceOwner) as { ciphertext: Uint8Array; iv: Uint8Array; tag: Uint8Array; key_version: number };
+    db.prepare(
+      'UPDATE summaries SET ciphertext = ?, iv = ?, tag = ?, key_version = ? WHERE owner_id = ?',
+    ).run(columns.ciphertext, columns.iv, columns.tag, columns.key_version, bobOwner);
+    db.close();
+
+    assert.throws(() => harness.store.getSummary(bobOwner, '2026-02'));
+    // Alice's own row is untouched.
+    assert.equal(harness.store.getSummary(aliceOwner, '2026-02')?.payload.grossInflowMinor, 555_000_000);
+  } finally {
+    await harness.close();
+  }
+});
