@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PAM</string>
+
+    <string name="stage_a_ready">Data foundation ready</string>
+
+    <string name="category_income">Income</string>
+    <string name="category_housing">Housing</string>
+    <string name="category_food">Food</string>
+    <string name="category_transport">Transport</string>
+    <string name="category_utilities">Utilities</string>
+    <string name="category_shopping">Shopping</string>
+    <string name="category_health">Health</string>
+    <string name="category_education">Education</string>
+    <string name="category_other_expense">Other expense</string>
+    <string name="category_transfer">Transfer</string>
+    <string name="category_uncategorized">Uncategorized</string>
+
+    <string name="analysis_obs_month_totals">%1$s records %2$s of inflow and %3$s of outflow from email — not a bank statement.</string>
+    <string name="analysis_obs_net_positive">Net cash flow this month is positive: %1$s.</string>
+    <string name="analysis_obs_net_negative">Net cash flow this month is negative by %1$s.</string>
+    <string name="analysis_obs_top_category">The largest expense category is %1$s, totalling %2$s.</string>
+    <string name="analysis_obs_expense_dominant_share">%1$s accounts for about %2$s%% of classified spending.</string>
+    <string name="analysis_obs_uncategorized">%1$s transactions still have no category.</string>
+    <string name="analysis_obs_non_idr">%1$s rows are not in Rupiah and are excluded from IDR totals.</string>
+    <string name="analysis_obs_manual">%1$s entries were added manually by you.</string>
+    <string name="analysis_obs_partial_coverage">Coverage for this month is partial: not every email page was processed.</string>
+    <string name="analysis_obs_empty_month">No matching Livin email was found for %1$s, so there is nothing to analyse yet.</string>
+    <string name="analysis_obs_no_prior_month">There is no comparison month yet, so a percentage change cannot be computed.</string>
+    <string name="analysis_obs_expense_increased">Classified spending rose by about %1$s%% versus the previous month.</string>
+    <string name="analysis_obs_expense_decreased">Classified spending fell by about %1$s%% versus the previous month.</string>
+
+    <string name="analysis_sug_top_category_limit">Consider capping %1$s at %2$s next month.</string>
+    <string name="analysis_sug_savings_target">Set aside at least %1$s as next month\'s savings target.</string>
+    <string name="analysis_sug_review_uncategorized">Review the %1$s uncategorized transactions to make the recap more accurate.</string>
+    <string name="analysis_sug_keep_on_track">Cash flow this month is balanced; keep the same pattern.</string>
+    <string name="analysis_sug_no_data">Import this month\'s email first so a budget suggestion can be made.</string>
+
+    <string name="analysis_limit_aggregate_only">Only aggregate numbers are sent to the analysis provider.</string>
+    <string name="analysis_limit_email_derived">Totals come from notification email, not from a bank ledger.</string>
+    <string name="analysis_limit_no_advice">PAM does not provide financial, tax or investment advice.</string>
+    <string name="analysis_limit_deterministic">This analysis is produced deterministically on the device.</string>
+</resources>

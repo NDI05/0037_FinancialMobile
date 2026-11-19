@@ -157,3 +157,21 @@ data class Analysis(
             this.modelId == modelId &&
             this.promptVersion == promptVersion
 }
+
+/**
+ * FR-36/FR-38 limitations that every generated report must state. Technical identifiers; the copy
+ * lives in `strings.xml` and is resolved by the engine through its copy source.
+ */
+enum class AnalysisLimitation {
+    /** The provider only ever saw aggregate numbers (FR-35). */
+    AGGREGATE_ONLY,
+
+    /** Totals come from email notifications, not from a bank ledger (BR-05). */
+    EMAIL_DERIVED,
+
+    /** No financial, tax or investment advice is offered (out-of-scope list). */
+    NO_ADVICE,
+
+    /** The default engine is deterministic and offline (OI-07). */
+    DETERMINISTIC,
+}

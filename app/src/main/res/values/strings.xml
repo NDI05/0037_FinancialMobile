@@ -1,4 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PAM</string>
+
+    <!-- Stage A host text; replaced by the real screens in the UI stage. -->
+    <string name="stage_a_ready">Fondasi data siap</string>
+
+    <!-- Category display names (FR-23). Codes stay technical and untranslated. -->
+    <string name="category_income">Pemasukan</string>
+    <string name="category_housing">Tempat tinggal</string>
+    <string name="category_food">Makanan</string>
+    <string name="category_transport">Transportasi</string>
+    <string name="category_utilities">Utilitas</string>
+    <string name="category_shopping">Belanja</string>
+    <string name="category_health">Kesehatan</string>
+    <string name="category_education">Pendidikan</string>
+    <string name="category_other_expense">Pengeluaran lain</string>
+    <string name="category_transfer">Transfer</string>
+    <string name="category_uncategorized">Belum berkategori</string>
+
+    <!-- Deterministic on-device analysis observations (FR-36). -->
+    <string name="analysis_obs_month_totals">Bulan %1$s mencatat pemasukan %2$s dan pengeluaran %3$s dari email — bukan mutasi rekening.</string>
+    <string name="analysis_obs_net_positive">Arus kas bersih bulan ini positif: %1$s.</string>
+    <string name="analysis_obs_net_negative">Arus kas bersih bulan ini negatif sebesar %1$s.</string>
+    <string name="analysis_obs_top_category">Kategori pengeluaran terbesar adalah %1$s dengan total %2$s.</string>
+    <string name="analysis_obs_expense_dominant_share">%1$s mencakup sekitar %2$s%% dari pengeluaran terklasifikasi.</string>
+    <string name="analysis_obs_uncategorized">%1$s transaksi belum memiliki kategori.</string>
+    <string name="analysis_obs_non_idr">%1$s baris bukan Rupiah dan tidak dihitung dalam total IDR.</string>
+    <string name="analysis_obs_manual">%1$s entri dicatat manual oleh Anda.</string>
+    <string name="analysis_obs_partial_coverage">Cakupan bulan ini sebagian: tidak semua halaman email berhasil diproses.</string>
+    <string name="analysis_obs_empty_month">Belum ada email Livin yang cocok untuk %1$s, jadi belum ada angka yang bisa dianalisis.</string>
+    <string name="analysis_obs_no_prior_month">Belum ada bulan pembanding, sehingga perubahan persentase tidak dapat dihitung.</string>
+    <string name="analysis_obs_expense_increased">Pengeluaran terklasifikasi naik sekitar %1$s%% dibanding bulan sebelumnya.</string>
+    <string name="analysis_obs_expense_decreased">Pengeluaran terklasifikasi turun sekitar %1$s%% dibanding bulan sebelumnya.</string>
+
+    <!-- Deterministic on-device suggestions (FR-42). -->
+    <string name="analysis_sug_top_category_limit">Coba batasi %1$s maksimal %2$s bulan depan.</string>
+    <string name="analysis_sug_savings_target">Sisihkan minimal %1$s sebagai target tabungan bulan depan.</string>
+    <string name="analysis_sug_review_uncategorized">Tinjau %1$s transaksi tanpa kategori agar ringkasan lebih akurat.</string>
+    <string name="analysis_sug_keep_on_track">Arus kas bulan ini seimbang; pertahankan pola yang sama.</string>
+    <string name="analysis_sug_no_data">Impor email bulan ini dulu agar saran anggaran bisa dibuat.</string>
+
+    <!-- Limitations every report must state (FR-36). -->
+    <string name="analysis_limit_aggregate_only">Hanya angka agregat yang dikirim ke penyedia analisis.</string>
+    <string name="analysis_limit_email_derived">Total berasal dari email notifikasi, bukan mutasi rekening.</string>
+    <string name="analysis_limit_no_advice">PAM tidak memberikan saran keuangan, pajak, atau investasi.</string>
+    <string name="analysis_limit_deterministic">Analisis ini dihasilkan secara deterministik di perangkat.</string>
 </resources>
