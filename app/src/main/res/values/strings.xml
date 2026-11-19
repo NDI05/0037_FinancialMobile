@@ -156,11 +156,9 @@
     <string name="overview_vs_previous">vs bulan lalu</string>
     <string name="overview_classified_income">Pemasukan terklasifikasi</string>
     <string name="overview_classified_expense">Pengeluaran terklasifikasi</string>
-    <string name="overview_uncategorized_count">%1$d belum berkategori</string>
     <string name="overview_composition_label">Komposisi pengeluaran: %1$s menyumbang %2$s dari pengeluaran terklasifikasi</string>
     <string name="overview_composition_center">terbesar</string>
     <string name="overview_categories_eyebrow">Kategori pengeluaran</string>
-    <string name="overview_transaction_count">%1$d transaksi</string>
     <string name="overview_recent_eyebrow">Transaksi terbaru</string>
     <string name="overview_empty_eyebrow">Belum ada data</string>
     <string name="overview_import_eyebrow">Sumber data</string>
@@ -190,7 +188,6 @@
     <!-- Transactions list -->
     <string name="transactions_title">Transaksi</string>
     <string name="transactions_eyebrow">Transaksi</string>
-    <string name="transactions_count">%1$d transaksi</string>
     <string name="transactions_search_placeholder">Cari keterangan atau merchant</string>
     <string name="transactions_filter_all">Semua</string>
     <string name="transactions_empty_eyebrow">Belum ada data</string>
@@ -323,4 +320,64 @@
     <string name="budget_actual_savings">Sisa bulan ini</string>
     <string name="budget_transfers_excluded">Transfer antar rekening tidak dihitung sebagai pengeluaran.</string>
     <string name="budget_limit_of">%1$s dari %2$s</string>
+
+    <!-- Settings -->
+    <string name="settings_mailbox_eyebrow">Kotak masuk</string>
+    <string name="settings_last_import">Impor terakhir</string>
+    <string name="settings_last_ai">Analisis terakhir</string>
+    <string name="settings_never">belum pernah</string>
+    <string name="settings_scope">Izin</string>
+    <string name="settings_scope_value">gmail.readonly (hanya baca)</string>
+    <string name="settings_manage_mailbox">Kelola kotak masuk</string>
+    <string name="settings_privacy_eyebrow">Persetujuan</string>
+    <string name="settings_consent_gmail">Baca email Livin</string>
+    <string name="settings_consent_ai">Analisis AI</string>
+    <string name="settings_consent_history">Riwayat persetujuan</string>
+    <string name="settings_consent_history_body">Lihat setiap keputusan beserta versi pemberitahuan dan waktunya.</string>
+    <string name="settings_budget_body">Atur batas pengeluaran bulan depan.</string>
+    <string name="settings_delete">Hapus semua data</string>
+    <string name="settings_delete_body">Hapus data lokal setelah verifikasi ulang.</string>
+    <string name="settings_sign_out">Keluar</string>
+    <string name="settings_sign_out_body">Menghapus cache keuangan di perangkat ini.</string>
+    <string name="settings_disconnect">Putuskan kotak masuk</string>
+    <string name="settings_footer">PAM tidak menampilkan saldo dan tidak memindahkan uang. Semua angka berasal dari email.</string>
+
+    <!-- Consent history -->
+    <string name="consent_history_title">Riwayat persetujuan</string>
+    <string name="consent_history_eyebrow">Catatan keputusan</string>
+    <string name="consent_history_headline">Setiap keputusan tercatat, tidak pernah ditimpa.</string>
+    <string name="consent_history_body">Entri terbaru di atas. Mencabut izin menambah entri baru, bukan menghapus yang lama.</string>
+    <string name="consent_history_meta">Versi %1$s · %2$s</string>
+
+    <!-- Deletion -->
+    <string name="deletion_title">Hapus data</string>
+    <string name="deletion_eyebrow">Penghapusan data</string>
+    <string name="deletion_headline">Hapus semua data lokal PAM.</string>
+    <string name="deletion_retention">Data lokal disimpan paling lama 24 bulan. Menghapus berarti transaksi, ringkasan, analisis, rencana anggaran, riwayat impor, dan koneksi kotak masuk dihapus segera dari perangkat ini.</string>
+    <string name="deletion_what_removed">Yang dihapus: transaksi, ringkasan, analisis, rencana anggaran, riwayat impor, koneksi kotak masuk, dan catatan pribadi.</string>
+    <string name="deletion_what_stays">Yang tidak bisa dihapus dari sini: email asli di kotak masuk Anda. PAM tidak pernah menyimpannya, jadi tidak ada yang perlu dihapus di sana.</string>
+    <string name="deletion_reauth_required">Verifikasi ulang dulu agar penghapusan tidak bisa dilakukan orang lain yang memegang perangkat Anda.</string>
+    <string name="deletion_reauth_done">Verifikasi ulang selesai. Anda bisa melanjutkan penghapusan.</string>
+    <string name="deletion_reauth_action">Verifikasi ulang</string>
+    <string name="deletion_confirm">Hapus sekarang</string>
+    <string name="deletion_done">Penghapusan selesai. Data lokal sudah dibersihkan dan sesi berakhir.</string>
+    <string name="nav_overview">Ringkasan</string>
+    <string name="nav_transactions">Transaksi</string>
+    <string name="nav_analysis">Analisis</string>
+    <string name="nav_settings">Pengaturan</string>
+
+    <plurals name="overview_transaction_count">
+        <item quantity="one">%1$d transaksi</item>
+        <item quantity="other">%1$d transaksi</item>
+    </plurals>
+
+    <plurals name="overview_uncategorized_count">
+        <item quantity="one">%1$d belum berkategori</item>
+        <item quantity="other">%1$d belum berkategori</item>
+    </plurals>
+
+    <plurals name="transactions_count">
+        <item quantity="one">%1$d transaksi</item>
+        <item quantity="other">%1$d transaksi</item>
+    </plurals>
 </resources>

@@ -5,6 +5,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.pam.recap.BuildConfig
@@ -75,6 +76,10 @@ class GoogleIdentitySource @Inject constructor(
             } else {
                 Outcome.Failure(AppError.PermissionRequired("unexpected_credential_type"))
             }
+        } catch (noCredential: NoCredentialException) {
+            // No signed-in Google account on this device yet: actionable, not an unknown error.
+            SafeLogger.warning(TAG, "identity_no_credential")
+            Outcome.Failure(AppError.PermissionRequired("no_credential"))
         } catch (cancelled: GetCredentialCancellationException) {
             Outcome.Failure(AppError.PermissionRequired("sign_in_cancelled"))
         } catch (error: GetCredentialException) {
