@@ -40,4 +40,34 @@
     <string name="analysis_limit_email_derived">Totals come from notification email, not from a bank ledger.</string>
     <string name="analysis_limit_no_advice">PAM does not provide financial, tax or investment advice.</string>
     <string name="analysis_limit_deterministic">This analysis is produced deterministically on the device.</string>
+
+    <!-- Shared actions and states -->
+    <string name="action_back">Back</string>
+    <string name="action_close">Close</string>
+    <string name="action_search">Search</string>
+    <string name="action_retry">Try again</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_next">Next</string>
+    <string name="action_previous">Previous</string>
+    <string name="action_see_all">See all</string>
+    <string name="status_loading">Loading</string>
+    <string name="status_loading_data">Loading data</string>
+
+    <!-- Status chips and deltas -->
+    <string name="status_email_derived">From email</string>
+    <string name="status_complete">Complete</string>
+    <string name="status_partial">Partial</string>
+    <string name="status_empty">Empty</string>
+    <string name="status_failed">Failed</string>
+    <string name="status_provisional">Provisional</string>
+    <string name="status_outdated">Outdated</string>
+    <string name="status_historical">Historical</string>
+    <string name="status_manual">Manual</string>
+    <string name="status_low_confidence">Needs review</string>
+    <string name="status_unavailable">Unavailable</string>
+    <string name="percent_increase">+%1$d%%</string>
+    <string name="percent_decrease">−%1$d%%</string>
+    <string name="percent_not_applicable">Not applicable</string>
 </resources>

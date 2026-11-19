@@ -45,4 +45,34 @@
     <string name="analysis_limit_email_derived">Total berasal dari email notifikasi, bukan mutasi rekening.</string>
     <string name="analysis_limit_no_advice">PAM tidak memberikan saran keuangan, pajak, atau investasi.</string>
     <string name="analysis_limit_deterministic">Analisis ini dihasilkan secara deterministik di perangkat.</string>
+
+    <!-- Shared actions and states -->
+    <string name="action_back">Kembali</string>
+    <string name="action_close">Tutup</string>
+    <string name="action_search">Cari</string>
+    <string name="action_retry">Coba lagi</string>
+    <string name="action_continue">Lanjut</string>
+    <string name="action_cancel">Batal</string>
+    <string name="action_save">Simpan</string>
+    <string name="action_next">Berikutnya</string>
+    <string name="action_previous">Sebelumnya</string>
+    <string name="action_see_all">Lihat semua</string>
+    <string name="status_loading">Memuat</string>
+    <string name="status_loading_data">Memuat data</string>
+
+    <!-- Status chips and deltas -->
+    <string name="status_email_derived">Dari email</string>
+    <string name="status_complete">Lengkap</string>
+    <string name="status_partial">Sebagian</string>
+    <string name="status_empty">Kosong</string>
+    <string name="status_failed">Gagal</string>
+    <string name="status_provisional">Sementara</string>
+    <string name="status_outdated">Kedaluwarsa</string>
+    <string name="status_historical">Riwayat</string>
+    <string name="status_manual">Manual</string>
+    <string name="status_low_confidence">Perlu tinjauan</string>
+    <string name="status_unavailable">Tidak tersedia</string>
+    <string name="percent_increase">+%1$d%%</string>
+    <string name="percent_decrease">−%1$d%%</string>
+    <string name="percent_not_applicable">Tidak berlaku</string>
 </resources>
