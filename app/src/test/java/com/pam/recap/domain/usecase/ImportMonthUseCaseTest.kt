@@ -301,6 +301,9 @@ class ImportMonthUseCaseTest {
         override suspend fun totalAmountForCategory(ownerId: String, month: JakartaMonth, category: Category): Money =
             Money.ZERO
 
+        override suspend fun latestEventAt(ownerId: String): Instant? =
+            rows.value.filter { it.ownerId == ownerId }.maxOfOrNull { it.eventAt }
+
         override suspend fun deleteAll(ownerId: String) {
             rows.value = rows.value.filterNot { it.ownerId == ownerId }
         }
