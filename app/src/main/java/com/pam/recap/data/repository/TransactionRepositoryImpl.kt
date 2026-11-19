@@ -230,6 +230,10 @@ class TransactionRepositoryImpl @Inject constructor(
         )
     }
 
+    override suspend fun latestEventAt(ownerId: String): Instant? = withContext(ioDispatcher) {
+        transactionDao.latestEventAt(ownerId)?.let { Instant.fromEpochMilliseconds(it) }
+    }
+
     override suspend fun deleteAll(ownerId: String): Unit = withContext(ioDispatcher) {
         database.withTransaction {
             transactionDao.deleteAll(ownerId)

@@ -109,6 +109,10 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE ownerId = :ownerId")
     suspend fun countByOwner(ownerId: String): Int
 
+    /** Newest parsed event time for the owner; drives the initial month of every screen. */
+    @Query("SELECT MAX(eventAt) FROM transactions WHERE ownerId = :ownerId")
+    suspend fun latestEventAt(ownerId: String): Long?
+
     @Query(
         """
         UPDATE transactions

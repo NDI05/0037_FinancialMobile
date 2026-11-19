@@ -75,4 +75,115 @@
     <string name="percent_increase">+%1$d%%</string>
     <string name="percent_decrease">−%1$d%%</string>
     <string name="percent_not_applicable">Tidak berlaku</string>
+
+    <!-- Error copy (single mapping from AppError) -->
+    <string name="error_network">Tidak dapat terhubung. Periksa koneksi Anda lalu coba lagi.</string>
+    <string name="error_unauthorized">Sesi Google berakhir. Hubungkan ulang kotak masuk.</string>
+    <string name="error_permission_required">Izin diperlukan untuk melanjutkan.</string>
+    <string name="error_configuration">Konfigurasi aplikasi belum lengkap.</string>
+    <string name="error_parsing">Data tidak dapat dibaca.</string>
+    <string name="error_not_found">Data tidak ditemukan.</string>
+    <string name="error_conflict">Terjadi konflik data.</string>
+    <string name="error_validation">Permintaan tidak valid.</string>
+    <string name="error_storage">Penyimpanan gagal. Coba lagi.</string>
+    <string name="error_unknown">Terjadi kesalahan. Coba lagi.</string>
+    <string name="error_consent_required">Izin baca email belum diberikan.</string>
+    <string name="error_ai_consent_withdrawn">Persetujuan analisis AI sudah dicabut.</string>
+    <string name="error_invalid_amount">Nominal harus lebih dari nol.</string>
+    <string name="error_month_has_no_data">Belum ada data untuk bulan ini.</string>
+    <string name="error_analysis_rejected">Analisis tidak dapat dipublikasikan.</string>
+    <string name="error_analysis_not_eligible">Data belum cukup untuk analisis.</string>
+    <string name="error_budget_gap_negative">Rencana anggaran tidak valid.</string>
+    <string name="error_reauth_required">Verifikasi ulang diperlukan sebelum menghapus.</string>
+    <string name="error_deletion_in_progress">Penghapusan sedang berjalan.</string>
+    <string name="error_description_required">Keterangan wajib diisi.</string>
+    <string name="error_refund_must_be_credit">Pengembalian dana harus berupa pemasukan.</string>
+    <string name="error_refund_target_must_be_expense">Pilih transaksi pengeluaran sebagai target.</string>
+    <string name="error_plan_value_negative">Nilai rencana tidak boleh negatif.</string>
+    <string name="error_not_signed_in">Anda belum masuk.</string>
+
+    <!-- Welcome -->
+    <string name="welcome_tagline">Rekap keuangan bulanan dari email Livin — angka yang bisa Anda periksa, bukan saldo rekening.</string>
+    <string name="welcome_sign_in">Masuk dengan Google</string>
+    <string name="welcome_privacy_link">Lihat kebijakan privasi</string>
+    <string name="welcome_demo_hint">Mode demo aktif: aplikasi memakai data contoh bawaan, bukan kotak masuk sungguhan.</string>
+    <string name="welcome_disclaimer">PAM bukan aplikasi bank. Tidak ada saldo, tidak ada perpindahan uang.</string>
+
+    <!-- Consent -->
+    <string name="consent_title">Persetujuan</string>
+    <string name="consent_eyebrow">Sebelum mulai</string>
+    <string name="consent_headline">Anda yang memutuskan apa yang dibaca PAM.</string>
+    <string name="consent_intro">Dua izin di bawah diputuskan terpisah dan bisa diubah kapan saja di Pengaturan.</string>
+    <string name="consent_gmail_title">Baca email notifikasi Livin</string>
+    <string name="consent_gmail_body">PAM hanya mencari email dari pengirim Livin yang ada di daftar izin, lalu mengambil nominal, waktu transaksi, arah, dan nama merchant. Isi email, lampiran, dan ID pesan tidak disimpan.</string>
+    <string name="consent_ai_title">Analisis dengan AI</string>
+    <string name="consent_ai_body">Hanya angka agregat bulanan dan per kategori yang dikirim ke penyedia analisis. Tidak ada isi email, nama merchant, catatan pribadi, atau ID pesan. Menolak AI tidak menghilangkan ringkasan.</string>
+    <string name="consent_disclosure_title">Yang keluar dari perangkat</string>
+    <string name="consent_disclosure_leaves">Dikirim saat analisis: total pemasukan dan pengeluaran, total per kategori, jumlah transaksi, dan status cakupan.</string>
+    <string name="consent_disclosure_stays">Tetap di perangkat: isi email, subjek, pengirim, ID pesan, nama merchant, catatan pribadi, token, dan nomor kartu.</string>
+    <string name="consent_footer">Anda bisa mencabut izin AI kapan saja; laporan lama akan ditandai sebagai riwayat.</string>
+
+    <!-- Gmail connection -->
+    <string name="gmail_title">Kotak masuk</string>
+    <string name="gmail_eyebrow">Sumber data</string>
+    <string name="gmail_headline">Hubungkan kotak masuk Livin Anda.</string>
+    <string name="gmail_scope_label">Izin yang diminta: hanya baca (gmail.readonly)</string>
+    <string name="gmail_last_import">Impor terakhir: %1$s</string>
+    <string name="gmail_never_imported">belum pernah</string>
+    <string name="gmail_consent_needed">Izin baca email belum diberikan, jadi kotak masuk belum bisa dihubungkan.</string>
+    <string name="gmail_open_consent">Buka persetujuan</string>
+    <string name="gmail_revoke_failed">Koneksi sudah diputus di perangkat ini, tetapi izin di Google belum bisa dicabut. Cabut manual di pengaturan akun Google.</string>
+    <string name="gmail_connect">Hubungkan Gmail</string>
+    <string name="gmail_disconnect">Putuskan koneksi</string>
+    <string name="gmail_state_not_connected">Belum terhubung</string>
+    <string name="gmail_state_pending">Menunggu izin</string>
+    <string name="gmail_state_connected">Terhubung</string>
+    <string name="gmail_state_reauth">Perlu izin ulang</string>
+    <string name="gmail_state_unavailable">Layanan tidak tersedia</string>
+    <string name="gmail_state_disconnected">Terputus</string>
+    <string name="gmail_guidance_not_connected">Hubungkan untuk mulai mengimpor notifikasi Livin. Kami hanya meminta izin baca.</string>
+    <string name="gmail_guidance_pending">Selesaikan layar izin Google yang terbuka. Setelah disetujui, kotak masuk langsung siap.</string>
+    <string name="gmail_guidance_connected">Kotak masuk siap. Jalankan impor dari tombol impor di bagian bawah.</string>
+    <string name="gmail_guidance_reauth">Izin dicabut atau kedaluwarsa. Hubungkan ulang agar impor bisa berjalan.</string>
+    <string name="gmail_guidance_unavailable">Layanan Google sedang tidak bisa dihubungi. Coba lagi nanti; data lama tetap bisa dibaca.</string>
+    <string name="gmail_guidance_disconnected">Koneksi sudah diputus dan token di perangkat dihapus. Hubungkan lagi bila diperlukan.</string>
+
+    <!-- Overview -->
+    <string name="overview_title">Ringkasan</string>
+    <string name="overview_net_eyebrow">Arus kas bersih</string>
+    <string name="overview_gross_in">Masuk</string>
+    <string name="overview_gross_out">Keluar</string>
+    <string name="overview_vs_previous">vs bulan lalu</string>
+    <string name="overview_classified_income">Pemasukan terklasifikasi</string>
+    <string name="overview_classified_expense">Pengeluaran terklasifikasi</string>
+    <string name="overview_uncategorized_count">%1$d belum berkategori</string>
+    <string name="overview_composition_label">Komposisi pengeluaran: %1$s menyumbang %2$s dari pengeluaran terklasifikasi</string>
+    <string name="overview_composition_center">terbesar</string>
+    <string name="overview_categories_eyebrow">Kategori pengeluaran</string>
+    <string name="overview_transaction_count">%1$d transaksi</string>
+    <string name="overview_recent_eyebrow">Transaksi terbaru</string>
+    <string name="overview_empty_eyebrow">Belum ada data</string>
+    <string name="overview_import_eyebrow">Sumber data</string>
+    <string name="overview_import_now">Impor sekarang</string>
+    <string name="overview_never_imported">Belum pernah impor</string>
+    <string name="overview_last_import">Impor terakhir %1$s</string>
+
+    <!-- Directions, coverage and metric keys -->
+    <string name="direction_credit">Masuk</string>
+    <string name="direction_debit">Keluar</string>
+    <string name="coverage_complete">Cakupan lengkap: semua halaman email untuk bulan ini sudah diproses.</string>
+    <string name="coverage_partial">Cakupan sebagian: tidak semua halaman email berhasil diproses. Angka bisa berubah setelah impor ulang.</string>
+    <string name="coverage_empty">Tidak ada email Livin yang cocok untuk bulan ini. Ini bukan berarti tidak ada pengeluaran.</string>
+    <string name="coverage_failed">Impor gagal total untuk bulan ini, jadi belum ada angka yang bisa dipercaya.</string>
+    <string name="metric_gross_inflow">Pemasukan kotor</string>
+    <string name="metric_gross_outflow">Pengeluaran kotor</string>
+    <string name="metric_net_cash_flow">Arus kas bersih</string>
+    <string name="metric_classified_income">Pemasukan</string>
+    <string name="metric_classified_expense">Pengeluaran</string>
+    <string name="metric_uncategorized_count">Belum berkategori</string>
+    <string name="metric_manual_count">Entri manual</string>
+    <string name="metric_non_idr_count">Non-IDR</string>
+    <string name="metric_transaction_count">Jumlah transaksi</string>
+    <string name="metric_coverage">Cakupan</string>
+    <string name="settings_title">Pengaturan</string>
 </resources>

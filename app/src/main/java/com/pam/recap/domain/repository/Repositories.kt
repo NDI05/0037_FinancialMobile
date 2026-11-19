@@ -77,6 +77,9 @@ interface TransactionRepository {
 
     suspend fun totalAmountForCategory(ownerId: String, month: JakartaMonth, category: Category): Money
 
+    /** Local-only convenience: the newest event time, used to open the most useful month. */
+    suspend fun latestEventAt(ownerId: String): Instant?
+
     /** Used by sign-out (FR-05) and deletion (FR-47). */
     suspend fun deleteAll(ownerId: String)
 }

@@ -39,3 +39,14 @@ data class Session(
     /** OI-01: true when the app runs against bundled fixtures instead of a real mailbox. */
     val isDemo: Boolean,
 )
+
+/**
+ * Result of the identity step (FR-01). [isDemo] mirrors OI-01: the bundled fixture mailbox is used
+ * when no OAuth client id is configured, and the demo session seeds the sample month.
+ */
+data class AccountIdentity(
+    val accountId: String,
+    val displayName: String?,
+    val mailboxLabel: String?,
+    val isDemo: Boolean,
+)

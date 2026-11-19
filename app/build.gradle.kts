@@ -139,6 +139,8 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.play.services.auth)
+    // Credential Manager's Google ID option/credential (compile-only transitive of the AAR above).
+    implementation(libs.googleid)
 
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)

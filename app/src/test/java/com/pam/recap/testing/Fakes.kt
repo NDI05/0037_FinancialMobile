@@ -143,6 +143,9 @@ class FakeTransactionRepository(initial: List<Transaction> = emptyList()) : Tran
             .filter { it.category == category && it.isDebit && it.isIdr }
             .fold(Money.ZERO) { acc, row -> acc + row.amount }
 
+    override suspend fun latestEventAt(ownerId: String): Instant? =
+        rows.value.filter { it.ownerId == ownerId }.maxOfOrNull { it.eventAt }
+
     override suspend fun deleteAll(ownerId: String) {
         rows.value = rows.value.filterNot { it.ownerId == ownerId }
     }

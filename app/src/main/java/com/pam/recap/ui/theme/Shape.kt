@@ -48,4 +48,10 @@ object PamSize {
     val bottomBar = 68.dp
     val bottomBarGutter = 16.dp
     val monthStripCell = 52.dp
+
+    /** Bottom content padding for a scroll surface that sits under the floating bottom bar. */
+    val bottomBarContentPadding = 112.dp
+
+    /** Raised import action diameter on the bottom bar. */
+    val bottomBarAction = 52.dp
 }

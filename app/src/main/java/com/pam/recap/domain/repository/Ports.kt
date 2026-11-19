@@ -1,6 +1,7 @@
 package com.pam.recap.domain.repository
 
 import com.pam.recap.core.result.Outcome
+import com.pam.recap.domain.model.AccountIdentity
 import com.pam.recap.domain.model.AiAggregatePayload
 import com.pam.recap.domain.model.BudgetPlan
 import com.pam.recap.domain.model.GmailConnectionState
@@ -153,4 +154,14 @@ interface DemoDataPort {
 /** OI-07: tells the domain whether a backend engine is actually configured before it is chosen. */
 interface AnalysisEngineConfiguration {
     val isConfigured: Boolean
+}
+
+/**
+ * Identity port (FR-01). One implementation talks to Google Identity, and in demo mode it returns
+ * the bundled fixture account instead of touching the network (OI-01).
+ */
+interface AccountIdentitySource {
+    val isDemoMode: Boolean
+
+    suspend fun signIn(): Outcome<AccountIdentity>
 }

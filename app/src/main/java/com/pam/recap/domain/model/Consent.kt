@@ -15,6 +15,11 @@ enum class ConsentDecision {
     WITHDRAWN,
 }
 
+/** Notice versions currently offered by the consent screen (FR-03). */
+object NoticeVersion {
+    const val CURRENT: String = "notice-v1"
+}
+
 /**
  * Append-only consent ledger entry (FR-03, FR-49). The ledger is never mutated: withdrawing
  * appends a `WITHDRAWN` entry so the history stays auditable.
