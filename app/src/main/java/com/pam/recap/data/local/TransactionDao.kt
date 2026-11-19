@@ -99,6 +99,10 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE ownerId = :ownerId AND id = :id LIMIT 1")
     suspend fun findById(ownerId: String, id: String): TransactionEntity?
 
+    /** Owner-agnostic lookup used inside a transaction before an owner-checked mutation. */
+    @Query("SELECT * FROM transactions WHERE id = :id LIMIT 1")
+    suspend fun findAnyById(id: String): TransactionEntity?
+
     @Query("SELECT * FROM transactions WHERE ownerId = :ownerId AND fingerprint = :fingerprint LIMIT 1")
     suspend fun findByFingerprint(ownerId: String, fingerprint: String): TransactionEntity?
 

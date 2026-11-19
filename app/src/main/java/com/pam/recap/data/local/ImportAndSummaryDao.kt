@@ -28,6 +28,15 @@ interface ImportJobDao {
     )
     suspend fun latestForMonth(ownerId: String, monthId: String): ImportJobEntity?
 
+    @Query(
+        """
+        SELECT * FROM import_jobs
+        WHERE ownerId = :ownerId AND monthId = :monthId
+        ORDER BY startedAt DESC LIMIT 1
+        """,
+    )
+    fun observeLatestForMonth(ownerId: String, monthId: String): Flow<ImportJobEntity?>
+
     @Query("DELETE FROM import_jobs WHERE ownerId = :ownerId")
     suspend fun deleteAll(ownerId: String)
 }

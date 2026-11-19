@@ -11,6 +11,7 @@ import com.pam.recap.domain.model.RawAnalysis
 import com.pam.recap.domain.model.RawObservation
 import com.pam.recap.domain.model.RawSuggestion
 import com.pam.recap.domain.repository.AnalysisEngine
+import com.pam.recap.domain.repository.AnalysisEngineConfiguration
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -36,7 +37,7 @@ class RemoteAnalysisEngine @Inject constructor(
     private val httpClient: OkHttpClient,
     private val json: Json,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-) : AnalysisEngine {
+) : AnalysisEngine, AnalysisEngineConfiguration {
 
     override val providerId: String = PROVIDER_ID
 
@@ -44,7 +45,7 @@ class RemoteAnalysisEngine @Inject constructor(
 
     private val endpoint: String = BuildConfig.PAM_ANALYSIS_BACKEND_URL
 
-    val isConfigured: Boolean get() = endpoint.isNotBlank()
+    override val isConfigured: Boolean get() = endpoint.isNotBlank()
 
     override suspend fun analyze(payload: AiAggregatePayload): Outcome<RawAnalysis> {
         if (!isConfigured) {

@@ -2,6 +2,7 @@ package com.pam.recap.data.gmail
 
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.repository.LivinQuery
+import com.pam.recap.domain.repository.LivinQueryFactory
 import kotlin.time.Instant
 
 /**
@@ -195,12 +196,12 @@ class LivinTemplateRegistry(
  * derived from the registry, so marketing mail, merchant payouts and other senders cannot be
  * fetched in the first place.
  */
-class LivinQueryBuilder(private val registry: LivinTemplateRegistry) {
+class LivinQueryBuilder(private val registry: LivinTemplateRegistry) : LivinQueryFactory {
 
-    fun build(
+    override fun build(
         fromInclusive: Instant,
         toExclusive: Instant,
-        templateVersion: String? = null,
+        templateVersion: String?,
     ): LivinQuery {
         val templates = templateVersion?.let { version ->
             registry.all().filter { it.version == version }

@@ -3,6 +3,8 @@ package com.pam.recap.core.security
 import java.nio.charset.StandardCharsets
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Supplies the per-user HMAC key. The Android implementation derives it from a master secret
@@ -39,7 +41,8 @@ data class FingerprintInput(
  * A collision is not silently dropped: the import pipeline compares the stored content of an
  * existing row with the candidate and records a `FINGERPRINT_COLLISION` skipped candidate.
  */
-class FingerprintFactory(
+@Singleton
+class FingerprintFactory @Inject constructor(
     private val keyProvider: HmacKeyProvider,
 ) {
 

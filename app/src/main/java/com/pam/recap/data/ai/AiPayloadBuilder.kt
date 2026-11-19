@@ -6,6 +6,7 @@ import com.pam.recap.domain.model.AiPlanSummary
 import com.pam.recap.domain.model.AiPriorMonthTotals
 import com.pam.recap.domain.model.BudgetPlan
 import com.pam.recap.domain.model.MonthlySummary
+import com.pam.recap.domain.repository.AiPayloadSource
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,12 +19,12 @@ import javax.inject.Singleton
  * month id (`2026-02`), the coverage enum name and allow-listed category codes.
  */
 @Singleton
-class AiPayloadBuilder @Inject constructor() {
+class AiPayloadBuilder @Inject constructor() : AiPayloadSource {
 
-    fun build(
+    override fun build(
         summary: MonthlySummary,
-        previousMonth: MonthlySummary? = null,
-        plan: BudgetPlan? = null,
+        previousMonth: MonthlySummary?,
+        plan: BudgetPlan?,
     ): AiAggregatePayload = AiAggregatePayload(
         schemaVersion = AiAggregatePayload.SCHEMA_VERSION,
         monthId = summary.month.id(),

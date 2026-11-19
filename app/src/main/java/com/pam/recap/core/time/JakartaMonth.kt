@@ -75,7 +75,7 @@ data class JakartaMonth(val year: Int, val month: Int) {
 
     /** Inclusive sequence ending at [this], oldest first; used by budget historical averages. */
     fun previousMonths(count: Int): List<JakartaMonth> =
-        (count downTo 1).map { minusMonths(it) }
+        (count downTo 1).map { minusMonths(it) }.reversed()
 
     /** First day of the month as a Jakarta local date. */
     fun firstDay(): LocalDate = LocalDate(year, month, 1)

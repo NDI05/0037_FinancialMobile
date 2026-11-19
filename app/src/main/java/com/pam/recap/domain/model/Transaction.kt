@@ -75,7 +75,7 @@ data class Transaction(
  * except the month, so the same query powers the month list, category drill-downs and search.
  */
 data class TransactionFilter(
-    val month: JakartaMonth? = null,
+    val month: JakartaMonth,
     val category: Category? = null,
     val direction: Direction? = null,
     val query: String? = null,

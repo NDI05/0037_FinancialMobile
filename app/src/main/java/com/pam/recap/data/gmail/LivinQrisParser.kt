@@ -3,8 +3,10 @@ package com.pam.recap.data.gmail
 import com.pam.recap.core.money.Money
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.Direction
+import com.pam.recap.domain.model.ParseResult
 import com.pam.recap.domain.model.ParseStatus
 import com.pam.recap.domain.model.RedactionReason
+import com.pam.recap.domain.repository.LivinNotificationParser
 import com.pam.recap.domain.repository.RawMessage
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -16,28 +18,6 @@ import kotlin.time.Instant
  * Outcome of parsing one notification. [Unresolved] carries only a [RedactionReason]: not the
  * subject, body, sender, message id or merchant (FR-13/FR-15, hard rule 7).
  */
-sealed interface ParseResult {
-
-    data class Parsed(
-        val messageId: String,
-        val templateId: String,
-        val parserVersion: String,
-        val eventAt: Instant,
-        val receivedAt: Instant?,
-        val amount: Money,
-        val currency: String,
-        val direction: Direction,
-        val merchantLabel: String?,
-        val acquirer: String?,
-        val status: ParseStatus,
-        /** Normalized description from the template, never a body line (FR-15). */
-        val description: String,
-        val confidence: Float,
-    ) : ParseResult
-
-    data class Unresolved(val reason: RedactionReason) : ParseResult
-}
-
 /**
  * Strict parser for Livin QRIS notifications (FR-12/FR-13/FR-14/FR-15).
  *
@@ -55,11 +35,11 @@ sealed interface ParseResult {
  */
 class LivinQrisParser(
     private val registry: LivinTemplateRegistry = LivinTemplateRegistry(),
-) {
+) : LivinNotificationParser {
 
     private val jakarta: ZoneId = ZoneId.of(JakartaMonth.ZONE.id)
 
-    fun parse(message: RawMessage): ParseResult {
+    override fun parse(message: RawMessage): ParseResult {
         val template = registry.match(message.sender, message.subject)
             ?: return ParseResult.Unresolved(RedactionReason.UNKNOWN_TEMPLATE)
 
@@ -78,7 +58,7 @@ class LivinQrisParser(
         // FR-13/FR-14: a failure notice is not a cash-flow row, whatever its amount says. The
         // check is scoped to the subject, the headline and the status field so a "what to do if a
         // payment fails" footer can never reject a real success notice.
-        val statusValue = firstValue(fields, template.labels.status)
+        val statusValue = firstValue(fields, template.labels.status)?.lowercase()
         val failureInHeadline = template.failureMarkers.any { headline.contains(it) || subject.contains(it) }
         val failureInStatus = statusValue?.let { value -> template.failureMarkers.any { value.contains(it) } } ?: false
         if (failureInHeadline || failureInStatus) {
