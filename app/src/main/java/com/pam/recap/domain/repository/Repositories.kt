@@ -109,6 +109,8 @@ interface ImportRepository {
 
     suspend fun latestForMonth(ownerId: String, month: JakartaMonth): ImportJob?
 
+    fun observeLatestForMonth(ownerId: String, month: JakartaMonth): Flow<ImportJob?>
+
     suspend fun saveSkipped(candidates: List<SkippedCandidate>)
 
     suspend fun skippedFor(jobId: String): List<SkippedCandidate>

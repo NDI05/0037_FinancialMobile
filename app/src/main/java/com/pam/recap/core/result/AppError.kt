@@ -60,20 +60,6 @@ sealed interface AppError {
     }
 
     companion object {
-        /** Stable rule ids for [Validation]; keep them in sync with the unit tests. */
-        object Rules {
-            const val NOT_SIGNED_IN = "not_signed_in"
-            const val CONSENT_REQUIRED = "consent_required"
-            const val AI_CONSENT_WITHDRAWN = "ai_consent_withdrawn"
-            const val INVALID_AMOUNT = "invalid_amount"
-            const val INVALID_DATE = "invalid_date"
-            const val MONTH_HAS_NO_DATA = "month_has_no_data"
-            const val ANALYSIS_NOT_ELIGIBLE = "analysis_not_eligible"
-            const val ANALYSIS_REJECTED = "analysis_rejected"
-            const val BUDGET_GAP_NEGATIVE = "budget_gap_negative"
-            const val DELETION_IN_PROGRESS = "deletion_in_progress"
-            const val REAUTH_REQUIRED = "reauth_required"
-        }
     }
 }
 
@@ -88,4 +74,26 @@ enum class ErrorKind {
     VALIDATION,
     STORAGE,
     UNKNOWN,
+}
+
+/**
+ * Stable rule ids for [AppError.Validation]; keep them in sync with the unit tests.
+ */
+object AppErrorRules {
+
+    const val NOT_SIGNED_IN = "not_signed_in"
+    const val CONSENT_REQUIRED = "consent_required"
+    const val AI_CONSENT_WITHDRAWN = "ai_consent_withdrawn"
+    const val INVALID_AMOUNT = "invalid_amount"
+    const val INVALID_DATE = "invalid_date"
+    const val MONTH_HAS_NO_DATA = "month_has_no_data"
+    const val ANALYSIS_NOT_ELIGIBLE = "analysis_not_eligible"
+    const val ANALYSIS_REJECTED = "analysis_rejected"
+    const val BUDGET_GAP_NEGATIVE = "budget_gap_negative"
+    const val DELETION_IN_PROGRESS = "deletion_in_progress"
+    const val REAUTH_REQUIRED = "reauth_required"
+    const val DESCRIPTION_REQUIRED = "description_required"
+    const val REFUND_MUST_BE_CREDIT = "refund_must_be_credit"
+    const val REFUND_TARGET_MUST_BE_EXPENSE = "refund_target_must_be_expense"
+    const val PLAN_VALUE_NEGATIVE = "plan_value_negative"
 }

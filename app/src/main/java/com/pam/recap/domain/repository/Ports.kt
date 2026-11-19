@@ -2,7 +2,10 @@ package com.pam.recap.domain.repository
 
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.AiAggregatePayload
+import com.pam.recap.domain.model.BudgetPlan
 import com.pam.recap.domain.model.GmailConnectionState
+import com.pam.recap.domain.model.MonthlySummary
+import com.pam.recap.domain.model.ParseResult
 import com.pam.recap.domain.model.RawAnalysis
 import kotlinx.coroutines.flow.Flow
 import kotlin.time.Instant
@@ -107,4 +110,47 @@ interface AnalysisEngine {
     val modelId: String
 
     suspend fun analyze(payload: AiAggregatePayload): Outcome<RawAnalysis>
+}
+
+/**
+ * Parser port (FR-12/FR-13). `data/gmail` provides the strict Livin implementation; the domain
+ * import pipeline only needs this contract, which keeps `domain` free of the parsing details and
+ * makes the whole pipeline testable with a fake parser.
+ */
+interface LivinNotificationParser {
+    fun parse(message: RawMessage): ParseResult
+}
+
+/**
+ * Builds the allow-listed month query from the versioned template registry (FR-11). The registry
+ * itself is data; the domain only asks for the resulting [LivinQuery].
+ */
+interface LivinQueryFactory {
+    fun build(fromInclusive: Instant, toExclusive: Instant, templateVersion: String?): LivinQuery
+}
+
+/**
+ * FR-35 payload port: the domain asks for an aggregate-only payload without knowing how it is
+ * projected or serialized.
+ */
+interface AiPayloadSource {
+    fun build(
+        summary: MonthlySummary,
+        previousMonth: MonthlySummary?,
+        plan: BudgetPlan?,
+    ): AiAggregatePayload
+}
+
+/**
+ * A9 demo seeding port. The domain decides *when* a signed-in demo session needs its sample
+ * month; `data/seed` owns the fixtures and the insert.
+ */
+interface DemoDataPort {
+    /** Seeds once per owner; a re-run is a no-op thanks to the fingerprint unique index. */
+    suspend fun seedIfNeeded(ownerId: String): Boolean
+}
+
+/** OI-07: tells the domain whether a backend engine is actually configured before it is chosen. */
+interface AnalysisEngineConfiguration {
+    val isConfigured: Boolean
 }

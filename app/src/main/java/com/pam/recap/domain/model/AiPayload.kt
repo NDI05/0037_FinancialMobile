@@ -51,6 +51,7 @@ data class AiAggregatePayload(
             "amountMinor",
             "limitMinor",
             "expenseMinor",
+            "incomeMinor",
             "expectedIncomeMinor",
             "plannedSavingsMinor",
             "categoryLimitTotals",
