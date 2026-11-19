@@ -6,6 +6,7 @@ import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.Consent
 import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.DeletionRequest
+import com.pam.recap.domain.model.DeletionResult
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.DeletionRepository
 import com.pam.recap.domain.repository.GmailSource
@@ -60,6 +61,8 @@ data class DataDeletionUiState(
     val isBusy: Boolean = false,
     val reauthenticated: Boolean = false,
     val request: DeletionRequest? = null,
+    /** SLA the backend acknowledged (contract §4.3); null when the app runs offline. */
+    val serverSlaDays: Int? = null,
     val error: Int? = null,
 )
 
@@ -132,7 +135,12 @@ class DataDeletionViewModel @Inject constructor(
                 }
 
                 is Outcome.Success -> _state.update {
-                    it.copy(step = DeletionStep.Done, isBusy = false, request = result.value)
+                    it.copy(
+                        step = DeletionStep.Done,
+                        isBusy = false,
+                        request = result.value.request,
+                        serverSlaDays = result.value.serverSlaDays,
+                    )
                 }
             }
         }

@@ -7,6 +7,7 @@ import com.pam.recap.domain.model.Consent
 import com.pam.recap.domain.model.ConsentDecision
 import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.repository.AnalysisRepository
+import com.pam.recap.domain.repository.BackendConsentSync
 import com.pam.recap.domain.repository.ConsentRepository
 import javax.inject.Inject
 
@@ -19,6 +20,7 @@ class RecordConsentUseCase @Inject constructor(
     private val analyses: AnalysisRepository,
     private val clock: ClockProvider,
     private val idGenerator: IdGenerator,
+    private val backendConsent: BackendConsentSync,
 ) {
 
     suspend operator fun invoke(
@@ -36,6 +38,12 @@ class RecordConsentUseCase @Inject constructor(
             decidedAt = clock.now(),
         )
         consents.append(consent)
+
+        // FR-03/FR-34: the backend needs its own copy to gate analysis, but the local ledger is the
+        // source of truth for the UI. A failed push must never change the recorded decision.
+        runCatching {
+            backendConsent.record(ownerId, purpose, decision, noticeVersion)
+        }
 
         if (purpose == ConsentPurpose.AI_PROCESSING && decision == ConsentDecision.WITHDRAWN) {
             // FR-04: existing reports become historical instead of staying "available".

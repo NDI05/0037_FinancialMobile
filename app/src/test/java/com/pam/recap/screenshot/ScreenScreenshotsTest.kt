@@ -69,6 +69,10 @@ import com.pam.recap.testing.FakeGmailConnectionRepository
 import com.pam.recap.testing.FakeImportRepository
 import com.pam.recap.testing.FakeSummaryRepository
 import com.pam.recap.testing.FakeTransactionRepository
+import com.pam.recap.testing.NoopBackendConsentSync
+import com.pam.recap.testing.NoopBackendDeletionSync
+import com.pam.recap.testing.NoopBackendSessionRepository
+import com.pam.recap.testing.NoopBackendSummarySync
 import com.pam.recap.testing.SequentialIdGenerator
 import com.pam.recap.testing.completeJob
 import com.pam.recap.testing.fixedClock
@@ -175,7 +179,13 @@ class ScreenScreenshotsTest {
         clock = clock,
     )
     private val resolveMonth = ResolveInitialMonthUseCase(transactions, clock)
-    private val recordConsent = RecordConsentUseCase(consents, analyses, clock, ids)
+    private val recordConsent = RecordConsentUseCase(
+        consents,
+        analyses,
+        clock,
+        ids,
+        NoopBackendConsentSync(),
+    )
 
     private val importMonth = ImportMonthUseCase(
         gmailSource = gmail,
@@ -211,6 +221,7 @@ class ScreenScreenshotsTest {
         gmailConnection = connections,
         clock = clock,
         idGenerator = ids,
+        backendSummary = NoopBackendSummarySync(),
     )
 
     @Before
@@ -439,6 +450,7 @@ class ScreenScreenshotsTest {
                 analyses = analyses,
                 budgets = budgets,
                 imports = imports,
+                backendSessions = NoopBackendSessionRepository(),
             ),
         )
 
@@ -487,6 +499,7 @@ class ScreenScreenshotsTest {
                 sessions = sessions,
                 clock = clock,
                 idGenerator = ids,
+                backendDeletion = NoopBackendDeletionSync(),
             ),
             withdrawAiConsent = WithdrawAiConsentUseCase(recordConsent),
         )
@@ -601,7 +614,7 @@ class ScreenScreenshotsTest {
         override val providerId: String = "on-device"
         override val modelId: String = "deterministic-v1"
 
-        override suspend fun analyze(payload: AiAggregatePayload): Outcome<RawAnalysis> = Outcome.Success(
+        override suspend fun analyze(request: com.pam.recap.domain.repository.AnalysisRequest): Outcome<RawAnalysis> = Outcome.Success(
             RawAnalysis(
                 providerId = providerId,
                 modelId = modelId,

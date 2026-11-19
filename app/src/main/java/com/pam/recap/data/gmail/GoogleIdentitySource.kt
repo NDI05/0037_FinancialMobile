@@ -16,6 +16,7 @@ import com.pam.recap.core.security.OwnerIdFactory
 import com.pam.recap.core.util.ActivityHolder
 import com.pam.recap.domain.model.AccountIdentity
 import com.pam.recap.domain.repository.AccountIdentitySource
+import com.pam.recap.domain.repository.IdentityTokenProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,7 +33,7 @@ import javax.inject.Singleton
 class GoogleIdentitySource @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val activityHolder: ActivityHolder,
-) : AccountIdentitySource {
+) : AccountIdentitySource, IdentityTokenProvider {
 
     override val isDemoMode: Boolean get() = BuildConfig.PAM_GOOGLE_WEB_CLIENT_ID.isBlank()
 
@@ -48,6 +49,40 @@ class GoogleIdentitySource @Inject constructor(
             )
         }
 
+        return when (val credential = googleCredential()) {
+            is Outcome.Failure -> Outcome.Failure(credential.error)
+            is Outcome.Success -> {
+                SafeLogger.event(TAG, "identity_signed_in")
+                Outcome.Success(
+                    AccountIdentity(
+                        accountId = credential.value.googleId,
+                        displayName = credential.value.displayName,
+                        mailboxLabel = credential.value.googleId,
+                        isDemo = false,
+                    ),
+                )
+            }
+        }
+    }
+
+    /**
+     * The backend needs the raw Google ID token to verify who is calling (contract §2.1). It is
+     * handed straight to [com.pam.recap.domain.repository.BackendSessionRepository] for a single
+     * exchange and is never stored or logged.
+     */
+    override suspend fun idToken(): Outcome<String> {
+        if (isDemoMode) {
+            // There is no Google token in demo mode; the backend accepts a development token and
+            // the session repository is the only place that knows how to build one.
+            return Outcome.Failure(AppError.Configuration("demo_mode_no_google_token"))
+        }
+        return when (val credential = googleCredential()) {
+            is Outcome.Failure -> Outcome.Failure(credential.error)
+            is Outcome.Success -> Outcome.Success(credential.value.idToken)
+        }
+    }
+
+    private suspend fun googleCredential(): Outcome<GoogleCredential> {
         val activity = activityHolder.current
             ?: return Outcome.Failure(AppError.PermissionRequired("no_foreground_activity"))
         return try {
@@ -64,13 +99,11 @@ class GoogleIdentitySource @Inject constructor(
             val credential = response.credential
             if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val googleId = GoogleIdTokenCredential.createFrom(credential.data)
-                SafeLogger.event(TAG, "identity_signed_in")
                 Outcome.Success(
-                    AccountIdentity(
-                        accountId = googleId.id,
+                    GoogleCredential(
+                        googleId = googleId.id,
                         displayName = googleId.displayName,
-                        mailboxLabel = googleId.id,
-                        isDemo = false,
+                        idToken = googleId.idToken,
                     ),
                 )
             } else {
@@ -87,6 +120,12 @@ class GoogleIdentitySource @Inject constructor(
             Outcome.Failure(AppError.PermissionRequired("credential_${error.type}"))
         }
     }
+
+    private data class GoogleCredential(
+        val googleId: String,
+        val displayName: String?,
+        val idToken: String,
+    )
 
     private companion object {
         const val TAG = "GoogleIdentity"

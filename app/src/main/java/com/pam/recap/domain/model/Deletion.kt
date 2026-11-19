@@ -30,6 +30,15 @@ data class DeletionRequest(
     val blocksSync: Boolean get() = isInProgress
 }
 
+/**
+ * Outcome of a deletion request. [serverSlaDays] is the SLA the backend acknowledged (contract
+ * §4.3) or null when the app runs without a backend; it is transport metadata, not stored state.
+ */
+data class DeletionResult(
+    val request: DeletionRequest,
+    val serverSlaDays: Int? = null,
+)
+
 /** FR-01: a signed-in session. Financial data is owner-scoped by [ownerId] (FR-02). */
 data class Session(
     val ownerId: String,

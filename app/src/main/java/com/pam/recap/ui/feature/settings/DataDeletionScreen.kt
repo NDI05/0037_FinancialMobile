@@ -32,6 +32,7 @@ import com.pam.recap.ui.components.StatusChipKind
 import com.pam.recap.ui.theme.BodyM
 import com.pam.recap.ui.theme.DisplayM
 import com.pam.recap.ui.theme.OnInk
+import com.pam.recap.ui.theme.LabelM
 import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.PamSpacing
 
@@ -154,6 +155,15 @@ fun DataDeletionScreen(
                         tone = MoneyTone.Income,
                         icon = Icons.Rounded.CheckCircle,
                     )
+                    val slaDays = state.serverSlaDays
+                    if (slaDays != null) {
+                        // FR-48: the SLA is the backend's acknowledgement, not a promise we make.
+                        Text(
+                            text = stringResource(R.string.deletion_server_sla, slaDays),
+                            style = LabelM,
+                            color = OnInkMuted,
+                        )
+                    }
                     PillButton(
                         text = stringResource(R.string.action_close),
                         onClick = onDeleted,

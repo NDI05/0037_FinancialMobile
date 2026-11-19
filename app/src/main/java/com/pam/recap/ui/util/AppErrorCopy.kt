@@ -43,6 +43,7 @@ fun appErrorRes(error: AppError): Int = when (error) {
         ErrorKind.NOT_FOUND -> R.string.error_not_found
         ErrorKind.CONFLICT -> R.string.error_conflict
         ErrorKind.VALIDATION -> R.string.error_validation
+        ErrorKind.RATE_LIMITED -> R.string.error_rate_limited
         ErrorKind.STORAGE -> R.string.error_storage
         ErrorKind.UNKNOWN -> R.string.error_unknown
     }

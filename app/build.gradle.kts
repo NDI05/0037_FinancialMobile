@@ -31,6 +31,13 @@ android {
             "\"${project.findProperty("PAM_GOOGLE_WEB_CLIENT_ID")?.toString().orEmpty()}\"",
         )
         // OI-07: optional remote analysis backend; blank keeps the on-device engine.
+        // Precedence in `BackendConfig`: PAM_BACKEND_BASE_URL wins; PAM_ANALYSIS_BACKEND_URL stays
+        // supported as a full-URL override so older invocations keep working.
+        buildConfigField(
+            "String",
+            "PAM_BACKEND_BASE_URL",
+            "\"${project.findProperty("PAM_BACKEND_BASE_URL")?.toString().orEmpty()}\"",
+        )
         buildConfigField(
             "String",
             "PAM_ANALYSIS_BACKEND_URL",
@@ -158,6 +165,7 @@ dependencies {
     testImplementation(libs.roborazzi.compose)
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.androidx.compose.ui.tooling)
+    testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.robolectric)

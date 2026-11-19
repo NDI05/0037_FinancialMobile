@@ -110,8 +110,20 @@ interface AnalysisEngine {
 
     val modelId: String
 
-    suspend fun analyze(payload: AiAggregatePayload): Outcome<RawAnalysis>
+    suspend fun analyze(request: AnalysisRequest): Outcome<RawAnalysis>
 }
+
+/**
+ * One analysis request with everything the engines need. The on-device engine only reads
+ * [payload]; the remote engine also needs [ownerId] (for a stable idempotency key) and the frozen
+ * [inputRevision] + [monthId] that go into the contract body.
+ */
+data class AnalysisRequest(
+    val ownerId: String,
+    val monthId: String,
+    val inputRevision: Int,
+    val payload: AiAggregatePayload,
+)
 
 /**
  * Parser port (FR-12/FR-13). `data/gmail` provides the strict Livin implementation; the domain

@@ -16,9 +16,20 @@ import javax.crypto.spec.GCMParameterSpec
  * The wrapped passphrase is the only value persisted; the unwrapped bytes exist in memory
  * for the lifetime of the process only.
  */
+/**
+ * Wraps a short secret with a key that never leaves the Keystore. The interface exists so the
+ * backend session cache can be exercised on the JVM with an in-memory double; production always
+ * binds [KeystoreSecretStore].
+ */
+interface WrappedSecretStore {
+    fun wrap(plainSecret: ByteArray): String
+
+    fun unwrap(wrapped: String): ByteArray
+}
+
 class KeystoreSecretStore(
     private val keyAlias: String = DEFAULT_KEY_ALIAS,
-) {
+) : WrappedSecretStore {
 
     private val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 
@@ -39,7 +50,7 @@ class KeystoreSecretStore(
         return generator.generateKey()
     }
 
-    fun wrap(plainSecret: ByteArray): String {
+    override fun wrap(plainSecret: ByteArray): String {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, obtainKey())
         val cipherText = cipher.doFinal(plainSecret)
@@ -52,7 +63,7 @@ class KeystoreSecretStore(
         return Base64.encodeToString(combined, Base64.NO_WRAP)
     }
 
-    fun unwrap(wrapped: String): ByteArray {
+    override fun unwrap(wrapped: String): ByteArray {
         val combined = Base64.decode(wrapped, Base64.NO_WRAP)
         val ivSize = combined[0].toInt()
         val iv = combined.copyOfRange(1, 1 + ivSize)

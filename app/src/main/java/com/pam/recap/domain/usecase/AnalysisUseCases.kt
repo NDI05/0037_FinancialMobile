@@ -22,6 +22,8 @@ import com.pam.recap.domain.repository.AiPayloadSource
 import com.pam.recap.domain.repository.AnalysisEngine
 import com.pam.recap.domain.repository.AnalysisEngineConfiguration
 import com.pam.recap.domain.repository.AnalysisRepository
+import com.pam.recap.domain.repository.AnalysisRequest
+import com.pam.recap.domain.repository.BackendSummarySync
 import com.pam.recap.domain.repository.BudgetRepository
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.GmailConnectionRepository
@@ -54,6 +56,7 @@ class RequestAnalysisUseCase @Inject constructor(
     private val gmailConnection: GmailConnectionRepository,
     private val clock: ClockProvider,
     private val idGenerator: IdGenerator,
+    private val backendSummary: BackendSummarySync,
 ) {
 
     suspend operator fun invoke(
@@ -95,14 +98,24 @@ class RequestAnalysisUseCase @Inject constructor(
         }
 
         val payload = payloadSource.build(summary, comparison.previousMonth, plan)
+        val request = AnalysisRequest(
+            ownerId = ownerId,
+            monthId = month.id(),
+            inputRevision = summary.inputRevision,
+            payload = payload,
+        )
+
+        // FR-33: the server freezes the same revision it analyses. A failed push is not fatal —
+        // the analyses endpoint stores the payload it receives.
+        runCatching { backendSummary.push(request) }
 
         var regeneration = 0
-        var raw = analyzeWithFallback(engine, payload)
+        var raw = analyzeWithFallback(engine, request)
         var validation = validator.validate(raw, payload)
         if (!validation.isValid) {
             // FR-37: exactly one bounded regeneration, never an unbounded retry loop.
             regeneration = 1
-            raw = analyzeWithFallback(engine, payload)
+            raw = analyzeWithFallback(engine, request)
             validation = validator.validate(raw, payload)
         }
         if (raw == null || !validation.isValid) {
@@ -153,13 +166,13 @@ class RequestAnalysisUseCase @Inject constructor(
 
     private suspend fun analyzeWithFallback(
         engine: AnalysisEngine,
-        payload: AiAggregatePayload,
+        request: AnalysisRequest,
     ): RawAnalysis? {
-        val first = engine.analyze(payload)
+        val first = engine.analyze(request)
         if (first is Outcome.Success) return first.value
         if (engine === remoteEngine) {
             // OI-07: a misconfigured or unavailable backend must not block the offline engine.
-            val fallback = onDeviceEngine.analyze(payload)
+            val fallback = onDeviceEngine.analyze(request)
             return (fallback as? Outcome.Success)?.value
         }
         return null

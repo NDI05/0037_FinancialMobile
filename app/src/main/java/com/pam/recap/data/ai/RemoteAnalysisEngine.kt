@@ -1,17 +1,21 @@
 package com.pam.recap.data.ai
 
-import com.pam.recap.BuildConfig
 import com.pam.recap.core.di.IoDispatcher
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.result.SafeLogger
-import com.pam.recap.domain.model.AiAggregatePayload
+import com.pam.recap.data.backend.BackendEndpoints
+import com.pam.recap.data.backend.BackendErrorBody
+import com.pam.recap.data.backend.backendError
 import com.pam.recap.domain.model.AnalysisUsage
 import com.pam.recap.domain.model.RawAnalysis
 import com.pam.recap.domain.model.RawObservation
 import com.pam.recap.domain.model.RawSuggestion
 import com.pam.recap.domain.repository.AnalysisEngine
 import com.pam.recap.domain.repository.AnalysisEngineConfiguration
+import com.pam.recap.domain.repository.AnalysisRequest
+import com.pam.recap.domain.repository.BackendSessionRepository
+import com.pam.recap.domain.repository.SessionRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -20,67 +24,116 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Optional backend-backed engine (OI-07, NFR-26). Enabled only when
- * `PAM_ANALYSIS_BACKEND_URL` is configured; otherwise it fails fast with a configuration error
- * so the caller can fall back to the on-device engine.
+ * Backend-backed engine (OI-07, NFR-26, contract §4.1).
  *
- * It posts exactly the [AiAggregatePayload] (aggregate numbers only, FR-35) and never sends a
- * credential: the backend URL is the only configuration and no token is stored or logged
- * (NFR-14).
+ * Enabled only when a backend URL is configured; otherwise it fails fast with a configuration error
+ * so `RequestAnalysisUseCase` keeps the deterministic on-device engine. The request is the exact
+ * contract body `{monthId, inputRevision, payload}` with a Bearer session and a stable
+ * `Idempotency-Key`, so a retry of the same frozen revision is a replay rather than a second
+ * provider call.
+ *
+ * Nothing in this class logs the payload, the endpoint, the id token or the access token (NFR-18).
  */
 @Singleton
 class RemoteAnalysisEngine @Inject constructor(
     private val httpClient: OkHttpClient,
     private val json: Json,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    private val config: BackendEndpoints,
+    private val backendSessions: BackendSessionRepository,
+    private val sessions: SessionRepository,
 ) : AnalysisEngine, AnalysisEngineConfiguration {
 
     override val providerId: String = PROVIDER_ID
 
     override val modelId: String = MODEL_ID
 
-    private val endpoint: String = BuildConfig.PAM_ANALYSIS_BACKEND_URL
+    override val isConfigured: Boolean
+        get() = config.isEnabled && config.analysesUrl != null
 
-    override val isConfigured: Boolean get() = endpoint.isNotBlank()
-
-    override suspend fun analyze(payload: AiAggregatePayload): Outcome<RawAnalysis> {
-        if (!isConfigured) {
+    override suspend fun analyze(request: AnalysisRequest): Outcome<RawAnalysis> {
+        val url = config.analysesUrl
+        if (!isConfigured || url == null) {
             return Outcome.Failure(AppError.Configuration("analysis_backend_not_configured"))
         }
+
         return withContext(ioDispatcher) {
-            try {
-                val body = json.encodeToString(AiAggregatePayload.serializer(), payload)
-                val request = Request.Builder()
-                    .url(endpoint)
-                    .post(body.toRequestBody(JSON_MEDIA_TYPE))
-                    .header("Accept", JSON_MEDIA_TYPE.toString())
-                    .build()
-                httpClient.newCall(request).execute().use { response ->
-                    when {
-                        response.code == 401 || response.code == 403 -> Outcome.Failure(
-                            AppError.Unauthorized("analysis_backend_${response.code}"),
-                        )
+            val body = json.encodeToString(AnalysisRequestBody.serializer(), request.toBody())
+            val idempotencyKey = request.idempotencyKey()
+            val isDemo = sessions.current()?.isDemo == true
 
-                        !response.isSuccessful -> Outcome.Failure(
-                            AppError.Network("analysis_backend_${response.code}"),
-                        )
-
-                        else -> {
-                            val text = response.body?.string().orEmpty()
-                            val decoded = json.decodeFromString(RemoteAnalysisResponse.serializer(), text)
-                            Outcome.Success(decoded.toRaw())
-                        }
-                    }
+            for (attempt in 0 until MAX_ATTEMPTS) {
+                val token = when (val result = backendSessions.token(request.ownerId, isDemo)) {
+                    is Outcome.Success -> result.value
+                    is Outcome.Failure -> return@withContext Outcome.Failure(result.error)
                 }
-            } catch (error: Throwable) {
-                // Only an error class name is logged: never the payload or the endpoint (NFR-18).
-                SafeLogger.failure(TAG, "analysis_backend_call_failed")
-                Outcome.Failure(AppError.Network(error::class.simpleName))
+                val outcome = call(url, body, idempotencyKey, token)
+                when {
+                    outcome.value != null -> return@withContext Outcome.Success(outcome.value)
+                    // Expired/revoked session: drop it and retry exactly once with a fresh token.
+                    outcome.unauthorized && attempt == 0 -> backendSessions.clear()
+                    else -> return@withContext Outcome.Failure(
+                        outcome.error ?: AppError.Unknown("backend_empty"),
+                    )
+                }
             }
+            Outcome.Failure(AppError.Unauthorized("backend_401"))
+        }
+    }
+
+    private fun call(
+        url: String,
+        body: String,
+        idempotencyKey: String,
+        token: String,
+    ): CallOutcome = try {
+        val request = Request.Builder()
+            .url(url)
+            .post(body.toRequestBody(JSON_MEDIA_TYPE))
+            .header("authorization", "Bearer $token")
+            .header("idempotency-key", idempotencyKey)
+            .header("content-type", JSON_MEDIA_TYPE.toString())
+            .header("accept", JSON_MEDIA_TYPE.toString())
+            .build()
+        httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                val code = runCatching {
+                    json.decodeFromString(BackendErrorBody.serializer(), response.body?.string().orEmpty())
+                }.getOrNull()?.code
+                CallOutcome(
+                    unauthorized = response.code == 401,
+                    error = backendError(response.code, code),
+                    value = null,
+                )
+            } else {
+                val text = response.body?.string().orEmpty()
+                val decoded = json.decodeFromString(RemoteAnalysisResponse.serializer(), text)
+                CallOutcome(unauthorized = false, error = null, value = decoded.toRaw())
+            }
+        }
+    } catch (error: IOException) {
+        // Only a class/technical marker is recorded: never the payload or the endpoint.
+        SafeLogger.failure(TAG, "analysis_backend_call_failed")
+        CallOutcome(unauthorized = false, error = AppError.Network("backend_unreachable"), value = null)
+    } catch (error: Exception) {
+        SafeLogger.failure(TAG, "analysis_backend_invalid_response")
+        CallOutcome(unauthorized = false, error = AppError.Network("backend_invalid_response"), value = null)
+    }
+
+    private data class CallOutcome(
+        val unauthorized: Boolean,
+        val error: AppError?,
+        val value: RawAnalysis?,
+    ) {
+        fun result(): Outcome<RawAnalysis> = when {
+            value != null -> Outcome.Success(value)
+            error != null -> Outcome.Failure(error)
+            else -> Outcome.Failure(AppError.Unknown("backend_empty"))
         }
     }
 
@@ -131,6 +184,7 @@ class RemoteAnalysisEngine @Inject constructor(
         const val TAG = "RemoteAnalysis"
         const val PROVIDER_ID = "pam-remote"
         const val MODEL_ID = "remote-v1"
+        const val MAX_ATTEMPTS = 2
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 }

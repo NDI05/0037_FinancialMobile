@@ -372,4 +372,6 @@
     <string name="non_idr_marker">Non-IDR</string>
     <string name="status_available">Available</string>
     <string name="import_pages_processed">Pages processed: %1$d</string>
+    <string name="error_rate_limited">Analysis limit reached. Try again later.</string>
+    <string name="deletion_server_sla">Server data is removed within %1$d days.</string>
 </resources>

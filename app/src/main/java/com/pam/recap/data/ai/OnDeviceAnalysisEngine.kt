@@ -16,6 +16,7 @@ import com.pam.recap.domain.model.RawObservation
 import com.pam.recap.domain.model.RawSuggestion
 import com.pam.recap.domain.model.SuggestionTemplate
 import com.pam.recap.domain.repository.AnalysisEngine
+import com.pam.recap.domain.repository.AnalysisRequest
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
@@ -45,7 +46,8 @@ class OnDeviceAnalysisEngine @Inject constructor(
 
     override val modelId: String = MODEL_ID
 
-    override suspend fun analyze(payload: AiAggregatePayload): Outcome<RawAnalysis> {
+    override suspend fun analyze(request: AnalysisRequest): Outcome<RawAnalysis> {
+        val payload = request.payload
         if (payload.schemaVersion != AiAggregatePayload.SCHEMA_VERSION) {
             return Outcome.Failure(AppError.Validation("payload_schema_unsupported"))
         }

@@ -33,6 +33,14 @@ sealed interface AppError {
         override val kind: ErrorKind get() = ErrorKind.CONFIGURATION
     }
 
+    /**
+     * FR-50: the analysis quota is exhausted (per-user window or the daily ceiling). Recoverable by
+     * waiting, so the UI offers that instead of a failure state.
+     */
+    data class RateLimited(override val debugDetail: String? = null) : AppError {
+        override val kind: ErrorKind get() = ErrorKind.RATE_LIMITED
+    }
+
     data class Parsing(override val debugDetail: String? = null) : AppError {
         override val kind: ErrorKind get() = ErrorKind.PARSING
     }
@@ -72,6 +80,7 @@ enum class ErrorKind {
     NOT_FOUND,
     CONFLICT,
     VALIDATION,
+    RATE_LIMITED,
     STORAGE,
     UNKNOWN,
 }

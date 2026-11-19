@@ -32,6 +32,7 @@ sealed interface Outcome<out T> {
                     ErrorKind.NOT_FOUND -> AppError.NotFound(detail)
                     ErrorKind.CONFLICT -> AppError.Conflict(detail)
                     ErrorKind.VALIDATION -> AppError.Validation(detail ?: "unspecified")
+                    ErrorKind.RATE_LIMITED -> AppError.RateLimited(detail)
                     ErrorKind.STORAGE -> AppError.Storage(detail)
                     ErrorKind.UNKNOWN -> AppError.Unknown(detail)
                 },

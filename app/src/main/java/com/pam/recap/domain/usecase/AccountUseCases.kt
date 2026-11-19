@@ -8,11 +8,14 @@ import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.util.IdGenerator
 import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.DeletionRequest
+import com.pam.recap.domain.model.DeletionResult
 import com.pam.recap.domain.model.DeletionState
 import com.pam.recap.domain.model.GmailConnection
 import com.pam.recap.domain.model.GmailConnectionState
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.AnalysisRepository
+import com.pam.recap.domain.repository.BackendDeletionSync
+import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.domain.repository.BudgetRepository
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.DeletionRepository
@@ -77,9 +80,12 @@ class SignOutUseCase @Inject constructor(
     private val analyses: AnalysisRepository,
     private val budgets: BudgetRepository,
     private val imports: ImportRepository,
+    private val backendSessions: BackendSessionRepository,
 ) {
 
     suspend operator fun invoke(ownerId: String): Outcome<Unit> {
+        // FR-05: invalidate the server session before the local token cache is dropped.
+        runCatching { backendSessions.revoke() }
         runCatching { gmailSource.disconnect() }
         transactions.deleteAll(ownerId)
         summaries.deleteAll(ownerId)
@@ -189,12 +195,13 @@ class RequestDeletionUseCase @Inject constructor(
     private val sessions: SessionRepository,
     private val clock: ClockProvider,
     private val idGenerator: IdGenerator,
+    private val backendDeletion: BackendDeletionSync,
 ) {
 
     suspend operator fun invoke(
         ownerId: String,
         reauthenticatedAt: Instant?,
-    ): Outcome<DeletionRequest> {
+    ): Outcome<DeletionResult> {
         val now = clock.now()
         if (reauthenticatedAt == null || now.toEpochMilliseconds() - reauthenticatedAt.toEpochMilliseconds() > REAUTH_WINDOW_MILLIS) {
             // FR-47: recent re-authentication is a precondition, not a hint.
@@ -212,6 +219,10 @@ class RequestDeletionUseCase @Inject constructor(
         )
         deletion.save(request)
 
+        // FR-48/contract §4.3: tell the backend so it blocks sync and sweeps its aggregates. The
+        // returned SLA is surfaced in the UI; a failure never stops the local deletion.
+        val serverSlaDays = (runCatching { backendDeletion.request(ownerId) }.getOrNull() as? Outcome.Success)?.value
+
         request = request.copy(state = DeletionState.IN_PROGRESS)
         deletion.save(request)
 
@@ -227,7 +238,7 @@ class RequestDeletionUseCase @Inject constructor(
 
             val completed = request.copy(state = DeletionState.COMPLETED, completedAt = clock.now())
             deletion.save(completed)
-            Outcome.Success(completed)
+            Outcome.Success(DeletionResult(request = completed, serverSlaDays = serverSlaDays))
         }.getOrElse { error ->
             val failed = request.copy(state = DeletionState.FAILED, failureCode = error::class.simpleName)
             deletion.save(failed)

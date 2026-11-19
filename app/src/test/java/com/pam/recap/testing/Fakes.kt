@@ -1,4 +1,12 @@
 package com.pam.recap.testing
+import com.pam.recap.core.result.AppError
+import com.pam.recap.core.result.Outcome
+import com.pam.recap.domain.model.ConsentDecision
+import com.pam.recap.domain.repository.AnalysisRequest
+import com.pam.recap.domain.repository.BackendConsentSync
+import com.pam.recap.domain.repository.BackendDeletionSync
+import com.pam.recap.domain.repository.BackendSessionRepository
+import com.pam.recap.domain.repository.BackendSummarySync
 
 import com.pam.recap.core.money.Money
 import com.pam.recap.core.time.ClockProvider
@@ -336,4 +344,37 @@ class FakeDeletionRepository : DeletionRepository {
     }
 
     override suspend fun deleteAll(ownerId: String) = Unit
+}
+
+/**
+ * Backend ports with no backend configured: the shape every offline test needs so the new
+ * constructor parameters never force a real HTTP client into a JVM test.
+ */
+class NoopBackendSessionRepository : BackendSessionRepository {
+    override val isEnabled: Boolean = false
+
+    override suspend fun token(ownerId: String, isDemo: Boolean): Outcome<String> =
+        Outcome.Failure(AppError.Configuration("backend_not_configured"))
+
+    override suspend fun revoke() = Unit
+
+    override fun clear() = Unit
+}
+
+class NoopBackendConsentSync : BackendConsentSync {
+    override suspend fun record(
+        ownerId: String,
+        purpose: ConsentPurpose,
+        decision: ConsentDecision,
+        noticeVersion: String,
+    ) = Unit
+}
+
+class NoopBackendSummarySync : BackendSummarySync {
+    override suspend fun push(request: AnalysisRequest): Outcome<Unit> = Outcome.Success(Unit)
+}
+
+class NoopBackendDeletionSync : BackendDeletionSync {
+    override suspend fun request(ownerId: String): Outcome<Int> =
+        Outcome.Failure(AppError.Configuration("backend_not_configured"))
 }

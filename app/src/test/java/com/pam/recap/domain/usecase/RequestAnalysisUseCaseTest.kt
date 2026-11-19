@@ -22,6 +22,7 @@ import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.AnalysisEngine
 import com.pam.recap.domain.repository.AnalysisEngineConfiguration
+import com.pam.recap.domain.repository.AnalysisRequest
 import com.pam.recap.testing.FakeAnalysisRepository
 import com.pam.recap.testing.FakeBudgetRepository
 import com.pam.recap.testing.FakeConsentRepository
@@ -29,6 +30,7 @@ import com.pam.recap.testing.FakeGmailConnectionRepository
 import com.pam.recap.testing.FakeImportRepository
 import com.pam.recap.testing.FakeSummaryRepository
 import com.pam.recap.testing.FakeTransactionRepository
+import com.pam.recap.testing.NoopBackendSummarySync
 import com.pam.recap.testing.SequentialIdGenerator
 import com.pam.recap.testing.completeJob
 import com.pam.recap.testing.fixedClock
@@ -115,7 +117,7 @@ class RequestAnalysisUseCaseTest {
         override val providerId: String = "test-engine"
         override val modelId: String = "test-model"
 
-        override suspend fun analyze(payload: AiAggregatePayload): Outcome<RawAnalysis> {
+        override suspend fun analyze(request: AnalysisRequest): Outcome<RawAnalysis> {
             calls++
             onAnalyze()
             val raw = output() ?: return Outcome.Failure(AppError.Network("engine_down"))
@@ -139,6 +141,7 @@ class RequestAnalysisUseCaseTest {
         gmailConnection = connections,
         clock = fixedClock(now),
         idGenerator = SequentialIdGenerator("analysis"),
+        backendSummary = NoopBackendSummarySync(),
     )
 
     @Test

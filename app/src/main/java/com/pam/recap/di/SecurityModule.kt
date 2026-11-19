@@ -3,6 +3,7 @@ package com.pam.recap.di
 import android.content.Context
 import com.pam.recap.core.security.DatabasePassphraseProvider
 import com.pam.recap.core.security.KeystoreSecretStore
+import com.pam.recap.core.security.WrappedSecretStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,6 +18,10 @@ object SecurityModule {
     @Provides
     @Singleton
     fun provideKeystoreSecretStore(): KeystoreSecretStore = KeystoreSecretStore()
+
+    @Provides
+    @Singleton
+    fun provideWrappedSecretStore(store: KeystoreSecretStore): WrappedSecretStore = store
 
     @Provides
     @Singleton
