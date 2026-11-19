@@ -132,7 +132,13 @@ import kotlin.time.Instant
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34], qualifiers = "w411dp-h891dp-xxhdpi")
+@Config(
+    sdk = [34],
+    // The app pins id-ID in Application + MainActivity; Robolectric's app-context resources ignore
+    // attachBaseContext (verified), so the device qualifier is set to the configuration the app
+    // pins. That makes these captures show what a device renders.
+    qualifiers = "id-rID-w411dp-h891dp-xxhdpi",
+)
 class ScreenScreenshotsTest {
 
     @get:Rule

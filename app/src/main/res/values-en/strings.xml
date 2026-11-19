@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    English translations, kept for a future in-app language switch. Release 1 pins id-ID, so
+    `values/` is the shipped language; keep this file in sync key-for-key with it.
+-->
 <resources>
     <string name="app_name">PAM</string>
 
@@ -154,7 +158,7 @@
     <string name="overview_import_eyebrow">Data source</string>
     <string name="overview_import_now">Import now</string>
     <string name="overview_never_imported">Never imported</string>
-    <string name="overview_last_import">Last import %1$s</string>
+    <string name="overview_last_import">Import: %1$s</string>
 
     <string name="direction_credit">In</string>
     <string name="direction_debit">Out</string>

@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
@@ -298,7 +299,8 @@ private fun rowMeta(transaction: Transaction): String {
     val category = stringResource(categoryLabelRes(transaction.category))
     val time = PamDateFormat.time(transaction.eventAt)
     val direction = stringResource(com.pam.recap.ui.util.directionLabelRes(transaction.direction))
-    return "$time · $category · $direction"
+    // Direction before category: an ellipsis may only ever drop the category name.
+    return "$time · $direction · $category"
 }
 
 /** Hero card: gradient wash + warm bloom, net cash flow as the hero number (design system §5). */
@@ -337,7 +339,6 @@ private fun NetCashFlowHero(
             ) {
                 StatusChip(kind = StatusChipKind.EmailDerived)
                 StatusChip(kind = summary.coverage.chipKind())
-
             }
             Spacer(modifier = Modifier.height(PamSpacing.lg))
             EyebrowText(text = stringResource(R.string.overview_net_eyebrow), color = OnInkMuted)
@@ -386,20 +387,31 @@ private fun NetCashFlowHero(
 
 @Composable
 private fun FreshnessPill(lastImportAt: kotlin.time.Instant?, modifier: Modifier = Modifier) {
-    val label = if (lastImportAt == null) {
-        stringResource(R.string.overview_never_imported)
+    if (lastImportAt == null) {
+        Text(
+            text = stringResource(R.string.overview_never_imported),
+            style = LabelM,
+            color = OnInkFaint,
+            maxLines = 1,
+            modifier = modifier,
+        )
     } else {
-        stringResource(R.string.overview_last_import, PamDateFormat.date(lastImportAt))
+        val date = PamDateFormat.date(lastImportAt)
+        Row(
+            modifier = modifier,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Schedule,
+                // The full sentence is announced once, the visible text stays a bare date.
+                contentDescription = stringResource(R.string.overview_last_import, date),
+                tint = OnInkFaint,
+                modifier = Modifier.size(12.dp),
+            )
+            Text(text = date, style = LabelM, color = OnInkFaint, maxLines = 1)
+        }
     }
-    Text(
-        text = label,
-        style = LabelM,
-        color = OnInkFaint,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        textAlign = TextAlign.End,
-        modifier = modifier,
-    )
 }
 
 private fun CoverageStatus.chipKind(): StatusChipKind = when (this) {

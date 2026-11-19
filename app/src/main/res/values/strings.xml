@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Indonesian is the SRS §1.4 source of truth for release 1: the app pins id-ID in
+    PamApplication, so this file is what ships. `values-en/` is kept for a future in-app language
+    switch and must stay in sync key-for-key.
+-->
 <resources>
     <string name="app_name">PAM</string>
 
@@ -164,7 +169,7 @@
     <string name="overview_import_eyebrow">Sumber data</string>
     <string name="overview_import_now">Impor sekarang</string>
     <string name="overview_never_imported">Belum pernah impor</string>
-    <string name="overview_last_import">Impor terakhir %1$s</string>
+    <string name="overview_last_import">Impor: %1$s</string>
 
     <!-- Directions, coverage and metric keys -->
     <string name="direction_credit">Masuk</string>

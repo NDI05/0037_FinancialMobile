@@ -1,5 +1,6 @@
 package com.pam.recap
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import com.pam.recap.core.util.ActivityHolder
+import com.pam.recap.core.util.AppLocale
 import com.pam.recap.data.gmail.GoogleAuthBridge
 import com.pam.recap.ui.navigation.PamNavHost
 import com.pam.recap.ui.theme.Ink
@@ -33,6 +35,14 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var googleAuthBridge: GoogleAuthBridge
+
+    /**
+     * The only activity. Its base context is created from the system configuration, so the
+     * Indonesian pin has to be applied here as well as in the application (see [AppLocale]).
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
