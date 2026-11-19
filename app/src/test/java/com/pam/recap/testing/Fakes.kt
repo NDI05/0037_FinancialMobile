@@ -1,0 +1,331 @@
+package com.pam.recap.testing
+
+import com.pam.recap.core.money.Money
+import com.pam.recap.core.time.ClockProvider
+import com.pam.recap.core.time.JakartaMonth
+import com.pam.recap.core.util.IdGenerator
+import com.pam.recap.domain.model.Analysis
+import com.pam.recap.domain.model.BudgetPlan
+import com.pam.recap.domain.model.Category
+import com.pam.recap.domain.model.CategoryOrigin
+import com.pam.recap.domain.model.Consent
+import com.pam.recap.domain.model.ConsentPurpose
+import com.pam.recap.domain.model.DeletionRequest
+import com.pam.recap.domain.model.GmailConnection
+import com.pam.recap.domain.model.ImportJob
+import com.pam.recap.domain.model.ImportState
+import com.pam.recap.domain.model.InsertResult
+import com.pam.recap.domain.model.MonthTotals
+import com.pam.recap.domain.model.MonthlySummary
+import com.pam.recap.domain.model.SkippedCandidate
+import com.pam.recap.domain.model.Transaction
+import com.pam.recap.domain.model.TransactionFilter
+import com.pam.recap.domain.model.TransactionPage
+import com.pam.recap.domain.repository.AnalysisRepository
+import com.pam.recap.domain.repository.BudgetRepository
+import com.pam.recap.domain.repository.ConsentRepository
+import com.pam.recap.domain.repository.DeletionRepository
+import com.pam.recap.domain.repository.GmailConnectionRepository
+import com.pam.recap.domain.repository.ImportRepository
+import com.pam.recap.domain.repository.SummaryRepository
+import com.pam.recap.domain.repository.TransactionRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlin.time.Instant
+
+/**
+ * In-memory fakes for the JVM tests. They implement the ports faithfully enough for the use-case
+ * tests (no Room, no Hilt, deterministic time).
+ */
+
+fun fixedClock(instant: Instant): ClockProvider = object : ClockProvider {
+    override fun now(): Instant = instant
+}
+
+class SequentialIdGenerator(private val prefix: String = "id") : IdGenerator {
+    private var counter = 0
+    override fun newId(): String = "$prefix-${counter++}"
+}
+
+class FakeTransactionRepository(initial: List<Transaction> = emptyList()) : TransactionRepository {
+
+    private val rows = MutableStateFlow(initial)
+    private val revisions = mutableMapOf<String, Int>()
+
+    fun all(): List<Transaction> = rows.value
+
+    fun replaceAll(values: List<Transaction>) {
+        rows.value = values
+    }
+
+    override fun observeMonth(ownerId: String, month: JakartaMonth, filter: TransactionFilter?): Flow<List<Transaction>> =
+        rows.map { list -> list.filter { it.ownerId == ownerId && month.contains(it.eventAt) } }
+
+    override suspend fun listMonth(ownerId: String, month: JakartaMonth): List<Transaction> =
+        rows.value.filter { it.ownerId == ownerId && month.contains(it.eventAt) }
+
+    override suspend fun page(
+        ownerId: String,
+        filter: TransactionFilter,
+        offset: Int,
+        limit: Int,
+    ): TransactionPage {
+        val items = listMonth(ownerId, filter.month).drop(offset).take(limit)
+        return TransactionPage(items, items.size, offset, hasMore = false)
+    }
+
+    override suspend fun get(ownerId: String, id: String): Transaction? =
+        rows.value.firstOrNull { it.ownerId == ownerId && it.id == id }
+
+    override suspend fun findByFingerprint(ownerId: String, fingerprint: String): Transaction? =
+        rows.value.firstOrNull { it.ownerId == ownerId && it.fingerprint == fingerprint }
+
+    override suspend fun insertIgnoringDuplicates(ownerId: String, transactions: List<Transaction>): InsertResult {
+        val existing = rows.value.map { it.fingerprint }.toSet()
+        val fresh = transactions.filter { it.ownerId == ownerId && it.fingerprint !in existing }
+        rows.value = rows.value + fresh
+        return InsertResult(inserted = fresh.size, ignored = transactions.size - fresh.size)
+    }
+
+    override suspend fun updateCategory(
+        ownerId: String,
+        id: String,
+        category: Category,
+        origin: CategoryOrigin,
+        confidence: Float?,
+        at: Instant,
+    ): Boolean = update(id) { it.copy(category = category, categoryOrigin = origin, categoryConfidence = confidence) }
+
+    override suspend fun setInternalTransfer(ownerId: String, id: String, isInternalTransfer: Boolean, at: Instant): Boolean =
+        update(id) { it.copy(isInternalTransfer = isInternalTransfer) }
+
+    override suspend fun linkRefund(ownerId: String, refundId: String, expenseId: String?, at: Instant): Boolean =
+        update(refundId) { it.copy(linkedRefundOf = expenseId) }
+
+    override suspend fun updateNote(ownerId: String, id: String, note: String?, at: Instant): Boolean =
+        update(id) { it.copy(note = note) }
+
+    override suspend fun monthRevision(ownerId: String, month: JakartaMonth): Int =
+        revisions["$ownerId:${month.id()}"] ?: 0
+
+    override suspend fun bumpMonthRevision(ownerId: String, month: JakartaMonth): Int {
+        val key = "$ownerId:${month.id()}"
+        val next = (revisions[key] ?: 0) + 1
+        revisions[key] = next
+        return next
+    }
+
+    override fun observeMonthTotals(ownerId: String, month: JakartaMonth): Flow<MonthTotals> =
+        flowOf(MonthTotals.EMPTY)
+
+    override suspend fun monthTotals(ownerId: String, month: JakartaMonth): MonthTotals {
+        val scoped = listMonth(ownerId, month).filter { it.isIdr }
+        val inflow = scoped.filter { it.isCredit }.fold(Money.ZERO) { acc, row -> acc + row.amount }
+        val outflow = scoped.filter { it.isDebit }.fold(Money.ZERO) { acc, row -> acc + row.amount }
+        return MonthTotals(
+            grossInflow = inflow,
+            grossOutflow = outflow,
+            creditCount = scoped.count { it.isCredit },
+            debitCount = scoped.count { it.isDebit },
+            transactionCount = scoped.size,
+            nonIdrCount = listMonth(ownerId, month).count { !it.isIdr },
+            uncategorizedCount = scoped.count { it.category.isUncategorized },
+            manualCount = scoped.count { it.isManual },
+            latestEventAt = scoped.maxOfOrNull { it.eventAt },
+            latestUpdatedAt = scoped.maxOfOrNull { it.updatedAt },
+        )
+    }
+
+    override suspend fun totalAmountForCategory(ownerId: String, month: JakartaMonth, category: Category): Money =
+        listMonth(ownerId, month)
+            .filter { it.category == category && it.isDebit && it.isIdr }
+            .fold(Money.ZERO) { acc, row -> acc + row.amount }
+
+    override suspend fun deleteAll(ownerId: String) {
+        rows.value = rows.value.filterNot { it.ownerId == ownerId }
+    }
+
+    private fun update(id: String, transform: (Transaction) -> Transaction): Boolean {
+        val current = rows.value
+        val index = current.indexOfFirst { it.id == id }
+        if (index < 0) return false
+        rows.value = current.toMutableList().also { it[index] = transform(it[index]) }
+        return true
+    }
+}
+
+class FakeSummaryRepository : SummaryRepository {
+    private val stored = mutableMapOf<String, MonthlySummary>()
+
+    override fun observeSummary(ownerId: String, month: JakartaMonth): Flow<MonthlySummary?> =
+        flowOf(stored["$ownerId:${month.id()}"])
+
+    override suspend fun get(ownerId: String, month: JakartaMonth, inputRevision: Int?): MonthlySummary? =
+        stored["$ownerId:${month.id()}"]
+
+    override suspend fun save(summary: MonthlySummary) {
+        stored["${summary.ownerId}:${summary.month.id()}"] = summary
+    }
+
+    override suspend fun markOutdated(ownerId: String, month: JakartaMonth) = Unit
+
+    override suspend fun deleteAll(ownerId: String) = Unit
+}
+
+class FakeImportRepository(
+    var latest: ImportJob? = null,
+    private val skipped: MutableList<SkippedCandidate> = mutableListOf(),
+) : ImportRepository {
+
+    private val jobs = mutableMapOf<String, ImportJob>()
+    private val latestFlow = MutableStateFlow(latest)
+
+    override suspend fun create(job: ImportJob) {
+        jobs[job.id] = job
+        latestFlow.value = job
+    }
+
+    override suspend fun update(job: ImportJob) {
+        jobs[job.id] = job
+        latestFlow.value = job
+    }
+
+    override fun observe(jobId: String): Flow<ImportJob?> = flowOf(jobs[jobId])
+
+    override suspend fun get(jobId: String): ImportJob? = jobs[jobId]
+
+    override suspend fun latestForMonth(ownerId: String, month: JakartaMonth): ImportJob? =
+        latest ?: jobs.values.filter { it.ownerId == ownerId && it.month == month }.maxByOrNull { it.startedAt }
+
+    override fun observeLatestForMonth(ownerId: String, month: JakartaMonth): Flow<ImportJob?> = latestFlow
+
+    override suspend fun saveSkipped(candidates: List<SkippedCandidate>) {
+        skipped += candidates
+    }
+
+    override suspend fun skippedFor(jobId: String): List<SkippedCandidate> = skipped.filter { it.jobId == jobId }
+
+    override suspend fun deleteAll(ownerId: String) = Unit
+}
+
+fun completeJob(ownerId: String, month: JakartaMonth, at: Instant): ImportJob = ImportJob(
+    id = "job-$ownerId-${month.id()}",
+    ownerId = ownerId,
+    month = month,
+    state = ImportState.COMPLETE,
+    pagesProcessed = 1,
+    pagesExpected = 1,
+    matchedCount = 10,
+    importedCount = 10,
+    duplicateCount = 0,
+    skippedCount = 0,
+    unresolvedCount = 0,
+    templateVersion = "v1",
+    startedAt = at,
+    finishedAt = at,
+)
+
+class FakeGmailConnectionRepository : GmailConnectionRepository {
+    private var stored: GmailConnection? = null
+
+    override fun observe(ownerId: String): Flow<GmailConnection?> = flowOf(stored)
+
+    override suspend fun get(ownerId: String): GmailConnection? = stored
+
+    override suspend fun save(connection: GmailConnection) {
+        stored = connection
+    }
+
+    override suspend fun touchLastImport(ownerId: String, at: Instant) = Unit
+
+    override suspend fun touchLastAi(ownerId: String, at: Instant) = Unit
+
+    override suspend fun deleteAll(ownerId: String) = Unit
+}
+
+class FakeConsentRepository(initial: List<Consent> = emptyList()) : ConsentRepository {
+    val ledger = MutableStateFlow(initial)
+
+    fun withdraw(purpose: ConsentPurpose) {
+        ledger.value = ledger.value + Consent(
+            id = "consent-withdraw-${ledger.value.size}",
+            ownerId = ledger.value.firstOrNull()?.ownerId ?: "u_demo",
+            purpose = purpose,
+            noticeVersion = "v1",
+            decision = com.pam.recap.domain.model.ConsentDecision.WITHDRAWN,
+            decidedAt = Instant.fromEpochMilliseconds(0),
+        )
+    }
+
+    override fun observeLedger(ownerId: String): Flow<List<Consent>> = ledger
+
+    override fun observeLatest(ownerId: String, purpose: ConsentPurpose): Flow<Consent?> =
+        ledger.map { list -> list.lastOrNull { it.purpose == purpose } }
+
+    override suspend fun latest(ownerId: String, purpose: ConsentPurpose): Consent? =
+        ledger.value.lastOrNull { it.purpose == purpose }
+
+    override suspend fun append(consent: Consent) {
+        ledger.value = ledger.value + consent
+    }
+
+    override suspend fun hasGranted(ownerId: String, purpose: ConsentPurpose): Boolean =
+        latest(ownerId, purpose)?.isGranted == true
+
+    override suspend fun deleteAll(ownerId: String) = Unit
+}
+
+class FakeAnalysisRepository : AnalysisRepository {
+    val saved = mutableListOf<Analysis>()
+    var outdated = false
+
+    override fun observeLatest(ownerId: String, monthId: String): Flow<Analysis?> =
+        flowOf(saved.lastOrNull { it.ownerId == ownerId && it.monthId == monthId })
+
+    override suspend fun latest(ownerId: String, monthId: String): Analysis? =
+        saved.lastOrNull { it.ownerId == ownerId && it.monthId == monthId }
+
+    override suspend fun save(analysis: Analysis) {
+        saved += analysis
+    }
+
+    override suspend fun markOutdated(ownerId: String, monthId: String) {
+        outdated = true
+    }
+
+    override suspend fun markAllHistorical(ownerId: String) = Unit
+
+    override suspend fun deleteAll(ownerId: String) = Unit
+}
+
+class FakeBudgetRepository : BudgetRepository {
+    var stored: BudgetPlan? = null
+
+    override fun observeActive(ownerId: String, month: JakartaMonth): Flow<BudgetPlan?> = flowOf(stored)
+
+    override suspend fun active(ownerId: String, month: JakartaMonth): BudgetPlan? = stored
+
+    override suspend fun save(plan: BudgetPlan) {
+        stored = plan
+    }
+
+    override suspend fun deleteAll(ownerId: String) = Unit
+}
+
+class FakeDeletionRepository : DeletionRepository {
+    var activeRequest: DeletionRequest? = null
+
+    override fun observeLatest(ownerId: String): Flow<DeletionRequest?> = flowOf(activeRequest)
+
+    override suspend fun latest(ownerId: String): DeletionRequest? = activeRequest
+
+    override suspend fun active(ownerId: String): DeletionRequest? = activeRequest
+
+    override suspend fun save(request: DeletionRequest) {
+        activeRequest = request
+    }
+
+    override suspend fun deleteAll(ownerId: String) = Unit
+}

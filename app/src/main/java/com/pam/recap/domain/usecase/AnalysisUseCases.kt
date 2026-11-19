@@ -15,11 +15,9 @@ import com.pam.recap.domain.model.AnalysisStatus
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.CoverageStatus
-import com.pam.recap.domain.model.MetricKeys
 import com.pam.recap.domain.model.Observation
 import com.pam.recap.domain.model.RawAnalysis
 import com.pam.recap.domain.model.Suggestion
-import com.pam.recap.domain.model.ValidationOutcome
 import com.pam.recap.domain.repository.AiPayloadSource
 import com.pam.recap.domain.repository.AnalysisEngine
 import com.pam.recap.domain.repository.AnalysisEngineConfiguration
@@ -45,6 +43,7 @@ import javax.inject.Inject
  */
 class RequestAnalysisUseCase @Inject constructor(
     private val computeSummary: ComputeMonthlySummaryUseCase,
+    private val validator: AnalysisValidator,
     private val consents: ConsentRepository,
     private val analyses: AnalysisRepository,
     private val budgets: BudgetRepository,
@@ -99,12 +98,12 @@ class RequestAnalysisUseCase @Inject constructor(
 
         var regeneration = 0
         var raw = analyzeWithFallback(engine, payload)
-        var validation = validate(raw)
-        if (!validation.isValid && regenerate) {
+        var validation = validator.validate(raw, payload)
+        if (!validation.isValid) {
             // FR-37: exactly one bounded regeneration, never an unbounded retry loop.
             regeneration = 1
             raw = analyzeWithFallback(engine, payload)
-            validation = validate(raw)
+            validation = validator.validate(raw, payload)
         }
         if (raw == null || !validation.isValid) {
             return Outcome.Failure(AppError.Validation(AppErrorRules.ANALYSIS_REJECTED))
@@ -166,42 +165,5 @@ class RequestAnalysisUseCase @Inject constructor(
         return null
     }
 
-    /**
-     * FR-36/FR-37 validation: every observation/suggestion must cite at least one known summary
-     * metric key and carry non-blank text. An invented key means the provider hallucinated
-     * evidence, so the output is rejected.
-     */
-    private fun validate(raw: RawAnalysis?): ValidationOutcome {
-        if (raw == null) {
-            return ValidationOutcome(isValid = false, issues = listOf(ISSUE_NO_OUTPUT))
-        }
-        val issues = buildList {
-            if (raw.observations.isEmpty()) add(ISSUE_NO_OBSERVATIONS)
-            raw.observations.forEach { observation ->
-                if (observation.text.isBlank()) add(ISSUE_BLANK_TEXT)
-                if (observation.metricKeys.isEmpty()) {
-                    add(ISSUE_MISSING_EVIDENCE)
-                } else if (observation.metricKeys.any { it !in MetricKeys.all }) {
-                    add(ISSUE_UNKNOWN_METRIC)
-                }
-            }
-            raw.suggestions.forEach { suggestion ->
-                if (suggestion.text.isBlank()) add(ISSUE_BLANK_TEXT)
-                if (suggestion.metricKeys.isEmpty()) {
-                    add(ISSUE_MISSING_EVIDENCE)
-                } else if (suggestion.metricKeys.any { it !in MetricKeys.all }) {
-                    add(ISSUE_UNKNOWN_METRIC)
-                }
-            }
-        }
-        return ValidationOutcome(isValid = issues.isEmpty(), issues = issues.distinct())
-    }
 
-    private companion object {
-        const val ISSUE_NO_OUTPUT = "no_output"
-        const val ISSUE_NO_OBSERVATIONS = "no_observations"
-        const val ISSUE_BLANK_TEXT = "blank_text"
-        const val ISSUE_MISSING_EVIDENCE = "missing_evidence"
-        const val ISSUE_UNKNOWN_METRIC = "unknown_metric_key"
-    }
 }
