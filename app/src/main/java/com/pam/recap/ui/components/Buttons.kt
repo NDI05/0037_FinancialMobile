@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -111,7 +112,7 @@ fun PillButton(
     Box(
         modifier = modifier
             .minimumInteractiveComponentSize()
-            .height(size)
+            .heightIn(min = size)
             .clip(RoundedCornerShape(PamRadius.pill))
             .background(container)
             .then(if (border != null) Modifier.border(border, RoundedCornerShape(PamRadius.pill)) else Modifier)
@@ -130,7 +131,7 @@ fun PillButton(
             .semantics {
                 if (loading) contentDescription = loadingDescription
             }
-            .padding(horizontal = PamSpacing.lg),
+            .padding(horizontal = PamSpacing.lg, vertical = PamSpacing.xs),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -250,7 +251,7 @@ fun SearchField(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(PamSize.minTouch)
+            .heightIn(min = PamSize.minTouch)
             .clip(RoundedCornerShape(PamRadius.pill))
             .background(GlassFill)
             .border(1.dp, GlassBorder, RoundedCornerShape(PamRadius.pill))

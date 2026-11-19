@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -96,7 +97,7 @@ import com.pam.recap.ui.util.coverageBannerRes
 @Composable
 fun OverviewScreen(
     onOpenSettings: () -> Unit,
-    onOpenTransactions: (categoryCode: String?, dayIso: String?) -> Unit,
+    onOpenTransactions: (categoryCode: String?, monthId: String?) -> Unit,
     onOpenTransaction: (String) -> Unit,
     onOpenImport: () -> Unit,
     modifier: Modifier = Modifier,
@@ -161,7 +162,7 @@ fun OverviewScreen(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clickable { onOpenTransactions(null, null) },
+                                .clickable { onOpenTransactions(null, month.id()) },
                         ) {
                             StatTile(
                                 eyebrow = stringResource(R.string.overview_gross_in),
@@ -178,7 +179,7 @@ fun OverviewScreen(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clickable { onOpenTransactions(null, null) },
+                                .clickable { onOpenTransactions(null, month.id()) },
                         ) {
                             StatTile(
                                 eyebrow = stringResource(R.string.overview_gross_out),
@@ -210,8 +211,8 @@ fun OverviewScreen(
                     item {
                         CategoryBreakdown(
                             summary = summary,
-                            onOpenCategory = { code -> onOpenTransactions(code, null) },
-                            onSeeAll = { onOpenTransactions(null, null) },
+                            onOpenCategory = { code -> onOpenTransactions(code, month.id()) },
+                            onSeeAll = { onOpenTransactions(null, month.id()) },
                         )
                     }
                 } else {
@@ -233,7 +234,7 @@ fun OverviewScreen(
                                     style = LabelM,
                                     color = OnInkMuted,
                                     modifier = Modifier
-                                        .clickable { onOpenTransactions(null, null) }
+                                        .clickable { onOpenTransactions(null, month.id()) }
                                         .padding(PamSpacing.xs),
                                 )
                             },
@@ -439,7 +440,7 @@ private fun CompositionCard(summary: MonthlySummary) {
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = stringResource(R.string.overview_uncategorized_count, summary.uncategorizedCount),
+                        text = pluralStringResource(R.plurals.overview_uncategorized_count, summary.uncategorizedCount, summary.uncategorizedCount),
                         style = TitleS,
                         color = OnInkFaint,
                     )
@@ -539,7 +540,7 @@ private fun CategoryRow(total: CategoryTotal, share: Float, onClick: () -> Unit)
                 maxLines = 1,
             )
             Text(
-                text = stringResource(R.string.overview_transaction_count, total.transactionCount),
+                text = pluralStringResource(R.plurals.overview_transaction_count, total.transactionCount, total.transactionCount),
                 style = LabelM,
                 color = OnInkFaint,
             )

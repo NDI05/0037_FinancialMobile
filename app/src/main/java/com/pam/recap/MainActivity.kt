@@ -9,21 +9,21 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import com.pam.recap.core.util.ActivityHolder
 import com.pam.recap.data.gmail.GoogleAuthBridge
+import com.pam.recap.ui.navigation.PamNavHost
+import com.pam.recap.ui.theme.Ink
 import com.pam.recap.ui.theme.PamTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 /**
- * Temporary host for the Stage A foundation. The navigation graph and the real screens arrive in
- * the UI stage; this activity only proves the data layer runs and provides the two platform hooks
- * the real Gmail authorization needs.
+ * Single-activity host for the Compose navigation graph.
+ *
+ * Keeps the two platform hooks the real Gmail flow needs: [ActivityHolder] for Credential Manager /
+ * Google authorization, and the [GoogleAuthBridge] Activity-result forwarder. `FLAG_SECURE` stays on
+ * so the recap never appears in the recents thumbnail (NFR-16).
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -38,23 +38,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         activityHolder.attach(this)
-        // NFR-16: keep the recap out of the recents thumbnail.
         window.setFlags(
             WindowManager.LayoutParams.FLAG_SECURE,
             WindowManager.LayoutParams.FLAG_SECURE,
         )
         setContent {
             PamTheme {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(R.string.stage_a_ready),
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
+                Box(modifier = Modifier.fillMaxSize().background(Ink)) {
+                    PamNavHost()
                 }
             }
         }

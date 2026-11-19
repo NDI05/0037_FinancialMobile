@@ -11,12 +11,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -50,6 +52,7 @@ import com.pam.recap.ui.util.categoryLabelRes
 @Composable
 fun TransactionsScreen(
     onOpenTransaction: (String) -> Unit,
+    onOpenManualEntry: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: TransactionsViewModel = hiltViewModel(),
 ) {
@@ -59,7 +62,18 @@ fun TransactionsScreen(
     PamScaffold(
         modifier = modifier,
         showAurora = false,
-        topBar = { GlassTopBar(title = stringResource(R.string.transactions_title)) },
+        topBar = {
+            GlassTopBar(
+                title = stringResource(R.string.transactions_title),
+                actions = {
+                    com.pam.recap.ui.components.CircularIconWell(
+                        icon = Icons.Rounded.Add,
+                        contentDescription = stringResource(R.string.manual_title),
+                        onClick = onOpenManualEntry,
+                    )
+                },
+            )
+        },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -106,7 +120,7 @@ fun TransactionsScreen(
             ) {
                 EyebrowText(text = stringResource(R.string.transactions_eyebrow))
                 Text(
-                    text = stringResource(R.string.transactions_count, state.items.size),
+                    text = pluralStringResource(R.plurals.transactions_count, state.items.size, state.items.size),
                     style = LabelM,
                     color = OnInkMuted,
                     modifier = Modifier.padding(start = PamSpacing.xs),

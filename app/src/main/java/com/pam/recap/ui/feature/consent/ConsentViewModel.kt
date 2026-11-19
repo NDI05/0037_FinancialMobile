@@ -68,15 +68,15 @@ class ConsentViewModel @Inject constructor(
                 noticeVersion = NoticeVersion.CURRENT,
                 decision = if (gmail) ConsentDecision.GRANTED else ConsentDecision.DECLINED,
             )
-            val ai = current.aiGranted
-            if (ai != null) {
-                recordConsent(
-                    ownerId = ownerId,
-                    purpose = ConsentPurpose.AI_PROCESSING,
-                    noticeVersion = NoticeVersion.CURRENT,
-                    decision = if (ai) ConsentDecision.GRANTED else ConsentDecision.DECLINED,
-                )
-            }
+            // FR-03: both decisions are recorded. An untouched AI switch means "not granted",
+            // which the analysis surface then treats as a decision the user can revisit.
+            val aiGranted = current.aiGranted == true
+            recordConsent(
+                ownerId = ownerId,
+                purpose = ConsentPurpose.AI_PROCESSING,
+                noticeVersion = NoticeVersion.CURRENT,
+                decision = if (aiGranted) ConsentDecision.GRANTED else ConsentDecision.DECLINED,
+            )
             _state.update { it.copy(isSaving = false, finished = true) }
         }
     }
