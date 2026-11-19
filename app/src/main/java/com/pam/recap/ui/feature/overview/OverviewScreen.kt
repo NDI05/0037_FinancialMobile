@@ -99,7 +99,7 @@ fun OverviewScreen(
     onOpenSettings: () -> Unit,
     onOpenTransactions: (categoryCode: String?, monthId: String?) -> Unit,
     onOpenTransaction: (String) -> Unit,
-    onOpenImport: () -> Unit,
+    onOpenImport: (monthId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: OverviewViewModel = hiltViewModel(),
 ) {
@@ -202,7 +202,7 @@ fun OverviewScreen(
                     item {
                         CoverageBanner(
                             coverage = summary.coverage,
-                            onOpenImport = onOpenImport,
+                            onOpenImport = { onOpenImport(month.id()) },
                         )
                     }
                 }
@@ -219,7 +219,7 @@ fun OverviewScreen(
                     item {
                         EmptyMonthCard(
                             coverage = summary.coverage,
-                            onOpenImport = onOpenImport,
+                            onOpenImport = { onOpenImport(month.id()) },
                         )
                     }
                 }
@@ -257,7 +257,7 @@ fun OverviewScreen(
                 item {
                     ImportCta(
                         lastImportAt = state.connection?.lastImportAt,
-                        onOpenImport = onOpenImport,
+                        onOpenImport = { onOpenImport(month.id()) },
                     )
                 }
             } else if (state.error != null) {

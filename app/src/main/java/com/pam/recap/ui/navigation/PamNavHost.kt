@@ -138,7 +138,7 @@ fun PamNavHost(modifier: Modifier = Modifier) {
                     onOpenTransaction = { id ->
                         navController.navigate(PamDestination.TransactionDetail(id))
                     },
-                    onOpenImport = { navController.navigate(PamDestination.ImportJob()) },
+                    onOpenImport = { monthId -> navController.navigate(PamDestination.ImportJob(monthId = monthId)) },
                 )
             }
 
