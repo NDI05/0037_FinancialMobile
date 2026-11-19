@@ -198,8 +198,8 @@ Housing refund  CREDIT    100,000.00  Housing refund (linked)
 | OI-02 | Sender allow-list + subject patterns are data in `LivinTemplateRegistry`, versioned `v1`. | Configurable without code change; documents the observed template. |
 | OI-03 | Incoming-transfer template unverified ⇒ **manual income only**, as the SRS mandates. | Matches A4. |
 | OI-05 | Ingestion buffer 3 days, historical range 24 months. | Aligns NFR-15. |
-| OI-07 | LLM is reached through `AnalysisEngine`. Default = `OnDeviceAnalysisEngine` (deterministic, evidence-bound). `RemoteAnalysisEngine` present and enabled only when a backend URL + consent exist. | Keeps FR-34…FR-41 semantics testable offline; NFR-26 satisfied. |
-| OI-08 | Single-module app, Hilt, Room+SQLCipher, DataStore, Navigation Compose. No backend in this deliverable. | Scope of an academic release 1. |
+| OI-07 | LLM is reached through `AnalysisEngine`. Default = `OnDeviceAnalysisEngine` (deterministic, evidence-bound). `RemoteAnalysisEngine` present and enabled only when a backend URL + consent exist. | Keeps FR-34…FR-41 semantics testable offline; NFR-26 satisfied. **Resolved:** a backend now exists (`backend/`), reaches OpenAI **or** OpenRouter through one OpenAI-compatible adapter, and is gated by `PAM_BACKEND_BASE_URL`. See `06_BACKEND_CONTRACT.md`. |
+| OI-08 | Single-module app, Hilt, Room+SQLCipher, DataStore, Navigation Compose. Backend: Node 24 + TypeScript + Express 5 + SQLite in `backend/`, field-level AES-256-GCM. | **Resolved** for release 1; Postgres swap is a driver change behind the store layer. |
 | OI-10 | Accepted: one mailbox, Livin only, IDR, Indonesian UI, Asia/Jakarta, API 26+. | Per SRS. |
 | OI-12 | Budget planning **included** (Medium). CSV/PDF export, reminders, background schedules **deferred**. | Medium feature is cheap here; deferrals stay out. |
 

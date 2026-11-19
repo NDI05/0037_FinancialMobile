@@ -125,6 +125,50 @@ allow-listed aggregate projection only (FR-35).
 
 ---
 
+## Backend
+
+`backend/` is a Node 24 + TypeScript service (Express 5, `node:sqlite`, zero native deps) that
+owns everything the device must not: Google ID-token verification, revocable sessions, consent
+enforcement, aggregate storage, the LLM call with output validation, quotas, and deletion.
+
+```bash
+cd backend
+npm install
+npm start                     # http://127.0.0.1:8080 — fake LLM, local SQLite, no config needed
+bash scripts/smoke.sh         # 13-step happy path against the running server
+npm test                      # 83 contract tests
+```
+
+Then build the app pointed at it:
+
+```bash
+cd pam-app
+./scripts/build.sh :app:assembleDebug -PPAM_BACKEND_BASE_URL=http://10.0.2.2:8080
+```
+
+`10.0.2.2` is how the Android emulator reaches the host's `localhost`. The device and the backend
+must agree on the contract in [`docs/06_BACKEND_CONTRACT.md`](docs/06_BACKEND_CONTRACT.md); the
+build emits the app's exact request body to `app/build/contract/analysis-request.json`, which can
+be replayed against a live server with `curl` to prove compatibility without a device.
+
+Without `PAM_BACKEND_BASE_URL` the app uses the deterministic on-device engine and pushes nothing
+off the device — the offline demo path is unchanged.
+
+### What the backend never receives
+
+No email body, subject, sender, Gmail message id, OAuth token, card PAN, customer name, merchant
+name, private note or transaction row. Only the allow-listed monthly aggregate on
+`AiAggregatePayload` plus the metrics it cites. The service rejects any other field (FR-35,
+NFR-19) and stores even that as AES-256-GCM ciphertext (NFR-16).
+
+## Going from demo to real Google
+
+The app ships in demo mode on purpose (OI-01): no Google Cloud project exists yet. Everything
+needed to switch it on — the two OAuth clients, the consent screen with the restricted
+`gmail.readonly` scope, the exact registered package names and SHA-1 fingerprints, and a
+troubleshooting table of every `DEVELOPER_ERROR` you can hit — is in
+[`docs/05_REAL_GOOGLE_SETUP.md`](docs/05_REAL_GOOGLE_SETUP.md).
+
 ## Architecture
 
 Single Gradle module, Hilt, MVVM with unidirectional state. The dependency rule is
