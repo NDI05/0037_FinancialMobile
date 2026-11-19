@@ -47,9 +47,22 @@ object PamGradients {
         radius = 900f,
     )
 
-    fun warmBloom() = Brush.radialGradient(
-        colors = listOf(AmberDeep.copy(alpha = 0.42f), Amber.copy(alpha = 0.12f), Color.Transparent),
-        radius = 700f,
+    /**
+     * Warm corner bloom. The radius and centre must be supplied by the caller so the gradient's
+     * falloff ends exactly at the drawn shape's edge — a fixed radius produces a hard-edged disc.
+     */
+    fun warmBloom(
+        radius: Float,
+        center: Offset,
+        coreAlpha: Float = 0.38f,
+    ) = Brush.radialGradient(
+        colors = listOf(
+            AmberDeep.copy(alpha = coreAlpha),
+            Amber.copy(alpha = coreAlpha * 0.28f),
+            Color.Transparent,
+        ),
+        center = center,
+        radius = radius.coerceAtLeast(1f),
     )
 
     fun ringTrack() = Brush.sweepGradient(

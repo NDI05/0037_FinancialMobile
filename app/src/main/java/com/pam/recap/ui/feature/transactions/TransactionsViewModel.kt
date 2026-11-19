@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
@@ -140,13 +141,19 @@ class TransactionsViewModel @Inject constructor(
                 transaction.merchantLabel?.lowercase()?.contains(needle) == true
         }
 
-        private fun LocalDate.toCell(count: Int): DayStripCell = DayStripCell(
-            date = this,
-            weekdayLabel = format(DateTimeFormatter.ofPattern("EEEEE", Locale.getDefault())),
-            dayLabel = format(DateTimeFormatter.ofPattern("d", Locale.getDefault())),
-            hasData = count > 0,
-            contentDescription = format(DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault())),
-        )
+        private fun LocalDate.toCell(count: Int): DayStripCell {
+            val today = LocalDate.now(ZoneId.of(JakartaMonth.ZONE.id))
+            return DayStripCell(
+                date = this,
+                weekdayLabel = format(DateTimeFormatter.ofPattern("EEE", Locale.getDefault())),
+                dayLabel = format(DateTimeFormatter.ofPattern("d", Locale.getDefault())),
+                hasData = count > 0,
+                contentDescription = format(DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault())),
+                // Cells are built from the selected month, so this can only be true when today
+                // actually belongs to that month (C2-6).
+                isToday = this == today,
+            )
+        }
     }
 
     private fun MutableStateFlow<JakartaMonth?>.updateValue(transform: (JakartaMonth?) -> JakartaMonth?) {

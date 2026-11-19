@@ -22,6 +22,10 @@ import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,6 +83,19 @@ fun AnalysisScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val month = state.month
+
+    // C2-5: with consent already granted and no cached analysis for the frozen revision, the first
+    // open requests one so the walkthrough lands on content instead of a CTA. The disclosure card
+    // is rendered above and a failed request never retries itself.
+    var autoRequested by remember { mutableStateOf(false) }
+    LaunchedEffect(state.aiConsentGranted, state.analysis, state.error, state.canGenerate) {
+        if (!autoRequested && state.aiConsentGranted && state.analysis == null &&
+            state.error == null && state.canGenerate
+        ) {
+            autoRequested = true
+            viewModel.generate()
+        }
+    }
 
     PamScaffold(
         modifier = modifier,
@@ -249,7 +266,7 @@ private fun AnalysisHeader(analysis: Analysis) {
 }
 
 private fun AnalysisStatus.chipKind(): StatusChipKind = when (this) {
-    AnalysisStatus.AVAILABLE -> StatusChipKind.Complete
+    AnalysisStatus.AVAILABLE -> StatusChipKind.Available
     AnalysisStatus.PROVISIONAL -> StatusChipKind.Provisional
     AnalysisStatus.OUTDATED -> StatusChipKind.Outdated
     AnalysisStatus.HISTORICAL -> StatusChipKind.Historical
@@ -287,8 +304,10 @@ private fun ObservationPager(
         }
         Spacer(modifier = Modifier.height(PamSpacing.xs))
         Text(
+            // A full sentence at DisplayM (26 sp bold) becomes a wall of text; the featured
+            // card keeps the size hierarchy in its progress row and evidence chips instead.
             text = observation.text,
-            style = DisplayM,
+            style = HeadlineM,
             color = OnInk,
         )
         Spacer(modifier = Modifier.height(PamSpacing.sm))

@@ -1,6 +1,5 @@
 package com.pam.recap.ui.components
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -9,9 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,7 +39,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -159,78 +154,6 @@ fun PillButton(
                 color = contentColor.copy(alpha = alpha),
                 textAlign = TextAlign.Center,
             )
-        }
-    }
-}
-
-/** One option of a [PillToggleGroup]. */
-data class PillToggleOption<T>(
-    val value: T,
-    val label: String,
-)
-
-/**
- * Segmented control matching the reference: an inset dark track with a sliding white pill whose
- * label flips to ink when selected. Selection is announced for TalkBack, never conveyed by
- * colour alone.
- */
-@Composable
-fun <T> PillToggleGroup(
-    options: List<PillToggleOption<T>>,
-    selected: T,
-    onSelect: (T) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    require(options.isNotEmpty()) { "toggle group needs at least one option" }
-    val selectedIndex = options.indexOfFirst { it.value == selected }.coerceAtLeast(0)
-
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(PamSize.minTouch)
-            .clip(RoundedCornerShape(PamRadius.pill))
-            .background(TrackInset)
-            .padding(4.dp),
-    ) {
-        val pillWidth = maxWidth / options.size
-        val pillOffset by animateDpAsState(
-            targetValue = pillWidth * selectedIndex,
-            animationSpec = tween(durationMillis = 220),
-            label = "toggle-pill",
-        )
-
-        Box(
-            modifier = Modifier
-                .offset(x = pillOffset)
-                .width(pillWidth)
-                .fillMaxHeight()
-                .clip(RoundedCornerShape(PamRadius.pill))
-                .background(Color.White),
-        )
-
-        Row(modifier = Modifier.fillMaxWidth()) {
-            options.forEach { option ->
-                val isSelected = option.value == selected
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .minimumInteractiveComponentSize()
-                        .clip(RoundedCornerShape(PamRadius.pill))
-                        .clickable(role = Role.Tab) { onSelect(option.value) }
-                        .semantics {
-                            contentDescription = option.label
-                            this.selected = isSelected
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = option.label,
-                        style = LabelL,
-                        color = if (isSelected) Ink else OnInkMuted,
-                    )
-                }
-            }
         }
     }
 }

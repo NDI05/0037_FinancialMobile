@@ -33,6 +33,8 @@ import com.pam.recap.domain.model.Transaction
 import com.pam.recap.ui.components.CategoryChip
 import com.pam.recap.ui.components.CategoryGlyph
 import com.pam.recap.ui.components.ConfidenceBar
+import com.pam.recap.ui.components.amountLabel
+import com.pam.recap.ui.components.moneyToneColor
 import com.pam.recap.ui.components.ConsentSwitchRow
 import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassCard
@@ -40,7 +42,6 @@ import com.pam.recap.ui.components.GlassTopBar
 import com.pam.recap.ui.components.KeyValueRow
 import com.pam.recap.ui.components.LabelledField
 import com.pam.recap.ui.components.LoadingShimmer
-import com.pam.recap.ui.components.MoneyText
 import com.pam.recap.ui.components.MoneyTone
 import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
@@ -128,11 +129,18 @@ fun TransactionDetailScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(PamSpacing.sm))
-                MoneyText(
-                    amount = transaction.amount,
-                    tone = if (transaction.direction == Direction.CREDIT) MoneyTone.Income else MoneyTone.Expense,
-                    style = DisplayL,
+                Text(
+                    text = amountLabel(transaction.amount, transaction.currency),
+                    style = DisplayL.copy(fontFeatureSettings = "tnum"),
+                    color = moneyToneColor(
+                        if (transaction.direction == Direction.CREDIT) MoneyTone.Income else MoneyTone.Expense,
+                    ),
+                    maxLines = 1,
                 )
+                if (!transaction.isIdr) {
+                    Spacer(modifier = Modifier.height(PamSpacing.xxs))
+                    StatusChip(kind = StatusChipKind.Unavailable)
+                }
                 if (transaction.isLowConfidence) {
                     Spacer(modifier = Modifier.height(PamSpacing.xs))
                     StatusChip(kind = StatusChipKind.LowConfidence)

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +38,7 @@ import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
 import com.pam.recap.ui.components.PillButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.WarningAmber
 import com.pam.recap.ui.components.StatusChip
 import com.pam.recap.ui.components.StatusChipKind
@@ -93,13 +93,13 @@ fun BudgetPlanScreen(
                 color = OnInk,
             )
             if (state.isSeededFromHistory) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // F4: chip above the sentence so a 200 % font scale wraps instead of squeezing.
+                Column(verticalArrangement = Arrangement.spacedBy(PamSpacing.xxs)) {
                     StatusChip(kind = StatusChipKind.Provisional)
                     Text(
                         text = stringResource(R.string.budget_seeded_label),
                         style = LabelM,
                         color = OnInkMuted,
-                        modifier = Modifier.padding(start = PamSpacing.xs),
                     )
                 }
             }
@@ -110,6 +110,7 @@ fun BudgetPlanScreen(
                     value = state.expectedIncomeText,
                     onValueChange = viewModel::setExpectedIncome,
                     placeholder = stringResource(R.string.manual_amount_placeholder),
+                    suffix = stringResource(R.string.currency_code),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
                 Spacer(modifier = Modifier.height(PamSpacing.sm))
@@ -118,6 +119,7 @@ fun BudgetPlanScreen(
                     value = state.plannedSavingsText,
                     onValueChange = viewModel::setPlannedSavings,
                     placeholder = stringResource(R.string.manual_amount_placeholder),
+                    suffix = stringResource(R.string.currency_code),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
             }
@@ -129,7 +131,9 @@ fun BudgetPlanScreen(
                     stringResource(R.string.budget_feasible, IdrFormatter.format(gap.gap))
                 },
                 tone = if (gap.isShortfall) MoneyTone.Expense else MoneyTone.Income,
-                icon = Icons.Rounded.WarningAmber,
+                // F4: the icon must agree with the tone; a warning triangle next to a feasible
+                // plan reads as an error.
+                icon = if (gap.isShortfall) Icons.Rounded.WarningAmber else Icons.Rounded.CheckCircle,
             )
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -148,13 +152,16 @@ fun BudgetPlanScreen(
                             color = OnInk,
                             modifier = Modifier.weight(1f),
                         )
+                        // C2-1: no fixed width — the field keeps its own share of the row so a
+                        // 200 % font scale grows it instead of clipping the amount.
                         LabelledField(
-                            label = "",
+                            label = null,
                             value = state.limitTexts[category].orEmpty(),
                             onValueChange = { viewModel.setLimit(category, it) },
                             placeholder = stringResource(R.string.manual_amount_placeholder),
+                            suffix = stringResource(R.string.currency_code),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.width(140.dp),
+                            modifier = Modifier.weight(1f),
                         )
                     }
                 }

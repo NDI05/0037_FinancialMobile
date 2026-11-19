@@ -91,25 +91,23 @@ fun ImportJobScreen(
             }
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
+                // F6: one state word only — the chip carries it, the banner below explains it.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.End,
                 ) {
-                    Text(
-                        text = stringResource(importStateRes(job.state)),
-                        style = TitleM,
-                        color = OnInk,
-                    )
                     StatusChip(kind = importChipKind(job.state))
                 }
                 Spacer(modifier = Modifier.height(PamSpacing.xs))
                 Text(
-                    text = stringResource(
-                        R.string.import_pages,
-                        job.pagesProcessed,
-                        job.pagesExpected ?: job.pagesProcessed,
-                    ),
+                    // Never claim "1 of 1" when the total is unknown: a partial run has no
+                    // horizon yet, and "of 1" would read as complete (NFR-11).
+                    text = if (job.pagesExpected != null) {
+                        stringResource(R.string.import_pages, job.pagesProcessed, job.pagesExpected)
+                    } else {
+                        stringResource(R.string.import_pages_processed, job.pagesProcessed)
+                    },
                     style = LabelM,
                     color = OnInkMuted,
                 )
@@ -248,14 +246,7 @@ private fun CountTile(eyebrow: String, value: Int, modifier: Modifier = Modifier
     }
 }
 
-private fun importStateRes(state: ImportState): Int = when (state) {
-    ImportState.CREATED, ImportState.RUNNING -> R.string.import_state_running
-    ImportState.COMPLETE -> R.string.import_state_complete
-    ImportState.PARTIAL -> R.string.import_state_partial
-    ImportState.FAILED -> R.string.import_state_failed
-    ImportState.PERMISSION_REQUIRED -> R.string.import_state_permission
-    ImportState.EMPTY -> R.string.import_state_empty
-}
+
 
 private fun importChipKind(state: ImportState): StatusChipKind = when (state) {
     ImportState.CREATED, ImportState.RUNNING -> StatusChipKind.Provisional

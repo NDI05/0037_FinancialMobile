@@ -29,6 +29,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.pam.recap.R
 import com.pam.recap.ui.components.BottomNavBar
 import com.pam.recap.ui.components.BottomNavItem
@@ -142,12 +143,23 @@ fun PamNavHost(modifier: Modifier = Modifier) {
                 )
             }
 
-            composable<PamDestination.Transactions> {
+            composable<PamDestination.Transactions> { entry ->
+                val args = entry.toRoute<PamDestination.Transactions>()
+                // A tab tap lands on the bare route; a drill-down carries a filter, and only the
+                // drill-down gets a back well (C2-2).
+                val openedAsDrillDown = args.monthId != null ||
+                    args.categoryCode != null ||
+                    args.dayIso != null
                 TransactionsScreen(
                     onOpenTransaction = { id ->
                         navController.navigate(PamDestination.TransactionDetail(id))
                     },
                     onOpenManualEntry = { navController.navigate(PamDestination.ManualEntry()) },
+                    onBack = if (openedAsDrillDown) {
+                        { navController.popBackStack() }
+                    } else {
+                        null
+                    },
                 )
             }
 

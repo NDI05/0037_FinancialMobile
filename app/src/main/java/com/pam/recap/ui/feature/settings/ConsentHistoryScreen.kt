@@ -118,7 +118,7 @@ private fun purposeRes(purpose: ConsentPurpose): Int = when (purpose) {
 }
 
 private fun decisionChip(decision: ConsentDecision): StatusChipKind = when (decision) {
-    ConsentDecision.GRANTED -> StatusChipKind.Complete
-    ConsentDecision.DECLINED -> StatusChipKind.Unavailable
+    ConsentDecision.GRANTED -> StatusChipKind.Granted
+    ConsentDecision.DECLINED -> StatusChipKind.Declined
     ConsentDecision.WITHDRAWN -> StatusChipKind.Historical
 }

@@ -99,11 +99,14 @@ data class DayStripCell(
     val dayLabel: String,
     val hasData: Boolean,
     val contentDescription: String,
+    /** True only when "today" falls inside the month this strip belongs to (C2-6). */
+    val isToday: Boolean = false,
 )
 
 /**
  * Horizontal day selector echoing the reference's Sun–Sat strip: weekday letter above the day
- * number, with a gradient ring on the active day and a dot when the day has transactions.
+ * number, a gradient fill on the selected day, a thin ring on today (only when today belongs to the
+ * selected month) and a dot when the day has transactions.
  */
 @Composable
 fun MonthStrip(
@@ -149,6 +152,13 @@ fun MonthStrip(
                     modifier = Modifier
                         .size(30.dp)
                         .clip(CircleShape)
+                        .then(
+                            if (day.isToday && !isSelected) {
+                                Modifier.border(1.dp, com.pam.recap.ui.theme.Violet, CircleShape)
+                            } else {
+                                Modifier
+                            },
+                        )
                         .background(if (isSelected) PamGradients.brand else SolidColor(androidx.compose.ui.graphics.Color.Transparent)),
                     contentAlignment = Alignment.Center,
                 ) {

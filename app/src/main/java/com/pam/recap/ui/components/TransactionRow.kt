@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -38,6 +39,7 @@ import com.pam.recap.ui.theme.OnInkFaint
 import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.PamRadius
 import com.pam.recap.ui.theme.PamSpacing
+import com.pam.recap.ui.theme.Violet
 import com.pam.recap.ui.theme.TitleM
 import com.pam.recap.ui.theme.TitleS
 import com.pam.recap.ui.theme.WarningAmber
@@ -56,6 +58,8 @@ fun TransactionRow(
     direction: Direction,
     modifier: Modifier = Modifier,
     isLowConfidence: Boolean = false,
+    isManual: Boolean = false,
+    currency: String = "IDR",
     onClick: (() -> Unit)? = null,
 ) {
     Row(
@@ -105,13 +109,33 @@ fun TransactionRow(
                         modifier = Modifier.size(12.dp),
                     )
                 }
+                if (isManual) {
+                    // FR-26: a manual entry must be identifiable on every surface.
+                    Text(
+                        text = stringResource(com.pam.recap.R.string.status_manual),
+                        style = LabelM,
+                        color = Violet,
+                        maxLines = 1,
+                    )
+                }
+                if (!com.pam.recap.core.money.IdrFormatter.isIdr(currency)) {
+                    Text(
+                        text = stringResource(com.pam.recap.R.string.non_idr_marker),
+                        style = LabelM,
+                        color = WarningAmber,
+                        maxLines = 1,
+                    )
+                }
             }
         }
 
-        MoneyText(
-            amount = amount,
-            tone = if (direction == Direction.CREDIT) MoneyTone.Income else MoneyTone.Expense,
-            style = TitleM,
+        Text(
+            text = amountLabel(amount, currency),
+            style = TitleM.copy(fontFeatureSettings = "tnum"),
+            color = moneyToneColor(
+                if (direction == Direction.CREDIT) MoneyTone.Income else MoneyTone.Expense,
+            ),
+            maxLines = 1,
         )
 
         if (onClick != null) {
@@ -189,5 +213,28 @@ fun AvatarStack(
             }
             Spacer(modifier = Modifier.width(0.dp))
         }
+    }
+}
+
+/** Selectable pill without a category glyph, used for the "all categories" filter. */
+@Composable
+fun FilterPill(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(PamRadius.pill)
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(if (selected) Violet.copy(alpha = 0.18f) else GlassFill)
+            .border(1.dp, if (selected) Violet.copy(alpha = 0.6f) else GlassBorder, shape)
+            .clickable(onClick = onClick)
+            .minimumInteractiveComponentSize()
+            .padding(horizontal = PamSpacing.md, vertical = PamSpacing.xs),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text = label, style = TitleM, color = if (selected) OnInk else OnInkMuted, maxLines = 1)
     }
 }

@@ -73,7 +73,7 @@ fun ConsentSwitchRow(
                 checkedThumbColor = Ink,
                 checkedTrackColor = Violet,
                 checkedBorderColor = Violet,
-                uncheckedThumbColor = OnInkMuted,
+                uncheckedThumbColor = com.pam.recap.ui.theme.OnInkFaint,
                 uncheckedTrackColor = TrackInset,
                 uncheckedBorderColor = TrackInset,
             ),
@@ -87,7 +87,7 @@ fun ConsentSwitchRow(
  */
 @Composable
 fun LabelledField(
-    label: String,
+    label: String?,
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -97,7 +97,9 @@ fun LabelledField(
         androidx.compose.foundation.text.KeyboardOptions.Default,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(text = label, style = com.pam.recap.ui.theme.LabelM, color = OnInkMuted)
+        if (!label.isNullOrBlank()) {
+            Text(text = label, style = com.pam.recap.ui.theme.LabelM, color = OnInkMuted)
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()

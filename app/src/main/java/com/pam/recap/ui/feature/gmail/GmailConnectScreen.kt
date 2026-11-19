@@ -188,7 +188,7 @@ private fun guidanceRes(state: GmailConnectionState): Int = when (state) {
 }
 
 private fun stateChipKind(state: GmailConnectionState): StatusChipKind = when (state) {
-    GmailConnectionState.CONNECTED -> StatusChipKind.Complete
+    GmailConnectionState.CONNECTED -> StatusChipKind.Connected
     GmailConnectionState.AUTHORIZATION_PENDING -> StatusChipKind.Provisional
     GmailConnectionState.REAUTHORIZATION_REQUIRED -> StatusChipKind.Partial
     GmailConnectionState.UNAVAILABLE -> StatusChipKind.Unavailable

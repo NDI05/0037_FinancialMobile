@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -28,6 +27,7 @@ import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.ui.components.CategoryChip
 import com.pam.recap.ui.components.EmptyState
+import com.pam.recap.ui.components.FilterPill
 import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassTopBar
 import com.pam.recap.ui.components.LoadingShimmer
@@ -37,6 +37,7 @@ import com.pam.recap.ui.components.PamScaffold
 import com.pam.recap.ui.components.SearchField
 import com.pam.recap.ui.components.TransactionRow
 import com.pam.recap.ui.theme.LabelM
+import com.pam.recap.ui.theme.OnInkFaint
 import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.PamSize
 import com.pam.recap.ui.theme.PamSpacing
@@ -54,6 +55,8 @@ fun TransactionsScreen(
     onOpenTransaction: (String) -> Unit,
     onOpenManualEntry: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Present only when the screen was opened as a drill-down (C2-2). */
+    onBack: (() -> Unit)? = null,
     viewModel: TransactionsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -65,6 +68,7 @@ fun TransactionsScreen(
         topBar = {
             GlassTopBar(
                 title = stringResource(R.string.transactions_title),
+                onBack = onBack,
                 actions = {
                     com.pam.recap.ui.components.CircularIconWell(
                         icon = Icons.Rounded.Add,
@@ -92,6 +96,14 @@ fun TransactionsScreen(
             )
 
             if (state.days.isNotEmpty()) {
+                // C2-6: the strip lists only days that actually carry transactions, so it needs
+                // the month in words to read as "days of February", not as a partial week.
+                Text(
+                    text = stringResource(R.string.transactions_days_caption, month.label()),
+                    style = LabelM,
+                    color = OnInkFaint,
+                    modifier = Modifier.padding(top = PamSpacing.xs),
+                )
                 MonthStrip(
                     days = state.days,
                     selectedDate = state.selectedDay,
@@ -183,6 +195,8 @@ private fun TransactionList(
                     amount = transaction.amount,
                     direction = transaction.direction,
                     isLowConfidence = transaction.isLowConfidence,
+                    isManual = transaction.isManual,
+                    currency = transaction.currency,
                     onClick = { onOpenTransaction(transaction.id) },
                 )
             }
@@ -198,26 +212,26 @@ private fun rowMeta(transaction: Transaction): String {
     return "$time · $category · $direction"
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun CategoryFilterRow(
     selected: Category?,
     onSelect: (Category?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyRow(
+    // F3: filters wrap instead of scrolling, so no chip is ever half-cut at the screen edge and
+    // the row keeps working at 200 % font scale.
+    androidx.compose.foundation.layout.FlowRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(PamSpacing.xs),
-        contentPadding = PaddingValues(horizontal = 0.dp),
+        verticalArrangement = Arrangement.spacedBy(PamSpacing.xs),
     ) {
-        item(key = "all") {
-            CategoryChip(
-                category = Category.UNCATEGORIZED,
-                label = stringResource(R.string.transactions_filter_all),
-                selected = selected == null,
-                onClick = { onSelect(null) },
-            )
-        }
-        items(items = Category.expenseCategories, key = { it.code }) { category ->
+        FilterPill(
+            label = stringResource(R.string.transactions_filter_all),
+            selected = selected == null,
+            onClick = { onSelect(null) },
+        )
+        Category.expenseCategories.forEach { category ->
             CategoryChip(
                 category = category,
                 label = stringResource(categoryLabelRes(category)),
@@ -227,3 +241,4 @@ private fun CategoryFilterRow(
         }
     }
 }
+

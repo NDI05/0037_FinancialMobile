@@ -171,10 +171,7 @@ class BudgetPlanViewModel @Inject constructor(
         }
     }
 
+    /** Grouped like the display (`2.875.000`) so an editable amount is never a wall of digits. */
     private fun Money.toInputText(): String =
-        if (isZero) "" else minor.let { value ->
-            val major = value / 100
-            val cents = (value % 100).toInt()
-            if (cents == 0) major.toString() else "$major,${cents.toString().padStart(2, '0')}"
-        }
+        if (isZero) "" else Money(minor).toDecimalString()
 }

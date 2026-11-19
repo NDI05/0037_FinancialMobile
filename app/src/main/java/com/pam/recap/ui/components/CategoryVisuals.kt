@@ -33,7 +33,9 @@ import com.pam.recap.ui.theme.IncomeMint
 import com.pam.recap.ui.theme.Magenta
 import com.pam.recap.ui.theme.OnInkFaint
 import com.pam.recap.ui.theme.Pink
+import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.Violet
+import com.pam.recap.ui.theme.VioletDeep
 import com.pam.recap.ui.theme.VioletSoft
 import com.pam.recap.ui.theme.WarningAmber
 
@@ -44,6 +46,8 @@ import com.pam.recap.ui.theme.WarningAmber
 @Composable
 fun categoryColor(role: CategoryColorRole): Color = when (role) {
     CategoryColorRole.INCOME_MINT -> IncomeMint
+    CategoryColorRole.VIOLET_DEEP -> VioletDeep
+    CategoryColorRole.SLATE -> OnInkMuted
     CategoryColorRole.BRAND_VIOLET -> Violet
     CategoryColorRole.BRAND_MAGENTA -> Magenta
     CategoryColorRole.BRAND_PINK -> Pink

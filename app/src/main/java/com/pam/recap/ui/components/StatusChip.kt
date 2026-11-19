@@ -11,10 +11,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.MailOutline
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Visibility
@@ -52,6 +54,18 @@ enum class StatusChipKind {
     Manual,
     LowConfidence,
     Unavailable,
+
+    /** A mailbox that is currently connected (not a coverage outcome). */
+    Connected,
+
+    /** A consent purpose whose latest decision is GRANTED. */
+    Granted,
+
+    /** A consent purpose whose latest decision is DECLINED. */
+    Declined,
+
+    /** A published analysis that is neither provisional nor outdated. */
+    Available,
 }
 
 /**
@@ -131,6 +145,30 @@ fun StatusChip(
             labelRes = R.string.status_unavailable
             icon = Icons.Rounded.CloudOff
             color = OnInkMuted
+        }
+
+        StatusChipKind.Connected -> {
+            labelRes = R.string.status_connected
+            icon = Icons.Rounded.Link
+            color = IncomeMint
+        }
+
+        StatusChipKind.Granted -> {
+            labelRes = R.string.status_granted
+            icon = Icons.Rounded.CheckCircle
+            color = IncomeMint
+        }
+
+        StatusChipKind.Declined -> {
+            labelRes = R.string.status_declined
+            icon = Icons.Rounded.Block
+            color = OnInkMuted
+        }
+
+        StatusChipKind.Available -> {
+            labelRes = R.string.status_available
+            icon = Icons.Rounded.CheckCircle
+            color = IncomeMint
         }
     }
 

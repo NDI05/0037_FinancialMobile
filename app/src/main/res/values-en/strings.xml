@@ -359,4 +359,13 @@
         <item quantity="one">%1$d transaction</item>
         <item quantity="other">%1$d transactions</item>
     </plurals>
+    <string name="transactions_days_caption">Days with transactions · %1$s</string>
+    <string name="overview_after_refund">After refund</string>
+    <string name="overview_refund_badge">Refund</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_granted">Granted</string>
+    <string name="status_declined">Declined</string>
+    <string name="non_idr_marker">Non-IDR</string>
+    <string name="status_available">Available</string>
+    <string name="import_pages_processed">Pages processed: %1$d</string>
 </resources>

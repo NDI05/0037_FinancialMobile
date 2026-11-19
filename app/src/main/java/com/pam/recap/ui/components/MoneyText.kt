@@ -59,6 +59,10 @@ fun MoneyText(
     style: TextStyle = MoneyXl,
     prefix: String? = null,
 ) {
+    val formatted = IdrFormatter.format(amount)
+    // Money must never be clipped: a truncated amount is a wrong amount. Long values step down
+    // one type tier at a time so the full digits always fit the available width.
+    val fitted = fittedStyle(style, formatted.length)
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -68,13 +72,22 @@ fun MoneyText(
             Text(text = prefix, style = TitleM, color = OnInkMuted)
         }
         Text(
-            text = IdrFormatter.format(amount),
-            style = style.copy(fontFeatureSettings = "tnum"),
+            text = formatted,
+            style = fitted.copy(fontFeatureSettings = "tnum"),
             color = moneyToneColor(tone),
             maxLines = 1,
         )
     }
 }
+
+/** Digit-count based type stepping so a long amount renders in full rather than clipped. */
+private fun fittedStyle(style: TextStyle, characters: Int): TextStyle = when {
+    characters <= 10 -> style
+    characters <= 12 -> style.copy(fontSize = style.fontSize * 0.86f, lineHeight = style.lineHeight * 0.86f)
+    characters <= 14 -> style.copy(fontSize = style.fontSize * 0.72f, lineHeight = style.lineHeight * 0.72f)
+    else -> style.copy(fontSize = style.fontSize * 0.6f, lineHeight = style.lineHeight * 0.6f)
+}
+
 
 /**
  * Percentage delta chip (FR-31). A zero/missing denominator renders the "not applicable" copy
@@ -108,6 +121,18 @@ fun AmountPill(
         Text(text = text, style = LabelM, color = color)
     }
 }
+
+/**
+ * Amount label for a row that may hold a non-IDR transaction (BR-04). IDR renders through
+ * [IdrFormatter]; anything else keeps its own currency code so a USD 12,00 row can never read as
+ * "Rp12" — the amount is exact minor units in both cases.
+ */
+fun amountLabel(amount: Money, currency: String): String =
+    if (IdrFormatter.isIdr(currency)) {
+        IdrFormatter.format(amount)
+    } else {
+        "$currency ${Money(amount.minor).toDecimalString()}"
+    }
 
 /** Compact amount used inside dense rows: same formatter, smaller style. */
 @Composable

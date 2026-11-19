@@ -99,7 +99,7 @@ fun SettingsScreen(
                     )
                     StatusChip(
                         kind = if (state.connection?.state?.grantsAccess == true) {
-                            StatusChipKind.Complete
+                            StatusChipKind.Connected
                         } else {
                             StatusChipKind.Empty
                         },
@@ -205,9 +205,9 @@ private fun ConsentSummaryRow(label: String, consent: Consent?) {
         Text(text = label, style = TitleM, color = OnInkMuted, modifier = Modifier.weight(1f))
         when {
             consent == null -> StatusChip(kind = StatusChipKind.Empty)
-            consent.isGranted -> StatusChip(kind = StatusChipKind.Complete)
+            consent.isGranted -> StatusChip(kind = StatusChipKind.Granted)
             consent.isWithdrawn -> StatusChip(kind = StatusChipKind.Historical)
-            else -> StatusChip(kind = StatusChipKind.Unavailable)
+            else -> StatusChip(kind = StatusChipKind.Declined)
         }
     }
 }

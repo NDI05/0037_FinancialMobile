@@ -380,4 +380,13 @@
         <item quantity="one">%1$d transaksi</item>
         <item quantity="other">%1$d transaksi</item>
     </plurals>
+    <string name="transactions_days_caption">Hari dengan transaksi · %1$s</string>
+    <string name="overview_after_refund">Setelah refund</string>
+    <string name="overview_refund_badge">Refund</string>
+    <string name="status_connected">Terhubung</string>
+    <string name="status_granted">Diberikan</string>
+    <string name="status_declined">Ditolak</string>
+    <string name="non_idr_marker">Non-IDR</string>
+    <string name="status_available">Tersedia</string>
+    <string name="import_pages_processed">Halaman diproses: %1$d</string>
 </resources>

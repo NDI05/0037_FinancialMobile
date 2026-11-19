@@ -21,7 +21,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +35,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,6 +45,7 @@ import com.pam.recap.core.money.PercentChange
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.CategoryTotal
+import com.pam.recap.domain.model.ClassifiedKind
 import com.pam.recap.domain.model.CoverageStatus
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.model.MonthlySummary
@@ -70,6 +74,8 @@ import com.pam.recap.ui.components.sharePercentText
 import com.pam.recap.ui.theme.BodyM
 import com.pam.recap.ui.theme.DisplayXl
 import com.pam.recap.ui.theme.GlassBorderStrong
+import com.pam.recap.ui.theme.HeadlineL
+import com.pam.recap.ui.theme.IncomeMint
 import com.pam.recap.ui.theme.LabelM
 import com.pam.recap.ui.theme.OnInk
 import com.pam.recap.ui.theme.OnInkFaint
@@ -85,6 +91,7 @@ import com.pam.recap.ui.theme.WarningAmber
 import com.pam.recap.ui.util.PamDateFormat
 import com.pam.recap.ui.util.categoryLabelRes
 import com.pam.recap.ui.util.coverageBannerRes
+import kotlin.math.roundToInt
 
 /**
  * §8 Overview — the flagship surface.
@@ -172,7 +179,7 @@ fun OverviewScreen(
                                 MoneyText(
                                     amount = summary.grossInflow,
                                     tone = MoneyTone.Income,
-                                    style = com.pam.recap.ui.theme.DisplayM,
+                                    style = com.pam.recap.ui.theme.HeadlineL,
                                 )
                             }
                         }
@@ -189,7 +196,7 @@ fun OverviewScreen(
                                 MoneyText(
                                     amount = summary.grossOutflow,
                                     tone = MoneyTone.Expense,
-                                    style = com.pam.recap.ui.theme.DisplayM,
+                                    style = com.pam.recap.ui.theme.HeadlineL,
                                 )
                             }
                         }
@@ -248,6 +255,7 @@ fun OverviewScreen(
                             amount = transaction.amount,
                             direction = transaction.direction,
                             isLowConfidence = transaction.isLowConfidence,
+                            currency = transaction.currency,
                             onClick = { onOpenTransaction(transaction.id) },
                             modifier = Modifier.padding(horizontal = 0.dp),
                         )
@@ -274,7 +282,15 @@ fun OverviewScreen(
 private fun deltaCaption(change: PercentChange?): String? = when (change) {
     null -> null
     PercentChange.NotApplicable -> stringResource(R.string.percent_not_applicable)
-    is PercentChange.Value -> stringResource(R.string.overview_vs_previous)
+    is PercentChange.Value -> {
+        val points = kotlin.math.abs(change.percent).roundToInt()
+        val percentage = if (change.isDecrease) {
+            stringResource(R.string.percent_decrease, points)
+        } else {
+            stringResource(R.string.percent_increase, points)
+        }
+        "$percentage ${stringResource(R.string.overview_vs_previous)}"
+    }
 }
 
 @Composable
@@ -303,10 +319,14 @@ private fun NetCashFlowHero(
     ) {
         // Amber bloom in the top-right corner, exactly like the reference's "Schedule" card.
         Canvas(modifier = Modifier.matchParentSize()) {
+            // Radius and centre are shared with the brush so the bloom fades out inside the card
+            // instead of ending on a visible circular edge.
+            val bloomRadius = size.maxDimension * 0.92f
+            val bloomCenter = Offset(size.width * 1.0f, size.height * 0.02f)
             drawCircle(
-                brush = PamGradients.warmBloom(),
-                radius = size.minDimension * 0.75f,
-                center = Offset(size.width * 0.95f, size.height * 0.02f),
+                brush = PamGradients.warmBloom(radius = bloomRadius, center = bloomCenter),
+                radius = bloomRadius,
+                center = bloomCenter,
             )
         }
         Column(modifier = Modifier.padding(PamSpacing.lg)) {
@@ -317,8 +337,7 @@ private fun NetCashFlowHero(
             ) {
                 StatusChip(kind = StatusChipKind.EmailDerived)
                 StatusChip(kind = summary.coverage.chipKind())
-                Spacer(modifier = Modifier.weight(1f))
-                FreshnessPill(lastImportAt = lastImportAt)
+
             }
             Spacer(modifier = Modifier.height(PamSpacing.lg))
             EyebrowText(text = stringResource(R.string.overview_net_eyebrow), color = OnInkMuted)
@@ -356,7 +375,9 @@ private fun NetCashFlowHero(
                         color = OnInkMuted,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
                     )
+                    FreshnessPill(lastImportAt = lastImportAt)
                 }
             }
         }
@@ -364,13 +385,21 @@ private fun NetCashFlowHero(
 }
 
 @Composable
-private fun FreshnessPill(lastImportAt: kotlin.time.Instant?) {
+private fun FreshnessPill(lastImportAt: kotlin.time.Instant?, modifier: Modifier = Modifier) {
     val label = if (lastImportAt == null) {
         stringResource(R.string.overview_never_imported)
     } else {
         stringResource(R.string.overview_last_import, PamDateFormat.date(lastImportAt))
     }
-    Text(text = label, style = LabelM, color = OnInkFaint)
+    Text(
+        text = label,
+        style = LabelM,
+        color = OnInkFaint,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = TextAlign.End,
+        modifier = modifier,
+    )
 }
 
 private fun CoverageStatus.chipKind(): StatusChipKind = when (this) {
@@ -486,8 +515,11 @@ private fun CategoryBreakdown(
     onOpenCategory: (String) -> Unit,
     onSeeAll: () -> Unit,
 ) {
+    // BR-02: this section is the *expense* breakdown, so income and transfers must not appear.
+    // C2-4: a category whose linked refund exceeded its spending has a negative net; it still
+    // belongs here (with an explicit refund marker) instead of vanishing or drawing an empty bar.
     val expenseTotals = summary.categoryTotals
-        .filter { it.amount.isPositive }
+        .filter { it.category.kind == ClassifiedKind.EXPENSE && !it.amount.isZero }
         .sortedByDescending { it.amount.minor }
         .take(MAX_CATEGORIES)
 
@@ -522,6 +554,7 @@ private fun CategoryBreakdown(
 @Composable
 private fun CategoryRow(total: CategoryTotal, share: Float, onClick: () -> Unit) {
     val color = categoryColor(total.category.colorRole)
+    val isNetRefund = total.amount.isNegative
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -545,23 +578,61 @@ private fun CategoryRow(total: CategoryTotal, share: Float, onClick: () -> Unit)
                 color = OnInkFaint,
             )
             Spacer(modifier = Modifier.height(PamSpacing.xxs))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(PamRadius.pill))
-                    .background(color.copy(alpha = 0.16f)),
-            ) {
+            if (isNetRefund) {
+                RefundBadge()
+            } else {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(share.coerceIn(0f, 1f))
+                        .fillMaxWidth()
                         .height(4.dp)
                         .clip(RoundedCornerShape(PamRadius.pill))
-                        .background(color),
+                        .background(color.copy(alpha = 0.16f)),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(share.coerceIn(0f, 1f))
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(PamRadius.pill))
+                            .background(color),
+                    )
+                }
+            }
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            MoneyText(amount = total.amount, tone = MoneyTone.Neutral, style = TitleM)
+            if (isNetRefund) {
+                Text(
+                    text = stringResource(R.string.overview_after_refund),
+                    style = LabelM,
+                    color = OnInkMuted,
                 )
             }
         }
-        MoneyText(amount = total.amount, tone = MoneyTone.Neutral, style = TitleM)
+    }
+}
+
+/** Explicit marker for a category whose refunds exceeded its spending in this month (C2-4). */
+@Composable
+private fun RefundBadge() {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(PamRadius.pill))
+            .background(IncomeMint.copy(alpha = 0.14f))
+            .padding(horizontal = PamSpacing.xs, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Undo,
+            contentDescription = null,
+            tint = IncomeMint,
+            modifier = Modifier.size(12.dp),
+        )
+        Text(
+            text = stringResource(R.string.overview_refund_badge),
+            style = LabelM,
+            color = IncomeMint,
+        )
     }
 }
 

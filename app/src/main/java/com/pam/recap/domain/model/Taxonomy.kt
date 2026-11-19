@@ -40,6 +40,9 @@ enum class ParseStatus {
  */
 enum class CategoryColorRole {
     INCOME_MINT,
+
+    /** Deep saturated violet; reserved for the category that must never look like another. */
+    VIOLET_DEEP,
     BRAND_VIOLET,
     BRAND_MAGENTA,
     BRAND_PINK,
@@ -47,6 +50,9 @@ enum class CategoryColorRole {
     AMBER,
     AMBER_DEEP,
     ROSE,
+
+    /** Two grey steps so a transfer and an "other expense" cannot be confused. */
+    SLATE,
     NEUTRAL,
     WARNING,
 }
@@ -61,7 +67,7 @@ enum class Category(
     val colorRole: CategoryColorRole,
 ) {
     INCOME("income", ClassifiedKind.INCOME, CategoryColorRole.INCOME_MINT),
-    HOUSING("housing", ClassifiedKind.EXPENSE, CategoryColorRole.BRAND_VIOLET),
+    HOUSING("housing", ClassifiedKind.EXPENSE, CategoryColorRole.VIOLET_DEEP),
     FOOD("food", ClassifiedKind.EXPENSE, CategoryColorRole.AMBER),
     TRANSPORT("transport", ClassifiedKind.EXPENSE, CategoryColorRole.BRAND_MAGENTA),
     UTILITIES("utilities", ClassifiedKind.EXPENSE, CategoryColorRole.VIOLET_SOFT),
@@ -69,7 +75,7 @@ enum class Category(
     HEALTH("health", ClassifiedKind.EXPENSE, CategoryColorRole.ROSE),
     EDUCATION("education", ClassifiedKind.EXPENSE, CategoryColorRole.AMBER_DEEP),
     OTHER_EXPENSE("other_expense", ClassifiedKind.EXPENSE, CategoryColorRole.NEUTRAL),
-    TRANSFER("transfer", ClassifiedKind.TRANSFER, CategoryColorRole.NEUTRAL),
+    TRANSFER("transfer", ClassifiedKind.TRANSFER, CategoryColorRole.SLATE),
     UNCATEGORIZED("uncategorized", ClassifiedKind.UNCATEGORIZED, CategoryColorRole.WARNING);
 
     val isExpenseCategory: Boolean get() = kind == ClassifiedKind.EXPENSE
