@@ -27,3 +27,6 @@ local.properties
 
 # Gradle daemon JVM criteria generated from the local toolchain
 gradle/gradle-daemon-jvm.properties
+
+# Robolectric android-all jars downloaded for JVM screenshots (not part of the app)
+.robolectric-deps/

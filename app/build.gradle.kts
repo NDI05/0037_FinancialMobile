@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -99,6 +100,12 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
+            all { test ->
+                // Robolectric resolves android-all jars from here; the machine-wide caches are
+                // not writable in this workspace.
+                test.systemProperty("robolectric.dependency.dir", rootProject.layout.projectDirectory.dir(".robolectric-deps").asFile.absolutePath)
+                test.systemProperty("robolectric.offline", "false")
+            }
         }
     }
 }
@@ -147,6 +154,10 @@ dependencies {
     implementation(libs.okhttp)
 
     testImplementation(libs.junit)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.compose.ui.tooling)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.robolectric)

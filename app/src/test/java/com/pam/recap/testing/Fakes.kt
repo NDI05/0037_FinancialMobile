@@ -281,17 +281,20 @@ class FakeConsentRepository(initial: List<Consent> = emptyList()) : ConsentRepos
 }
 
 class FakeAnalysisRepository : AnalysisRepository {
-    val saved = mutableListOf<Analysis>()
+    private val stored = MutableStateFlow<List<Analysis>>(emptyList())
     var outdated = false
 
+    /** Every analysis written so far, in order. */
+    val saved: List<Analysis> get() = stored.value
+
     override fun observeLatest(ownerId: String, monthId: String): Flow<Analysis?> =
-        flowOf(saved.lastOrNull { it.ownerId == ownerId && it.monthId == monthId })
+        stored.map { list -> list.lastOrNull { it.ownerId == ownerId && it.monthId == monthId } }
 
     override suspend fun latest(ownerId: String, monthId: String): Analysis? =
-        saved.lastOrNull { it.ownerId == ownerId && it.monthId == monthId }
+        stored.value.lastOrNull { it.ownerId == ownerId && it.monthId == monthId }
 
     override suspend fun save(analysis: Analysis) {
-        saved += analysis
+        stored.value = stored.value + analysis
     }
 
     override suspend fun markOutdated(ownerId: String, monthId: String) {
@@ -300,7 +303,9 @@ class FakeAnalysisRepository : AnalysisRepository {
 
     override suspend fun markAllHistorical(ownerId: String) = Unit
 
-    override suspend fun deleteAll(ownerId: String) = Unit
+    override suspend fun deleteAll(ownerId: String) {
+        stored.value = stored.value.filterNot { it.ownerId == ownerId }
+    }
 }
 
 class FakeBudgetRepository : BudgetRepository {
