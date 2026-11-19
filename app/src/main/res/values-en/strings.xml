@@ -274,4 +274,35 @@
     <string name="reason_collision">Fingerprint collision</string>
     <string name="reason_currency_unsupported">Currency unsupported</string>
     <string name="reason_malformed_field">Incomplete fields</string>
+
+    <string name="analysis_title">Analysis</string>
+    <string name="analysis_eyebrow">Saved analysis</string>
+    <string name="analysis_disclosure_eyebrow">Before generating an analysis</string>
+    <string name="analysis_disclosure_body">Only aggregate numbers are sent: inflow and outflow totals, per-category totals, transaction counts and coverage status. No email content, merchant name, private note or message id.</string>
+    <string name="analysis_disclosure_provider">Provider: a deterministic on-device analysis engine (no network). You can use analysis without sending data anywhere.</string>
+    <string name="analysis_consent_missing">AI analysis consent has not been granted, so an analysis cannot be generated yet.</string>
+    <string name="analysis_open_consent">Open consent</string>
+    <string name="analysis_empty_title">No analysis yet</string>
+    <string name="analysis_empty_body">Generate an analysis to see evidence-linked observations and budget suggestions. The recap stays readable without it.</string>
+    <string name="analysis_generate">Generate analysis</string>
+    <string name="analysis_regenerate">Regenerate analysis</string>
+    <string name="analysis_tab_observations">Observations</string>
+    <string name="analysis_tab_suggestions">Suggestions</string>
+    <string name="analysis_observation_of">%1$d of %2$d</string>
+    <string name="analysis_limitations_eyebrow">Limitations</string>
+
+    <string name="budget_title">Budget plan</string>
+    <string name="budget_eyebrow">Next month\'s plan</string>
+    <string name="budget_seeded_label">Starting values based on historical averages</string>
+    <string name="budget_income_label">Expected income</string>
+    <string name="budget_savings_label">Savings target</string>
+    <string name="budget_shortfall">This plan is %1$s short. Lower a category limit or the savings target.</string>
+    <string name="budget_feasible">This plan leaves %1$s after savings and category limits.</string>
+    <string name="budget_limits_eyebrow">Per-category limits</string>
+    <string name="budget_save">Save plan</string>
+    <string name="budget_no_money_movement">Saving a plan does not move any money.</string>
+    <string name="budget_comparison_eyebrow">Actual vs plan</string>
+    <string name="budget_actual_savings">Left this month</string>
+    <string name="budget_transfers_excluded">Own-account transfers are not counted as spending.</string>
+    <string name="budget_limit_of">%1$s of %2$s</string>
 </resources>

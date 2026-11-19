@@ -290,4 +290,37 @@
     <string name="reason_collision">Bentrok sidik jari</string>
     <string name="reason_currency_unsupported">Mata uang tidak didukung</string>
     <string name="reason_malformed_field">Kolom tidak lengkap</string>
+
+    <!-- Analysis -->
+    <string name="analysis_title">Analisis</string>
+    <string name="analysis_eyebrow">Analisis tersimpan</string>
+    <string name="analysis_disclosure_eyebrow">Sebelum membuat analisis</string>
+    <string name="analysis_disclosure_body">Yang dikirim hanya angka agregat: total pemasukan dan pengeluaran, total per kategori, jumlah transaksi, dan status cakupan. Tidak ada isi email, nama merchant, catatan pribadi, atau ID pesan.</string>
+    <string name="analysis_disclosure_provider">Penyedia: mesin analisis deterministik di perangkat (tanpa jaringan). Anda bisa memakai analisis tanpa mengirim data ke mana pun.</string>
+    <string name="analysis_consent_missing">Persetujuan analisis AI belum diberikan, jadi analisis belum bisa dibuat.</string>
+    <string name="analysis_open_consent">Buka persetujuan</string>
+    <string name="analysis_empty_title">Belum ada analisis</string>
+    <string name="analysis_empty_body">Buat analisis untuk melihat observasi berbasis bukti dan saran anggaran. Ringkasan tetap bisa dibaca tanpa analisis.</string>
+    <string name="analysis_generate">Buat analisis</string>
+    <string name="analysis_regenerate">Buat ulang analisis</string>
+    <string name="analysis_tab_observations">Observasi</string>
+    <string name="analysis_tab_suggestions">Saran</string>
+    <string name="analysis_observation_of">%1$d dari %2$d</string>
+    <string name="analysis_limitations_eyebrow">Batasan</string>
+
+    <!-- Budget -->
+    <string name="budget_title">Rencana anggaran</string>
+    <string name="budget_eyebrow">Rencana bulan depan</string>
+    <string name="budget_seeded_label">Nilai awal berdasarkan rata-rata historis</string>
+    <string name="budget_income_label">Perkiraan pemasukan</string>
+    <string name="budget_savings_label">Target tabungan</string>
+    <string name="budget_shortfall">Rencana ini kurang %1$s. Kurangi batas kategori atau target tabungan.</string>
+    <string name="budget_feasible">Rencana ini menyisakan %1$s setelah tabungan dan batas kategori.</string>
+    <string name="budget_limits_eyebrow">Batas per kategori</string>
+    <string name="budget_save">Simpan rencana</string>
+    <string name="budget_no_money_movement">Menyimpan rencana tidak memindahkan uang apa pun.</string>
+    <string name="budget_comparison_eyebrow">Realisasi vs rencana</string>
+    <string name="budget_actual_savings">Sisa bulan ini</string>
+    <string name="budget_transfers_excluded">Transfer antar rekening tidak dihitung sebagai pengeluaran.</string>
+    <string name="budget_limit_of">%1$s dari %2$s</string>
 </resources>
