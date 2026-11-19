@@ -186,4 +186,108 @@
     <string name="metric_transaction_count">Jumlah transaksi</string>
     <string name="metric_coverage">Cakupan</string>
     <string name="settings_title">Pengaturan</string>
+
+    <!-- Transactions list -->
+    <string name="transactions_title">Transaksi</string>
+    <string name="transactions_eyebrow">Transaksi</string>
+    <string name="transactions_count">%1$d transaksi</string>
+    <string name="transactions_search_placeholder">Cari keterangan atau merchant</string>
+    <string name="transactions_filter_all">Semua</string>
+    <string name="transactions_empty_eyebrow">Belum ada data</string>
+    <string name="transactions_empty_title">Bulan ini masih kosong</string>
+    <string name="transactions_empty_body">Jalankan impor untuk mengambil notifikasi Livin bulan ini, atau catat transaksi manual.</string>
+    <string name="transactions_nomatch_eyebrow">Tidak ada yang cocok</string>
+    <string name="transactions_nomatch_title">Tidak ada email yang cocok</string>
+    <string name="transactions_nomatch_body">Coba hapus filter hari atau kategori, atau ubah kata pencarian.</string>
+
+    <!-- Transaction detail -->
+    <string name="detail_title">Detail transaksi</string>
+    <string name="detail_direction_and_time">%1$s · %2$s</string>
+    <string name="detail_provenance_eyebrow">Asal data</string>
+    <string name="detail_source">Sumber</string>
+    <string name="detail_source_email">Email Livin</string>
+    <string name="detail_parser_version">Versi parser</string>
+    <string name="detail_fingerprint">Sidik jari (awalan)</string>
+    <string name="detail_event_time">Waktu transaksi</string>
+    <string name="detail_received_time">Waktu diterima</string>
+    <string name="detail_category_origin">Asal kategori</string>
+    <string name="detail_confidence">Keyakinan</string>
+    <string name="detail_category_eyebrow">Kategori</string>
+    <string name="detail_transfer_title">Transfer antar rekening sendiri</string>
+    <string name="detail_transfer_body">Tandai bila perpindahan ini bukan pengeluaran. Transaksi tetap dihitung di arus kas kotor tetapi keluar dari total terklasifikasi.</string>
+    <string name="detail_refund_eyebrow">Pengembalian dana</string>
+    <string name="detail_refund_linked">Sudah ditautkan ke pengeluaran terkait.</string>
+    <string name="detail_refund_unlinked">Belum ditautkan. Tautkan agar mengurangi kategori pengeluaran yang tepat.</string>
+    <string name="detail_refund_choose">Pilih pengeluaran</string>
+    <string name="detail_refund_clear">Lepas tautan</string>
+    <string name="detail_refund_sheet_title">Pilih pengeluaran yang dikembalikan</string>
+    <string name="detail_note_eyebrow">Catatan pribadi</string>
+    <string name="detail_note_label">Catatan</string>
+    <string name="detail_note_placeholder">Hanya tersimpan di perangkat</string>
+    <string name="detail_audit_eyebrow">Jejak audit</string>
+    <string name="detail_created_at">Dibuat</string>
+    <string name="detail_updated_at">Diubah</string>
+    <string name="detail_revision">Revisi</string>
+    <string name="detail_category_updated">Kategori diubah</string>
+    <string name="detail_never_edited">belum pernah</string>
+    <string name="origin_user">Dipilih pengguna</string>
+    <string name="origin_rule">Aturan otomatis</string>
+
+    <!-- Manual entry -->
+    <string name="manual_title">Catat manual</string>
+    <string name="manual_eyebrow">Entri manual</string>
+    <string name="manual_headline">Tambahkan transaksi yang tidak ada di email.</string>
+    <string name="manual_body">Entri manual ditandai Manual di semua layar dan tidak pernah dianggap hasil impor.</string>
+    <string name="manual_amount_label">Nominal</string>
+    <string name="manual_amount_placeholder">0</string>
+    <string name="manual_description_label">Keterangan</string>
+    <string name="manual_description_placeholder">Misal: gaji bulanan</string>
+    <string name="manual_date_label">Tanggal</string>
+    <string name="manual_category_eyebrow">Kategori</string>
+    <string name="manual_save">Simpan transaksi</string>
+    <string name="currency_code">IDR</string>
+
+    <!-- Import job -->
+    <string name="import_title">Impor</string>
+    <string name="import_eyebrow">Impor kotak masuk</string>
+    <string name="import_headline">Memproses notifikasi Livin bulan ini.</string>
+    <string name="import_pages">Halaman diproses: %1$d dari %2$d</string>
+    <string name="import_finished_at">Selesai pada %1$s</string>
+    <string name="import_matched">Cocok</string>
+    <string name="import_imported">Tersimpan</string>
+    <string name="import_skipped">Dilewati</string>
+    <string name="import_unresolved">Belum jelas</string>
+    <string name="import_empty">Tidak ada email Livin yang cocok. Ini bukan berarti tidak ada pengeluaran.</string>
+    <string name="import_partial">Sebagian halaman gagal diproses. Data halaman pertama sudah tersimpan; jalankan ulang untuk melengkapi.</string>
+    <string name="import_failed">Impor gagal sebelum ada halaman yang selesai.</string>
+    <string name="import_permission">Izin baca dicabut sehingga impor berhenti. Hubungkan ulang kotak masuk.</string>
+    <string name="import_reconnect">Buka kotak masuk</string>
+    <string name="import_complete">Impor selesai untuk semua halaman yang dikonfigurasi.</string>
+    <string name="import_running">Impor sedang berjalan. Anda boleh meninggalkan layar ini.</string>
+    <string name="import_skipped_eyebrow">Alasan dilewati</string>
+    <string name="import_skipped_note">Hanya alasan yang disimpan. Isi email, pengirim, dan ID pesan tidak pernah disimpan.</string>
+    <string name="import_state_running">Berjalan</string>
+    <string name="import_state_complete">Selesai</string>
+    <string name="import_state_partial">Sebagian</string>
+    <string name="import_state_failed">Gagal</string>
+    <string name="import_state_permission">Perlu izin</string>
+    <string name="import_state_empty">Kosong</string>
+
+    <!-- Redacted skip reasons -->
+    <string name="reason_missing_amount">Nominal tidak ditemukan</string>
+    <string name="reason_malformed_amount">Nominal tidak terbaca</string>
+    <string name="reason_missing_event_time">Waktu transaksi tidak ada</string>
+    <string name="reason_malformed_event_time">Waktu transaksi tidak terbaca</string>
+    <string name="reason_missing_direction">Arah transaksi tidak jelas</string>
+    <string name="reason_missing_status">Status transaksi tidak ada</string>
+    <string name="reason_missing_recipient">Penerima tidak ada</string>
+    <string name="reason_failed_payment">Transaksi gagal</string>
+    <string name="reason_unknown_template">Templat email belum dikenal</string>
+    <string name="reason_attachment_only">Hanya lampiran</string>
+    <string name="reason_not_livin_source">Bukan pengirim Livin</string>
+    <string name="reason_not_in_month">Di luar bulan ini</string>
+    <string name="reason_duplicate">Duplikat</string>
+    <string name="reason_collision">Bentrok sidik jari</string>
+    <string name="reason_currency_unsupported">Mata uang tidak didukung</string>
+    <string name="reason_malformed_field">Kolom tidak lengkap</string>
 </resources>

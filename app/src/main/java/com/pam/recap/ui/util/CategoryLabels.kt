@@ -6,6 +6,7 @@ import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.CoverageStatus
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.model.MetricKeys
+import com.pam.recap.domain.model.RedactionReason
 
 /** Category display names. Codes stay technical; only the label is user-visible (FR-23). */
 @StringRes
@@ -60,4 +61,25 @@ fun metricLabelRes(metricKey: String): Int = when (metricKey) {
         val category = Category.fromCode(categoryCode)
         if (category != null) categoryLabelRes(category) else R.string.metric_coverage
     }
+}
+
+/** FR-15: redacted skip reasons shown to the user; they never carry message content. */
+@StringRes
+fun redactionReasonRes(reason: RedactionReason): Int = when (reason) {
+    RedactionReason.MISSING_AMOUNT -> R.string.reason_missing_amount
+    RedactionReason.MALFORMED_AMOUNT -> R.string.reason_malformed_amount
+    RedactionReason.MISSING_EVENT_TIME -> R.string.reason_missing_event_time
+    RedactionReason.MALFORMED_EVENT_TIME -> R.string.reason_malformed_event_time
+    RedactionReason.MISSING_DIRECTION -> R.string.reason_missing_direction
+    RedactionReason.MISSING_STATUS -> R.string.reason_missing_status
+    RedactionReason.MISSING_RECIPIENT -> R.string.reason_missing_recipient
+    RedactionReason.FAILED_PAYMENT -> R.string.reason_failed_payment
+    RedactionReason.UNKNOWN_TEMPLATE -> R.string.reason_unknown_template
+    RedactionReason.ATTACHMENT_ONLY -> R.string.reason_attachment_only
+    RedactionReason.NOT_LIVIN_SOURCE -> R.string.reason_not_livin_source
+    RedactionReason.NOT_IN_MONTH -> R.string.reason_not_in_month
+    RedactionReason.DUPLICATE -> R.string.reason_duplicate
+    RedactionReason.FINGERPRINT_COLLISION -> R.string.reason_collision
+    RedactionReason.CURRENCY_UNSUPPORTED -> R.string.reason_currency_unsupported
+    RedactionReason.MALFORMED_FIELD -> R.string.reason_malformed_field
 }
