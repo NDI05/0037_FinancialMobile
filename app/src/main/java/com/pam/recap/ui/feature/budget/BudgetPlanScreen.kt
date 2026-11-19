@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -140,30 +141,11 @@ fun BudgetPlanScreen(
                 EyebrowText(text = stringResource(R.string.budget_limits_eyebrow))
                 Spacer(modifier = Modifier.height(PamSpacing.xs))
                 Category.expenseCategories.forEach { category ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = PamSpacing.xxs),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(categoryLabelRes(category)),
-                            style = TitleM,
-                            color = OnInk,
-                            modifier = Modifier.weight(1f),
-                        )
-                        // C2-1: no fixed width — the field keeps its own share of the row so a
-                        // 200 % font scale grows it instead of clipping the amount.
-                        LabelledField(
-                            label = null,
-                            value = state.limitTexts[category].orEmpty(),
-                            onValueChange = { viewModel.setLimit(category, it) },
-                            placeholder = stringResource(R.string.manual_amount_placeholder),
-                            suffix = stringResource(R.string.currency_code),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+                    LimitRow(
+                        category = category,
+                        value = state.limitTexts[category].orEmpty(),
+                        onValueChange = { viewModel.setLimit(category, it) },
+                    )
                 }
             }
 
@@ -253,3 +235,62 @@ private fun ComparisonRow(row: BudgetComparisonRow) {
         }
     }
 }
+
+/**
+ * D2: label left / amount right on one line at default scale (the reference's compact row shape),
+ * stacking only when the font scale leaves no room for both — never clipping the amount.
+ */
+@Composable
+private fun LimitRow(
+    category: Category,
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
+    val stacked = LocalDensity.current.fontScale > STACK_ABOVE_FONT_SCALE
+    if (stacked) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = PamSpacing.xxs),
+        ) {
+            Text(
+                text = stringResource(categoryLabelRes(category)),
+                style = TitleM,
+                color = OnInk,
+            )
+            LabelledField(
+                label = null,
+                value = value,
+                onValueChange = onValueChange,
+                placeholder = stringResource(R.string.manual_amount_placeholder),
+                suffix = stringResource(R.string.currency_code),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            )
+        }
+    } else {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = PamSpacing.xxs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(categoryLabelRes(category)),
+                style = TitleM,
+                color = OnInk,
+                modifier = Modifier.weight(0.8f),
+            )
+            LabelledField(
+                label = null,
+                value = value,
+                onValueChange = onValueChange,
+                placeholder = stringResource(R.string.manual_amount_placeholder),
+                suffix = stringResource(R.string.currency_code),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1.2f),
+            )
+        }
+    }
+}
+
+private const val STACK_ABOVE_FONT_SCALE = 1.3f

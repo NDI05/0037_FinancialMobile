@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -209,29 +210,31 @@ private fun rowMeta(transaction: Transaction): String {
     val time = PamDateFormat.time(transaction.eventAt)
     val category = stringResource(categoryLabelRes(transaction.category))
     val direction = stringResource(directionLabelRes(transaction.direction))
-    return "$time · $category · $direction"
+    // Direction before category: an ellipsis may only ever drop the category name.
+    return "$time · $direction · $category"
 }
 
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun CategoryFilterRow(
     selected: Category?,
     onSelect: (Category?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // F3: filters wrap instead of scrolling, so no chip is ever half-cut at the screen edge and
-    // the row keeps working at 200 % font scale.
-    androidx.compose.foundation.layout.FlowRow(
+    // D2: one horizontally scrollable row keeps the header compact (the reference keeps its
+    // controls to a single strip). Chips size to their own content, so a 200 % font scale makes
+    // the row taller and scroll further instead of clipping a label.
+    LazyRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(PamSpacing.xs),
-        verticalArrangement = Arrangement.spacedBy(PamSpacing.xs),
     ) {
-        FilterPill(
-            label = stringResource(R.string.transactions_filter_all),
-            selected = selected == null,
-            onClick = { onSelect(null) },
-        )
-        Category.expenseCategories.forEach { category ->
+        item(key = "all") {
+            FilterPill(
+                label = stringResource(R.string.transactions_filter_all),
+                selected = selected == null,
+                onClick = { onSelect(null) },
+            )
+        }
+        items(items = Category.expenseCategories, key = { it.code }) { category ->
             CategoryChip(
                 category = category,
                 label = stringResource(categoryLabelRes(category)),
@@ -241,4 +244,5 @@ private fun CategoryFilterRow(
         }
     }
 }
+
 
