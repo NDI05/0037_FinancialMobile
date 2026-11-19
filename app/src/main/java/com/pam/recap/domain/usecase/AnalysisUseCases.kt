@@ -37,8 +37,8 @@ import javax.inject.Inject
  * - no provider call happens without a granted AI consent (FR-34), and a withdrawal observed
  *   after the call discards the result instead of publishing it (FR-41);
  * - no call happens for a month with no records (FR-38, BR-06);
- * - a saved analysis is reused for an unchanged revision + consent + provider/model/prompt
- *   combination (FR-40);
+ * - a saved analysis is reused when the input revision, the consent record and the provider/model
+ *   are unchanged (FR-40); the stored prompt version is kept for provenance and audit;
  * - an invalid output gets at most one regeneration, then the request fails as `REJECTED`
  *   (FR-37);
  * - partial coverage publishes as `PROVISIONAL` (FR-38).

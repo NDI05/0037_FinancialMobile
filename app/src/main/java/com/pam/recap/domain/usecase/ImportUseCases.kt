@@ -129,36 +129,41 @@ class ImportMonthUseCase @Inject constructor(
                                 unresolved++
                             }
 
-                            is Outcome.Success -> when (val parsed = parser.parse(fetched.value)) {
-                                is ParseResult.Unresolved -> {
-                                    skipped++
-                                    skippedCandidates += skippedCandidate(
-                                        jobId = jobId,
-                                        ownerId = ownerId,
-                                        reason = parsed.reason,
-                                        pageOrdinal = pageOrdinal,
-                                        candidateOrdinal = index,
-                                    )
-                                }
-
-                                is ParseResult.Parsed -> {
-                                    matched++
-                                    if (!month.contains(parsed.eventAt)) {
-                                        // The search window is widened; membership is not (BR-01).
+                            is Outcome.Success -> {
+                                // Any allow-listed message that reached the parser counts as a
+                                // match, even when it is then rejected: an all-rejected page is a
+                                // complete import with skips, never "no matching email" (FR-20).
+                                matched++
+                                when (val parsed = parser.parse(fetched.value)) {
+                                    is ParseResult.Unresolved -> {
                                         skipped++
                                         skippedCandidates += skippedCandidate(
                                             jobId = jobId,
                                             ownerId = ownerId,
-                                            reason = RedactionReason.NOT_IN_MONTH,
+                                            reason = parsed.reason,
                                             pageOrdinal = pageOrdinal,
                                             candidateOrdinal = index,
                                         )
-                                    } else {
-                                        batch += parsed.toTransaction(
-                                            ownerId = ownerId,
-                                            jobId = jobId,
-                                            now = clock.now(),
-                                        )
+                                    }
+
+                                    is ParseResult.Parsed -> {
+                                        if (!month.contains(parsed.eventAt)) {
+                                            // The search window is widened; membership is not (BR-01).
+                                            skipped++
+                                            skippedCandidates += skippedCandidate(
+                                                jobId = jobId,
+                                                ownerId = ownerId,
+                                                reason = RedactionReason.NOT_IN_MONTH,
+                                                pageOrdinal = pageOrdinal,
+                                                candidateOrdinal = index,
+                                            )
+                                        } else {
+                                            batch += parsed.toTransaction(
+                                                ownerId = ownerId,
+                                                jobId = jobId,
+                                                now = clock.now(),
+                                            )
+                                        }
                                     }
                                 }
                             }

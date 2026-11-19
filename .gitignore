@@ -24,3 +24,6 @@ local.properties
 
 # Local emulator image home (never part of the app)
 .avd-home/
+
+# Gradle daemon JVM criteria generated from the local toolchain
+gradle/gradle-daemon-jvm.properties
