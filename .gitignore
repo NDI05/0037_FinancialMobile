@@ -1,0 +1,23 @@
+# Android / Gradle
+.gradle/
+.gradle-home/
+.gradle-native/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+*.apk
+*.aab
+*.hprof
+
+# Local toolchain (JDK downloaded for building on this machine)
+.toolchain/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Kotlin
+.kotlin/

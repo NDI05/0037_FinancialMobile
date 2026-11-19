@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="pam_window_background">#FF0B0710</color>
+    <color name="pam_surface">#FF120D18</color>
+    <color name="pam_primary">#FFB388FF</color>
+    <color name="ic_launcher_background">#FF0B0710</color>
+</resources>
