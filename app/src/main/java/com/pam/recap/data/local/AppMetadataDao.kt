@@ -16,4 +16,8 @@ interface AppMetadataDao {
 
     @Upsert
     suspend fun upsert(entity: AppMetadataEntity)
+
+    /** Used by sign-out/deletion to drop bookkeeping keys (e.g. month revisions). */
+    @Query("DELETE FROM app_metadata WHERE key LIKE :prefix || '%'")
+    suspend fun deleteByPrefix(prefix: String)
 }
