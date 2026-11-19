@@ -21,6 +21,20 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+
+        // OI-01: the real Gmail path is wired but gated by configuration. Absent property =>
+        // empty string => the DI graph binds the deterministic FixtureGmailSource instead.
+        buildConfigField(
+            "String",
+            "PAM_GOOGLE_WEB_CLIENT_ID",
+            "\"${project.findProperty("PAM_GOOGLE_WEB_CLIENT_ID")?.toString().orEmpty()}\"",
+        )
+        // OI-07: optional remote analysis backend; blank keeps the on-device engine.
+        buildConfigField(
+            "String",
+            "PAM_ANALYSIS_BACKEND_URL",
+            "\"${project.findProperty("PAM_ANALYSIS_BACKEND_URL")?.toString().orEmpty()}\"",
+        )
     }
 
     buildTypes {
@@ -58,7 +72,16 @@ android {
     kotlin {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+            // kotlinx-datetime 0.7 exposes kotlin.time.Instant; opt in once for the module.
+            optIn.add("kotlin.time.ExperimentalTime")
         }
+    }
+
+    ksp {
+        // exportSchema = true needs a schema directory, and the exported JSON is committed so
+        // future migrations can be diffed.
+        arg("room.schemaLocation", "$projectDir/schemas")
+        arg("room.generateKotlin", "true")
     }
 
     buildFeatures {

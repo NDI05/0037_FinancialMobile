@@ -21,3 +21,6 @@ local.properties
 
 # Kotlin
 .kotlin/
+
+# Local emulator image home (never part of the app)
+.avd-home/
