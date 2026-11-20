@@ -527,12 +527,13 @@ class FakeDemoDataMaintenance(
     private val summaries: FakeSummaryRepository? = null,
     private val jobs: FakeImportRepository? = null,
     private val prefix: String = "demo-",
+    private val fixedCount: Int? = null,
 ) : DemoDataMaintenance {
     val purgedOwners = mutableListOf<String>()
     val seededCalledFor = mutableListOf<String>()
 
     override suspend fun countDemoRows(ownerId: String): Int =
-        transactions?.countByIdPrefix(ownerId, prefix) ?: 0
+        fixedCount ?: transactions?.countByIdPrefix(ownerId, prefix) ?: 0
 
     override suspend fun purge(ownerId: String): DemoPurge {
         purgedOwners += ownerId

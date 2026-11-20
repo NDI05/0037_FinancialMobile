@@ -165,6 +165,68 @@ fun SettingsScreen(
                 subtitle = stringResource(R.string.settings_budget_body),
                 onClick = onOpenBudget,
             )
+            if (state.demoRowCount > 0) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    EyebrowText(text = stringResource(R.string.settings_demo_eyebrow))
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    Text(
+                        text = stringResource(R.string.settings_demo_count, state.demoRowCount),
+                        style = TitleM,
+                        color = OnInk,
+                    )
+                    Spacer(modifier = Modifier.height(PamSpacing.xxs))
+                    Text(
+                        text = stringResource(R.string.settings_demo_body),
+                        style = BodyM,
+                        color = OnInkMuted,
+                    )
+                    Spacer(modifier = Modifier.height(PamSpacing.sm))
+                    if (state.confirmingPurge) {
+                        NoticeBanner(
+                            text = stringResource(
+                                R.string.settings_demo_confirm,
+                                state.demoRowCount,
+                            ),
+                            tone = MoneyTone.Expense,
+                        )
+                        Spacer(modifier = Modifier.height(PamSpacing.xs))
+                        PillButton(
+                            text = stringResource(R.string.settings_demo_confirm_action),
+                            onClick = viewModel::confirmPurge,
+                            loading = state.purgeBusy,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(modifier = Modifier.height(PamSpacing.xxs))
+                        PillButton(
+                            text = stringResource(R.string.settings_demo_cancel),
+                            onClick = viewModel::cancelPurge,
+                            style = PillButtonStyle.Ghost,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        PillButton(
+                            text = stringResource(R.string.settings_demo_action),
+                            onClick = viewModel::requestPurge,
+                            style = PillButtonStyle.Secondary,
+                            leadingIcon = Icons.Rounded.DeleteOutline,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            }
+
+            val purge = state.purgeResult
+            if (purge != null) {
+                NoticeBanner(
+                    text = if (purge.isEmpty) {
+                        stringResource(R.string.settings_demo_none)
+                    } else {
+                        stringResource(R.string.settings_demo_done, purge.total)
+                    },
+                    tone = MoneyTone.Income,
+                )
+            }
+
             SettingsRow(
                 icon = Icons.Rounded.DeleteOutline,
                 title = stringResource(R.string.settings_delete),

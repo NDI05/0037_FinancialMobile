@@ -6,8 +6,10 @@ import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.Consent
 import com.pam.recap.domain.model.ConsentPurpose
+import com.pam.recap.domain.model.DemoPurge
 import com.pam.recap.domain.model.GmailConnection
 import com.pam.recap.domain.repository.ConsentRepository
+import com.pam.recap.domain.repository.DemoDataMaintenance
 import com.pam.recap.domain.repository.GmailConnectionRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.DisconnectGmailUseCase
@@ -34,6 +36,11 @@ data class SettingsUiState(
     val error: AppError? = null,
     val signedOut: Boolean = false,
     val revokeFailed: Boolean = false,
+    /** F3: the demo cleanup row is shown only when sample rows actually exist. */
+    val demoRowCount: Int = 0,
+    val confirmingPurge: Boolean = false,
+    val purgeResult: DemoPurge? = null,
+    val purgeBusy: Boolean = false,
 )
 
 /**
@@ -49,9 +56,19 @@ class SettingsViewModel @Inject constructor(
     consents: ConsentRepository,
     private val disconnectGmail: DisconnectGmailUseCase,
     private val signOut: SignOutUseCase,
+    private val demoData: DemoDataMaintenance,
 ) : ViewModel() {
 
     private val actions = MutableStateFlow(ActionState())
+
+    private data class DemoState(
+        val rowCount: Int = 0,
+        val confirming: Boolean = false,
+        val busy: Boolean = false,
+        val result: DemoPurge? = null,
+    )
+
+    private val demo = MutableStateFlow(DemoState())
 
     private data class ActionState(
         val isBusy: Boolean = false,
@@ -63,12 +80,14 @@ class SettingsViewModel @Inject constructor(
     val state: StateFlow<SettingsUiState> = sessions.observe()
         .filterNotNull()
         .flatMapLatest { session ->
+            demo.update { it.copy(rowCount = runCatching { demoData.countDemoRows(session.ownerId) }.getOrDefault(0)) }
             combine(
                 connections.observe(session.ownerId),
                 consents.observeLatest(session.ownerId, ConsentPurpose.GMAIL_READ),
                 consents.observeLatest(session.ownerId, ConsentPurpose.AI_PROCESSING),
                 actions,
-            ) { connection, gmail, ai, action ->
+                demo,
+            ) { connection, gmail, ai, action, demoState ->
                 SettingsUiState(
                     connection = connection,
                     gmailConsent = gmail,
@@ -77,6 +96,10 @@ class SettingsViewModel @Inject constructor(
                     error = action.error,
                     signedOut = action.signedOut,
                     revokeFailed = action.revokeFailed,
+                    demoRowCount = demoState.rowCount,
+                    confirmingPurge = demoState.confirming,
+                    purgeResult = demoState.result,
+                    purgeBusy = demoState.busy,
                 )
             }
         }
@@ -93,6 +116,35 @@ class SettingsViewModel @Inject constructor(
                 }
 
                 is Outcome.Success -> actions.update { it.copy(isBusy = false) }
+            }
+        }
+    }
+
+    fun requestPurge() {
+        if (demo.value.busy) return
+        demo.update { it.copy(confirming = true, result = null) }
+    }
+
+    fun cancelPurge() {
+        if (demo.value.busy) return
+        demo.update { it.copy(confirming = false) }
+    }
+
+    /** F3: deletes the demo rows and reports how many were removed. */
+    fun confirmPurge() {
+        if (demo.value.busy) return
+        demo.update { it.copy(busy = true) }
+        viewModelScope.launch {
+            val ownerId = sessions.current()?.ownerId ?: return@launch
+            val result = runCatching { demoData.purge(ownerId) }.getOrNull()
+            val remaining = runCatching { demoData.countDemoRows(ownerId) }.getOrDefault(0)
+            demo.update {
+                it.copy(
+                    busy = false,
+                    confirming = false,
+                    rowCount = remaining,
+                    result = result,
+                )
             }
         }
     }

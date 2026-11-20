@@ -443,6 +443,41 @@ class ScreenScreenshotsTest {
     // 06 Settings
     // ---------------------------------------------------------------------------------------
     @Test
+    fun settingsWithDemoRows() {
+        val demoWithRows = FakeDemoDataMaintenance(fixedCount = 19)
+        val viewModel = SettingsViewModel(
+            sessions = sessions,
+            connections = connections,
+            consents = consents,
+            disconnectGmail = DisconnectGmailUseCase(gmail, connections, sessions, noopVault, clock),
+            demoData = demoWithRows,
+            signOut = SignOutUseCase(
+                sessions = sessions,
+                gmailSource = gmail,
+                gmailConnection = connections,
+                transactions = transactions,
+                summaries = summaries,
+                analyses = analyses,
+                budgets = budgets,
+                imports = imports,
+                backendSessions = NoopBackendSessionRepository(),
+                appPasswordVault = noopVault,
+            ),
+        )
+
+        shot("06b-settings-demo-purge") {
+            SettingsScreen(
+                onOpenGmail = {},
+                onOpenConsentHistory = {},
+                onOpenBudget = {},
+                onOpenDeletion = {},
+                onSignedOut = {},
+                viewModel = viewModel,
+            )
+        }
+    }
+
+    @Test
     fun settings() {
         val viewModel = SettingsViewModel(
             sessions = sessions,

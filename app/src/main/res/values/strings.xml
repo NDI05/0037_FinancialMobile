@@ -435,4 +435,13 @@
     <string name="gmail_help_steps">1. Buka Akun Google → Keamanan. 2. Aktifkan Verifikasi 2 Langkah (wajib). 3. Pilih Sandi aplikasi, buat satu untuk PAM, lalu tempel 16 karakternya di sini.</string>
     <string name="gmail_help_caveat">Sandi aplikasi memberi akses baca dan kirim ke kotak masuk Anda. PAM hanya membuka folder INBOX secara hanya-baca, tidak pernah mengirim email, dan menyimpannya terenkripsi di perangkat ini. Sandi dihapus saat Anda memutuskan kotak masuk atau keluar.</string>
     <string name="gmail_credentials_required">Email dan Sandi aplikasi wajib diisi.</string>
+    <string name="settings_demo_eyebrow">Data demo</string>
+    <string name="settings_demo_count">Perangkat ini masih menyimpan %1$d baris contoh dari mode demo.</string>
+    <string name="settings_demo_body">Data hasil impor dan catatan manual tidak ikut terhapus. Ringkasan bulan demo akan dihitung ulang saat dibuka.</string>
+    <string name="settings_demo_action">Bersihkan data demo</string>
+    <string name="settings_demo_confirm">Hapus %1$d baris demo sekarang? Tindakan ini tidak bisa dibatalkan.</string>
+    <string name="settings_demo_confirm_action">Hapus data demo</string>
+    <string name="settings_demo_cancel">Batal</string>
+    <string name="settings_demo_done">%1$d baris demo dihapus.</string>
+    <string name="settings_demo_none">Tidak ada data demo tersisa.</string>
 </resources>

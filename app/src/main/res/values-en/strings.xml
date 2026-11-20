@@ -413,4 +413,13 @@
     <string name="gmail_help_steps">1. Open your Google Account → Security. 2. Turn on 2-Step Verification (required). 3. Choose App passwords, create one for PAM, then paste its 16 characters here.</string>
     <string name="gmail_help_caveat">An App Password grants read and send access to your mailbox. PAM only opens INBOX read-only, never sends mail, and stores the password encrypted on this device. It is removed when you disconnect the inbox or sign out.</string>
     <string name="gmail_credentials_required">Email and App Password are both required.</string>
+    <string name="settings_demo_eyebrow">Demo data</string>
+    <string name="settings_demo_count">This device still stores %1$d sample rows from demo mode.</string>
+    <string name="settings_demo_body">Imported rows and manual notes are not removed. The demo month summary is recomputed when you open it.</string>
+    <string name="settings_demo_action">Clear demo data</string>
+    <string name="settings_demo_confirm">Delete %1$d demo rows now? This cannot be undone.</string>
+    <string name="settings_demo_confirm_action">Delete demo data</string>
+    <string name="settings_demo_cancel">Cancel</string>
+    <string name="settings_demo_done">%1$d demo rows deleted.</string>
+    <string name="settings_demo_none">No demo data left.</string>
 </resources>
