@@ -81,6 +81,7 @@ Semua error:
 | 422 | `invalid_analysis_output` | keluaran LLM gagal validasi (FR-37) |
 | 429 | `rate_limited` / `daily_ceiling_reached` | FR-50 |
 | 502 | `provider_unavailable` | LLM gagal/timeout |
+| 503 | `database_unavailable` | penyimpanan (Turso) tidak terjangkau — **retryable**; klien wajib memperlakukan ini sebagai sementara, bukan kegagalan permanen |
 | 500 | `internal_error` | — |
 
 `correlationId` selalu dikembalikan dan selalu dicatat di log — tanpa body.
@@ -181,8 +182,16 @@ Melebihi batas ditolak **sebelum** provider dipanggil.
 
 ## 6. Penyimpanan
 
-Tabel: `users`, `sessions`, `consents`, `summaries`, `analyses`, `budget_plans`,
-`deletion_requests`, `usage_counters`.
+Tabel: `users`, `sessions`, `login_attempts`, `consents`, `summaries`, `analyses`,
+`budget_plans`, `deletion_requests`, `usage_counters`, `schema_migrations`.
+
+**Batasan platform Turso:** server menolak pernyataan `PRAGMA` yang bersifat menulis
+(`user_version`, `journal_mode`, `foreign_keys`, `synchronous`). Versi skema karena itu dicatat di
+tabel `schema_migrations`, bukan `PRAGMA user_version`. Menambah PRAGMA tulis baru akan gagal
+hanya di remote, tidak di `file:` — ada regression test yang menjaganya.
+
+**`schema_migrations` adalah bagian dari backup.** Restore/clone yang menghilangkan tabel ini akan
+menjalankan ulang migrasi pada database yang sudah terisi.
 
 - Payload agregat, hasil analisis dan rencana anggaran disimpan sebagai ciphertext
   AES-256-GCM (`DATA_ENCRYPTION_KEY`), dengan `keyVersion` agar bisa dirotasi.

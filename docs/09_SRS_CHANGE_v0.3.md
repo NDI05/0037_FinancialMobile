@@ -240,6 +240,27 @@ Amandemen kedua setelah Fase 3 (IMAP) — semua keputusan implementasi yang haru
 Batas penghapusan: **satu rilis** setelah v0.3 dinyatakan baseline (§6.4 G4). Setelah itu variabel
 dan cabang fallback-nya dihapus dari `src/config.ts`.
 
+## 10b. Amandemen ketiga setelah koneksi Turso sungguhan
+
+Enam hal yang hanya muncul saat backend dihubungkan ke database cloud nyata:
+
+16. **`schema_migrations` adalah state cloud.** FR-56 menyebut tabel ini, dan NFR-23 (Fase 5)
+    menyatakan tabel tersebut **termasuk dalam set backup**; restore yang menghilangkannya akan
+    menjalankan ulang migrasi di atas data yang sudah ada.
+17. **Larangan PRAGMA tulis adalah fakta platform.** Turso menolak `PRAGMA user_version`,
+    `journal_mode`, `foreign_keys`, `synchronous` yang bersifat menulis. Dicatat di DR-05 sebagai
+    batasan, bukan detail implementasi, agar fase berikutnya tidak memasukkannya kembali.
+18. **Alias `turso://`.** Dashboard Turso menampilkan `turso://`; driver memerlukan `libsql://`.
+    Backend menormalkan keduanya dengan peringatan, tetapi dokumentasi pengguna menampilkan
+    `libsql://` saja.
+19. **Kode error `database_unavailable` sudah masuk kontrak §3** (503, `retryable: true`) dan
+    harus diperlakukan sebagai sementara oleh klien mana pun.
+20. **Perilaku saat penyimpanan mati: *fail fast*.** Proses berhenti dan dihidupkan ulang oleh
+    supervisor, bukan melayani dalam keadaan terdegradasi. Ini keputusan, bukan kebetulan; alasannya
+    agar tidak pernah menyajikan angka setengah jadi.
+21. **Counter login dan rate limit berada di database cloud.** Bila Turso tidak terjangkau, login
+    menjawab 503, bukan jatuh ke state lokal. Dicatat sebagai keputusan agar konsisten dengan 20.
+
 ## 11. Sign-off
 
 | Peran | Nama | Keputusan |

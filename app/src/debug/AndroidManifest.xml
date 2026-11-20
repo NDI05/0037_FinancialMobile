@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only override so a phone on the LAN can reach the local backend over plain HTTP.
+  Release builds do not include this source set, so NFR-03 (HTTPS only) still holds for release.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:usesCleartextTraffic="true" />
+</manifest>
