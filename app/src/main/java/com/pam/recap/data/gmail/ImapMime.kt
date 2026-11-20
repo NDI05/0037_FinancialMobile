@@ -1,11 +1,15 @@
 package com.pam.recap.data.gmail
 
+import com.pam.recap.domain.repository.RawMessage
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import javax.mail.Message
 import javax.mail.Multipart
 import javax.mail.Part
 import javax.mail.Session
 import javax.mail.internet.MimeMessage
+import kotlin.time.Instant
 
 /**
  * The text a notification contributes to the parser, plus how many attachments were skipped
@@ -21,6 +25,45 @@ internal data class MimeBody(
     /** Counts of the structural kinds actually seen, for diagnostics. Never content. */
     val kindCounts: Map<String, Int> = emptyMap(),
 )
+
+/** One message as the parser sees it, plus the structural facts the debug probe logs. */
+internal data class ExtractedIncoming(
+    val raw: RawMessage,
+    val body: MimeBody,
+    val reparsed: Boolean,
+)
+
+/**
+ * The production IMAP → parser boundary. Kept here (rather than private in the source) so an
+ * anonymized MIME fixture can be driven through exactly the same code as a real fetch: re-parse the
+ * raw RFC822 bytes, walk the MIME tree, and build the [RawMessage].
+ */
+internal fun Message.extractIncoming(reference: String, session: Session?): ExtractedIncoming {
+    val reparsed = reparseRaw(session)
+    val body = extractMimeBody(reparsed ?: this, session)
+    return ExtractedIncoming(
+        raw = RawMessage(
+            messageId = reference,
+            sender = runCatching { from?.firstOrNull()?.toString() }.getOrNull(),
+            subject = subject,
+            internalDate = receivedDate?.let { Instant.fromEpochMilliseconds(it.time) },
+            textParts = listOf(body.text),
+            attachmentCount = body.attachmentCount,
+        ),
+        body = body,
+        reparsed = reparsed != null,
+    )
+}
+
+/** Raw message bytes re-parsed locally, or null when the message is too large or unreadable. */
+internal fun Message.reparseRaw(session: Session?): Message? = runCatching {
+    if (size > MAX_RAW_BYTES) return null
+    val out = ByteArrayOutputStream()
+    writeTo(out)
+    val bytes = out.toByteArray()
+    if (bytes.size > MAX_RAW_BYTES) return null
+    MimeMessage(session, ByteArrayInputStream(bytes))
+}.getOrNull()
 
 /**
  * Walks a MIME tree and returns **text parts only**.
@@ -90,7 +133,7 @@ internal fun extractMimeBody(part: Part, session: Session? = null): MimeBody {
             // instead of reporting the misleading ATTACHMENT_ONLY reason.
             is InputStream -> {
                 record("untyped_body")
-                recoverUntyped(content, current, session, level, kinds, recovered)
+                attachments += recoverUntyped(content, current, session, level, kinds, recovered)
             }
             null -> record("unreadable")
             else -> record("other")
@@ -133,15 +176,15 @@ private fun recoverUntyped(
     level: Int,
     kinds: MutableMap<String, Int>,
     into: MutableList<String>,
-) {
+): Int {
     val bytes = runCatching { stream.use { it.readBounded(MAX_RECOVER_BYTES) } }.getOrNull()
     if (bytes == null || bytes.isEmpty()) {
         kinds.merge("unreadable", 1, Int::plus)
-        return
+        return 0
     }
     if (!bytes.isMostlyPrintable()) {
         kinds.merge("binary_skipped", 1, Int::plus)
-        return
+        return 0
     }
     val text = String(bytes, charsetOf(part))
 
@@ -154,7 +197,9 @@ private fun recoverUntyped(
             val inner = extractMimeBody(nested, session = null)
             for ((kind, count) in inner.kindCounts) kinds.merge(kind, count, Int::plus)
             if (inner.text.isNotBlank()) into += inner.text
-            return
+            // An attachment nested inside an untyped entity still counts: it decides whether the
+            // message is ATTACHMENT_ONLY rather than a malformed body.
+            return inner.attachmentCount
         }
     }
 
@@ -165,6 +210,7 @@ private fun recoverUntyped(
         kinds.merge("untyped_text", 1, Int::plus)
         into += text
     }
+    return 0
 }
 
 /** Reads at most [limit] bytes; the stream is never drained beyond the bound. */
@@ -223,7 +269,14 @@ private fun String.looksLikeHtml(): Boolean {
 private fun contentOf(part: Part): String? =
     runCatching { part.content as? String }.getOrNull()?.takeIf { it.isNotBlank() }
 
-/** Minimal HTML→text: drops script/style content, then tags, then the common entities. */
+/**
+ * Minimal HTML→text: drops script/style content, then tags, then the common entities.
+ *
+ * A table cell ends a line (`</td>`/`</th>`), not just a row: Livin renders the field label in one
+ * cell and its value in the next, and collapsing both cells to spaces made the parser see
+ * `Nominal Pembayaran Rp175.000` as one unlabelled line. Preserving the cell boundary keeps the
+ * "label line, value on the next line" contract the parser already implements.
+ */
 internal fun stripHtml(raw: String): String {
     var text = raw
     text = text.replace(SCRIPT_OR_STYLE, " ")
@@ -239,6 +292,7 @@ internal fun stripHtml(raw: String): String {
         .joinToString(separator = "\n")
 }
 
+private const val MAX_RAW_BYTES = 1024 * 1024
 private const val MAX_RECOVER_BYTES = 1024 * 1024
 private const val MAX_EMBEDDED_DEPTH = 2
 private const val MAX_CONTROL_PERCENT = 5
@@ -249,7 +303,7 @@ private val CHARSET_PARAM = Regex("(?i)charset=\"?([^\";\\s]+)")
 private val MIME_HEADER = Regex("(?im)^(content-type|content-transfer-encoding|mime-version):")
 
 private val SCRIPT_OR_STYLE = Regex("(?is)<(script|style)[^>]*>.*?</\\1>")
-private val BREAK_TAG = Regex("(?i)<(br|/p|/div|/tr)[^>]*>")
+private val BREAK_TAG = Regex("(?i)<(br|/p|/div|/tr|/td|/th)[^>]*>")
 private val TAG = Regex("<[^>]+>")
 private val WHITESPACE = Regex("[ \\t\\u00A0]+")
 

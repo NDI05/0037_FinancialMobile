@@ -11,6 +11,7 @@ import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.usecase.ConnectGmailUseCase
 import com.pam.recap.domain.usecase.DisconnectGmailUseCase
+import com.pam.recap.testing.FakeAccountRepository
 import com.pam.recap.testing.FakeAppPasswordVault
 import com.pam.recap.testing.FakeConsentRepository
 import com.pam.recap.testing.FakeCredentialValidator
@@ -64,6 +65,7 @@ class GmailConnectPurgeTest {
         consents: FakeConsentRepository,
         validator: FakeCredentialValidator,
         demoData: FakeDemoDataMaintenance,
+        accounts: FakeAccountRepository = FakeAccountRepository(),
     ): GmailConnectViewModel {
         val gmail = FixtureGmailSource(LivinTemplateRegistry())
         return GmailConnectViewModel(
@@ -81,6 +83,7 @@ class GmailConnectPurgeTest {
                 FakeAppPasswordVault(),
                 clock,
             ),
+            accounts = accounts,
         )
     }
 
@@ -103,6 +106,29 @@ class GmailConnectPurgeTest {
 
         val settled = viewModel.state.first { !it.isBusy }
         assertEquals(null, settled.error)
+        assertEquals(listOf(ownerId), demoData.purgedOwners)
+    }
+
+    @Test
+    fun `the offline demo mailbox authorizes the fixture without a credential`() = runTest {
+        val sessions = FakeSessionRepository(session())
+        val demoData = FakeDemoDataMaintenance()
+        val viewModel = viewModel(
+            sessions = sessions,
+            connections = FakeGmailConnectionRepository(),
+            consents = grantedConsent(),
+            validator = FakeCredentialValidator(),
+            demoData = demoData,
+            accounts = FakeAccountRepository(isBackendEnabled = false),
+        )
+
+        viewModel.state.first { it.demoMailboxAvailable }
+        viewModel.connectDemoMailbox()
+
+        val settled = viewModel.state.first { !it.isBusy && it.connection != null }
+        assertEquals(null, settled.error)
+        assertEquals("livin.demo@pam.local", settled.connection?.mailboxLabel)
+        // The demo rows are purged so the following import is what populates the month.
         assertEquals(listOf(ownerId), demoData.purgedOwners)
     }
 

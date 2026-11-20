@@ -107,6 +107,29 @@ class ImapMimeTest {
         assertEquals(1, body.attachmentCount)
     }
 
+    @Test
+    fun `a table with a label cell and a value cell keeps them on separate lines`() {
+        val body = extractMimeBody(
+            parse(
+                """
+                Subject: Pembayaran Berhasil!
+                Content-Type: text/html; charset=UTF-8
+
+                <html><body><table>
+                <tr><td>Nominal Pembayaran</td><td>Rp175.000</td></tr>
+                <tr><td>Tanggal Transaksi</td><td>19 Februari 2026 11:10:00</td></tr>
+                <tr><td>Merchant</td><td>Indomaret</td></tr>
+                </table></body></html>
+                """,
+            ),
+        )
+
+        // Regression: collapsing `</td>` to a space produced "Nominal Pembayaran Rp175.000".
+        assertTrue(body.text.lines().any { it.trim() == "Nominal Pembayaran" })
+        assertTrue(body.text.lines().any { it.trim() == "Rp175.000" })
+        assertTrue(body.text.lines().any { it.trim() == "Indomaret" })
+    }
+
     /**
      * The device shape: Gmail hands the root part back as an untyped `application/octet-stream`
      * whose bytes are a MIME entity. Without recovery this was `parts=1 plain=0 html=0 chars=0` and

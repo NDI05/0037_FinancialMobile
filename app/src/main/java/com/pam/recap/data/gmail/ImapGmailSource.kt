@@ -20,8 +20,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.util.Properties
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -32,7 +30,6 @@ import javax.inject.Singleton
 import javax.mail.Folder
 import javax.mail.Message
 import javax.mail.Session
-import javax.mail.internet.MimeMessage
 import javax.mail.UIDFolder
 import javax.mail.Store
 import javax.mail.search.AndTerm
@@ -293,8 +290,8 @@ class ImapGmailSource @Inject constructor(
             is javax.mail.Part -> 4
             else -> 0
         }
-        val reparsed = reparseRaw()
-        val body = extractMimeBody(reparsed ?: this, session)
+        val extracted = extractIncoming(reference, session)
+        val body = extracted.body
         if (com.pam.recap.BuildConfig.DEBUG) {
             // Debug-only shape measurement: which allow-listed labels survive, and whether the
             // recovered text still has separators. Integers only — never the text itself.
@@ -360,29 +357,12 @@ class ImapGmailSource @Inject constructor(
             "html" to body.htmlParts,
             "attachments" to body.attachmentCount,
             "chars" to body.text.length,
-            "reparsed" to if (reparsed != null) 1 else 0,
+            "reparsed" to if (extracted.reparsed) 1 else 0,
             "provider_kind" to providerKind,
             *body.kindCounts.map { (kind, count) -> kind to count }.toTypedArray(),
         )
-        return RawMessage(
-            messageId = reference,
-            sender = runCatching { from?.firstOrNull()?.toString() }.getOrNull(),
-            subject = subject,
-            internalDate = receivedDate?.let { Instant.fromEpochMilliseconds(it.time) },
-            textParts = listOf(body.text),
-            attachmentCount = body.attachmentCount,
-        )
+        return extracted.raw
     }
-
-    /** Raw message bytes re-parsed locally, or null when the message is too large or unreadable. */
-    private fun Message.reparseRaw(): Message? = runCatching {
-        if (size > MAX_RAW_BYTES) return null
-        val out = ByteArrayOutputStream()
-        writeTo(out)
-        val bytes = out.toByteArray()
-        if (bytes.size > MAX_RAW_BYTES) return null
-        MimeMessage(session, ByteArrayInputStream(bytes))
-    }.getOrNull()
 
     private data class SearchHit(val key: String, val refs: List<GmailMessageRef>)
 
@@ -431,7 +411,6 @@ class ImapGmailSource @Inject constructor(
         const val READ_TIMEOUT_MILLIS = 30_000
         /** A single folder operation may not exceed this; the watchdog closes the socket. */
         const val OP_DEADLINE_MILLIS = 45_000L
-        const val MAX_RAW_BYTES = 1024 * 1024
         val WATCHDOG: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor { runnable ->
             Thread(runnable, "imap-watchdog").apply { isDaemon = true }
         }

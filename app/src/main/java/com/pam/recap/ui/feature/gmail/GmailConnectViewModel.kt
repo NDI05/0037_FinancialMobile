@@ -7,6 +7,7 @@ import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.GmailConnection
+import com.pam.recap.domain.repository.AccountRepository
 import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.DemoDataMaintenance
@@ -40,6 +41,8 @@ data class GmailConnectUiState(
     val email: String = "",
     val appPassword: String = "",
     val passwordVisible: Boolean = false,
+    /** Pure offline demo: the fixture mailbox can replace the sample rows without a credential. */
+    val demoMailboxAvailable: Boolean = false,
 )
 
 /**
@@ -57,7 +60,10 @@ class GmailConnectViewModel @Inject constructor(
     private val demoData: DemoDataMaintenance,
     private val connectGmail: ConnectGmailUseCase,
     private val disconnectGmail: DisconnectGmailUseCase,
+    accounts: AccountRepository,
 ) : ViewModel() {
+
+    private val demoMailboxAvailable = !accounts.isBackendEnabled
 
     private data class ActionState(
         val isBusy: Boolean = false,
@@ -88,6 +94,7 @@ class GmailConnectViewModel @Inject constructor(
                     email = action.email.ifBlank { session.mailboxLabel.orEmpty() },
                     appPassword = action.appPassword,
                     passwordVisible = action.passwordVisible,
+                    demoMailboxAvailable = demoMailboxAvailable,
                 )
             }
         }
@@ -138,6 +145,33 @@ class GmailConnectViewModel @Inject constructor(
                         runCatching { demoData.purge(ownerId) }
                         actions.update { it.copy(isBusy = false, error = null, appPassword = "") }
                     }
+                }
+            }
+        }
+    }
+
+    /**
+     * Offline demo fallback: authorize the bundled fixture mailbox instead of a real IMAP login.
+     * The sample rows are purged first so the following import is what populates the month — the
+     * same rule a real connection follows (F2), and it keeps the demo honest about its source.
+     */
+    fun connectDemoMailbox() {
+        val ownerId = state.value.ownerId ?: return
+        if (!state.value.demoMailboxAvailable || actions.value.isBusy) return
+        if (!state.value.consentGranted) {
+            actions.update { it.copy(error = AppError.Validation(AppErrorRules.CONSENT_REQUIRED)) }
+            return
+        }
+        actions.update { it.copy(isBusy = true, error = null, revokeFailed = false) }
+        viewModelScope.launch {
+            when (val result = connectGmail(ownerId)) {
+                is Outcome.Failure -> actions.update {
+                    it.copy(isBusy = false, error = result.error)
+                }
+
+                is Outcome.Success -> {
+                    runCatching { demoData.purge(ownerId) }
+                    actions.update { it.copy(isBusy = false, error = null) }
                 }
             }
         }
