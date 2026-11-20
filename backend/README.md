@@ -178,3 +178,15 @@ src/
 - Setiap query memfilter `owner_id`; objek milik pengguna lain menjawab 404 (FR-02/NFR-17).
 - Log satu baris JSON per request: `correlationId`, method, path, status, ms, `ownerRef` (hash
   pendek), retry — tanpa payload, nominal, kode kategori, email, atau token (NFR-18).
+
+## Melihat isi database
+
+```bash
+npm run db:inspect            # ringkasan: daftar tabel + jumlah baris + akun & consent
+npm run db:inspect -- --full  # tambahan: payload didekripsi (nominal, teks analisis)
+```
+
+Alat ini **hanya membaca** (SELECT). Ia memakai `.env` yang sama dengan server, jadi otomatis
+menunjuk ke Turso atau ke file lokal. Kolom sensitif (`password_hash`, `salt`, `token_hash`)
+disensor; payload terenkripsi didekripsi memakai `DATA_ENCRYPTION_KEY` sehingga yang tampil adalah
+angka dan teks sebenarnya.
