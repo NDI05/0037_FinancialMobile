@@ -106,7 +106,11 @@ class GmailConnectViewModel @Inject constructor(
         val ownerId = state.value.ownerId ?: return
         if (actions.value.isBusy) return
         val email = actions.value.email.trim()
-        val appPassword = actions.value.appPassword.trim()
+        // Google displays the 16-character app password as four groups separated by spaces
+        // ("abcd efgh ijkl mnop") and users paste it verbatim. IMAP expects the bare 16
+        // characters, so every whitespace character is dropped, not just the ends — trim()
+        // alone left the inner spaces in and every login was rejected.
+        val appPassword = actions.value.appPassword.filterNot { it.isWhitespace() }
         if (email.isEmpty() || appPassword.isEmpty()) {
             actions.update {
                 it.copy(error = AppError.Validation(AppErrorRules.IMAP_CREDENTIALS_REQUIRED))

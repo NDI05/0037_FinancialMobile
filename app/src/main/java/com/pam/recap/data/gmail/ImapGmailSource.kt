@@ -102,8 +102,11 @@ class ImapGmailSource @Inject constructor(
                 runCatching { store.close() }
                 Outcome.Success(Unit)
             } catch (error: Throwable) {
-                SafeLogger.failure(TAG, "imap_validation_failed")
-                Outcome.Failure(mapImapFailure(error))
+                // The mapped code distinguishes a rejected password (PERMISSION_REQUIRED) from an
+                // unreachable server (NETWORK) without logging anything about the credential.
+                val mapped = mapImapFailure(error)
+                SafeLogger.failure(TAG, "imap_validation_failed", mapped)
+                Outcome.Failure(mapped)
             }
         }
 
