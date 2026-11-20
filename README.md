@@ -17,7 +17,7 @@ it maps every requirement ID to where it is implemented.
 Bagian ini diperbarui setiap kali ada kemajuan. Kalau ragu apakah masih akurat, `git log` adalah
 kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 
-**Terakhir diperbarui:** 20 November 2026 · commit `9ccde29`
+**Terakhir diperbarui:** 20 November 2026 · commit `8d1640d` + rancangan migrasi
 
 | Area | Status |
 |---|---|
@@ -29,6 +29,7 @@ kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 | LLM **Ollama lokal** (gratis, offline) | ✅ jalan |
 | Fase 5 — backup harian + deploy | ⬜ belum |
 | Fase 6 — APK release bertanda tangan | ⬜ belum |
+| **Kepatuhan Pedoman Project Akhir 2026** | 🟡 dianalisis, rancangan selesai, belum dieksekusi |
 
 **Sedang dikerjakan.** Parser menolak isi email Livin asli dengan `missing_amount`: pada email
 nyata labelnya ditulis `Nominal` **tanpa titik dua** (`nom_start=1 nom_colon=0`), sedangkan
@@ -36,6 +37,23 @@ ekstraktor mencari `Nominal:`. Isi email sendiri sudah terbaca (765 karakter), j
 adalah format label — bukan lagi soal MIME.
 
 **Bukti terakhir di perangkat:** IMAP terkoneksi, 20 notifikasi Livin ditemukan, 0 tersimpan.
+
+### Kepatuhan pedoman
+
+Pedoman mata kuliah (`PEDOMAN PROJECT AKHIR PAM 2026`) menetapkan syarat yang **bertentangan**
+dengan SRS v0.3, dan pedoman yang menentukan nilai. Enam butir belum terpenuhi:
+
+| Butir | Syarat | Kondisi |
+|---|---|---|
+| D.8 | Database minimal MySQL; **Room dilarang** | ❌ masih Room + SQLCipher |
+| D.1 | Access token **JWT** + **refresh token** | ❌ token opaque |
+| D.2 | **Role-based UI**, minimal 1 peran | ❌ belum ada |
+| D.9 | **Simpan & baca file lokal** | ❌ belum ada |
+| D.6 | **5 fitur CRUDS penuh** | ⚠️ Delete belum ada |
+| C.1 | Progress **mingguan** di README + push rutin | 🟡 dimulai hari ini |
+
+Rancangan migrasi: [`docs/10_MIGRASI_PEDOMAN.md`](docs/10_MIGRASI_PEDOMAN.md) ·
+Perubahan SRS: [`docs/11_SRS_CHANGE_v0.4.md`](docs/11_SRS_CHANGE_v0.4.md)
 
 ---
 
