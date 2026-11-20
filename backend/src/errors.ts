@@ -15,6 +15,7 @@ export type ApiErrorCode =
   | 'rate_limited'
   | 'daily_ceiling_reached'
   | 'provider_unavailable'
+  | 'database_unavailable'
   | 'internal_error';
 
 const statusForCode: Record<ApiErrorCode, number> = {
@@ -29,6 +30,7 @@ const statusForCode: Record<ApiErrorCode, number> = {
   rate_limited: 429,
   daily_ceiling_reached: 429,
   provider_unavailable: 502,
+  database_unavailable: 503,
   internal_error: 500,
 };
 
@@ -44,6 +46,7 @@ const retryableForCode: Record<ApiErrorCode, boolean> = {
   rate_limited: true,
   daily_ceiling_reached: true,
   provider_unavailable: true,
+  database_unavailable: true,
   internal_error: true,
 };
 
@@ -80,3 +83,35 @@ export const dailyCeilingReached = (): ApiError =>
   new ApiError('daily_ceiling_reached', 'The daily AI budget ceiling has been reached');
 export const providerUnavailable = (message = 'The analysis provider is unavailable'): ApiError =>
   new ApiError('provider_unavailable', message);
+export const databaseUnavailable = (
+  message = 'The database is temporarily unavailable',
+): ApiError => new ApiError('database_unavailable', message);
+
+/**
+ * Fase 4 amendment: a storage connectivity failure must surface as a retryable 503, not a bare 500.
+ *
+ * libSQL reports both kinds through `LibsqlError`: SQL problems carry a code starting with `SQL`
+ * (`SQLITE_ERROR`, `SQLITE_CONSTRAINT`, `SQL_PARSE_ERROR`), while transport problems carry
+ * `SERVER_ERROR`/`AUTH_ERROR`/`URL_INVALID`/`TRANSACTION_*` or arrive as `TypeError: fetch failed`
+ * with a socket/DNS cause. Only the latter are availability failures.
+ */
+export function isDatabaseUnavailableError(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 6 && current && typeof current === 'object'; depth += 1) {
+    const record = current as {
+      code?: unknown;
+      name?: unknown;
+      message?: unknown;
+      cause?: unknown;
+    };
+    if (typeof record.code === 'string' && record.code.length > 0) {
+      return !/^SQL/.test(record.code);
+    }
+    const message = typeof record.message === 'string' ? record.message : '';
+    if (/ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|bad port|fetch failed|getaddrinfo/i.test(message)) {
+      return true;
+    }
+    current = record.cause;
+  }
+  return false;
+}

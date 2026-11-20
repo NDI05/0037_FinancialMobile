@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import express, { type NextFunction, type Request, type Response, Router } from 'express';
-import { ApiError, badRequest, notFound } from './errors.js';
+import { ApiError, badRequest, databaseUnavailable, isDatabaseUnavailableError, notFound } from './errors.js';
 import { ownerRef, type Logger } from './logger.js';
 import { accountsRouter } from './routes/accounts.js';
 import { analysesRouter } from './routes/analyses.js';
@@ -60,7 +60,9 @@ function errorHandler(logger: Logger) {
         correlationId: request.correlationId,
         name: error instanceof Error ? error.name : 'Unknown',
       });
-      apiError = new ApiError('internal_error', 'Unexpected error');
+      apiError = isDatabaseUnavailableError(error)
+        ? databaseUnavailable()
+        : new ApiError('internal_error', 'Unexpected error');
     }
     if (response.headersSent) return;
     response.status(apiError.status).json({
