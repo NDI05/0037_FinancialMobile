@@ -35,3 +35,10 @@
     *** Companion;
     kotlinx.serialization.KSerializer serializer(...);
 }
+
+# G2/CR-001: javax.mail resolves the IMAP store and MIME handlers by name from
+# META-INF/javamail.providers, so R8 must not strip or rename these classes.
+-keep class javax.mail.** { *; }
+-keep class com.sun.mail.** { *; }
+-dontwarn javax.mail.**
+-dontwarn com.sun.mail.**

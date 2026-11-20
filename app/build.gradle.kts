@@ -93,6 +93,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // javax.mail ships descriptor files that would collide across the two artifacts.
+            excludes += "/META-INF/{mailcap,mailcap.default,MANIFEST.MF,INDEX.LIST,NOTICE.md,LICENSE.md,LICENSE.txt}"
         }
     }
 
@@ -146,6 +148,10 @@ dependencies {
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
+    // G1/G2: IMAP over TLS. android-mail ships javax.mail 1.6.x (no jakarta split, no
+    // duplicate classes); activation is its companion artifact.
+    implementation(libs.android.mail)
+    implementation(libs.android.activation)
 
     testImplementation(libs.junit)
     testImplementation(libs.roborazzi)
