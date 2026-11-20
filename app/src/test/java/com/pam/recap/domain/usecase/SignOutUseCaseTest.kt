@@ -6,6 +6,7 @@ import com.pam.recap.data.gmail.LivinTemplateRegistry
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.testing.FakeAnalysisRepository
+import com.pam.recap.testing.FakeAppPasswordVault
 import com.pam.recap.testing.FakeBudgetRepository
 import com.pam.recap.testing.FakeGmailConnectionRepository
 import com.pam.recap.testing.FakeImportRepository
@@ -47,6 +48,7 @@ class SignOutUseCaseTest {
             budgets = FakeBudgetRepository(),
             imports = FakeImportRepository(),
             backendSessions = backend,
+            appPasswordVault = FakeAppPasswordVault(),
         )
 
         val result = useCase(session.ownerId)

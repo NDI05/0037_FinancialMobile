@@ -15,6 +15,7 @@ import com.pam.recap.data.backend.BackendEndpoints
 import com.pam.recap.data.backend.BackendSessionRepositoryImpl
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.domain.usecase.SignInUseCase
+import com.pam.recap.testing.FakeAppPasswordVault
 import com.pam.recap.testing.FakeSessionRepository
 import com.pam.recap.testing.NoopBackendSessionRepository
 import com.pam.recap.testing.fixedClock
@@ -173,12 +174,14 @@ class LocalAccountSourceTest {
         sessions = sessions,
         signIn = SignInUseCase(sessions, noopDemoData, clock),
         backendSessions = NoopBackendSessionRepository(),
+        appPasswordVault = FakeAppPasswordVault(),
     )
 
     private fun backendSource(): LocalAccountSource = LocalAccountSource(
         sessions = sessions,
         signIn = SignInUseCase(sessions, noopDemoData, clock),
         backendSessions = backendSessions(),
+        appPasswordVault = FakeAppPasswordVault(),
     )
 
     private fun backendSessions(): BackendSessionRepository {

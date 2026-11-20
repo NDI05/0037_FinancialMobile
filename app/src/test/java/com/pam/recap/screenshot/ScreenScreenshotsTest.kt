@@ -65,6 +65,8 @@ import com.pam.recap.testing.FakeAnalysisRepository
 import com.pam.recap.testing.FakeBudgetRepository
 import com.pam.recap.testing.FakeConsentRepository
 import com.pam.recap.testing.FakeDeletionRepository
+import com.pam.recap.testing.FakeAppPasswordVault
+import com.pam.recap.testing.FakeCredentialValidator
 import com.pam.recap.testing.FakeGmailConnectionRepository
 import com.pam.recap.testing.FakeImportRepository
 import com.pam.recap.testing.FakeSummaryRepository
@@ -172,6 +174,8 @@ class ScreenScreenshotsTest {
     private val gmail = FixtureGmailSource(registry)
     private val fingerprints = FingerprintFactory { id -> "screenshot-key::$id".toByteArray() }
     private val ids = SequentialIdGenerator("shot")
+    private val noopVault = FakeAppPasswordVault()
+    private val noopValidator = FakeCredentialValidator()
 
     private val computeSummary = ComputeMonthlySummaryUseCase(
         transactions = transactions,
@@ -442,7 +446,7 @@ class ScreenScreenshotsTest {
             sessions = sessions,
             connections = connections,
             consents = consents,
-            disconnectGmail = DisconnectGmailUseCase(gmail, connections, sessions, clock),
+            disconnectGmail = DisconnectGmailUseCase(gmail, connections, sessions, noopVault, clock),
             signOut = SignOutUseCase(
                 sessions = sessions,
                 gmailSource = gmail,
@@ -453,6 +457,7 @@ class ScreenScreenshotsTest {
                 budgets = budgets,
                 imports = imports,
                 backendSessions = NoopBackendSessionRepository(),
+                appPasswordVault = noopVault,
             ),
         )
 
@@ -502,6 +507,7 @@ class ScreenScreenshotsTest {
                 clock = clock,
                 idGenerator = ids,
                 backendDeletion = NoopBackendDeletionSync(),
+                appPasswordVault = noopVault,
             ),
             withdrawAiConsent = WithdrawAiConsentUseCase(recordConsent),
         )
@@ -572,11 +578,50 @@ class ScreenScreenshotsTest {
             sessions = sessions,
             connections = connections,
             consents = consents,
+            validator = noopValidator,
+            vault = noopVault,
             connectGmail = ConnectGmailUseCase(gmail, gmail, consents, connections, sessions, clock),
-            disconnectGmail = DisconnectGmailUseCase(gmail, connections, sessions, clock),
+            disconnectGmail = DisconnectGmailUseCase(
+                gmail,
+                connections,
+                sessions,
+                noopVault,
+                clock,
+            ),
         )
 
         shot("11-gmail-connect") {
+            GmailConnectScreen(onBack = {}, onOpenConsent = {}, viewModel = viewModel)
+        }
+    }
+
+    @Test
+    fun gmailConnectWithCredentials() {
+        runBlocking {
+            connections.save(
+                GmailConnection(
+                    ownerId = ownerId,
+                    state = GmailConnectionState.NOT_CONNECTED,
+                    mailboxLabel = null,
+                    scope = GmailConnection.IMAP_SCOPE,
+                    connectedAt = null,
+                    lastImportAt = null,
+                    lastAiAt = null,
+                    updatedAt = now,
+                ),
+            )
+        }
+        val viewModel = GmailConnectViewModel(
+            sessions = sessions,
+            connections = connections,
+            consents = consents,
+            validator = noopValidator,
+            vault = noopVault,
+            connectGmail = ConnectGmailUseCase(gmail, gmail, consents, connections, sessions, clock),
+            disconnectGmail = DisconnectGmailUseCase(gmail, connections, sessions, noopVault, clock),
+        )
+
+        shot("11b-gmail-credentials") {
             GmailConnectScreen(onBack = {}, onOpenConsent = {}, viewModel = viewModel)
         }
     }

@@ -1,4 +1,7 @@
 package com.pam.recap.testing
+import com.pam.recap.domain.model.GmailCredential
+import com.pam.recap.domain.repository.AppPasswordVault
+import com.pam.recap.domain.repository.GmailCredentialValidator
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.domain.model.Session
@@ -448,5 +451,40 @@ class FakeSessionRepository(initial: Session? = null) : SessionRepository {
     override suspend fun isDemoSeeded(ownerId: String): Boolean = ownerId in seededOwners
     override suspend fun markDemoSeeded(ownerId: String) {
         seededOwners += ownerId
+    }
+}
+
+/** In-memory credential vault (no Keystore) for JVM tests. */
+class FakeAppPasswordVault(
+    initial: GmailCredential? = null,
+) : AppPasswordVault {
+    val saved = mutableListOf<GmailCredential>()
+    var cleared = 0
+
+    private var current: GmailCredential? = initial
+
+    override suspend fun save(email: String, appPassword: String) {
+        val credential = GmailCredential(email = email, appPassword = appPassword)
+        saved += credential
+        current = credential
+    }
+
+    override suspend fun read(): GmailCredential? = current
+
+    override suspend fun clear() {
+        cleared += 1
+        current = null
+    }
+}
+
+/** Credential validator double: fixed outcome, records the attempt. */
+class FakeCredentialValidator(
+    var result: Outcome<Unit> = Outcome.Success(Unit),
+) : GmailCredentialValidator {
+    val attempts = mutableListOf<String>()
+
+    override suspend fun validate(email: String, appPassword: String): Outcome<Unit> {
+        attempts += email
+        return result
     }
 }
