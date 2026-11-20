@@ -1,4 +1,7 @@
 package com.pam.recap.testing
+import com.pam.recap.domain.model.DemoPurge
+import com.pam.recap.domain.repository.DemoDataMaintenance
+import com.pam.recap.domain.repository.DemoDataPort
 import com.pam.recap.domain.model.GmailCredential
 import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.GmailCredentialValidator
@@ -165,6 +168,16 @@ class FakeTransactionRepository(initial: List<Transaction> = emptyList()) : Tran
         rows.value = rows.value.filterNot { it.ownerId == ownerId }
     }
 
+    override suspend fun countByIdPrefix(ownerId: String, prefix: String): Int =
+        rows.value.count { it.ownerId == ownerId && it.id.startsWith(prefix) }
+
+    override suspend fun deleteByIdPrefix(ownerId: String, prefix: String): Int {
+        val current = rows.value
+        val kept = current.filterNot { it.ownerId == ownerId && it.id.startsWith(prefix) }
+        rows.value = kept
+        return current.size - kept.size
+    }
+
     private fun update(id: String, transform: (Transaction) -> Transaction): Boolean {
         val current = rows.value
         val index = current.indexOfFirst { it.id == id }
@@ -189,7 +202,12 @@ class FakeSummaryRepository : SummaryRepository {
 
     override suspend fun markOutdated(ownerId: String, month: JakartaMonth) = Unit
 
-    override suspend fun deleteAll(ownerId: String) = Unit
+    override suspend fun deleteAll(ownerId: String) {
+        stored.keys.removeIf { it.startsWith("$ownerId:") }
+    }
+
+    override suspend fun delete(ownerId: String, month: JakartaMonth): Int =
+        if (stored.remove("$ownerId:${month.id()}") != null) 1 else 0
 }
 
 class FakeImportRepository(
@@ -226,6 +244,13 @@ class FakeImportRepository(
     override suspend fun skippedFor(jobId: String): List<SkippedCandidate> = skipped.filter { it.jobId == jobId }
 
     override suspend fun deleteAll(ownerId: String) = Unit
+
+    override suspend fun delete(ownerId: String, jobId: String): Boolean {
+        val job = jobs[jobId] ?: return false
+        if (job.ownerId != ownerId) return false
+        jobs.remove(jobId)
+        return true
+    }
 }
 
 fun completeJob(ownerId: String, month: JakartaMonth, at: Instant): ImportJob = ImportJob(
@@ -246,14 +271,14 @@ fun completeJob(ownerId: String, month: JakartaMonth, at: Instant): ImportJob = 
 )
 
 class FakeGmailConnectionRepository : GmailConnectionRepository {
-    private var stored: GmailConnection? = null
+    private val stored = MutableStateFlow<GmailConnection?>(null)
 
-    override fun observe(ownerId: String): Flow<GmailConnection?> = flowOf(stored)
+    override fun observe(ownerId: String): Flow<GmailConnection?> = stored
 
-    override suspend fun get(ownerId: String): GmailConnection? = stored
+    override suspend fun get(ownerId: String): GmailConnection? = stored.value
 
     override suspend fun save(connection: GmailConnection) {
-        stored = connection
+        stored.value = connection
     }
 
     override suspend fun touchLastImport(ownerId: String, at: Instant) = Unit
@@ -452,6 +477,10 @@ class FakeSessionRepository(initial: Session? = null) : SessionRepository {
     override suspend fun markDemoSeeded(ownerId: String) {
         seededOwners += ownerId
     }
+
+    override suspend fun clearDemoSeeded(ownerId: String) {
+        seededOwners -= ownerId
+    }
 }
 
 /** In-memory credential vault (no Keystore) for JVM tests. */
@@ -486,5 +515,44 @@ class FakeCredentialValidator(
     override suspend fun validate(email: String, appPassword: String): Outcome<Unit> {
         attempts += email
         return result
+    }
+}
+
+/**
+ * Demo maintenance double: records purge calls and, by default, behaves like the real purger over a
+ * [FakeTransactionRepository] (prefix delete) so a test can assert real row removal.
+ */
+class FakeDemoDataMaintenance(
+    private val transactions: FakeTransactionRepository? = null,
+    private val summaries: FakeSummaryRepository? = null,
+    private val jobs: FakeImportRepository? = null,
+    private val prefix: String = "demo-",
+) : DemoDataMaintenance {
+    val purgedOwners = mutableListOf<String>()
+    val seededCalledFor = mutableListOf<String>()
+
+    override suspend fun countDemoRows(ownerId: String): Int =
+        transactions?.countByIdPrefix(ownerId, prefix) ?: 0
+
+    override suspend fun purge(ownerId: String): DemoPurge {
+        purgedOwners += ownerId
+        val removedTransactions = transactions?.deleteByIdPrefix(ownerId, prefix) ?: 0
+        val removedJobs = listOf("demo-job-2026-02", "demo-job-2026-01")
+            .count { jobs?.delete(ownerId, it) == true }
+        val removedSummaries = listOf(
+            com.pam.recap.core.time.JakartaMonth(2026, 2),
+            com.pam.recap.core.time.JakartaMonth(2026, 1),
+        ).sumOf { summaries?.delete(ownerId, it) ?: 0 }
+        return DemoPurge(removedTransactions, removedJobs, removedSummaries)
+    }
+}
+
+/** Seed port double: records which owners were seeded, never writes rows. */
+class FakeDemoDataPort : DemoDataPort {
+    val seededOwners = mutableListOf<String>()
+
+    override suspend fun seedIfNeeded(ownerId: String): Boolean {
+        seededOwners += ownerId
+        return true
     }
 }

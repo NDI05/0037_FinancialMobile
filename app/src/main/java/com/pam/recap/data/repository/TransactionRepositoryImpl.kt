@@ -234,6 +234,22 @@ class TransactionRepositoryImpl @Inject constructor(
         transactionDao.latestEventAt(ownerId)?.let { Instant.fromEpochMilliseconds(it) }
     }
 
+    override suspend fun countByIdPrefix(ownerId: String, prefix: String): Int =
+        withContext(ioDispatcher) { transactionDao.countByIdPrefix(ownerId, prefix) }
+
+    override suspend fun deleteByIdPrefix(ownerId: String, prefix: String): Int =
+        withContext(ioDispatcher) {
+            database.withTransaction {
+                val removed = transactionDao.deleteByIdPrefix(ownerId, prefix)
+                if (removed > 0) {
+                    // Removing rows changes the month's inputs: bump every revision this owner has
+                    // so a stale summary can never look current (FR-33).
+                    metadataDao.deleteByPrefix(revisionPrefix(ownerId))
+                }
+                removed
+            }
+        }
+
     override suspend fun deleteAll(ownerId: String): Unit = withContext(ioDispatcher) {
         database.withTransaction {
             transactionDao.deleteAll(ownerId)

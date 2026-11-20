@@ -39,6 +39,10 @@ interface ImportJobDao {
 
     @Query("DELETE FROM import_jobs WHERE ownerId = :ownerId")
     suspend fun deleteAll(ownerId: String)
+
+    /** F2: removing one seeded job, owner-checked. */
+    @Query("DELETE FROM import_jobs WHERE ownerId = :ownerId AND id = :jobId")
+    suspend fun deleteById(ownerId: String, jobId: String): Int
 }
 
 /** FR-15 redacted skipped candidates. */
@@ -116,4 +120,8 @@ interface MonthlySummaryDao {
 
     @Query("DELETE FROM monthly_summaries WHERE ownerId = :ownerId")
     suspend fun deleteAll(ownerId: String)
+
+    /** F2: a summary derived from demo rows is deleted; the next render recomputes it. */
+    @Query("DELETE FROM monthly_summaries WHERE ownerId = :ownerId AND monthId = :monthId")
+    suspend fun deleteForMonth(ownerId: String, monthId: String): Int
 }

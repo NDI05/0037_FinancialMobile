@@ -70,6 +70,10 @@ class SessionRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun clearDemoSeeded(ownerId: String): Unit = withContext(ioDispatcher) {
+        dataStore.edit { prefs -> prefs.remove(SessionKeys.demoSeeded(ownerId)) }
+    }
+
     override suspend fun isDemoSeeded(ownerId: String): Boolean = withContext(ioDispatcher) {
         dataStore.data.first()[SessionKeys.demoSeeded(ownerId)] == true
     }

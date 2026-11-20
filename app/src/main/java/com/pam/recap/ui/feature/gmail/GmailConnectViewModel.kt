@@ -9,6 +9,7 @@ import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.GmailConnection
 import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.ConsentRepository
+import com.pam.recap.domain.repository.DemoDataMaintenance
 import com.pam.recap.domain.repository.GmailConnectionRepository
 import com.pam.recap.domain.repository.GmailCredentialValidator
 import com.pam.recap.domain.repository.SessionRepository
@@ -53,6 +54,7 @@ class GmailConnectViewModel @Inject constructor(
     consents: ConsentRepository,
     private val validator: GmailCredentialValidator,
     private val vault: AppPasswordVault,
+    private val demoData: DemoDataMaintenance,
     private val connectGmail: ConnectGmailUseCase,
     private val disconnectGmail: DisconnectGmailUseCase,
 ) : ViewModel() {
@@ -132,6 +134,8 @@ class GmailConnectViewModel @Inject constructor(
                         if (result.error is AppError.PermissionRequired) vault.clear()
                         actions.update { it.copy(isBusy = false, error = result.error) }
                     } else {
+                        // F2: a real mailbox replaces the demo framing, so sample rows must go.
+                        runCatching { demoData.purge(ownerId) }
                         actions.update { it.copy(isBusy = false, error = null, appPassword = "") }
                     }
                 }

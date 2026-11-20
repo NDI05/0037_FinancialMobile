@@ -6,8 +6,8 @@ import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.AccountRepository
-import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.BackendSessionRepository
+import com.pam.recap.domain.repository.DemoDataMaintenance
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.SignInUseCase
 import javax.inject.Inject
@@ -21,15 +21,19 @@ import javax.inject.Singleton
  * (email + display name, no password) signs in on this device only — nothing leaves the phone and
  * the account screen says so.
  *
- * `isDemo = true` because Fase 2 still reads the bundled fixture mailbox; Fase 3 flips it once a
- * real IMAP app password is stored.
+ * Demo data belongs to the offline demo only (F1): `seedDemo` is true exactly when no backend is
+ * configured. A server-backed account never receives sample rows, and any demo rows written by an
+ * earlier build are purged on sign-in (F2).
+ *
+ * `isDemo` is now a display/labelling flag: true in offline mode, false for a server account,
+ * independent of whether a Gmail app password is stored.
  */
 @Singleton
 class LocalAccountSource @Inject constructor(
     private val sessions: SessionRepository,
     private val signIn: SignInUseCase,
     private val backendSessions: BackendSessionRepository,
-    private val appPasswordVault: AppPasswordVault,
+    private val demoData: DemoDataMaintenance,
 ) : AccountRepository {
 
     override val isBackendEnabled: Boolean get() = backendSessions.isEnabled
@@ -84,15 +88,22 @@ class LocalAccountSource @Inject constructor(
         sessions.signOut()
     }
 
-    private suspend fun createProfile(email: String, displayName: String?): Outcome<Session> =
-        signIn(
+    private suspend fun createProfile(email: String, displayName: String?): Outcome<Session> {
+        val offline = !isBackendEnabled
+        val result = signIn(
             accountId = email,
             displayName = displayName ?: email.substringBefore('@'),
             mailboxLabel = email,
-            // CR-001: with a real app password the bundled sample month is no longer "demo data";
-            // without one the fixture mailbox still is, so the seed keeps the walkthrough populated.
-            isDemo = !appPasswordVault.hasCredential(),
+            // Offline mode is the demo; a server account is never demo, connected or not.
+            isDemo = offline,
+            seedDemo = offline,
         )
+        if (!offline && result is Outcome.Success) {
+            // F2 self-healing: an installation that seeded sample rows before this rule existed.
+            runCatching { demoData.purge(result.value.ownerId) }
+        }
+        return result
+    }
 
     private fun normalize(email: String): String = email.trim().lowercase()
 

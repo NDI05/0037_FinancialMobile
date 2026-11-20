@@ -82,6 +82,11 @@ interface TransactionRepository {
 
     /** Used by sign-out (FR-05) and deletion (FR-47). */
     suspend fun deleteAll(ownerId: String)
+
+    /** F2: demo rows are identified by their id prefix, never by content. */
+    suspend fun countByIdPrefix(ownerId: String, prefix: String): Int
+
+    suspend fun deleteByIdPrefix(ownerId: String, prefix: String): Int
 }
 
 /** FR-30/FR-33 summary persistence. */
@@ -97,6 +102,9 @@ interface SummaryRepository {
     suspend fun markOutdated(ownerId: String, month: JakartaMonth)
 
     suspend fun deleteAll(ownerId: String)
+
+    /** F2: drops the summaries for one month, including its category split. */
+    suspend fun delete(ownerId: String, month: JakartaMonth): Int
 }
 
 /** FR-19/FR-21 import job and redacted skipped-candidate persistence. */
@@ -119,6 +127,9 @@ interface ImportRepository {
     suspend fun skippedFor(jobId: String): List<SkippedCandidate>
 
     suspend fun deleteAll(ownerId: String)
+
+    /** F2: removes one seeded job for [ownerId]; false when it did not exist. */
+    suspend fun delete(ownerId: String, jobId: String): Boolean
 }
 
 /** FR-39/FR-40 analysis persistence, including the cache key and historical marking. */
@@ -198,6 +209,9 @@ interface SessionRepository {
 
     /** Demo data is seeded once per signed-in demo session (A9). */
     suspend fun isDemoSeeded(ownerId: String): Boolean
+
+    /** F2: after a purge the owner may seed again if it ever runs in offline mode. */
+    suspend fun clearDemoSeeded(ownerId: String)
 
     suspend fun markDemoSeeded(ownerId: String)
 }

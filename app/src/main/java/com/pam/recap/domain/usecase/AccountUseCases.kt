@@ -44,11 +44,17 @@ class SignInUseCase @Inject constructor(
     private val clock: ClockProvider,
 ) {
 
+    /**
+     * [isDemo] is a *display* label only ("this session runs on the offline demo"). [seedDemo]
+     * decides whether the bundled dataset is written, and only the offline mode sets it (F1): a
+     * server-backed account must never receive sample rows, connected mailbox or not.
+     */
     suspend operator fun invoke(
         accountId: String,
         displayName: String? = null,
         mailboxLabel: String? = null,
         isDemo: Boolean = false,
+        seedDemo: Boolean = false,
     ): Outcome<Session> {
         if (accountId.isBlank()) {
             return Outcome.Failure(AppError.Validation(AppErrorRules.NOT_SIGNED_IN))
@@ -61,7 +67,7 @@ class SignInUseCase @Inject constructor(
             isDemo = isDemo,
         )
         sessions.signIn(session)
-        if (isDemo) {
+        if (seedDemo) {
             runCatching { demoData.seedIfNeeded(session.ownerId) }
         }
         return Outcome.Success(session)

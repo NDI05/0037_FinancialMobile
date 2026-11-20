@@ -67,6 +67,7 @@ import com.pam.recap.testing.FakeConsentRepository
 import com.pam.recap.testing.FakeDeletionRepository
 import com.pam.recap.testing.FakeAppPasswordVault
 import com.pam.recap.testing.FakeCredentialValidator
+import com.pam.recap.testing.FakeDemoDataMaintenance
 import com.pam.recap.testing.FakeGmailConnectionRepository
 import com.pam.recap.testing.FakeImportRepository
 import com.pam.recap.testing.FakeSummaryRepository
@@ -175,6 +176,7 @@ class ScreenScreenshotsTest {
     private val fingerprints = FingerprintFactory { id -> "screenshot-key::$id".toByteArray() }
     private val ids = SequentialIdGenerator("shot")
     private val noopVault = FakeAppPasswordVault()
+    private val demoData = FakeDemoDataMaintenance()
     private val noopValidator = FakeCredentialValidator()
 
     private val computeSummary = ComputeMonthlySummaryUseCase(
@@ -447,6 +449,7 @@ class ScreenScreenshotsTest {
             connections = connections,
             consents = consents,
             disconnectGmail = DisconnectGmailUseCase(gmail, connections, sessions, noopVault, clock),
+            demoData = demoData,
             signOut = SignOutUseCase(
                 sessions = sessions,
                 gmailSource = gmail,
@@ -580,6 +583,7 @@ class ScreenScreenshotsTest {
             consents = consents,
             validator = noopValidator,
             vault = noopVault,
+            demoData = demoData,
             connectGmail = ConnectGmailUseCase(gmail, gmail, consents, connections, sessions, clock),
             disconnectGmail = DisconnectGmailUseCase(
                 gmail,
@@ -617,6 +621,7 @@ class ScreenScreenshotsTest {
             consents = consents,
             validator = noopValidator,
             vault = noopVault,
+            demoData = demoData,
             connectGmail = ConnectGmailUseCase(gmail, gmail, consents, connections, sessions, clock),
             disconnectGmail = DisconnectGmailUseCase(gmail, connections, sessions, noopVault, clock),
         )
@@ -723,5 +728,6 @@ class ScreenScreenshotsTest {
         override suspend fun signOut() = Unit
         override suspend fun isDemoSeeded(ownerId: String): Boolean = true
         override suspend fun markDemoSeeded(ownerId: String) = Unit
+        override suspend fun clearDemoSeeded(ownerId: String) = Unit
     }
 }

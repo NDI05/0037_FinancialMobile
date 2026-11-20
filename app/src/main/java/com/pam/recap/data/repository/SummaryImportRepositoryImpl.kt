@@ -61,6 +61,10 @@ class SummaryRepositoryImpl @Inject constructor(
     override suspend fun deleteAll(ownerId: String): Unit = withContext(ioDispatcher) {
         summaryDao.deleteAll(ownerId)
     }
+
+    override suspend fun delete(ownerId: String, month: JakartaMonth): Int = withContext(ioDispatcher) {
+        summaryDao.deleteForMonth(ownerId, month.id())
+    }
 }
 
 /** FR-19/FR-21 import jobs and redacted skipped candidates. */
@@ -113,5 +117,9 @@ class ImportRepositoryImpl @Inject constructor(
             skippedCandidateDao.deleteAll(ownerId)
             importJobDao.deleteAll(ownerId)
         }
+    }
+
+    override suspend fun delete(ownerId: String, jobId: String): Boolean = withContext(ioDispatcher) {
+        importJobDao.deleteById(ownerId, jobId) > 0
     }
 }

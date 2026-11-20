@@ -308,6 +308,10 @@ class ImportMonthUseCaseTest {
             rows.value = rows.value.filterNot { it.ownerId == ownerId }
         }
 
+        override suspend fun countByIdPrefix(ownerId: String, prefix: String): Int = 0
+
+        override suspend fun deleteByIdPrefix(ownerId: String, prefix: String): Int = 0
+
         private fun replace(id: String, transform: (Transaction) -> Transaction): Boolean {
             val current = rows.value
             val index = current.indexOfFirst { it.id == id }
@@ -348,6 +352,8 @@ class ImportMonthUseCaseTest {
         override suspend fun skippedFor(jobId: String): List<SkippedCandidate> = skipped.filter { it.jobId == jobId }
 
         override suspend fun deleteAll(ownerId: String) = Unit
+
+        override suspend fun delete(ownerId: String, jobId: String): Boolean = false
     }
 
     private class FakeSummaryRepository : SummaryRepository {
@@ -356,6 +362,8 @@ class ImportMonthUseCaseTest {
         override suspend fun save(summary: MonthlySummary) = Unit
         override suspend fun markOutdated(ownerId: String, month: JakartaMonth) = Unit
         override suspend fun deleteAll(ownerId: String) = Unit
+
+        override suspend fun delete(ownerId: String, month: JakartaMonth): Int = 0
     }
 
     private class FakeAnalysisRepository : AnalysisRepository {

@@ -237,4 +237,11 @@ interface TransactionDao {
 
     @Query("DELETE FROM transactions WHERE ownerId = :ownerId")
     suspend fun deleteAll(ownerId: String)
+
+    /** F2: demo seed rows are the only ones whose id starts with the demo prefix. */
+    @Query("SELECT COUNT(*) FROM transactions WHERE ownerId = :ownerId AND id LIKE :prefix || '%'")
+    suspend fun countByIdPrefix(ownerId: String, prefix: String): Int
+
+    @Query("DELETE FROM transactions WHERE ownerId = :ownerId AND id LIKE :prefix || '%'")
+    suspend fun deleteByIdPrefix(ownerId: String, prefix: String): Int
 }

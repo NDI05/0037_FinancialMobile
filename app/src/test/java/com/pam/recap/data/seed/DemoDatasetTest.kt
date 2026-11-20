@@ -28,6 +28,13 @@ class DemoDatasetTest {
     private val fingerprints = FingerprintFactory { ownerId -> "test-key::$ownerId".toByteArray() }
     private val now = Instant.parse("2026-03-01T02:00:00Z")
 
+    @org.junit.Test
+    fun `every seeded row id carries the demo prefix the purge relies on`() {
+        val ids = rows().map { it.id }
+        org.junit.Assert.assertEquals(ids.size, ids.count { it.startsWith(DemoDataset.ID_PREFIX) })
+        org.junit.Assert.assertTrue(ids.isNotEmpty())
+    }
+
     private fun rows(ownerId: String = "u_demo"): List<Transaction> = DemoDataset.build(
         ownerId = ownerId,
         now = now,

@@ -29,6 +29,9 @@ object DemoDataset {
 
     val REFERENCE_MONTH: JakartaMonth = JakartaMonth(2026, 2)
 
+    /** Every seeded row id starts with this prefix; the purge deletes by it (F2). */
+    const val ID_PREFIX: String = "demo-"
+
     const val DEMO_JOB_ID: String = "demo-job-2026-02"
     const val PREVIOUS_JOB_ID: String = "demo-job-2026-01"
 
@@ -55,7 +58,7 @@ object DemoDataset {
         addAll(previousMonthRows(ownerId, now, fingerprints))
     }
 
-    fun seedId(key: String): String = "demo-$key"
+    fun seedId(key: String): String = "$ID_PREFIX$key"
 
     fun instantAt(local: String): Instant = Instant.fromEpochMilliseconds(
         LocalDateTime.parse(local, LOCAL_FORMAT).atZone(jakarta).toInstant().toEpochMilli(),

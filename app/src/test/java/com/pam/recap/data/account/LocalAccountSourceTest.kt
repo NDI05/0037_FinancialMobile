@@ -1,5 +1,7 @@
 package com.pam.recap.data.account
 
+import com.pam.recap.testing.FakeDemoDataPort
+import com.pam.recap.testing.FakeTransactionRepository
 import android.content.Context
 import android.util.Base64
 import androidx.test.core.app.ApplicationProvider
@@ -15,7 +17,7 @@ import com.pam.recap.data.backend.BackendEndpoints
 import com.pam.recap.data.backend.BackendSessionRepositoryImpl
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.domain.usecase.SignInUseCase
-import com.pam.recap.testing.FakeAppPasswordVault
+import com.pam.recap.testing.FakeDemoDataMaintenance
 import com.pam.recap.testing.FakeSessionRepository
 import com.pam.recap.testing.NoopBackendSessionRepository
 import com.pam.recap.testing.fixedClock
@@ -47,13 +49,12 @@ class LocalAccountSourceTest {
     private lateinit var server: MockWebServer
     private lateinit var context: Context
     private lateinit var sessions: FakeSessionRepository
+    private lateinit var demoData: FakeDemoDataMaintenance
     private val now = Instant.parse("2026-03-01T02:00:00Z")
     private val clock = object : ClockProvider {
         override fun now(): Instant = now
     }
-    private val noopDemoData = object : com.pam.recap.domain.repository.DemoDataPort {
-        override suspend fun seedIfNeeded(ownerId: String): Boolean = true
-    }
+    private val demoDataPort = FakeDemoDataPort()
 
     @Before
     fun setUp() {
@@ -62,6 +63,7 @@ class LocalAccountSourceTest {
         context = ApplicationProvider.getApplicationContext()
         context.getSharedPreferences("pam_backend_session", Context.MODE_PRIVATE).edit().clear().commit()
         sessions = FakeSessionRepository()
+        demoData = FakeDemoDataMaintenance()
     }
 
     @After
@@ -168,20 +170,80 @@ class LocalAccountSourceTest {
         assertNull(sessions.current())
     }
 
+    // ---- F1: demo data belongs to the offline demo only -------------------------------------
+
+    @Test
+    fun `a server account never seeds demo rows, even with no mailbox connected`() = runTest {
+        server.enqueue(accountCreated())
+        server.enqueue(sessionCreated("token-1"))
+        val source = backendSource()
+
+        val result = source.register("andi@example.test", "correct-horse-battery", "Andi", "invite-123")
+
+        assertTrue(result is Outcome.Success)
+        assertEquals(emptyList<String>(), demoDataPort.seededOwners)
+        assertEquals(listOf(OwnerIdFactory.ownerIdFor("andi@example.test")), demoData.purgedOwners)
+        assertEquals(false, (result as Outcome.Success).value.isDemo)
+    }
+
+    @Test
+    fun `offline mode seeds the demo dataset and labels the session`() = runTest {
+        val source = offlineSource()
+
+        val result = source.loginOffline("andhika@example.test", "Andhika")
+
+        assertTrue(result is Outcome.Success)
+        assertEquals(listOf(OwnerIdFactory.ownerIdFor("andhika@example.test")), demoDataPort.seededOwners)
+        assertTrue((result as Outcome.Success).value.isDemo)
+        assertEquals(emptyList<String>(), demoData.purgedOwners)
+    }
+
+    @Test
+    fun `a server sign-in purges demo rows left by an earlier build`() = runTest {
+        val ownerId = OwnerIdFactory.ownerIdFor("andi@example.test")
+        val seed = com.pam.recap.data.seed.DemoDataset.build(
+            ownerId = ownerId,
+            now = now,
+            parser = com.pam.recap.data.gmail.LivinQrisParser(),
+            rules = com.pam.recap.domain.usecase.MerchantCategoryRules(),
+            fingerprints = com.pam.recap.core.security.FingerprintFactory { id -> "k::$id".toByteArray() },
+        ).first()
+        val transactions = FakeTransactionRepository(
+            listOf(
+                seed.copy(id = com.pam.recap.data.seed.DemoDataset.seedId("leftover"), fingerprint = "fp-demo"),
+                seed.copy(id = "email-1", fingerprint = "fp-email"),
+            ),
+        )
+        demoData = FakeDemoDataMaintenance(transactions = transactions)
+        server.enqueue(sessionCreated("token-1"))
+        val source = LocalAccountSource(
+            sessions = sessions,
+            signIn = SignInUseCase(sessions, demoDataPort, clock),
+            backendSessions = backendSessions(),
+            demoData = demoData,
+        )
+
+        val result = source.login("andi@example.test", "correct-horse-battery")
+
+        assertTrue(result is Outcome.Success)
+        assertEquals(listOf("email-1"), transactions.all().map { it.id })
+        assertEquals(0, demoData.countDemoRows(OwnerIdFactory.ownerIdFor("andi@example.test")))
+    }
+
     // ---- helpers -------------------------------------------------------------------------
 
     private fun offlineSource() = LocalAccountSource(
         sessions = sessions,
-        signIn = SignInUseCase(sessions, noopDemoData, clock),
+        signIn = SignInUseCase(sessions, demoDataPort, clock),
         backendSessions = NoopBackendSessionRepository(),
-        appPasswordVault = FakeAppPasswordVault(),
+        demoData = demoData,
     )
 
     private fun backendSource(): LocalAccountSource = LocalAccountSource(
         sessions = sessions,
-        signIn = SignInUseCase(sessions, noopDemoData, clock),
+        signIn = SignInUseCase(sessions, demoDataPort, clock),
         backendSessions = backendSessions(),
-        appPasswordVault = FakeAppPasswordVault(),
+        demoData = demoData,
     )
 
     private fun backendSessions(): BackendSessionRepository {

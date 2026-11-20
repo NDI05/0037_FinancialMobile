@@ -22,6 +22,7 @@ import com.pam.recap.data.repository.GmailConnectionRepositoryImpl
 import com.pam.recap.data.repository.ImportRepositoryImpl
 import com.pam.recap.data.repository.SummaryRepositoryImpl
 import com.pam.recap.data.repository.TransactionRepositoryImpl
+import com.pam.recap.data.seed.DemoDataPurger
 import com.pam.recap.data.seed.DemoDataSeeder
 import com.pam.recap.domain.repository.AccountRepository
 import com.pam.recap.domain.repository.AiPayloadSource
@@ -29,6 +30,7 @@ import com.pam.recap.domain.repository.AnalysisRepository
 import com.pam.recap.domain.repository.BudgetRepository
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.DeletionRepository
+import com.pam.recap.domain.repository.DemoDataMaintenance
 import com.pam.recap.domain.repository.DemoDataPort
 import com.pam.recap.domain.repository.GmailConnectionRepository
 import com.pam.recap.domain.repository.ImportRepository
@@ -79,6 +81,9 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindDemoData(impl: DemoDataSeeder): DemoDataPort
+
+    @Binds
+    abstract fun bindDemoDataMaintenance(impl: DemoDataPurger): DemoDataMaintenance
 
     @Binds
     abstract fun bindLivinParser(impl: LivinQrisParser): LivinNotificationParser
