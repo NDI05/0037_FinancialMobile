@@ -102,7 +102,7 @@
 
     <string name="welcome_tagline">A monthly financial recap built from Livin email — numbers you can check, not a bank balance.</string>
     <string name="welcome_privacy_link">Read the privacy policy</string>
-    <string name="welcome_demo_hint">Demo mode is on: the app uses bundled sample data, not a real mailbox.</string>
+    <string name="welcome_demo_hint">Demo mode is active (no server): the app uses bundled sample data, not a real inbox.</string>
     <string name="welcome_disclaimer">PAM is not a bank app. There is no balance and no money movement.</string>
 
     <string name="consent_title">Consent</string>

@@ -39,14 +39,18 @@ import com.pam.recap.ui.theme.PamSpacing
 import com.pam.recap.ui.theme.Violet
 
 /**
- * §8 Welcome: wordmark, tagline, privacy link and a single Google sign-in action over the
- * hero + aurora background. Rejection produces neutral inline copy, never a red screen (FR-01).
+ * §8 Welcome: wordmark, tagline, privacy link and the two account actions over the hero + aurora
+ * background.
+ *
+ * [showDemoNotice] is passed in by the caller (G2): the "mode demo aktif" line is only true when no
+ * backend is configured, so a server-backed installation shows the honesty card without it.
  */
 @Composable
 fun WelcomeScreen(
     onSignIn: () -> Unit,
     onCreateAccount: () -> Unit,
     onOpenPrivacy: () -> Unit,
+    showDemoNotice: Boolean,
     modifier: Modifier = Modifier,
 ) {
 
@@ -97,12 +101,14 @@ fun WelcomeScreen(
                     style = BodyS,
                     color = OnInkMuted,
                 )
-                Spacer(modifier = Modifier.height(PamSpacing.xs))
-                Text(
-                    text = stringResource(R.string.welcome_demo_hint),
-                    style = BodyS,
-                    color = OnInkFaint,
-                )
+                if (showDemoNotice) {
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    Text(
+                        text = stringResource(R.string.welcome_demo_hint),
+                        style = BodyS,
+                        color = OnInkFaint,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(PamSpacing.lg))

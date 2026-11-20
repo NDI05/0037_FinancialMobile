@@ -560,8 +560,26 @@ class ScreenScreenshotsTest {
     // ---------------------------------------------------------------------------------------
     @Test
     fun welcome() {
+        // Production shape: a server-backed build, so the demo notice must not appear.
         shot("09-welcome") {
-            WelcomeScreen(onSignIn = {}, onCreateAccount = {}, onOpenPrivacy = {})
+            WelcomeScreen(
+                onSignIn = {},
+                onCreateAccount = {},
+                onOpenPrivacy = {},
+                showDemoNotice = false,
+            )
+        }
+    }
+
+    @Test
+    fun welcomeDemo() {
+        shot("09-welcome-demo") {
+            WelcomeScreen(
+                onSignIn = {},
+                onCreateAccount = {},
+                onOpenPrivacy = {},
+                showDemoNotice = true,
+            )
         }
     }
 

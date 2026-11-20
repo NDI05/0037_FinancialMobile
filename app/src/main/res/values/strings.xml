@@ -110,7 +110,7 @@
     <!-- Welcome -->
     <string name="welcome_tagline">Rekap keuangan bulanan dari email Livin — angka yang bisa Anda periksa, bukan saldo rekening.</string>
     <string name="welcome_privacy_link">Lihat kebijakan privasi</string>
-    <string name="welcome_demo_hint">Mode demo aktif: aplikasi memakai data contoh bawaan, bukan kotak masuk sungguhan.</string>
+    <string name="welcome_demo_hint">Mode demo aktif (tanpa server): aplikasi memakai data contoh bawaan, bukan kotak masuk sungguhan.</string>
     <string name="welcome_disclaimer">PAM bukan aplikasi bank. Tidak ada saldo, tidak ada perpindahan uang.</string>
 
     <!-- Consent -->

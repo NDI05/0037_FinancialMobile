@@ -48,6 +48,7 @@ import com.pam.recap.ui.feature.transactions.TransactionsScreen
 import com.pam.recap.ui.feature.account.AccountMode
 import com.pam.recap.ui.feature.account.AccountScreen
 import com.pam.recap.ui.feature.welcome.WelcomeScreen
+import com.pam.recap.ui.feature.welcome.WelcomeViewModel
 import com.pam.recap.ui.session.GateState
 import com.pam.recap.ui.session.SessionGateViewModel
 
@@ -107,10 +108,12 @@ fun PamNavHost(modifier: Modifier = Modifier) {
             popExitTransition = { fadeOut(tween(durationMillis = 160)) },
         ) {
             composable<PamDestination.Welcome> {
+                val welcome: WelcomeViewModel = hiltViewModel()
                 WelcomeScreen(
                     onSignIn = { navController.navigate(PamDestination.Account(AccountMode.SIGN_IN)) },
                     onCreateAccount = { navController.navigate(PamDestination.Account(AccountMode.REGISTER)) },
                     onOpenPrivacy = { navController.navigate(PamDestination.Consent) },
+                    showDemoNotice = welcome.showDemoNotice,
                 )
             }
 
