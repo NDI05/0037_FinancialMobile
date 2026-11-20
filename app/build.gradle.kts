@@ -54,6 +54,14 @@ android {
             "PAM_ANALYSIS_BACKEND_URL",
             "\"${buildProperty("PAM_ANALYSIS_BACKEND_URL")}\"",
         )
+        // Debug builds allow screen capture so the app can be mirrored in Android Studio and
+        // inspected while testing. Release always keeps FLAG_SECURE (NFR-16), so this cannot leak
+        // into a shipped build.
+        buildConfigField(
+            "boolean",
+            "PAM_ALLOW_SCREEN_CAPTURE",
+            buildProperty("PAM_ALLOW_SCREEN_CAPTURE").ifBlank { "true" },
+        )
     }
 
     buildTypes {
@@ -63,6 +71,7 @@ android {
             isMinifyEnabled = false
         }
         release {
+            buildConfigField("boolean", "PAM_ALLOW_SCREEN_CAPTURE", "false")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

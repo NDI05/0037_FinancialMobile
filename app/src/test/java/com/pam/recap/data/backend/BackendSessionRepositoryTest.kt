@@ -194,7 +194,8 @@ class BackendSessionRepositoryTest {
 
     @Test
     fun `a blank base URL never opens a socket`() = runTest {
-        val blank = BackendConfig()
+        // Explicit blanks: the blank-URL contract must not depend on how this build was invoked.
+        val blank = BackendConfig(rawBaseUrl = "", rawLegacyAnalysisUrl = "")
         assertFalse(blank.isEnabled)
         val repository = BackendSessionRepositoryImpl(
             client = OkHttpClient(),

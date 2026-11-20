@@ -203,7 +203,8 @@ class RemoteAnalysisEngineTest {
     // ---- E5.6: no backend configured ------------------------------------------------------
     @Test
     fun `a blank base URL leaves the engine unconfigured and fails fast`() = runTest {
-        val blank = BackendConfig()
+        // Explicit blanks: the blank-URL contract must not depend on how this build was invoked.
+        val blank = BackendConfig(rawBaseUrl = "", rawLegacyAnalysisUrl = "")
         assertFalse(blank.isEnabled)
         assertNull(blank.analysesUrl)
         assertFalse(blank.endpoint("/v1/sessions") != null && blank.endpoint("/v1/sessions")!!.isNotBlank())

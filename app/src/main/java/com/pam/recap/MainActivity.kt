@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import com.pam.recap.core.util.AppLocale
 import com.pam.recap.ui.navigation.PamNavHost
 import com.pam.recap.ui.theme.Ink
+import com.pam.recap.BuildConfig
 import com.pam.recap.ui.theme.PamTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -37,10 +38,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE,
-        )
+        // NFR-16 keeps the recap out of the recents thumbnail and blocks screen capture.
+        // Debug builds opt out (PAM_ALLOW_SCREEN_CAPTURE) so the screen can be mirrored while
+        // testing; the release build type hard-codes the flag to false.
+        if (!BuildConfig.PAM_ALLOW_SCREEN_CAPTURE) {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE,
+            )
+        }
         setContent {
             PamTheme {
                 Box(modifier = Modifier.fillMaxSize().background(Ink)) {

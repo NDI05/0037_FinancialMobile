@@ -25,12 +25,24 @@ interface BackendEndpoints {
     fun endpoint(path: String): String?
 }
 
+/**
+ * Reads the two configured URLs. Values are constructor parameters rather than a direct
+ * [BuildConfig] read so unit tests can exercise the blank/non-blank matrix without depending on
+ * how the current build was invoked; the Hilt module supplies the real BuildConfig values.
+ */
 @Singleton
-class BackendConfig @Inject constructor() : BackendEndpoints {
+class BackendConfig(
+    rawBaseUrl: String,
+    rawLegacyAnalysisUrl: String,
+) : BackendEndpoints {
 
-    private val baseUrl: String = BuildConfig.PAM_BACKEND_BASE_URL.trim().trimEnd('/')
+    /** Production wiring: the URLs baked into this build. */
+    @Inject
+    constructor() : this(BuildConfig.PAM_BACKEND_BASE_URL, BuildConfig.PAM_ANALYSIS_BACKEND_URL)
 
-    private val legacyAnalysisUrl: String = BuildConfig.PAM_ANALYSIS_BACKEND_URL.trim()
+    private val baseUrl: String = rawBaseUrl.trim().trimEnd('/')
+
+    private val legacyAnalysisUrl: String = rawLegacyAnalysisUrl.trim()
 
     /** True when either property is set; drives the engine choice and every server push. */
     override val isEnabled: Boolean get() = baseUrl.isNotBlank() || legacyAnalysisUrl.isNotBlank()
