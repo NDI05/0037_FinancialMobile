@@ -7,8 +7,10 @@ import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.GmailConnection
+import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.GmailConnectionRepository
+import com.pam.recap.domain.repository.GmailCredentialValidator
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.ConnectGmailUseCase
 import com.pam.recap.domain.usecase.DisconnectGmailUseCase
@@ -32,8 +34,11 @@ data class GmailConnectUiState(
     val ownerId: String? = null,
     val isBusy: Boolean = false,
     val error: AppError? = null,
-    /** FR-46: disconnect succeeded locally but the grant could not be revoked. */
+    /** FR-46: disconnect succeeded locally but the session could not be closed. */
     val revokeFailed: Boolean = false,
+    val email: String = "",
+    val appPassword: String = "",
+    val passwordVisible: Boolean = false,
 )
 
 /**
@@ -46,6 +51,8 @@ class GmailConnectViewModel @Inject constructor(
     sessions: SessionRepository,
     connections: GmailConnectionRepository,
     consents: ConsentRepository,
+    private val validator: GmailCredentialValidator,
+    private val vault: AppPasswordVault,
     private val connectGmail: ConnectGmailUseCase,
     private val disconnectGmail: DisconnectGmailUseCase,
 ) : ViewModel() {
@@ -54,6 +61,9 @@ class GmailConnectViewModel @Inject constructor(
         val isBusy: Boolean = false,
         val error: AppError? = null,
         val revokeFailed: Boolean = false,
+        val email: String = "",
+        val appPassword: String = "",
+        val passwordVisible: Boolean = false,
     )
 
     private val actions = MutableStateFlow(ActionState())
@@ -73,19 +83,54 @@ class GmailConnectViewModel @Inject constructor(
                     isBusy = action.isBusy,
                     error = action.error,
                     revokeFailed = action.revokeFailed,
+                    email = action.email.ifBlank { session.mailboxLabel.orEmpty() },
+                    appPassword = action.appPassword,
+                    passwordVisible = action.passwordVisible,
                 )
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GmailConnectUiState())
 
+    fun setEmail(value: String) = actions.update { it.copy(email = value, error = null) }
+
+    fun setAppPassword(value: String) = actions.update { it.copy(appPassword = value, error = null) }
+
+    fun togglePasswordVisibility() =
+        actions.update { it.copy(passwordVisible = !it.passwordVisible) }
+
+    /**
+     * FR-54: the credential is validated with a real IMAP login **before** it is stored. A rejected
+     * password is never written to the vault.
+     */
     fun connect() {
         val ownerId = state.value.ownerId ?: return
         if (actions.value.isBusy) return
+        val email = actions.value.email.trim()
+        val appPassword = actions.value.appPassword.trim()
+        if (email.isEmpty() || appPassword.isEmpty()) {
+            actions.update {
+                it.copy(error = AppError.Validation(AppErrorRules.IMAP_CREDENTIALS_REQUIRED))
+            }
+            return
+        }
         actions.update { it.copy(isBusy = true, error = null, revokeFailed = false) }
         viewModelScope.launch {
-            val result = connectGmail(ownerId)
-            actions.update {
-                it.copy(isBusy = false, error = (result as? Outcome.Failure)?.error)
+            when (val validated = validator.validate(email, appPassword)) {
+                is Outcome.Failure -> actions.update {
+                    it.copy(isBusy = false, error = validated.error)
+                }
+
+                is Outcome.Success -> {
+                    vault.save(email, appPassword)
+                    val result = connectGmail(ownerId)
+                    if (result is Outcome.Failure) {
+                        // A credential the provider refused must not stay on the device.
+                        if (result.error is AppError.PermissionRequired) vault.clear()
+                        actions.update { it.copy(isBusy = false, error = result.error) }
+                    } else {
+                        actions.update { it.copy(isBusy = false, error = null, appPassword = "") }
+                    }
+                }
             }
         }
     }

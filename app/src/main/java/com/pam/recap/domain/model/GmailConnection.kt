@@ -37,8 +37,11 @@ data class GmailConnection(
     val updatedAt: Instant,
 ) {
     companion object {
-        /** The only scope PAM ever requests (FR-08). */
+        /** Legacy OAuth scope kept for stored rows from before CR-001. */
         const val READONLY_SCOPE: String = "https://www.googleapis.com/auth/gmail.readonly"
+
+        /** FR-55: IMAP is opened read-only; there is no OAuth scope any more. */
+        const val IMAP_SCOPE: String = "imap:read-only"
 
         fun disconnected(ownerId: String, at: Instant): GmailConnection = GmailConnection(
             ownerId = ownerId,

@@ -35,6 +35,7 @@ fun appErrorRes(error: AppError): Int = when (error) {
         com.pam.recap.core.result.AppErrorRules.INVALID_CREDENTIALS -> R.string.error_invalid_credentials
         com.pam.recap.core.result.AppErrorRules.INVALID_INVITE -> R.string.error_invalid_invite
         com.pam.recap.core.result.AppErrorRules.EMAIL_TAKEN -> R.string.error_email_taken
+        com.pam.recap.core.result.AppErrorRules.IMAP_CREDENTIALS_REQUIRED -> R.string.gmail_credentials_required
         com.pam.recap.core.result.AppErrorRules.NOT_SIGNED_IN -> R.string.error_not_signed_in
         else -> R.string.error_validation
     }

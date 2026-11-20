@@ -130,14 +130,14 @@
     <!-- Gmail connection -->
     <string name="gmail_title">Kotak masuk</string>
     <string name="gmail_eyebrow">Sumber data</string>
-    <string name="gmail_headline">Hubungkan kotak masuk Livin Anda.</string>
-    <string name="gmail_scope_label">Izin yang diminta: hanya baca (gmail.readonly)</string>
+    <string name="gmail_headline">Hubungkan kotak masuk Livin Anda dengan Sandi aplikasi.</string>
+    <string name="gmail_scope_label">Akses: IMAP hanya-baca (folder INBOX, tanpa perintah tulis)</string>
     <string name="gmail_last_import">Impor terakhir: %1$s</string>
     <string name="gmail_never_imported">belum pernah</string>
     <string name="gmail_consent_needed">Izin baca email belum diberikan, jadi kotak masuk belum bisa dihubungkan.</string>
     <string name="gmail_open_consent">Buka persetujuan</string>
-    <string name="gmail_revoke_failed">Koneksi sudah diputus di perangkat ini, tetapi izin di Google belum bisa dicabut. Cabut manual di pengaturan akun Google.</string>
-    <string name="gmail_connect">Hubungkan Gmail</string>
+    <string name="gmail_revoke_failed">Koneksi sudah diputus di perangkat ini, tetapi sesi IMAP belum bisa ditutup. Cabut Sandi aplikasi di Akun Google bila perlu.</string>
+    <string name="gmail_connect">Hubungkan kotak masuk</string>
     <string name="gmail_disconnect">Putuskan koneksi</string>
     <string name="gmail_state_not_connected">Belum terhubung</string>
     <string name="gmail_state_pending">Menunggu izin</string>
@@ -145,12 +145,12 @@
     <string name="gmail_state_reauth">Perlu izin ulang</string>
     <string name="gmail_state_unavailable">Layanan tidak tersedia</string>
     <string name="gmail_state_disconnected">Terputus</string>
-    <string name="gmail_guidance_not_connected">Hubungkan untuk mulai mengimpor notifikasi Livin. Kami hanya meminta izin baca.</string>
-    <string name="gmail_guidance_pending">Selesaikan layar izin Google yang terbuka. Setelah disetujui, kotak masuk langsung siap.</string>
+    <string name="gmail_guidance_not_connected">Tempel email Gmail dan Sandi aplikasi 16 karakter. PAM hanya membuka INBOX secara hanya-baca.</string>
+    <string name="gmail_guidance_pending">Koneksi sedang diperiksa. Setelah login IMAP berhasil, kotak masuk langsung siap.</string>
     <string name="gmail_guidance_connected">Kotak masuk siap. Jalankan impor dari tombol impor di bagian bawah.</string>
-    <string name="gmail_guidance_reauth">Izin dicabut atau kedaluwarsa. Hubungkan ulang agar impor bisa berjalan.</string>
-    <string name="gmail_guidance_unavailable">Layanan Google sedang tidak bisa dihubungi. Coba lagi nanti; data lama tetap bisa dibaca.</string>
-    <string name="gmail_guidance_disconnected">Koneksi sudah diputus dan token di perangkat dihapus. Hubungkan lagi bila diperlukan.</string>
+    <string name="gmail_guidance_reauth">Sandi aplikasi ditolak atau sudah dicabut. Buat Sandi aplikasi baru di Akun Google lalu hubungkan lagi.</string>
+    <string name="gmail_guidance_unavailable">Kotak masuk tidak bisa dihubungi (jaringan atau layanan Gmail). Coba lagi nanti; data lama tetap bisa dibaca.</string>
+    <string name="gmail_guidance_disconnected">Koneksi diputus dan Sandi aplikasi dihapus dari perangkat ini. Hubungkan lagi bila diperlukan.</string>
 
     <!-- Overview -->
     <string name="overview_title">Ringkasan</string>
@@ -331,7 +331,7 @@
     <string name="settings_last_ai">Analisis terakhir</string>
     <string name="settings_never">belum pernah</string>
     <string name="settings_scope">Izin</string>
-    <string name="settings_scope_value">gmail.readonly (hanya baca)</string>
+    <string name="settings_scope_value">IMAP hanya-baca (tanpa akses tulis)</string>
     <string name="settings_manage_mailbox">Kelola kotak masuk</string>
     <string name="settings_privacy_eyebrow">Persetujuan</string>
     <string name="settings_consent_gmail">Baca email Livin</string>
@@ -425,4 +425,14 @@
     <string name="error_invalid_invite">Kode undangan tidak valid.</string>
     <string name="error_email_taken">Email ini sudah terdaftar. Coba masuk.</string>
     <string name="account_email_placeholder">nama@contoh.id</string>
+    <string name="gmail_credentials_title">Kredensial kotak masuk</string>
+    <string name="gmail_email_label">Email Gmail</string>
+    <string name="gmail_app_password_label">Sandi aplikasi</string>
+    <string name="gmail_app_password_hint">16 karakter, tanpa spasi</string>
+    <string name="gmail_show_password">Tampilkan sandi aplikasi</string>
+    <string name="gmail_hide_password">Sembunyikan sandi aplikasi</string>
+    <string name="gmail_help_title">Cara membuat Sandi aplikasi</string>
+    <string name="gmail_help_steps">1. Buka Akun Google → Keamanan. 2. Aktifkan Verifikasi 2 Langkah (wajib). 3. Pilih Sandi aplikasi, buat satu untuk PAM, lalu tempel 16 karakternya di sini.</string>
+    <string name="gmail_help_caveat">Sandi aplikasi memberi akses baca dan kirim ke kotak masuk Anda. PAM hanya membuka folder INBOX secara hanya-baca, tidak pernah mengirim email, dan menyimpannya terenkripsi di perangkat ini. Sandi dihapus saat Anda memutuskan kotak masuk atau keluar.</string>
+    <string name="gmail_credentials_required">Email dan Sandi aplikasi wajib diisi.</string>
 </resources>

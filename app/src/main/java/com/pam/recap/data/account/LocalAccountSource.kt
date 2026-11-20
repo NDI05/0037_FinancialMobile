@@ -6,6 +6,7 @@ import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.AccountRepository
+import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.SignInUseCase
@@ -28,6 +29,7 @@ class LocalAccountSource @Inject constructor(
     private val sessions: SessionRepository,
     private val signIn: SignInUseCase,
     private val backendSessions: BackendSessionRepository,
+    private val appPasswordVault: AppPasswordVault,
 ) : AccountRepository {
 
     override val isBackendEnabled: Boolean get() = backendSessions.isEnabled
@@ -87,7 +89,9 @@ class LocalAccountSource @Inject constructor(
             accountId = email,
             displayName = displayName ?: email.substringBefore('@'),
             mailboxLabel = email,
-            isDemo = true,
+            // CR-001: with a real app password the bundled sample month is no longer "demo data";
+            // without one the fixture mailbox still is, so the seed keeps the walkthrough populated.
+            isDemo = !appPasswordVault.hasCredential(),
         )
 
     private fun normalize(email: String): String = email.trim().lowercase()

@@ -110,4 +110,5 @@ object AppErrorRules {
     const val INVALID_CREDENTIALS = "invalid_credentials"
     const val INVALID_INVITE = "invalid_invite"
     const val EMAIL_TAKEN = "email_taken"
+    const val IMAP_CREDENTIALS_REQUIRED = "imap_credentials_required"
 }

@@ -15,6 +15,7 @@ import com.pam.recap.domain.model.GmailConnectionState
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.AnalysisRepository
 import com.pam.recap.domain.repository.BackendDeletionSync
+import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.domain.repository.BudgetRepository
 import com.pam.recap.domain.repository.ConsentRepository
@@ -81,11 +82,14 @@ class SignOutUseCase @Inject constructor(
     private val budgets: BudgetRepository,
     private val imports: ImportRepository,
     private val backendSessions: BackendSessionRepository,
+    private val appPasswordVault: AppPasswordVault,
 ) {
 
     suspend operator fun invoke(ownerId: String): Outcome<Unit> {
         // FR-05: invalidate the server session before the local token cache is dropped.
         runCatching { backendSessions.revoke() }
+        // FR-54: signing out also forgets the mailbox app password.
+        runCatching { appPasswordVault.clear() }
         runCatching { gmailSource.disconnect() }
         transactions.deleteAll(ownerId)
         summaries.deleteAll(ownerId)
@@ -139,7 +143,7 @@ class ConnectGmailUseCase @Inject constructor(
         val connection = (connections.get(ownerId) ?: GmailConnection.disconnected(ownerId, now)).copy(
             state = GmailConnectionState.CONNECTED,
             mailboxLabel = label,
-            scope = GmailConnection.READONLY_SCOPE,
+            scope = GmailConnection.IMAP_SCOPE,
             connectedAt = now,
             updatedAt = now,
         )
@@ -158,11 +162,14 @@ class DisconnectGmailUseCase @Inject constructor(
     private val gmailSource: GmailSource,
     private val connections: GmailConnectionRepository,
     private val sessions: SessionRepository,
+    private val appPasswordVault: AppPasswordVault,
     private val clock: ClockProvider,
 ) {
 
     suspend operator fun invoke(ownerId: String): Outcome<Unit> {
         val revoke = gmailSource.disconnect()
+        // FR-54: disconnecting removes the app password from the device as well.
+        runCatching { appPasswordVault.clear() }
         val now = clock.now()
         val existing = connections.get(ownerId)
         connections.save(
@@ -196,6 +203,7 @@ class RequestDeletionUseCase @Inject constructor(
     private val clock: ClockProvider,
     private val idGenerator: IdGenerator,
     private val backendDeletion: BackendDeletionSync,
+    private val appPasswordVault: AppPasswordVault,
 ) {
 
     suspend operator fun invoke(
@@ -234,6 +242,7 @@ class RequestDeletionUseCase @Inject constructor(
             imports.deleteAll(ownerId)
             gmailConnection.deleteAll(ownerId)
             consents.deleteAll(ownerId)
+            appPasswordVault.clear()
             sessions.signOut()
 
             val completed = request.copy(state = DeletionState.COMPLETED, completedAt = clock.now())

@@ -120,14 +120,14 @@
 
     <string name="gmail_title">Mailbox</string>
     <string name="gmail_eyebrow">Data source</string>
-    <string name="gmail_headline">Connect your Livin inbox.</string>
-    <string name="gmail_scope_label">Requested scope: read-only (gmail.readonly)</string>
+    <string name="gmail_headline">Connect your Livin inbox with an App Password.</string>
+    <string name="gmail_scope_label">Access: IMAP read-only (INBOX folder, no write commands)</string>
     <string name="gmail_last_import">Last import: %1$s</string>
     <string name="gmail_never_imported">never</string>
     <string name="gmail_consent_needed">Email read permission has not been granted, so the mailbox cannot be connected yet.</string>
     <string name="gmail_open_consent">Open consent</string>
-    <string name="gmail_revoke_failed">The connection was removed on this device, but Google could not revoke the grant. Revoke it manually in your Google account settings.</string>
-    <string name="gmail_connect">Connect Gmail</string>
+    <string name="gmail_revoke_failed">The device connection is closed, but the IMAP session could not be ended. Revoke the App Password in your Google Account if needed.</string>
+    <string name="gmail_connect">Connect inbox</string>
     <string name="gmail_disconnect">Disconnect</string>
     <string name="gmail_state_not_connected">Not connected</string>
     <string name="gmail_state_pending">Waiting for permission</string>
@@ -135,12 +135,12 @@
     <string name="gmail_state_reauth">Reauthorization required</string>
     <string name="gmail_state_unavailable">Service unavailable</string>
     <string name="gmail_state_disconnected">Disconnected</string>
-    <string name="gmail_guidance_not_connected">Connect to start importing Livin notifications. Only read-only access is requested.</string>
-    <string name="gmail_guidance_pending">Finish the Google permission screen. Once approved the mailbox is ready.</string>
+    <string name="gmail_guidance_not_connected">Paste your Gmail address and the 16-character App Password. PAM opens INBOX read-only.</string>
+    <string name="gmail_guidance_pending">Checking the connection. Once the IMAP login succeeds the inbox is ready.</string>
     <string name="gmail_guidance_connected">Mailbox ready. Start an import from the import action at the bottom.</string>
-    <string name="gmail_guidance_reauth">The grant was revoked or expired. Reconnect so imports can run.</string>
-    <string name="gmail_guidance_unavailable">Google cannot be reached right now. Try later; existing data stays readable.</string>
-    <string name="gmail_guidance_disconnected">The connection was removed and the on-device token cleared. Reconnect if needed.</string>
+    <string name="gmail_guidance_reauth">The App Password was rejected or revoked. Create a new one in your Google Account and connect again.</string>
+    <string name="gmail_guidance_unavailable">The inbox is unreachable (network or Gmail). Try again later; existing data stays readable.</string>
+    <string name="gmail_guidance_disconnected">Disconnected and the App Password was removed from this device. Connect again if needed.</string>
 
     <string name="overview_title">Overview</string>
     <string name="overview_net_eyebrow">Net cash flow</string>
@@ -311,7 +311,7 @@
     <string name="settings_last_ai">Last analysis</string>
     <string name="settings_never">never</string>
     <string name="settings_scope">Scope</string>
-    <string name="settings_scope_value">gmail.readonly (read-only)</string>
+    <string name="settings_scope_value">IMAP read-only (no write access)</string>
     <string name="settings_manage_mailbox">Manage mailbox</string>
     <string name="settings_privacy_eyebrow">Consent</string>
     <string name="settings_consent_gmail">Read Livin email</string>
@@ -403,4 +403,14 @@
     <string name="error_invalid_invite">The invite code is invalid.</string>
     <string name="error_email_taken">This email is already registered. Try signing in.</string>
     <string name="account_email_placeholder">name@example.com</string>
+    <string name="gmail_credentials_title">Inbox credentials</string>
+    <string name="gmail_email_label">Gmail address</string>
+    <string name="gmail_app_password_label">App password</string>
+    <string name="gmail_app_password_hint">16 characters, no spaces</string>
+    <string name="gmail_show_password">Show app password</string>
+    <string name="gmail_hide_password">Hide app password</string>
+    <string name="gmail_help_title">How to create an App Password</string>
+    <string name="gmail_help_steps">1. Open your Google Account → Security. 2. Turn on 2-Step Verification (required). 3. Choose App passwords, create one for PAM, then paste its 16 characters here.</string>
+    <string name="gmail_help_caveat">An App Password grants read and send access to your mailbox. PAM only opens INBOX read-only, never sends mail, and stores the password encrypted on this device. It is removed when you disconnect the inbox or sign out.</string>
+    <string name="gmail_credentials_required">Email and App Password are both required.</string>
 </resources>

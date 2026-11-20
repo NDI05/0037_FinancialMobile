@@ -10,12 +10,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pam.recap.R
@@ -24,6 +34,7 @@ import com.pam.recap.domain.model.GmailConnectionState
 import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassCard
 import com.pam.recap.ui.components.GlassTopBar
+import com.pam.recap.ui.components.LabelledField
 import com.pam.recap.ui.components.MoneyTone
 import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
@@ -34,6 +45,7 @@ import com.pam.recap.ui.components.StatusChipKind
 import com.pam.recap.ui.theme.BodyM
 import com.pam.recap.ui.theme.DisplayM
 import com.pam.recap.ui.theme.OnInk
+import com.pam.recap.ui.theme.LabelM
 import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.PamSpacing
 import com.pam.recap.ui.theme.TitleM
@@ -77,6 +89,79 @@ fun GmailConnectScreen(
                 style = DisplayM,
                 color = OnInk,
             )
+
+            if (state.consentGranted && connectionState != GmailConnectionState.CONNECTED) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(R.string.gmail_credentials_title),
+                        style = TitleM,
+                        color = OnInk,
+                    )
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    LabelledField(
+                        label = stringResource(R.string.gmail_email_label),
+                        value = state.email,
+                        onValueChange = viewModel::setEmail,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Next,
+                        ),
+                    )
+                    Spacer(modifier = Modifier.height(PamSpacing.sm))
+                    LabelledField(
+                        label = stringResource(R.string.gmail_app_password_label),
+                        value = state.appPassword,
+                        onValueChange = viewModel::setAppPassword,
+                        placeholder = stringResource(R.string.gmail_app_password_hint),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done,
+                        ),
+                        visualTransformation = if (state.passwordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        trailing = {
+                            IconButton(onClick = viewModel::togglePasswordVisibility) {
+                                Icon(
+                                    imageVector = if (state.passwordVisible) {
+                                        Icons.Rounded.VisibilityOff
+                                    } else {
+                                        Icons.Rounded.Visibility
+                                    },
+                                    contentDescription = stringResource(
+                                        if (state.passwordVisible) {
+                                            R.string.gmail_hide_password
+                                        } else {
+                                            R.string.gmail_show_password
+                                        },
+                                    ),
+                                    tint = OnInkMuted,
+                                )
+                            }
+                        },
+                    )
+                    Spacer(modifier = Modifier.height(PamSpacing.sm))
+                    Text(
+                        text = stringResource(R.string.gmail_help_title),
+                        style = LabelM,
+                        color = OnInk,
+                    )
+                    Spacer(modifier = Modifier.height(PamSpacing.xxs))
+                    Text(
+                        text = stringResource(R.string.gmail_help_steps),
+                        style = BodyM,
+                        color = OnInkMuted,
+                    )
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    Text(
+                        text = stringResource(R.string.gmail_help_caveat),
+                        style = BodyM,
+                        color = OnInkMuted,
+                    )
+                }
+            }
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Row(

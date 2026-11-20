@@ -1,8 +1,13 @@
 package com.pam.recap.di
 
-import com.pam.recap.data.gmail.FixtureGmailSource
+import com.pam.recap.data.gmail.AppPasswordVaultImpl
+import com.pam.recap.data.gmail.ImapGmailSource
+import com.pam.recap.data.gmail.RoutingGmailSource
+import com.pam.recap.domain.repository.AppPasswordVault
+import com.pam.recap.domain.repository.GmailCredentialValidator
 import com.pam.recap.domain.repository.GmailMailboxLabelProvider
 import com.pam.recap.domain.repository.GmailSource
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -10,23 +15,33 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 /**
- * CR-001/Fase 2: every Google path is gone, so the deterministic fixture mailbox is the only
- * source. Fase 3 replaces it with `ImapGmailSource`; binding it here keeps the import pipeline
- * exercisable until then.
+ * CR-001/Fase 3: Gmail is read over IMAP when an app password is stored, and over the deterministic
+ * fixture mailbox otherwise (demo + offline stay intact). The router decides per call, so pasting a
+ * password takes effect without a restart.
  */
 @Module
 @InstallIn(SingletonComponent::class)
-object GmailModule {
+abstract class GmailModule {
 
-    @Provides
+    @Binds
     @Singleton
-    fun provideGmailSource(fixture: FixtureGmailSource): GmailSource = fixture
+    abstract fun bindAppPasswordVault(impl: AppPasswordVaultImpl): AppPasswordVault
 
-    @Provides
+    @Binds
     @Singleton
-    fun provideMailboxLabelProvider(source: GmailSource): GmailMailboxLabelProvider =
-        source as? GmailMailboxLabelProvider
-            ?: object : GmailMailboxLabelProvider {
-                override fun mailboxLabel(): String? = null
-            }
+    abstract fun bindCredentialValidator(impl: ImapGmailSource): GmailCredentialValidator
+
+    companion object {
+        @Provides
+        @Singleton
+        fun provideGmailSource(router: RoutingGmailSource): GmailSource = router
+
+        @Provides
+        @Singleton
+        fun provideMailboxLabelProvider(source: GmailSource): GmailMailboxLabelProvider =
+            source as? GmailMailboxLabelProvider
+                ?: object : GmailMailboxLabelProvider {
+                    override fun mailboxLabel(): String? = null
+                }
+    }
 }
