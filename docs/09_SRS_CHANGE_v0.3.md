@@ -78,6 +78,12 @@ yang terkena, dampak pengguna, konsekuensi integrasi/keamanan, dan pembaruan acc
 |---|---|
 | **Baru (klarifikasi)** | Pada jalur IMAP, kegagalan autentikasi **tidak pernah** diulang otomatis. Kegagalan jaringan **tidak** di-retry di dalam sumber data; pemulihan dilakukan pada tingkat job impor (pengguna menekan coba lagi). Aturan "maksimal dua kali retry dengan backoff" tetap berlaku untuk panggilan backend, bukan untuk sesi IMAP. |
 
+### Error code baru — `database_unavailable`
+| | |
+|---|---|
+| **Konteks** | Sebelum Fase 4, database selalu lokal sehingga kegagalannya berarti bug. Dengan database cloud, database bisa tidak terjangkau karena jaringan. |
+| **Aturan** | Bila penyimpanan tidak terjangkau, API mengembalikan **`503`** dengan `code: "database_unavailable"`, `retryable: true`, `correlationId`. Bukan `500 internal_error`. Klien boleh mencoba lagi; aplikasi tetap menampilkan data lokal (NFR-22). |
+
 ### NFR-14 — kredensial
 | | |
 |---|---|
@@ -124,7 +130,7 @@ FR-54 **adalah pengganti langsung FR-08**, bukan requirement tambahan yang tidak
 | **FR-53** | The system shall rate-limit failed account-login attempts to 5 per 15 minutes per email+address-class, where address-class is IPv4 `/24` and IPv6 `/64` behind a trusted proxy header, and shall not disclose whether an email exists. Both real and unknown emails shall take the same time to reject. |
 | **FR-54** | The system shall obtain mailbox credentials only from a user-entered Gmail app password, validate them with an IMAP login **before** storing, wrap them with an Android Keystore key, and clear them on sign out, on disconnect, and on workspace deletion. A failed validation shall store nothing. |
 | **FR-55** | The system shall open the mailbox read-only and issue no IMAP command that mutates message or folder state. |
-| **FR-56** | The system shall store consented monthly aggregates and reports in a managed cloud database, encrypted at rest and at field level, while transaction-level rows remain on the device. **Pending Fase 4** — Fase 2 belum menyentuh storage. |
+| **FR-56** | The system shall store, in a **SQLite-compatible (libSQL)** managed cloud database: consented monthly aggregates and reports, analyses, budget plans, consent ledger, deletion requests, account records (email + scrypt hash + salt — never a password), sessions, login-attempt counters and usage counters. Transaction-level rows, merchant labels, private notes and mailbox credentials shall never be stored there. Field-level AES-GCM encryption applies to aggregate, analysis and plan payloads. **Delivered in Fase 4** (`@libsql/client`; `file:` locally, `libsql://` on Turso). |
 
 ---
 
@@ -176,6 +182,8 @@ Ini penting: alasan memilih opsi Hybrid adalah supaya requirement privasi tetap 
 | **T01** Identity & consent | tambah: registrasi/login/logout, scrypt, rate limit, akun lokal tanpa backend |
 | **T02** Google authorization | **diganti** menjadi *IMAP authorization*: login valid, app password salah, app password dicabut, TLS wajib, kredensial tidak ada di log/prefs. **Fase 2 hanya menutup kasus "tidak ada kredensial"; empat kasus IMAP lainnya menunggu Fase 3.** |
 | **T03** Livin source validation | fixture yang sama; ditambah kasus "app password hanya-baca" dan X-GM-RAW search |
+| **T04** Backup (NFR-23) | Prosedur **berbeda per target**: `file:` memakai `sqlite3 .backup`; Turso memakai point-in-time / `turso db dump`. NFR-23 harus menyebut targetnya, bukan satu perintah generik. **Dikerjakan di Fase 5.** |
+
 | **T04** Import integrity | sumber pesan via IMAP; `X-GM-MSGID` HMAC; batching UID |
 | **T08** Privacy & operations | ditambah: isi database cloud tidak memuat plaintext transaksi |
 
@@ -191,6 +199,7 @@ AC01, AC02, AC03 harus ditulis ulang mengikuti alur baru.
 | **OI-14** | Google dapat menghentikan App Password kapan saja; rencana keluar: kembali ke OAuth bila perlu | Android lead | G3 |
 | **OI-15** | Turso free tier: kuota, backup, dan jalur pindah ke Postgres. "Portabel" berarti **dialek SQL tetap kompatibel** dan hanya driver klien yang diganti di balik lapisan store; migrasi ke Postgres bukan sekadar tukar driver karena tipe dan klausa `ON CONFLICT` berbeda | backend lead | G2 |
 | **OI-16** | Pengguna tanpa 2FA tidak bisa memakai fitur import email; harus dijelaskan di panduan | owner | G2 |
+| **OI-17** | Kuota database cloud (row/read limit free tier Turso) belum punya jalur penanganan; kehabisan kuota akan muncul sebagai error, bukan pesan yang bisa ditindaklanjuti. FR-50 hanya mengatur biaya LLM | backend lead | G3 |
 
 ---
 
@@ -225,6 +234,11 @@ Amandemen kedua setelah Fase 3 (IMAP) — semua keputusan implementasi yang haru
 13. FR-54: penghapusan workspace juga menghapus kredensial; validasi gagal tidak menyimpan apa pun.
 14. OI-13: `FLAG_SECURE` ditegaskan app-wide.
 15. FR-07: saat `REAUTHORIZATION_REQUIRED`, data lokal tetap terbaca dan UI wajib menyatakannya.
+
+### Deprekasi `DATABASE_PATH`
+`DATABASE_PATH` digantikan `DATABASE_URL` dan **diabaikan** (dengan peringatan) bila `DATABASE_URL` diisi.
+Batas penghapusan: **satu rilis** setelah v0.3 dinyatakan baseline (§6.4 G4). Setelah itu variabel
+dan cabang fallback-nya dihapus dari `src/config.ts`.
 
 ## 11. Sign-off
 
