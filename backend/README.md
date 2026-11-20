@@ -9,7 +9,7 @@ Backend ini **bukan** modul Gradle — `settings.gradle.kts` hanya berisi `:app`
 
 ## Prasyarat
 
-- Node.js **24** (memakai `node:sqlite` bawaan, jadi tidak ada dependensi native)
+- Node.js **24** (driver database: `@libsql/client`, tanpa dependensi native tambahan)
 - npm 11
 
 ## Cara jalan
@@ -21,7 +21,7 @@ npm start                 # http://127.0.0.1:8080
 curl localhost:8080/healthz
 ```
 
-Tanpa `.env` pun jalan: SQLite lokal di `./data/pam.db`, provider LLM **palsu** (deterministik),
+Tanpa `.env` pun jalan: database lokal di `./data/pam.db` (libSQL mode `file:`), provider LLM **palsu** (deterministik),
 dan kode undangan dev `pam-dev` supaya seluruh alur (daftar → masuk) bisa dicoba tanpa layanan
 eksternal.
 
@@ -129,6 +129,30 @@ dan menyimpan DB di volume `/data`).
 Backup: `sqlite3 /data/pam.db ".backup '/backup/pam-$(date +%F).db'"` terjadwal. Simpan
 `DATA_ENCRYPTION_KEY` **terpisah** dari file backup — tanpa kunci itu isi DB tidak bisa dibuka, dan
 sebaliknya.
+
+## Database: lokal atau Turso (opsional)
+
+Satu driver (`@libsql/client`), dua URL. **Bagian Turso ini opsional** — untuk menjalankan lokal
+cukup lewati saja dan pakai default `file:./data/pam.db`.
+
+```bash
+# hanya jika ingin database cloud gratis (Turso)
+turso auth signup
+turso db create pam
+turso db show pam --url          # libsql://<db>-<org>.turso.io
+turso db tokens create pam       # token
+```
+
+lalu di `.env`:
+
+```bash
+DATABASE_URL=libsql://<db>-<org>.turso.io
+DATABASE_AUTH_TOKEN=<token>
+```
+
+`NODE_ENV=production` menolak `libsql://` tanpa token; di development hanya muncul peringatan.
+`DATABASE_PATH` yang lama masih dipetakan ke `file:<path>` dengan peringatan usang, dan akan
+dihapus pada rilis berikutnya.
 
 ## Struktur
 
