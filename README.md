@@ -9,14 +9,42 @@ language of the supplied reference design.
 New to the code? Read [`docs/01_SCOPE_TRACEABILITY.md`](docs/01_SCOPE_TRACEABILITY.md) first —
 it maps every requirement ID to where it is implemented.
 
+
+---
+
+## Progress
+
+Bagian ini diperbarui setiap kali ada kemajuan. Kalau ragu apakah masih akurat, `git log` adalah
+kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
+
+**Terakhir diperbarui:** 20 November 2026 · commit `9ccde29`
+
+| Area | Status |
+|---|---|
+| SRS v0.2 → v0.3 change record (CR-001, tanpa GCP) | ✅ selesai |
+| Aplikasi Android — 13 destinasi, 203 test JVM | ✅ jalan |
+| Akun PAM (email + password, scrypt) menggantikan Google Sign-In | ✅ selesai |
+| Gmail lewat **IMAP + App Password** (tanpa Google Cloud) | 🟡 tersambung; impor belum menyimpan |
+| Backend Node + **Turso** (database cloud), 111 test | ✅ jalan |
+| LLM **Ollama lokal** (gratis, offline) | ✅ jalan |
+| Fase 5 — backup harian + deploy | ⬜ belum |
+| Fase 6 — APK release bertanda tangan | ⬜ belum |
+
+**Sedang dikerjakan.** Parser menolak isi email Livin asli dengan `missing_amount`: pada email
+nyata labelnya ditulis `Nominal` **tanpa titik dua** (`nom_start=1 nom_colon=0`), sedangkan
+ekstraktor mencari `Nominal:`. Isi email sendiri sudah terbaca (765 karakter), jadi yang tersisa
+adalah format label — bukan lagi soal MIME.
+
+**Bukti terakhir di perangkat:** IMAP terkoneksi, 20 notifikasi Livin ditemukan, 0 tersimpan.
+
 ---
 
 ## What it does
 
 | Capability | Requirement |
 |---|---|
-| Google sign-in with an app session gate | FR-01, FR-05 |
-| Separate Gmail read-only and AI consent, recorded with notice version and timestamp | FR-03, FR-04, FR-49 |
+| PAM account sign-in (email + password, scrypt) with an app session gate | FR-01, FR-05, FR-51 |
+| Separate mailbox and AI consent, recorded with notice version and timestamp | FR-03, FR-04, FR-49 |
 | Mailbox connection with six explicit states | FR-06…FR-10 |
 | Livin QRIS notification parsing with an allow-listed sender/template registry | FR-11…FR-15 |
 | Paginated, idempotent, resumable import with coverage reporting | FR-16…FR-22 |
@@ -85,10 +113,13 @@ cd pam-app
 
 `minSdk` is 26, so any API 26+ phone or emulator works.
 
-On first launch the app opens on **Welcome**. Tap **Masuk dengan Google**. When
-`PAM_GOOGLE_WEB_CLIENT_ID` is empty the app runs in **Demo mailbox mode** (OI-01) and signs in
-to a local demo session instead of Google, then seeds a synthetic February 2026 Jakarta dataset
-so every screen is populated.
+On first launch the app opens on **Welcome**. With no backend configured, tap **Lanjut tanpa
+akun** to run the offline demo: it creates a local profile and seeds a synthetic February 2026
+Jakarta dataset so every screen is populated.
+
+With a backend configured, **Buat akun** registers an email + password account (`pam-dev` is the
+development invite code) and the sample rows are **never** seeded — a server account holds only
+real data.
 
 The demo dataset is not decoration — it is asserted in `DemoDatasetTest` and contains the SRS
 B5 worked example, so the recap you see is arithmetically checkable:
@@ -102,21 +133,19 @@ housing net Rp900.000 after a linked refund · transfer Rp200.000 kept out of cl
 A walkthrough that shows everything: Welcome → Consent (grant both) → Overview → tap a
 category → Transactions → open a row → change its category → Analysis → generate → Budget.
 
-### Enabling real Google / Gmail
+### Connecting a real mailbox (App Password)
 
-Real OAuth needs a Google Cloud project; it cannot be provisioned from the repo. When you have
-one:
+Gmail is read over **IMAP with an App Password** — no Google Cloud project, no OAuth client, no
+verification review. The user creates a 16-character app password and pastes it into
+**Pengaturan → Kelola kotak masuk**.
 
-1. Create an **Android** OAuth client for package `com.pam.recap` and your signing SHA-1.
-2. Enable the **Gmail API** and configure the consent screen with the
-   `https://www.googleapis.com/auth/gmail.readonly` scope (a Google *restricted* scope — OI-04
-   applies before any real-user release).
-3. Build with the client id:
-   ```bash
-   ./scripts/build.sh :app:assembleDebug -PPAM_GOOGLE_WEB_CLIENT_ID=xxxx.apps.googleusercontent.com
-   ```
-   Without it, the DI graph binds `FixtureGmailSource`; with it, `GoogleGmailSource` is used.
-   Both implement the same `GmailSource` port (NFR-26), so nothing else changes.
+1. Enable **2-Step Verification** on the Google account (without it Google hides App Passwords).
+2. Create one at <https://myaccount.google.com/apppasswords> and copy the 16 characters.
+3. Paste it into the app. It is validated with a real IMAP login **before** being stored, then
+   wrapped by an Android Keystore key and never sent to the backend.
+
+The app reads INBOX read-only and issues no mutating command (FR-55). The credential is a
+long-lived one that also permits sending mail — a risk the owner accepted in CR-001 (OI-13).
 
 The optional analysis backend is behind the same posture:
 `-PPAM_ANALYSIS_BACKEND_URL=https://…` switches `OnDeviceAnalysisEngine` for
@@ -128,7 +157,7 @@ allow-listed aggregate projection only (FR-35).
 ## Backend
 
 `backend/` is a Node 24 + TypeScript service (Express 5, `node:sqlite`, zero native deps) that
-owns everything the device must not: Google ID-token verification, revocable sessions, consent
+owns everything the device must not: account authentication (scrypt), revocable sessions, consent
 enforcement, aggregate storage, the LLM call with output validation, quotas, and deletion.
 
 ```bash
@@ -161,20 +190,22 @@ name, private note or transaction row. Only the allow-listed monthly aggregate o
 `AiAggregatePayload` plus the metrics it cites. The service rejects any other field (FR-35,
 NFR-19) and stores even that as AES-256-GCM ciphertext (NFR-16).
 
-## Going from demo to real Google
+## Going from demo to production
 
-The app ships in demo mode on purpose (OI-01): no Google Cloud project exists yet. Everything
-needed to switch it on — the two OAuth clients, the consent screen with the restricted
-`gmail.readonly` scope, the exact registered package names and SHA-1 fingerprints, and a
-troubleshooting table of every `DEVELOPER_ERROR` you can hit — is in
-[`docs/05_REAL_GOOGLE_SETUP.md`](docs/05_REAL_GOOGLE_SETUP.md).
+Demo mode exists so the app is fully usable with no account, no mailbox and no network. To leave
+it: register a PAM account, connect a mailbox with an App Password, and point the build at the
+backend. No Google Cloud project is involved anywhere.
+
+The decisions that removed Google Cloud from the architecture (IMAP, local accounts, hybrid
+storage, Turso) are recorded in [`docs/08_ROADMAP.md`](docs/08_ROADMAP.md) and
+[`docs/09_SRS_CHANGE_v0.3.md`](docs/09_SRS_CHANGE_v0.3.md).
 
 ## Cost
 
-The entire stack runs at **zero cost, with no credit card**: the Gmail API + OAuth client path is
-free (the $300 Free Trial that asks for payment details is not needed), the LLM can be a local
-Ollama model with no account at all, and the backend is a single Node process with SQLite that
-runs on a laptop. [`docs/07_FREE_STACK.md`](docs/07_FREE_STACK.md) has the per-component cost
+The entire stack runs at **zero cost, with no credit card**: mail is read over IMAP with a free
+App Password (no Cloud project, no OAuth verification), the LLM can be a local Ollama model with
+no account at all, the cloud database is Turso's free tier, and the backend is a single Node
+process that runs on a laptop. [`docs/07_FREE_STACK.md`](docs/07_FREE_STACK.md) has the per-component cost
 table, the three free LLM presets and the fully-offline fallback.
 
 ## Architecture
@@ -261,15 +292,16 @@ string literals in Kotlin.
 
 These come from the SRS's own open-issues list (Appendix C) and are recorded rather than hidden:
 
-- **OI-01** A real Google Cloud project, OAuth client and test-user allowlist are required to
-  leave demo mode. The code path exists and is gated by `PAM_GOOGLE_WEB_CLIENT_ID`.
+- **OI-13** The IMAP App Password also permits sending mail and never expires on its own. It is
+  stored Keystore-wrapped, never leaves the device, and is cleared on sign-out.
+- **Parser coverage** Only the notification layouts exercised by fixtures are understood. A real
+  `Pembayaran Berhasil!` body is currently rejected (`missing_amount`, label without a colon) —
+  the open blocker in Progress above.
 - **OI-02 / OI-06** The Livin sender and subject allow-list reflects one manually reviewed QRIS
   payment notification. MIME/HTML variants and language changes are not exhaustively covered.
 - **OI-03** Incoming-transfer templates are unverified, so income is manual-entry only (A4).
-- **OI-04** `gmail.readonly` is a Google restricted scope. OAuth verification, approved use and
-  any security assessment must be resolved before any real-user release.
 - **OI-07** The LLM route is not chosen. The default engine is deterministic and on-device; a
   remote engine exists behind configuration.
-- No backend is implemented in this release: aggregates, analyses and budget plans live in the
-  encrypted local database. The app therefore makes no claim about multi-device sync.
+- Aggregates, analyses and budget plans live in the Turso cloud database; the app therefore can
+  move between devices once signed in. Transaction rows stay local by design (FR-35).
 - CSV/PDF export, reminders and background sync are explicitly deferred (OI-12).
