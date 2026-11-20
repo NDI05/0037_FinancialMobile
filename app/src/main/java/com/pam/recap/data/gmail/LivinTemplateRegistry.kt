@@ -114,6 +114,19 @@ class LivinTemplateRegistry(
         }
 
         /**
+         * Mailbox addresses that actually deliver Livin notifications. The first one came from the
+         * sample reviewed in the SRS; the second was confirmed against a real inbox
+         * (`noreply.livin@bankmandiri.co.id`, subject "Pembayaran Berhasil!") after an import
+         * matched nothing. Bank sender addresses change over time, so adding one is a one-line
+         * edit here rather than a rename in four templates. Display names are still insufficient
+         * on their own (FR-11) — matching is on the address.
+         */
+        val SENDER_ADDRESSES: List<String> = listOf(
+            "notifikasi@bankmandiri.co.id",
+            "noreply.livin@bankmandiri.co.id",
+        )
+
+        /**
          * Version 1 of the observed templates. QRIS payment/refund, outgoing transfer and bill
          * payment are allow-listed. An **incoming** transfer template is deliberately absent
          * (OI-03), so arriving money stays manual-entry only, exactly as the SRS mandates.
@@ -122,7 +135,7 @@ class LivinTemplateRegistry(
             LivinTemplate(
                 version = VERSION_V1,
                 id = "qris-payment",
-                senderAddresses = listOf("notifikasi@bankmandiri.co.id"),
+                senderAddresses = SENDER_ADDRESSES,
                 subjectPatterns = listOf("transaksi qris", "pembayaran qris"),
                 direction = Direction.DEBIT,
                 description = "QRIS",
@@ -139,7 +152,7 @@ class LivinTemplateRegistry(
             LivinTemplate(
                 version = VERSION_V1,
                 id = "qris-refund",
-                senderAddresses = listOf("notifikasi@bankmandiri.co.id"),
+                senderAddresses = SENDER_ADDRESSES,
                 subjectPatterns = listOf("pengembalian dana qris", "refund qris"),
                 direction = Direction.CREDIT,
                 description = "Pengembalian dana QRIS",
@@ -156,7 +169,7 @@ class LivinTemplateRegistry(
             LivinTemplate(
                 version = VERSION_V1,
                 id = "transfer-out",
-                senderAddresses = listOf("notifikasi@bankmandiri.co.id"),
+                senderAddresses = SENDER_ADDRESSES,
                 subjectPatterns = listOf("transfer antar rekening berhasil", "transfer berhasil"),
                 direction = Direction.DEBIT,
                 description = "Transfer",
@@ -173,7 +186,7 @@ class LivinTemplateRegistry(
             LivinTemplate(
                 version = VERSION_V1,
                 id = "bill-payment",
-                senderAddresses = listOf("notifikasi@bankmandiri.co.id"),
+                senderAddresses = SENDER_ADDRESSES,
                 subjectPatterns = listOf("pembayaran tagihan", "pembayaran berhasil"),
                 direction = Direction.DEBIT,
                 description = "Pembayaran",
