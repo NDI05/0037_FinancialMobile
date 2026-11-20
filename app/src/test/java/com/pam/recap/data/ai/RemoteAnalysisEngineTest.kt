@@ -10,13 +10,9 @@ import com.pam.recap.data.backend.BackendEndpoints
 import com.pam.recap.domain.model.AiAggregatePayload
 import com.pam.recap.domain.model.AiCategoryTotal
 import com.pam.recap.domain.model.MetricKeys
-import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.AnalysisRequest
 import com.pam.recap.domain.repository.BackendSessionRepository
-import com.pam.recap.domain.repository.SessionRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -218,7 +214,6 @@ class RemoteAnalysisEngineTest {
             ioDispatcher = UnconfinedTestDispatcher(),
             config = blank,
             backendSessions = StubBackendSessions(),
-            sessions = StubSessions(),
         )
         assertFalse(engine.isConfigured)
         val result = engine.analyze(request)
@@ -246,7 +241,6 @@ class RemoteAnalysisEngineTest {
         ioDispatcher = UnconfinedTestDispatcher(),
         config = endpoints,
         backendSessions = sessions,
-        sessions = StubSessions(),
     )
 
     private fun jsonResponse(code: Int, body: String) = MockResponse()
@@ -306,7 +300,17 @@ class RemoteAnalysisEngineTest {
 
         override val isEnabled: Boolean = true
 
-        override suspend fun token(ownerId: String, isDemo: Boolean): Outcome<String> {
+        override suspend fun register(
+            email: String,
+            password: String,
+            displayName: String?,
+            inviteCode: String,
+        ): Outcome<Unit> = Outcome.Success(Unit)
+
+        override suspend fun login(email: String, password: String): Outcome<Unit> =
+            Outcome.Success(Unit)
+
+        override suspend fun token(ownerId: String): Outcome<String> {
             tokenCalls++
             return Outcome.Success("test-access-token")
         }
@@ -316,17 +320,6 @@ class RemoteAnalysisEngineTest {
         override fun clear() {
             clearCalls++
         }
-    }
-
-    private class StubSessions : SessionRepository {
-        private val flow = MutableStateFlow<Session?>(null)
-        override fun observe(): Flow<Session?> = flow
-        override suspend fun current(): Session? = null
-        override suspend fun signIn(session: Session) = Unit
-        override suspend fun updateMailbox(ownerId: String, mailboxLabel: String?) = Unit
-        override suspend fun signOut() = Unit
-        override suspend fun isDemoSeeded(ownerId: String): Boolean = true
-        override suspend fun markDemoSeeded(ownerId: String) = Unit
     }
 
 }

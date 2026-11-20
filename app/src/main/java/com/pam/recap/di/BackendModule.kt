@@ -4,12 +4,10 @@ import com.pam.recap.data.backend.BackendConfig
 import com.pam.recap.data.backend.BackendEndpoints
 import com.pam.recap.data.backend.BackendSessionRepositoryImpl
 import com.pam.recap.data.backend.BackendSyncClient
-import com.pam.recap.data.gmail.GoogleIdentitySource
 import com.pam.recap.domain.repository.BackendConsentSync
 import com.pam.recap.domain.repository.BackendDeletionSync
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.domain.repository.BackendSummarySync
-import com.pam.recap.domain.repository.IdentityTokenProvider
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -43,8 +41,4 @@ abstract class BackendModule {
     @Binds
     @Singleton
     abstract fun bindBackendDeletionSync(impl: BackendSyncClient): BackendDeletionSync
-
-    @Binds
-    @Singleton
-    abstract fun bindIdentityTokenProvider(impl: GoogleIdentitySource): IdentityTokenProvider
 }

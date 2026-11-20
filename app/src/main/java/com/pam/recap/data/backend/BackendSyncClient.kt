@@ -12,7 +12,6 @@ import com.pam.recap.domain.repository.BackendConsentSync
 import com.pam.recap.domain.repository.BackendDeletionSync
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.domain.repository.BackendSummarySync
-import com.pam.recap.domain.repository.SessionRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -42,7 +41,6 @@ class BackendSyncClient @Inject constructor(
     private val json: Json,
     private val config: BackendEndpoints,
     private val backendSessions: BackendSessionRepository,
-    private val sessions: SessionRepository,
     @param:ApplicationScope private val appScope: CoroutineScope,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : BackendConsentSync, BackendSummarySync, BackendDeletionSync {
@@ -187,8 +185,7 @@ class BackendSyncClient @Inject constructor(
     }
 
     private suspend fun tokenFor(ownerId: String): String? {
-        val isDemo = sessions.current()?.isDemo == true
-        return when (val result = backendSessions.token(ownerId, isDemo)) {
+        return when (val result = backendSessions.token(ownerId)) {
             is Outcome.Success -> result.value
             is Outcome.Failure -> null
         }

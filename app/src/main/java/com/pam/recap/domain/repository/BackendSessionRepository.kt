@@ -3,38 +3,37 @@ package com.pam.recap.domain.repository
 import com.pam.recap.core.result.Outcome
 
 /**
- * The app's session against the optional analysis backend (contract §2).
+ * The app's session against the optional analysis backend (contract §2, CR-001).
  *
- * The backend never sees a Google ID token twice: it is exchanged once for an opaque access token
- * that is wrapped by the Keystore before it is stored (NFR-14/16), like the database passphrase.
- * A blank `PAM_BACKEND_BASE_URL` makes every method a no-op so the on-device engine stays in use.
+ * The backend never sees a password twice: it is exchanged once at `POST /v1/sessions` for an
+ * opaque access token that is wrapped by the Keystore before storage (NFR-14/16). A blank
+ * `PAM_BACKEND_BASE_URL` makes every method a no-op, so the app runs entirely offline (FR-52).
  */
 interface BackendSessionRepository {
 
-    /** True when a backend URL is configured; false keeps the whole app offline. */
+    /** True when a backend URL is configured. */
     val isEnabled: Boolean
 
+    /** FR-51: invite-only registration; the token is not issued until [login] succeeds. */
+    suspend fun register(
+        email: String,
+        password: String,
+        displayName: String?,
+        inviteCode: String,
+    ): Outcome<Unit>
+
+    /** Exchanges email + password for an access token and caches it. */
+    suspend fun login(email: String, password: String): Outcome<Unit>
+
     /**
-     * Returns a valid access token, exchanging a Google ID token when there is none, when it is
-     * within five minutes of expiry, or when it belongs to another owner.
-     *
-     * @param ownerId opaque owner id, used to scope the cached token and build a demo token.
-     * @param isDemo when true, sends the backend's development token instead of a Google token.
+     * Returns the cached token for [ownerId]; fails with `Unauthorized` when there is none or it
+     * has expired, so the UI can ask for sign-in again instead of storing a password on device.
      */
-    suspend fun token(ownerId: String, isDemo: Boolean): Outcome<String>
+    suspend fun token(ownerId: String): Outcome<String>
 
     /** FR-05: server-side invalidation on sign-out; clears the cache even when the call fails. */
     suspend fun revoke()
 
     /** Drops the cached token without a network call (used after a 401). */
     fun clear()
-}
-
-/**
- * Narrow identity port: the Google ID token itself, so the backend can verify who the user is.
- * [AccountIdentitySource] deliberately discards it; this reuses the same Credential Manager call
- * instead of starting a second sign-in flow.
- */
-interface IdentityTokenProvider {
-    suspend fun idToken(): Outcome<String>
 }

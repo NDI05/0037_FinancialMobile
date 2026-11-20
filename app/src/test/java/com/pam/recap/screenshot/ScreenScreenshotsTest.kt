@@ -34,7 +34,6 @@ import com.pam.recap.domain.model.RawAnalysis
 import com.pam.recap.domain.model.RawObservation
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.model.Transaction
-import com.pam.recap.domain.repository.AccountIdentitySource
 import com.pam.recap.domain.repository.AnalysisEngine
 import com.pam.recap.domain.repository.AnalysisEngineConfiguration
 import com.pam.recap.domain.repository.DemoDataPort
@@ -61,6 +60,7 @@ import com.pam.recap.domain.usecase.SuggestBudgetPlanUseCase
 import com.pam.recap.domain.usecase.UpdateTransactionCategoryUseCase
 import com.pam.recap.domain.usecase.UpdateTransactionNoteUseCase
 import com.pam.recap.domain.usecase.WithdrawAiConsentUseCase
+import com.pam.recap.testing.FakeAccountRepository
 import com.pam.recap.testing.FakeAnalysisRepository
 import com.pam.recap.testing.FakeBudgetRepository
 import com.pam.recap.testing.FakeConsentRepository
@@ -100,8 +100,10 @@ import com.pam.recap.ui.feature.transactions.TransactionDetailScreen
 import com.pam.recap.ui.feature.transactions.TransactionDetailViewModel
 import com.pam.recap.ui.feature.transactions.TransactionsScreen
 import com.pam.recap.ui.feature.transactions.TransactionsViewModel
+import com.pam.recap.ui.feature.account.AccountMode
+import com.pam.recap.ui.feature.account.AccountScreen
+import com.pam.recap.ui.feature.account.AccountViewModel
 import com.pam.recap.ui.feature.welcome.WelcomeScreen
-import com.pam.recap.ui.feature.welcome.WelcomeViewModel
 import com.pam.recap.ui.theme.PamTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -514,13 +516,38 @@ class ScreenScreenshotsTest {
     // ---------------------------------------------------------------------------------------
     @Test
     fun welcome() {
-        val viewModel = WelcomeViewModel(
-            identitySource = DemoIdentitySource,
-            signIn = SignInUseCase(sessions, NoopDemoData, clock),
-        )
-
         shot("09-welcome") {
-            WelcomeScreen(onOpenPrivacy = {}, viewModel = viewModel)
+            WelcomeScreen(onSignIn = {}, onCreateAccount = {}, onOpenPrivacy = {})
+        }
+    }
+
+    @Test
+    fun accountSignIn() {
+        val accounts = FakeAccountRepository(isBackendEnabled = true)
+        val viewModel = AccountViewModel(accounts, SavedStateHandle(mapOf("mode" to "SIGN_IN")))
+
+        shot("09b-account-signin") {
+            AccountScreen(onBack = {}, viewModel = viewModel)
+        }
+    }
+
+    @Test
+    fun accountRegister() {
+        val accounts = FakeAccountRepository(isBackendEnabled = true)
+        val viewModel = AccountViewModel(accounts, SavedStateHandle(mapOf("mode" to "REGISTER")))
+
+        shot("09c-account-register") {
+            AccountScreen(onBack = {}, viewModel = viewModel)
+        }
+    }
+
+    @Test
+    fun accountOffline() {
+        val accounts = FakeAccountRepository(isBackendEnabled = false)
+        val viewModel = AccountViewModel(accounts, SavedStateHandle(mapOf("mode" to "SIGN_IN")))
+
+        shot("09d-account-offline") {
+            AccountScreen(onBack = {}, viewModel = viewModel)
         }
     }
 
@@ -632,13 +659,6 @@ class ScreenScreenshotsTest {
 
     private object NoopDemoData : DemoDataPort {
         override suspend fun seedIfNeeded(ownerId: String): Boolean = false
-    }
-
-    private object DemoIdentitySource : AccountIdentitySource {
-        override val isDemoMode: Boolean = true
-
-        override suspend fun signIn(): Outcome<AccountIdentity> =
-            Outcome.Failure(AppError.Network("demo"))
     }
 
     private class DemoSessions(private val ownerId: String, private val now: Instant) : SessionRepository {

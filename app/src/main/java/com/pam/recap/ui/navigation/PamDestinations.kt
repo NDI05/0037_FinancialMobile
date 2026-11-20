@@ -14,6 +14,12 @@ sealed interface PamDestination {
     @Serializable
     data object Welcome : PamDestination
 
+    /** FR-51/FR-52: sign-in, registration, or the offline local profile. */
+    @Serializable
+    data class Account(
+        val mode: com.pam.recap.ui.feature.account.AccountMode = com.pam.recap.ui.feature.account.AccountMode.SIGN_IN,
+    ) : PamDestination
+
     @Serializable
     data object Consent : PamDestination
 

@@ -167,13 +167,3 @@ interface DemoDataPort {
 interface AnalysisEngineConfiguration {
     val isConfigured: Boolean
 }
-
-/**
- * Identity port (FR-01). One implementation talks to Google Identity, and in demo mode it returns
- * the bundled fixture account instead of touching the network (OI-01).
- */
-interface AccountIdentitySource {
-    val isDemoMode: Boolean
-
-    suspend fun signIn(): Outcome<AccountIdentity>
-}

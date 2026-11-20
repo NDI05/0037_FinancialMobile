@@ -17,18 +17,14 @@ import androidx.compose.material.icons.rounded.MailOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pam.recap.R
 import com.pam.recap.ui.components.GlassCard
-import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
 import com.pam.recap.ui.components.PillButton
 import com.pam.recap.ui.components.PillButtonStyle
@@ -41,7 +37,6 @@ import com.pam.recap.ui.theme.OnInkFaint
 import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.PamSpacing
 import com.pam.recap.ui.theme.Violet
-import com.pam.recap.ui.util.appErrorRes
 
 /**
  * §8 Welcome: wordmark, tagline, privacy link and a single Google sign-in action over the
@@ -49,11 +44,11 @@ import com.pam.recap.ui.util.appErrorRes
  */
 @Composable
 fun WelcomeScreen(
+    onSignIn: () -> Unit,
+    onCreateAccount: () -> Unit,
     onOpenPrivacy: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: WelcomeViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
 
     PamScaffold(modifier = modifier, showAurora = true) { padding ->
         Column(
@@ -102,22 +97,11 @@ fun WelcomeScreen(
                     style = BodyS,
                     color = OnInkMuted,
                 )
-                if (state.isDemoMode) {
-                    Spacer(modifier = Modifier.height(PamSpacing.xs))
-                    Text(
-                        text = stringResource(R.string.welcome_demo_hint),
-                        style = BodyS,
-                        color = OnInkFaint,
-                    )
-                }
-            }
-
-            if (state.error != null) {
-                Spacer(modifier = Modifier.height(PamSpacing.sm))
-                NoticeBanner(
-                    text = stringResource(appErrorRes(requireNotNull(state.error))),
-                    tone = com.pam.recap.ui.components.MoneyTone.Neutral,
-                    icon = Icons.Rounded.MailOutline,
+                Spacer(modifier = Modifier.height(PamSpacing.xs))
+                Text(
+                    text = stringResource(R.string.welcome_demo_hint),
+                    style = BodyS,
+                    color = OnInkFaint,
                 )
             }
 
@@ -125,8 +109,14 @@ fun WelcomeScreen(
 
             PillButton(
                 text = stringResource(R.string.welcome_sign_in),
-                onClick = viewModel::signInWithGoogle,
-                loading = state.isSigningIn,
+                onClick = onSignIn,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(PamSpacing.xs))
+            PillButton(
+                text = stringResource(R.string.welcome_create_account),
+                onClick = onCreateAccount,
+                style = PillButtonStyle.Secondary,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(PamSpacing.xs))

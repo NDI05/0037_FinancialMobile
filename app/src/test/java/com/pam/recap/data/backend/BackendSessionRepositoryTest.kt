@@ -4,17 +4,14 @@ import android.content.Context
 import android.util.Base64
 import androidx.test.core.app.ApplicationProvider
 import com.pam.recap.core.result.AppError
+import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.ErrorKind
 import com.pam.recap.core.result.Outcome
+import com.pam.recap.core.security.OwnerIdFactory
 import com.pam.recap.core.security.WrappedSecretStore
 import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.util.PamJson
-import com.pam.recap.domain.model.Session
-import com.pam.recap.domain.repository.IdentityTokenProvider
-import com.pam.recap.domain.repository.SessionRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -36,8 +33,8 @@ import org.robolectric.annotation.Config
 import kotlin.time.Instant
 
 /**
- * E2: the session is exchanged once, cached as ciphertext, refreshed five minutes before expiry,
- * re-acquired for another owner, and revoked on sign-out (contract §2.1/§2.2).
+ * FR-51/FR-53 and CR-001: the account session is exchanged once with email + password, cached as
+ * ciphertext, re-acquired per owner, and revoked on sign-out. Failures map to the right AppError.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -71,138 +68,161 @@ class BackendSessionRepositoryTest {
     }
 
     @Test
-    fun `exchanges once and reuses the cached token`() = runTest {
+    fun `login exchanges the credentials once and caches the token`() = runTest {
         server.enqueue(sessionResponse("token-1"))
-        val identity = StubIdentity(Outcome.Success("google-id-token"))
-        val repository = repository(identity)
+        val repository = repository()
 
-        val first = repository.token(OWNER, isDemo = false) as Outcome.Success
+        val loggedIn = repository.login(EMAIL, "correct-horse-battery")
+        val first = repository.token(OWNER) as Outcome.Success
         nowMillis += 60_000
-        val second = repository.token(OWNER, isDemo = false) as Outcome.Success
+        val second = repository.token(OWNER) as Outcome.Success
 
+        assertTrue(loggedIn is Outcome.Success)
         assertEquals("token-1", first.value)
         assertEquals("token-1", second.value)
         assertEquals(1, server.requestCount)
-        assertEquals(1, identity.calls)
 
         val request = server.takeRequest()
         assertEquals("POST", request.method)
         assertEquals("/v1/sessions", request.path)
         val body = Json.parseToJsonElement(request.body.readUtf8()).jsonObject
-        assertEquals("google-id-token", body["idToken"]?.jsonPrimitive?.content)
+        assertEquals(EMAIL, body["email"]?.jsonPrimitive?.content)
+        assertEquals("correct-horse-battery", body["password"]?.jsonPrimitive?.content)
     }
 
     @Test
-    fun `re-exchanges when less than five minutes remain`() = runTest {
+    fun `an expired token is dropped and reported as unauthorized`() = runTest {
         server.enqueue(sessionResponse("token-1", expiresInMinutes = 60))
-        server.enqueue(sessionResponse("token-2", expiresInMinutes = 60))
-        val repository = repository(StubIdentity(Outcome.Success("google-id-token")))
+        val repository = repository()
+        repository.login(EMAIL, "correct-horse-battery")
 
-        repository.token(OWNER, isDemo = false)
-        // Move to four minutes before expiry: the cache is no longer usable.
-        nowMillis += 56 * 60_000
-        val refreshed = repository.token(OWNER, isDemo = false) as Outcome.Success
+        // Two hours later the cached token is useless: the user must sign in again rather than the
+        // app storing a password to refresh it silently.
+        nowMillis += 120 * 60_000
+        val expired = repository.token(OWNER)
 
-        assertEquals("token-2", refreshed.value)
-        assertEquals(2, server.requestCount)
+        assertTrue(expired is Outcome.Failure)
+        assertEquals(ErrorKind.UNAUTHORIZED, (expired as Outcome.Failure).error.kind)
+        assertEquals(1, server.requestCount)
     }
 
     @Test
-    fun `re-exchanges for a different owner`() = runTest {
+    fun `a cached token for another owner is refused`() = runTest {
         server.enqueue(sessionResponse("token-a"))
-        server.enqueue(sessionResponse("token-b"))
-        val repository = repository(StubIdentity(Outcome.Success("google-id-token")))
+        val repository = repository()
+        repository.login(EMAIL, "correct-horse-battery")
 
-        repository.token("u_alice", isDemo = false)
-        val other = repository.token("u_bob", isDemo = false) as Outcome.Success
+        val other = repository.token(OwnerIdFactory.ownerIdFor("other@example.test"))
 
-        assertEquals("token-b", other.value)
-        assertEquals(2, server.requestCount)
+        assertTrue(other is Outcome.Failure)
+        assertEquals(ErrorKind.UNAUTHORIZED, (other as Outcome.Failure).error.kind)
     }
 
     @Test
     fun `sign out revokes on the server and drops the cache`() = runTest {
         server.enqueue(sessionResponse("token-1"))
         server.enqueue(MockResponse().setResponseCode(204))
-        server.enqueue(sessionResponse("token-2"))
-        val repository = repository(StubIdentity(Outcome.Success("google-id-token")))
+        val repository = repository()
+        repository.login(EMAIL, "correct-horse-battery")
 
-        repository.token(OWNER, isDemo = false)
         repository.revoke()
 
-        val sessionRequest = server.takeRequest()
-        assertEquals("POST", sessionRequest.method)
+        assertEquals("POST", server.takeRequest().method)
         val delete = server.takeRequest()
         assertEquals("DELETE", delete.method)
         assertEquals("/v1/sessions", delete.path)
         assertEquals("Bearer token-1", delete.getHeader("authorization"))
 
-        val reacquired = repository.token(OWNER, isDemo = false) as Outcome.Success
-        assertEquals("token-2", reacquired.value)
-    }
-
-    @Test
-    fun `a demo session sends the development token, never a Google token`() = runTest {
-        server.enqueue(sessionResponse("token-demo"))
-        val identity = StubIdentity(Outcome.Failure(AppError.Configuration("no_google_token")))
-        val repository = repository(identity, isDemo = true)
-
-        val result = repository.token(OWNER, isDemo = true) as Outcome.Success
-
-        assertEquals("token-demo", result.value)
-        assertEquals(0, identity.calls)
-        val body = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
-        val idToken = body["idToken"]!!.jsonPrimitive.content
-        assertTrue(idToken.startsWith("dev:$OWNER:"))
-    }
-
-    @Test
-    fun `a Google identity failure is surfaced, not retried blindly`() = runTest {
-        val repository = repository(StubIdentity(Outcome.Failure(AppError.PermissionRequired("no_credential"))))
-
-        val result = repository.token(OWNER, isDemo = false)
-
-        assertTrue(result is Outcome.Failure)
-        assertEquals(ErrorKind.PERMISSION_REQUIRED, (result as Outcome.Failure).error.kind)
-        assertEquals(0, server.requestCount)
+        val afterwards = repository.token(OWNER)
+        assertTrue(afterwards is Outcome.Failure)
     }
 
     @Test
     fun `the token is stored wrapped, not in clear`() = runTest {
         server.enqueue(sessionResponse("super-secret-access-token"))
-        val repository = repository(StubIdentity(Outcome.Success("google-id-token")))
-
-        repository.token(OWNER, isDemo = false)
+        val repository = repository()
+        repository.login(EMAIL, "correct-horse-battery")
 
         val prefs = context.getSharedPreferences("pam_backend_session", Context.MODE_PRIVATE)
         val stored = prefs.all.values.filterIsInstance<String>().joinToString("\n")
         assertTrue(stored.isNotEmpty())
         assertFalse(stored.contains("super-secret-access-token"))
-        assertFalse(stored.contains("google-id-token"))
-        // But the round-trip still works.
-        nowMillis += 1_000
-        val again = repository.token(OWNER, isDemo = false) as Outcome.Success
+        assertFalse(stored.contains("correct-horse-battery"))
+
+        val again = repository.token(OWNER) as Outcome.Success
         assertEquals("super-secret-access-token", again.value)
         assertEquals(1, server.requestCount)
     }
 
     @Test
-    fun `the development token is allowed only without a Google client id`() {
-        assertTrue(demoTokenAllowed(""))
-        assertFalse(demoTokenAllowed("123.apps.googleusercontent.com"))
+    fun `a wrong password maps to invalid credentials`() = runTest {
+        server.enqueue(jsonResponse(401, "unauthorized"))
+        val result = repository().login(EMAIL, "wrong")
+        assertValidation(result, AppErrorRules.INVALID_CREDENTIALS)
+    }
+
+    @Test
+    fun `a throttled login maps to RateLimited`() = runTest {
+        server.enqueue(jsonResponse(429, "rate_limited"))
+        val result = repository().login(EMAIL, "correct-horse-battery")
+        assertTrue(result is Outcome.Failure)
+        assertEquals(ErrorKind.RATE_LIMITED, (result as Outcome.Failure).error.kind)
+    }
+
+    @Test
+    fun `registration maps invite and duplicate-email failures`() = runTest {
+        server.enqueue(jsonResponse(403, "invalid_invite"))
+        assertValidation(repository().register(EMAIL, "correct-horse-battery", "A", "bad"), AppErrorRules.INVALID_INVITE)
+
+        server.enqueue(jsonResponse(409, "conflict"))
+        assertValidation(repository().register(EMAIL, "correct-horse-battery", "A", "invite"), AppErrorRules.EMAIL_TAKEN)
+    }
+
+    @Test
+    fun `a successful registration does not cache a token`() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(201)
+                .setHeader("content-type", "application/json")
+                .setBody("""{"ownerId":"u_x","email":"$EMAIL","displayName":"A"}"""),
+        )
+        val repository = repository()
+        val registered = repository.register(EMAIL, "correct-horse-battery", "A", "invite")
+        assertTrue(registered is Outcome.Success)
+        assertTrue(repository.token(OWNER) is Outcome.Failure)
+    }
+
+    @Test
+    fun `a blank base URL never opens a socket`() = runTest {
+        val blank = BackendConfig()
+        assertFalse(blank.isEnabled)
+        val repository = BackendSessionRepositoryImpl(
+            client = OkHttpClient(),
+            json = PamJson,
+            config = blank,
+            keystoreSecretStore = XorSecretStore(),
+            context = context,
+            clock = clock,
+            ioDispatcher = UnconfinedTestDispatcher(),
+        )
+        assertFalse(repository.isEnabled)
+        assertTrue(repository.login(EMAIL, "x") is Outcome.Failure)
+        assertEquals(0, server.requestCount)
     }
 
     // ---- helpers -------------------------------------------------------------------------
 
-    private fun repository(
-        identity: IdentityTokenProvider,
-        isDemo: Boolean = false,
-    ) = BackendSessionRepositoryImpl(
+    private fun assertValidation(result: Outcome<*>, rule: String) {
+        assertTrue(result is Outcome.Failure)
+        val error = (result as Outcome.Failure).error
+        assertEquals(ErrorKind.VALIDATION, error.kind)
+        assertEquals(rule, (error as AppError.Validation).rule)
+    }
+
+    private fun repository() = BackendSessionRepositoryImpl(
         client = OkHttpClient(),
         json = PamJson,
         config = endpoints,
-        identityTokens = identity,
-        sessions = StubSessions(isDemo),
         keystoreSecretStore = XorSecretStore(),
         context = context,
         clock = clock,
@@ -214,8 +234,13 @@ class BackendSessionRepositoryTest {
         return MockResponse()
             .setResponseCode(201)
             .setHeader("content-type", "application/json")
-            .setBody("""{"accessToken":"$token","expiresAt":"$expiresAt","displayName":"Alice"}""")
+            .setBody("""{"accessToken":"$token","expiresAt":"$expiresAt","displayName":"Andhika"}""")
     }
+
+    private fun jsonResponse(code: Int, errorCode: String) = MockResponse()
+        .setResponseCode(code)
+        .setHeader("content-type", "application/json")
+        .setBody("""{"code":"$errorCode","message":"teknisi","retryable":false,"correlationId":"c-1"}""")
 
     /** Reversible, but not the plaintext: proves the repository only stores wrapped bytes. */
     private class XorSecretStore : WrappedSecretStore {
@@ -229,34 +254,8 @@ class BackendSessionRepositoryTest {
         }
     }
 
-    private class StubIdentity(private val result: Outcome<String>) : IdentityTokenProvider {
-        var calls = 0
-        override suspend fun idToken(): Outcome<String> {
-            calls++
-            return result
-        }
-    }
-
-    private class StubSessions(private val isDemo: Boolean) : SessionRepository {
-        private val flow = MutableStateFlow(
-            Session(
-                ownerId = "u_owner",
-                displayName = "Andhika",
-                mailboxLabel = null,
-                signedInAt = Instant.parse("2026-03-01T00:00:00Z"),
-                isDemo = isDemo,
-            ),
-        )
-        override fun observe(): Flow<Session?> = flow
-        override suspend fun current(): Session? = flow.value
-        override suspend fun signIn(session: Session) = Unit
-        override suspend fun updateMailbox(ownerId: String, mailboxLabel: String?) = Unit
-        override suspend fun signOut() = Unit
-        override suspend fun isDemoSeeded(ownerId: String): Boolean = true
-        override suspend fun markDemoSeeded(ownerId: String) = Unit
-    }
-
     private companion object {
-        const val OWNER = "u_owner_hash"
+        const val EMAIL = "alice@example.test"
+        val OWNER = OwnerIdFactory.ownerIdFor(EMAIL)
     }
 }

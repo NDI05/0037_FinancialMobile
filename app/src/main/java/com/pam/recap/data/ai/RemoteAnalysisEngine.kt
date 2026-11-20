@@ -15,7 +15,6 @@ import com.pam.recap.domain.repository.AnalysisEngine
 import com.pam.recap.domain.repository.AnalysisEngineConfiguration
 import com.pam.recap.domain.repository.AnalysisRequest
 import com.pam.recap.domain.repository.BackendSessionRepository
-import com.pam.recap.domain.repository.SessionRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -46,7 +45,6 @@ class RemoteAnalysisEngine @Inject constructor(
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     private val config: BackendEndpoints,
     private val backendSessions: BackendSessionRepository,
-    private val sessions: SessionRepository,
 ) : AnalysisEngine, AnalysisEngineConfiguration {
 
     override val providerId: String = PROVIDER_ID
@@ -65,10 +63,9 @@ class RemoteAnalysisEngine @Inject constructor(
         return withContext(ioDispatcher) {
             val body = json.encodeToString(AnalysisRequestBody.serializer(), request.toBody())
             val idempotencyKey = request.idempotencyKey()
-            val isDemo = sessions.current()?.isDemo == true
 
             for (attempt in 0 until MAX_ATTEMPTS) {
-                val token = when (val result = backendSessions.token(request.ownerId, isDemo)) {
+                val token = when (val result = backendSessions.token(request.ownerId)) {
                     is Outcome.Success -> result.value
                     is Outcome.Failure -> return@withContext Outcome.Failure(result.error)
                 }

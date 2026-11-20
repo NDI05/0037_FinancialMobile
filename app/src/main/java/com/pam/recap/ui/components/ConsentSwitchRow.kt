@@ -95,6 +95,9 @@ fun LabelledField(
     suffix: String? = null,
     keyboardOptions: androidx.compose.foundation.text.KeyboardOptions =
         androidx.compose.foundation.text.KeyboardOptions.Default,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation =
+        androidx.compose.ui.text.input.VisualTransformation.None,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         if (!label.isNullOrBlank()) {
@@ -115,6 +118,7 @@ fun LabelledField(
                 onValueChange = onValueChange,
                 singleLine = true,
                 keyboardOptions = keyboardOptions,
+                visualTransformation = visualTransformation,
                 textStyle = com.pam.recap.ui.theme.TitleL.copy(color = OnInk),
                 cursorBrush = androidx.compose.ui.graphics.SolidColor(Violet),
                 modifier = Modifier.weight(1f),
@@ -128,6 +132,7 @@ fun LabelledField(
             if (suffix != null) {
                 Text(text = suffix, style = TitleM, color = OnInkMuted)
             }
+            if (trailing != null) trailing()
         }
     }
 }

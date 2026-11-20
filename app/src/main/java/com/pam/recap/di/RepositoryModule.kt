@@ -8,7 +8,7 @@ import com.pam.recap.core.security.KeystoreHmacKeyProvider
 import com.pam.recap.data.ai.AiPayloadBuilder
 import com.pam.recap.data.ai.AnalysisCopySource
 import com.pam.recap.data.ai.AndroidAnalysisCopySource
-import com.pam.recap.data.gmail.GoogleIdentitySource
+import com.pam.recap.data.account.LocalAccountSource
 import com.pam.recap.data.gmail.LivinQrisParser
 import com.pam.recap.data.gmail.LivinQueryBuilder
 import com.pam.recap.data.gmail.LivinTemplateRegistry
@@ -23,7 +23,7 @@ import com.pam.recap.data.repository.ImportRepositoryImpl
 import com.pam.recap.data.repository.SummaryRepositoryImpl
 import com.pam.recap.data.repository.TransactionRepositoryImpl
 import com.pam.recap.data.seed.DemoDataSeeder
-import com.pam.recap.domain.repository.AccountIdentitySource
+import com.pam.recap.domain.repository.AccountRepository
 import com.pam.recap.domain.repository.AiPayloadSource
 import com.pam.recap.domain.repository.AnalysisRepository
 import com.pam.recap.domain.repository.BudgetRepository
@@ -93,7 +93,7 @@ abstract class RepositoryModule {
     abstract fun bindHmacKeyProvider(impl: KeystoreHmacKeyProvider): HmacKeyProvider
 
     @Binds
-    abstract fun bindAccountIdentitySource(impl: GoogleIdentitySource): AccountIdentitySource
+    abstract fun bindAccountRepository(impl: LocalAccountSource): AccountRepository
 
     @Binds
     abstract fun bindAnalysisCopySource(impl: AndroidAnalysisCopySource): AnalysisCopySource

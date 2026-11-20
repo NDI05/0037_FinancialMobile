@@ -101,7 +101,6 @@
     <string name="error_not_signed_in">You are not signed in.</string>
 
     <string name="welcome_tagline">A monthly financial recap built from Livin email — numbers you can check, not a bank balance.</string>
-    <string name="welcome_sign_in">Sign in with Google</string>
     <string name="welcome_privacy_link">Read the privacy policy</string>
     <string name="welcome_demo_hint">Demo mode is on: the app uses bundled sample data, not a real mailbox.</string>
     <string name="welcome_disclaimer">PAM is not a bank app. There is no balance and no money movement.</string>
@@ -374,4 +373,34 @@
     <string name="import_pages_processed">Pages processed: %1$d</string>
     <string name="error_rate_limited">Analysis limit reached. Try again later.</string>
     <string name="deletion_server_sla">Server data is removed within %1$d days.</string>
+    <string name="welcome_sign_in">Sign in</string>
+    <string name="welcome_create_account">Create account</string>
+    <string name="account_title">Account</string>
+    <string name="account_eyebrow">PAM account</string>
+    <string name="account_headline_sign_in">Sign in to your PAM account.</string>
+    <string name="account_headline_register">Create a PAM account.</string>
+    <string name="account_headline_offline">Create a local profile.</string>
+    <string name="account_body_sign_in">Use your PAM email and password. Transaction rows stay on this device.</string>
+    <string name="account_body_register">This account stores monthly aggregates and analyses on the PAM server. Transaction rows, merchants and notes are never sent.</string>
+    <string name="account_body_offline">No server is configured, so this profile stays on your device: an email and a name, no password.</string>
+    <string name="account_email_label">Email</string>
+    <string name="account_password_label">Password</string>
+    <string name="account_display_name_label">Display name (optional)</string>
+    <string name="account_invite_label">Invite code</string>
+    <string name="account_submit_sign_in">Sign in</string>
+    <string name="account_submit_register">Create account</string>
+    <string name="account_submit_offline">Continue without an account</string>
+    <string name="account_show_password">Show password</string>
+    <string name="account_hide_password">Hide password</string>
+    <string name="account_switch_to_register">No account yet? Create one</string>
+    <string name="account_switch_to_sign_in">Already have an account? Sign in</string>
+    <string name="account_invite_hint">Registration needs an invite code from the server owner.</string>
+    <string name="account_offline_badge">Local profile</string>
+    <string name="account_backend_badge">Server account</string>
+    <string name="error_invalid_email">Enter a valid email address.</string>
+    <string name="error_password_too_short">Password must be at least 8 characters.</string>
+    <string name="error_invalid_credentials">Email or password is incorrect.</string>
+    <string name="error_invalid_invite">The invite code is invalid.</string>
+    <string name="error_email_taken">This email is already registered. Try signing in.</string>
+    <string name="account_email_placeholder">name@example.com</string>
 </resources>

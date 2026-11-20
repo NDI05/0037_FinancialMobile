@@ -1,7 +1,11 @@
 package com.pam.recap.testing
+import com.pam.recap.domain.repository.SessionRepository
+import com.pam.recap.core.result.AppErrorRules
+import com.pam.recap.domain.model.Session
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.ConsentDecision
+import com.pam.recap.domain.repository.AccountRepository
 import com.pam.recap.domain.repository.AnalysisRequest
 import com.pam.recap.domain.repository.BackendConsentSync
 import com.pam.recap.domain.repository.BackendDeletionSync
@@ -353,12 +357,58 @@ class FakeDeletionRepository : DeletionRepository {
 class NoopBackendSessionRepository : BackendSessionRepository {
     override val isEnabled: Boolean = false
 
-    override suspend fun token(ownerId: String, isDemo: Boolean): Outcome<String> =
+    override suspend fun register(
+        email: String,
+        password: String,
+        displayName: String?,
+        inviteCode: String,
+    ): Outcome<Unit> = Outcome.Failure(AppError.Configuration("backend_not_configured"))
+
+    override suspend fun login(email: String, password: String): Outcome<Unit> =
+        Outcome.Failure(AppError.Configuration("backend_not_configured"))
+
+    override suspend fun token(ownerId: String): Outcome<String> =
         Outcome.Failure(AppError.Configuration("backend_not_configured"))
 
     override suspend fun revoke() = Unit
 
     override fun clear() = Unit
+}
+
+/**
+ * Account source double: records the call and delegates to a fixed outcome, so the account screen
+ * and the gate can be exercised without HTTP.
+ */
+class FakeAccountRepository(
+    override val isBackendEnabled: Boolean = true,
+    var result: Outcome<Session>? = null,
+    private val session: Session? = null,
+) : AccountRepository {
+    val calls = mutableListOf<String>()
+
+    override suspend fun register(
+        email: String,
+        password: String,
+        displayName: String?,
+        inviteCode: String,
+    ): Outcome<Session> {
+        calls += "register:$email"
+        return result ?: Outcome.Failure(AppError.Validation(AppErrorRules.INVALID_INVITE))
+    }
+
+    override suspend fun login(email: String, password: String): Outcome<Session> {
+        calls += "login:$email"
+        return result ?: Outcome.Failure(AppError.Validation(AppErrorRules.INVALID_CREDENTIALS))
+    }
+
+    override suspend fun loginOffline(email: String, displayName: String?): Outcome<Session> {
+        calls += "offline:$email"
+        return result ?: Outcome.Failure(AppError.Configuration("offline"))
+    }
+
+    override suspend fun signOut() {
+        calls += "signOut"
+    }
 }
 
 class NoopBackendConsentSync : BackendConsentSync {
@@ -377,4 +427,26 @@ class NoopBackendSummarySync : BackendSummarySync {
 class NoopBackendDeletionSync : BackendDeletionSync {
     override suspend fun request(ownerId: String): Outcome<Int> =
         Outcome.Failure(AppError.Configuration("backend_not_configured"))
+}
+
+/** In-memory session/profile store for the account and gate tests. */
+class FakeSessionRepository(initial: Session? = null) : SessionRepository {
+    private val flow = MutableStateFlow(initial)
+    val seededOwners = mutableSetOf<String>()
+
+    override fun observe(): Flow<Session?> = flow
+    override suspend fun current(): Session? = flow.value
+    override suspend fun signIn(session: Session) {
+        flow.value = session
+    }
+
+    override suspend fun updateMailbox(ownerId: String, mailboxLabel: String?) = Unit
+    override suspend fun signOut() {
+        flow.value = null
+    }
+
+    override suspend fun isDemoSeeded(ownerId: String): Boolean = ownerId in seededOwners
+    override suspend fun markDemoSeeded(ownerId: String) {
+        seededOwners += ownerId
+    }
 }

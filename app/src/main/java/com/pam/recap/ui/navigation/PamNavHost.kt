@@ -45,6 +45,8 @@ import com.pam.recap.ui.feature.settings.DataDeletionScreen
 import com.pam.recap.ui.feature.settings.SettingsScreen
 import com.pam.recap.ui.feature.transactions.TransactionDetailScreen
 import com.pam.recap.ui.feature.transactions.TransactionsScreen
+import com.pam.recap.ui.feature.account.AccountMode
+import com.pam.recap.ui.feature.account.AccountScreen
 import com.pam.recap.ui.feature.welcome.WelcomeScreen
 import com.pam.recap.ui.session.GateState
 import com.pam.recap.ui.session.SessionGateViewModel
@@ -68,10 +70,12 @@ fun PamNavHost(modifier: Modifier = Modifier) {
         when (gate) {
             GateState.Loading -> Unit
 
-            GateState.NeedsSignIn -> if (destination.isGateScreen()) {
-                if (!destination.isWelcome()) navController.replaceWith(PamDestination.Welcome)
-            } else if (destination == null) {
-                navController.replaceWith(PamDestination.Welcome)
+            GateState.NeedsSignIn -> when {
+                // The account screen is reachable before a profile exists: that is its purpose.
+                destination == null -> navController.replaceWith(PamDestination.Welcome)
+                destination.isAccount() -> Unit
+                destination.isConsent() -> navController.replaceWith(PamDestination.Welcome)
+                else -> Unit
             }
 
             is GateState.NeedsConsent -> if (
@@ -104,7 +108,15 @@ fun PamNavHost(modifier: Modifier = Modifier) {
         ) {
             composable<PamDestination.Welcome> {
                 WelcomeScreen(
+                    onSignIn = { navController.navigate(PamDestination.Account(AccountMode.SIGN_IN)) },
+                    onCreateAccount = { navController.navigate(PamDestination.Account(AccountMode.REGISTER)) },
                     onOpenPrivacy = { navController.navigate(PamDestination.Consent) },
+                )
+            }
+
+            composable<PamDestination.Account> {
+                AccountScreen(
+                    onBack = { if (!navController.popBackStack()) navController.replaceWith(PamDestination.Welcome) },
                 )
             }
 
@@ -259,11 +271,14 @@ private fun bottomItems(destination: NavDestination?): List<BottomNavItem> = lis
 private fun NavDestination?.isTopLevel(): Boolean =
     isOverview() || isTransactions() || isAnalysis() || isSettings()
 
-private fun NavDestination?.isGateScreen(): Boolean = isWelcome() || isConsent()
+private fun NavDestination?.isGateScreen(): Boolean = isWelcome() || isConsent() || isAccount()
+
+private fun NavDestination?.isAccount(): Boolean = this?.hasRoute<PamDestination.Account>() == true
+
+private fun NavDestination?.isConsent(): Boolean = this?.hasRoute<PamDestination.Consent>() == true
 
 private fun NavDestination?.isWelcome(): Boolean = this?.hasRoute<PamDestination.Welcome>() == true
 
-private fun NavDestination?.isConsent(): Boolean = this?.hasRoute<PamDestination.Consent>() == true
 
 private fun NavDestination?.isOverview(): Boolean = this?.hasRoute<PamDestination.Overview>() == true
 

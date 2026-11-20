@@ -109,7 +109,6 @@
 
     <!-- Welcome -->
     <string name="welcome_tagline">Rekap keuangan bulanan dari email Livin — angka yang bisa Anda periksa, bukan saldo rekening.</string>
-    <string name="welcome_sign_in">Masuk dengan Google</string>
     <string name="welcome_privacy_link">Lihat kebijakan privasi</string>
     <string name="welcome_demo_hint">Mode demo aktif: aplikasi memakai data contoh bawaan, bukan kotak masuk sungguhan.</string>
     <string name="welcome_disclaimer">PAM bukan aplikasi bank. Tidak ada saldo, tidak ada perpindahan uang.</string>
@@ -396,4 +395,34 @@
     <string name="import_pages_processed">Halaman diproses: %1$d</string>
     <string name="error_rate_limited">Batas analisis tercapai. Coba lagi nanti.</string>
     <string name="deletion_server_sla">Data di server dihapus dalam ≤ %1$d hari.</string>
+    <string name="welcome_sign_in">Masuk</string>
+    <string name="welcome_create_account">Buat akun</string>
+    <string name="account_title">Akun</string>
+    <string name="account_eyebrow">Akun PAM</string>
+    <string name="account_headline_sign_in">Masuk ke akun PAM Anda.</string>
+    <string name="account_headline_register">Buat akun PAM.</string>
+    <string name="account_headline_offline">Buat profil lokal.</string>
+    <string name="account_body_sign_in">Gunakan email dan kata sandi akun PAM Anda. Baris transaksi tetap tinggal di perangkat ini.</string>
+    <string name="account_body_register">Akun ini menyimpan agregat bulanan dan analisis di server PAM. Baris transaksi, merchant, dan catatan tidak pernah dikirim.</string>
+    <string name="account_body_offline">Tidak ada server yang dikonfigurasi, jadi profil ini hanya tersimpan di perangkat Anda: cukup email dan nama, tanpa kata sandi.</string>
+    <string name="account_email_label">Email</string>
+    <string name="account_password_label">Kata sandi</string>
+    <string name="account_display_name_label">Nama tampilan (opsional)</string>
+    <string name="account_invite_label">Kode undangan</string>
+    <string name="account_submit_sign_in">Masuk</string>
+    <string name="account_submit_register">Buat akun</string>
+    <string name="account_submit_offline">Lanjut tanpa akun</string>
+    <string name="account_show_password">Tampilkan kata sandi</string>
+    <string name="account_hide_password">Sembunyikan kata sandi</string>
+    <string name="account_switch_to_register">Belum punya akun? Buat akun</string>
+    <string name="account_switch_to_sign_in">Sudah punya akun? Masuk</string>
+    <string name="account_invite_hint">Pendaftaran butuh kode undangan dari pemilik server.</string>
+    <string name="account_offline_badge">Profil lokal</string>
+    <string name="account_backend_badge">Akun server</string>
+    <string name="error_invalid_email">Format email tidak valid.</string>
+    <string name="error_password_too_short">Kata sandi minimal 8 karakter.</string>
+    <string name="error_invalid_credentials">Email atau kata sandi salah.</string>
+    <string name="error_invalid_invite">Kode undangan tidak valid.</string>
+    <string name="error_email_taken">Email ini sudah terdaftar. Coba masuk.</string>
+    <string name="account_email_placeholder">nama@contoh.id</string>
 </resources>

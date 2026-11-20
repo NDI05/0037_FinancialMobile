@@ -30,6 +30,11 @@ fun appErrorRes(error: AppError): Int = when (error) {
             R.string.error_refund_target_must_be_expense
 
         com.pam.recap.core.result.AppErrorRules.PLAN_VALUE_NEGATIVE -> R.string.error_plan_value_negative
+        com.pam.recap.core.result.AppErrorRules.INVALID_EMAIL -> R.string.error_invalid_email
+        com.pam.recap.core.result.AppErrorRules.PASSWORD_TOO_SHORT -> R.string.error_password_too_short
+        com.pam.recap.core.result.AppErrorRules.INVALID_CREDENTIALS -> R.string.error_invalid_credentials
+        com.pam.recap.core.result.AppErrorRules.INVALID_INVITE -> R.string.error_invalid_invite
+        com.pam.recap.core.result.AppErrorRules.EMAIL_TAKEN -> R.string.error_email_taken
         com.pam.recap.core.result.AppErrorRules.NOT_SIGNED_IN -> R.string.error_not_signed_in
         else -> R.string.error_validation
     }

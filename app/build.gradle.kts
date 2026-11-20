@@ -23,13 +23,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
 
-        // OI-01: the real Gmail path is wired but gated by configuration. Absent property =>
-        // empty string => the DI graph binds the deterministic FixtureGmailSource instead.
-        buildConfigField(
-            "String",
-            "PAM_GOOGLE_WEB_CLIENT_ID",
-            "\"${project.findProperty("PAM_GOOGLE_WEB_CLIENT_ID")?.toString().orEmpty()}\"",
-        )
         // OI-07: optional remote analysis backend; blank keeps the on-device engine.
         // Precedence in `BackendConfig`: PAM_BACKEND_BASE_URL wins; PAM_ANALYSIS_BACKEND_URL stays
         // supported as a full-URL override so older invocations keep working.
@@ -149,12 +142,6 @@ dependencies {
 
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coil.compose)
-
-    implementation(libs.androidx.credentials)
-    implementation(libs.androidx.credentials.play.services.auth)
-    implementation(libs.play.services.auth)
-    // Credential Manager's Google ID option/credential (compile-only transitive of the AAR above).
-    implementation(libs.googleid)
 
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)
