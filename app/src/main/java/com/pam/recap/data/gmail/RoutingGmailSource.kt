@@ -1,7 +1,9 @@
 package com.pam.recap.data.gmail
 
+import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.GmailConnectionState
+import com.pam.recap.data.backend.BackendEndpoints
 import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.GmailMailboxLabelProvider
 import com.pam.recap.domain.repository.GmailPage
@@ -18,31 +20,47 @@ import javax.inject.Singleton
  * offline path keep working exactly as before.
  *
  * The check is per call (not per app start) because a user can paste a password while the app runs.
+ *
+ * A server-backed account without a credential gets **no** mailbox at all: the fixture is demo data
+ * for the offline demo, and serving it here would let a production account import sample emails.
  */
 @Singleton
 class RoutingGmailSource @Inject constructor(
     private val vault: AppPasswordVault,
     private val imap: ImapGmailSource,
     private val fixture: FixtureGmailSource,
+    private val backend: BackendEndpoints,
 ) : GmailSource, GmailMailboxLabelProvider {
 
-    private suspend fun active(): GmailSource =
-        if (vault.hasCredential()) imap else fixture
+    /** Null means "this account has no mailbox": server mode without a credential. */
+    private suspend fun active(): GmailSource? = when {
+        vault.hasCredential() -> imap
+        backend.isEnabled -> null
+        else -> fixture
+    }
 
-    override suspend fun authorize(): Outcome<Unit> = active().authorize()
+    override suspend fun authorize(): Outcome<Unit> =
+        active()?.authorize() ?: Outcome.Failure(AppError.Configuration(NO_MAILBOX))
 
     override fun connectionState(): Flow<GmailConnectionState> = fixture.connectionState()
 
     override suspend fun search(query: LivinQuery, pageToken: String?): Outcome<GmailPage> =
-        active().search(query, pageToken)
+        active()?.search(query, pageToken) ?: Outcome.Failure(AppError.Configuration(NO_MAILBOX))
 
     override suspend fun fetchMessage(id: String): Outcome<RawMessage> =
-        active().fetchMessage(id)
+        active()?.fetchMessage(id) ?: Outcome.Failure(AppError.Configuration(NO_MAILBOX))
 
-    override suspend fun disconnect(): Outcome<Unit> =
-        if (vault.hasCredential()) imap.disconnect() else fixture.disconnect()
+    override suspend fun disconnect(): Outcome<Unit> = when {
+        vault.hasCredential() -> imap.disconnect()
+        backend.isEnabled -> Outcome.Success(Unit)
+        else -> fixture.disconnect()
+    }
 
     override fun mailboxLabel(): String? =
-        // The IMAP label is the saved address; the fixture label is its own constant.
-        imap.mailboxLabel() ?: fixture.mailboxLabel()
+        // The IMAP label is the saved address; the fixture label is offline-demo data only.
+        imap.mailboxLabel() ?: if (backend.isEnabled) null else fixture.mailboxLabel()
+
+    private companion object {
+        const val NO_MAILBOX = "mailbox_not_configured"
+    }
 }
