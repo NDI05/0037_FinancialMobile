@@ -40,8 +40,14 @@ test('a file URL maps to a local path and boots a real database', async () => {
       ]) {
         assert.ok(names.includes(expected), `missing table ${expected}`);
       }
-      const version = await client.execute('PRAGMA user_version');
-      assert.equal(Number(version.rows[0]?.user_version), 2);
+      const applied = await client.execute(
+        'SELECT version FROM schema_migrations ORDER BY version',
+      );
+      assert.deepEqual(
+        applied.rows.map((row) => Number(row.version)),
+        [1, 2],
+        'migrations are tracked in schema_migrations, not user_version',
+      );
     } finally {
       client.close();
     }

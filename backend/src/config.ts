@@ -97,6 +97,11 @@ export interface AppConfig {
 
 /** Dev-only deterministic secret, clearly marked so it can never be mistaken for a real one. */
 const DEV_PEPPER = 'dev-session-pepper-not-for-production-use';
+/** Turso's dashboard/dotenv may say `turso://`; the driver only speaks `libsql://`. */
+export function normalizeDatabaseUrl(url: string): string {
+  return url.startsWith('turso://') ? `libsql://${url.slice('turso://'.length)}` : url;
+}
+
 /** Local default: libSQL's embedded `file:` mode, no account needed. */
 export const DEFAULT_DATABASE_URL = 'file:./data/pam.db';
 
@@ -148,7 +153,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   // only a fallback, so a stale .env cannot silently redirect a Turso run to a local file.
   const legacyPath = value.DATABASE_PATH?.trim() ?? '';
   const explicitUrl = value.DATABASE_URL?.trim() ?? '';
-  const databaseUrl = explicitUrl || (legacyPath ? `file:${legacyPath}` : DEFAULT_DATABASE_URL);
+  const rawUrl = explicitUrl || (legacyPath ? `file:${legacyPath}` : DEFAULT_DATABASE_URL);
+  const databaseUrl = normalizeDatabaseUrl(rawUrl);
+  if (rawUrl !== databaseUrl) {
+    warnings.push(`DATABASE_URL used the ${rawUrl.split('://')[0]}:// scheme; using libsql://`);
+  }
   if (legacyPath && explicitUrl) {
     warnings.push('DATABASE_PATH is ignored because DATABASE_URL is set (remove DATABASE_PATH)');
   } else if (legacyPath) {

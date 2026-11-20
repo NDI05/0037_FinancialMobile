@@ -1,6 +1,7 @@
 /**
- * Schema for contract §6. Migrations are applied in order inside one transaction and tracked with
- * `PRAGMA user_version`, so boot is idempotent.
+ * Schema for contract §6. Migrations are applied in order, each inside one transaction, and tracked
+ * in the `schema_migrations` table (never `PRAGMA user_version`, which Turso rejects as a write), so
+ * boot is idempotent on every target.
  *
  * Every transactional table carries `owner_id`; there is no join that could cross owners without an
  * explicit `owner_id = ?` predicate.
