@@ -18,12 +18,12 @@ function safeEqual(left: string, right: string): boolean {
 export function internalRouter(deps: RouteDeps): Router {
   const router = Router();
 
-  router.post('/v1/internal/sweep', (request, response) => {
+  router.post('/v1/internal/sweep', async (request, response) => {
     const expected = deps.config.internalSweepToken;
     if (!expected) throw notFound();
     const supplied = request.header('x-internal-token') ?? '';
     if (!supplied || !safeEqual(supplied, expected)) throw unauthorized('Invalid internal token');
-    const completed = deps.store.sweepDeletions(deps.now().toISOString());
+    const completed = await deps.store.sweepDeletions(deps.now().toISOString());
     response.status(200).json({ completed });
   });
 

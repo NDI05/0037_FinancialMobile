@@ -25,7 +25,10 @@ const booleanish = z
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(0).max(65535).default(8080),
-  DATABASE_PATH: z.string().min(1).default('./data/pam.db'),
+  DATABASE_URL: z.string().min(1).optional(),
+  DATABASE_AUTH_TOKEN: z.string().default(''),
+  /** Deprecated: mapped to `file:<path>` for one release. */
+  DATABASE_PATH: z.string().optional(),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 
   REGISTRATION_INVITE_CODE: z.string().default(''),
@@ -57,7 +60,7 @@ const schema = z.object({
 export interface AppConfig {
   readonly nodeEnv: 'development' | 'test' | 'production';
   readonly port: number;
-  readonly databasePath: string;
+  readonly database: { readonly url: string; readonly authToken: string };
   readonly logLevel: 'debug' | 'info' | 'warn' | 'error';
   readonly registrationInviteCode: string;
   readonly sessionPepper: string;
@@ -94,6 +97,9 @@ export interface AppConfig {
 
 /** Dev-only deterministic secret, clearly marked so it can never be mistaken for a real one. */
 const DEV_PEPPER = 'dev-session-pepper-not-for-production-use';
+/** Local default: libSQL's embedded `file:` mode, no account needed. */
+export const DEFAULT_DATABASE_URL = 'file:./data/pam.db';
+
 /** Development-only invite code so `npm start` + smoke work with no .env. */
 export const DEV_INVITE_CODE = 'pam-dev';
 const DEV_DATA_KEY = createHash('sha256').update('pam-dev-data-key').digest();
@@ -134,8 +140,28 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const value = parsed.data;
   const isProduction = value.NODE_ENV === 'production';
   let registrationInviteCode = value.REGISTRATION_INVITE_CODE || (isProduction ? '' : DEV_INVITE_CODE);
+
   const problems: string[] = [];
   const warnings: string[] = [];
+
+  // F4: one driver, two URLs. An explicit DATABASE_URL always wins; the legacy DATABASE_PATH is
+  // only a fallback, so a stale .env cannot silently redirect a Turso run to a local file.
+  const legacyPath = value.DATABASE_PATH?.trim() ?? '';
+  const explicitUrl = value.DATABASE_URL?.trim() ?? '';
+  const databaseUrl = explicitUrl || (legacyPath ? `file:${legacyPath}` : DEFAULT_DATABASE_URL);
+  if (legacyPath && explicitUrl) {
+    warnings.push('DATABASE_PATH is ignored because DATABASE_URL is set (remove DATABASE_PATH)');
+  } else if (legacyPath) {
+    warnings.push('DATABASE_PATH is deprecated: set DATABASE_URL=file:<path> instead');
+  }
+  const remoteDatabase = databaseUrl.startsWith('libsql://') || databaseUrl.startsWith('https://');
+  if (remoteDatabase && !value.DATABASE_AUTH_TOKEN) {
+    if (isProduction) {
+      problems.push('DATABASE_AUTH_TOKEN is required when DATABASE_URL points at a Turso database');
+    } else {
+      warnings.push('DATABASE_URL is remote but DATABASE_AUTH_TOKEN is empty: database calls will fail');
+    }
+  }
 
   let sessionPepper = value.SESSION_PEPPER;
   let dataKey = decodeDataKey(value.DATA_ENCRYPTION_KEY);
@@ -192,7 +218,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return {
     nodeEnv: value.NODE_ENV,
     port: value.PORT,
-    databasePath: value.DATABASE_PATH,
+    database: { url: databaseUrl, authToken: value.DATABASE_AUTH_TOKEN },
     logLevel: value.LOG_LEVEL,
     registrationInviteCode,
     sessionPepper,

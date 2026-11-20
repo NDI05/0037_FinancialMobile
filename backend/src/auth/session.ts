@@ -22,13 +22,13 @@ export function mintAccessToken(): string {
   return randomBytes(32).toString('base64url');
 }
 
-export function issueSession(
+export async function issueSession(
   store: Store,
   options: { ownerId: string; pepper: string; ttlDays: number; now: Date },
-): IssuedSession {
+): Promise<IssuedSession> {
   const accessToken = mintAccessToken();
   const expiresAt = new Date(options.now.getTime() + options.ttlDays * 24 * 60 * 60 * 1000);
-  store.createSession({
+  await store.createSession({
     ownerId: options.ownerId,
     tokenHash: hashAccessToken(accessToken, options.pepper),
     createdAt: options.now.toISOString(),
@@ -49,27 +49,31 @@ export function readBearerToken(request: Request): string | null {
  * with no distinction between "unknown token" and "wrong token" (no oracle).
  */
 export function requireSession(store: Store, pepper: string, logger: Logger) {
-  return (request: Request, _response: Response, next: NextFunction): void => {
-    const token = readBearerToken(request);
-    if (!token) {
-      next(unauthorized());
-      return;
+  return async (request: Request, _response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const token = readBearerToken(request);
+      if (!token) {
+        next(unauthorized());
+        return;
+      }
+      const session = await store.findSessionByHash(hashAccessToken(token, pepper));
+      if (!session) {
+        next(unauthorized());
+        return;
+      }
+      if (session.revokedAt !== null) {
+        logger.warn('session_revoked_used', { correlationId: request.correlationId });
+        next(unauthorized());
+        return;
+      }
+      if (Date.parse(session.expiresAt) <= Date.now()) {
+        next(unauthorized('Access token has expired'));
+        return;
+      }
+      request.auth = { ownerId: session.ownerId, sessionId: session.id };
+      next();
+    } catch (error) {
+      next(error);
     }
-    const session = store.findSessionByHash(hashAccessToken(token, pepper));
-    if (!session) {
-      next(unauthorized());
-      return;
-    }
-    if (session.revokedAt !== null) {
-      logger.warn('session_revoked_used', { correlationId: request.correlationId });
-      next(unauthorized());
-      return;
-    }
-    if (Date.parse(session.expiresAt) <= Date.now()) {
-      next(unauthorized('Access token has expired'));
-      return;
-    }
-    request.auth = { ownerId: session.ownerId, sessionId: session.id };
-    next();
   };
 }

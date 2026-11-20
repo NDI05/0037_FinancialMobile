@@ -13,16 +13,16 @@ function bootstrapLogger(config: AppConfig): Logger {
   return createJsonLogger({ level: config.logLevel });
 }
 
-export function buildServer(config: AppConfig) {
+export async function buildServer(config: AppConfig) {
   const logger = bootstrapLogger(config);
   for (const warning of config.warnings) {
     logger.warn('config_warning', { message: warning });
   }
 
-  const db = openDatabase(config.databasePath);
-  const store = new Store({ db, dataKey: config.dataKey, keyVersion: config.dataKeyVersion });
+  const client = await openDatabase(config.database);
+  const store = new Store({ client, dataKey: config.dataKey, keyVersion: config.dataKeyVersion });
 
-  const swept = store.sweepDeletions(new Date().toISOString());
+  const swept = await store.sweepDeletions(new Date().toISOString());
   if (swept > 0) logger.info('deletion_sweep_on_boot', { completed: swept });
 
   const provider = createAnalysisProvider(config);
@@ -38,7 +38,7 @@ export function buildServer(config: AppConfig) {
   return { app, store, logger, provider, config };
 }
 
-function main(): void {
+async function main(): Promise<void> {
   let config: AppConfig;
   try {
     config = loadConfig();
@@ -50,7 +50,7 @@ function main(): void {
     throw error;
   }
 
-  const { app, store, logger, provider } = buildServer(config);
+  const { app, store, logger, provider } = await buildServer(config);
   const server = app.listen(config.port, () => {
     const address = server.address();
     const port = typeof address === 'object' && address ? address.port : config.port;
@@ -65,7 +65,7 @@ function main(): void {
   const shutdown = (signal: string): void => {
     logger.info('server_stopping', { signal });
     server.close(() => {
-      store.close();
+      void store.close();
       process.exit(0);
     });
     setTimeout(() => process.exit(1), 10_000).unref();
@@ -74,4 +74,4 @@ function main(): void {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 
-main();
+void main();

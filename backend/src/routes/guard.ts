@@ -16,8 +16,8 @@ export function readMonthId(raw: string | string[] | undefined): string {
  * FR-47/§4.3: while a deletion request is PENDING, sync and analysis are refused so the sweep
  * cannot race a new write.
  */
-export function assertNoDeletionInProgress(deps: RouteDeps, ownerId: string): void {
-  if (deps.store.hasPendingDeletion(ownerId)) throw deletionInProgress();
+export async function assertNoDeletionInProgress(deps: RouteDeps, ownerId: string): Promise<void> {
+  if (await deps.store.hasPendingDeletion(ownerId)) throw deletionInProgress();
 }
 
 export function requireAuth(request: { auth?: { ownerId: string; sessionId: string } }) {

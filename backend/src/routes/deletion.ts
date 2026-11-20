@@ -12,14 +12,13 @@ export const DELETION_SLA_DAYS = 7;
 export function deletionRouter(deps: RouteDeps, authenticated: RequestHandler): Router {
   const router = Router();
 
-  router.post('/v1/deletion-requests', authenticated, (request, response) => {
+  router.post('/v1/deletion-requests', authenticated, async (request, response) => {
     const auth = request.auth!;
     const now = deps.now().toISOString();
-    const pendingOwner = deps.store.hasPendingDeletion(auth.ownerId);
+    const pendingOwner = await deps.store.hasPendingDeletion(auth.ownerId);
     const record = pendingOwner
-      ? deps.store
-          .pendingDeletionForOwner(auth.ownerId)
-      : deps.store.createDeletionRequest({
+      ? await deps.store.pendingDeletionForOwner(auth.ownerId)
+      : await deps.store.createDeletionRequest({
           ownerId: auth.ownerId,
           slaDays: DELETION_SLA_DAYS,
           at: now,
@@ -28,9 +27,9 @@ export function deletionRouter(deps: RouteDeps, authenticated: RequestHandler): 
     response.status(202).json({ id: record.id, state: record.state, slaDays: record.slaDays });
   });
 
-  router.get('/v1/deletion-requests/:id', authenticated, (request, response) => {
+  router.get('/v1/deletion-requests/:id', authenticated, async (request, response) => {
     const auth = request.auth!;
-    const record = deps.store.getDeletionRequest(auth.ownerId, String(request.params.id ?? ''));
+    const record = await deps.store.getDeletionRequest(auth.ownerId, String(request.params.id ?? ''));
     if (!record) throw notFound('Deletion request not found');
     response.status(200).json({
       id: record.id,

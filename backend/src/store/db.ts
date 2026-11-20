@@ -1,53 +1,90 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import { createClient, type Client } from '@libsql/client';
 import { migrations } from './migrations.js';
 
 /**
- * Opens SQLite and applies migrations (contract §6). `:memory:` is used by most tests; the
- * ciphertext test needs a real file, so callers choose the path.
+ * One driver, two URLs (CR-001 / Fase 4):
+ *
+ * - `file:./data/pam.db` (default) — local SQLite through libSQL's embedded mode, no account;
+ * - `libsql://<db>-<org>.turso.io` + `DATABASE_AUTH_TOKEN` — the managed Turso database.
+ *
+ * Both go through `@libsql/client`, so there is exactly one storage path: the same SQL, the same
+ * transactions and the same tests run against either target.
  */
-export function openDatabase(path: string): DatabaseSync {
-  if (path !== ':memory:') {
-    mkdirSync(dirname(path), { recursive: true });
-  }
-  const db = new DatabaseSync(path);
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  if (path !== ':memory:') {
-    db.exec('PRAGMA journal_mode = WAL');
-  }
-  migrate(db);
-  return db;
+export interface DatabaseConfig {
+  readonly url: string;
+  readonly authToken: string;
 }
 
-export function migrate(db: DatabaseSync): void {
-  let applied = false;
-  const current = Number(
-    (db.prepare('PRAGMA user_version').get() as { user_version?: number } | undefined)
-      ?.user_version ?? 0,
-  );
+/** Filesystem path behind a `file:` URL, or null for a remote database. */
+export function localFilePath(url: string): string | null {
+  if (!url.startsWith('file:')) return null;
+  let path = url.slice('file:'.length).split('?')[0] ?? '';
+  if (path.startsWith('//')) path = path.slice(2);
+  return path.length > 0 ? path : ':memory:';
+}
+
+export async function openDatabase(config: DatabaseConfig): Promise<Client> {
+  const localPath = localFilePath(config.url);
+  if (localPath && localPath !== ':memory:') {
+    mkdirSync(dirname(localPath), { recursive: true });
+  }
+  const client = createClient({
+    url: config.url,
+    ...(config.authToken ? { authToken: config.authToken } : {}),
+  });
+  await migrate(client);
+  return client;
+}
+
+export async function migrate(client: Client): Promise<void> {
+  const versionResult = await client.execute('PRAGMA user_version');
+  const current = Number(versionResult.rows[0]?.user_version ?? 0);
   if (migrations.every((migration) => migration.version <= current)) return;
 
-  // A table rebuild (migration 2) cannot run with foreign keys enforced, and the pragma is a
-  // no-op inside a transaction, so it is toggled around the whole batch.
-  db.exec('PRAGMA foreign_keys = OFF');
+  // A table rebuild (migration 2) cannot run with foreign keys enforced.
+  await client.execute('PRAGMA foreign_keys = OFF');
   try {
     for (const migration of migrations) {
       if (migration.version <= current) continue;
-      db.exec('BEGIN');
+      const transaction = await client.transaction('write');
       try {
-        db.exec(migration.sql);
-        db.exec(`PRAGMA user_version = ${migration.version}`);
-        db.exec('COMMIT');
-        applied = true;
+        for (const statement of splitStatements(migration.sql)) {
+          await transaction.execute(statement);
+        }
+        await transaction.execute(`PRAGMA user_version = ${migration.version}`);
+        await transaction.commit();
       } catch (error) {
-        db.exec('ROLLBACK');
+        await transaction.rollback();
         throw error;
       }
     }
   } finally {
-    db.exec('PRAGMA foreign_keys = ON');
+    await client.execute('PRAGMA foreign_keys = ON');
   }
-  if (applied) db.exec('PRAGMA foreign_key_check');
+  const check = await client.execute('PRAGMA foreign_key_check');
+  if (check.rows.length > 0) {
+    throw new Error(`foreign_key_check failed after migration: ${check.rows.length} row(s)`);
+  }
+}
+
+/**
+ * The migrations are plain DDL without triggers or function bodies, so splitting on `;` is exact
+ * enough to feed them one statement at a time inside a transaction.
+ */
+export function splitStatements(sql: string): string[] {
+  // Strip `--` comments *before* splitting: a comment may contain a semicolon (the migration
+  // narrative does), and splitting first would cut the statement in half.
+  const withoutComments = sql
+    .split('\n')
+    .map((line) => {
+      const index = line.indexOf('--');
+      return index >= 0 ? line.slice(0, index) : line;
+    })
+    .join('\n');
+  return withoutComments
+    .split(';')
+    .map((statement) => statement.trim())
+    .filter((statement) => statement.length > 0);
 }

@@ -8,11 +8,11 @@ import type { RouteDeps } from './deps.js';
 export function meRouter(deps: RouteDeps, authenticated: RequestHandler): Router {
   const router = Router();
 
-  router.get('/v1/me', authenticated, (request, response) => {
+  router.get('/v1/me', authenticated, async (request, response) => {
     const auth = request.auth!;
-    const user = deps.store.getUser(auth.ownerId);
-    const activity = deps.store.activity(auth.ownerId);
-    const consents = deps.store.listConsents(auth.ownerId, 50);
+    const user = await deps.store.getUser(auth.ownerId);
+    const activity = await deps.store.activity(auth.ownerId);
+    const consents = await deps.store.listConsents(auth.ownerId, 50);
     const latestByPurpose = new Map<string, (typeof consents)[number]>();
     for (const consent of consents) {
       if (!latestByPurpose.has(consent.purpose)) latestByPurpose.set(consent.purpose, consent);
@@ -32,7 +32,7 @@ export function meRouter(deps: RouteDeps, authenticated: RequestHandler): Router
       },
       lastSummaryAt: activity.lastSummaryAt,
       lastAnalysisAt: activity.lastAnalysisAt,
-      deletionInProgress: deps.store.hasPendingDeletion(auth.ownerId),
+      deletionInProgress: await deps.store.hasPendingDeletion(auth.ownerId),
     });
   });
 

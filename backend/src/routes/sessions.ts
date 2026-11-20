@@ -31,13 +31,13 @@ export function sessionsRouter(deps: RouteDeps, authenticated: RequestHandler): 
     const body = parseBody(loginSchema, request.body);
     const email = normalizeEmail(body.email);
     const now = deps.now();
-    const key = assertLoginAllowed(deps.store, email, clientAddress(request), now);
+    const key = await assertLoginAllowed(deps.store, email, clientAddress(request), now);
 
-    const account = deps.store.findAccountByEmail(email);
+    const account = await deps.store.findAccountByEmail(email);
     if (!account) {
       // Same work as a real verify: no timing side channel.
       await dummyVerify(body.password);
-      recordLoginFailure(deps.store, key, now);
+      await recordLoginFailure(deps.store, key, now);
       throw unauthorized('Email or password is incorrect');
     }
 
@@ -47,13 +47,13 @@ export function sessionsRouter(deps: RouteDeps, authenticated: RequestHandler): 
       kdf: account.kdf,
     });
     if (!valid) {
-      recordLoginFailure(deps.store, key, now);
+      await recordLoginFailure(deps.store, key, now);
       throw unauthorized('Email or password is incorrect');
     }
 
-    clearLoginFailures(deps.store, key);
-    deps.store.touchAccount(account.ownerId, now.toISOString());
-    const issued = issueSession(deps.store, {
+    await clearLoginFailures(deps.store, key);
+    await deps.store.touchAccount(account.ownerId, now.toISOString());
+    const issued = await issueSession(deps.store, {
       ownerId: account.ownerId,
       pepper: deps.config.sessionPepper,
       ttlDays: deps.config.sessionTtlDays,
@@ -66,10 +66,10 @@ export function sessionsRouter(deps: RouteDeps, authenticated: RequestHandler): 
     });
   });
 
-  router.delete('/v1/sessions', authenticated, (request, response) => {
+  router.delete('/v1/sessions', authenticated, async (request, response) => {
     const auth = request.auth;
     if (!auth) throw notFound();
-    const revoked = deps.store.revokeSession(auth.ownerId, auth.sessionId, deps.now().toISOString());
+    const revoked = await deps.store.revokeSession(auth.ownerId, auth.sessionId, deps.now().toISOString());
     if (!revoked) throw notFound('Session not found');
     response.status(204).end();
   });

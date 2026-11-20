@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "PAM backend: aggregate-only analysis, consent ledger and deletion (SRS \u00a74.3).",
+  "description": "PAM backend: aggregate-only analysis, consent ledger and deletion (SRS §4.3).",
   "engines": {
     "node": ">=24.0.0"
   },
@@ -16,6 +16,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "express": "^5.1.0",
     "jose": "^6.1.0",
     "zod": "^4.1.0"

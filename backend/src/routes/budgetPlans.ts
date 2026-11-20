@@ -12,12 +12,12 @@ const putPlanSchema = z.object({ plan: planSummarySchema }).strict();
 export function budgetPlansRouter(deps: RouteDeps, authenticated: RequestHandler): Router {
   const router = Router();
 
-  router.put('/v1/budget-plans/:monthId', authenticated, (request, response) => {
+  router.put('/v1/budget-plans/:monthId', authenticated, async (request, response) => {
     const auth = request.auth!;
     const monthId = readMonthId(request.params.monthId);
     const body = parseBody(putPlanSchema, request.body);
-    assertNoDeletionInProgress(deps, auth.ownerId);
-    const record = deps.store.upsertBudgetPlan({
+    await assertNoDeletionInProgress(deps, auth.ownerId);
+    const record = await deps.store.upsertBudgetPlan({
       ownerId: auth.ownerId,
       monthId,
       plan: body.plan,
@@ -32,10 +32,10 @@ export function budgetPlansRouter(deps: RouteDeps, authenticated: RequestHandler
     });
   });
 
-  router.get('/v1/budget-plans/:monthId', authenticated, (request, response) => {
+  router.get('/v1/budget-plans/:monthId', authenticated, async (request, response) => {
     const auth = request.auth!;
     const monthId = readMonthId(request.params.monthId);
-    const record = deps.store.getBudgetPlan(auth.ownerId, monthId);
+    const record = await deps.store.getBudgetPlan(auth.ownerId, monthId);
     if (!record) throw notFound('No budget plan for that month');
     response.status(200).json({
       monthId: record.monthId,

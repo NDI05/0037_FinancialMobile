@@ -26,24 +26,24 @@ export function attemptKey(email: string, rawAddress: string | undefined): strin
     .digest('hex');
 }
 
-export function assertLoginAllowed(
+export async function assertLoginAllowed(
   store: Store,
   email: string,
   rawAddress: string | undefined,
   now: Date,
-): string {
+): Promise<string> {
   const key = attemptKey(email, rawAddress);
-  const state = store.loginFailureState(key, now, LOGIN_WINDOW_MS);
+  const state = await store.loginFailureState(key, now, LOGIN_WINDOW_MS);
   if (state.failedCount >= LOGIN_MAX_FAILURES) {
     throw rateLimited('Too many failed sign-in attempts. Try again in a few minutes.');
   }
   return key;
 }
 
-export function recordLoginFailure(store: Store, key: string, now: Date): void {
-  store.registerLoginFailure(key, now, LOGIN_WINDOW_MS);
+export async function recordLoginFailure(store: Store, key: string, now: Date): Promise<void> {
+  await store.registerLoginFailure(key, now, LOGIN_WINDOW_MS);
 }
 
-export function clearLoginFailures(store: Store, key: string): void {
-  store.deleteLoginFailures(key);
+export async function clearLoginFailures(store: Store, key: string): Promise<void> {
+  await store.deleteLoginFailures(key);
 }

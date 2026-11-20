@@ -5,11 +5,12 @@ import {
   badRequest,
   conflict,
   consentRequired,
+  deletionInProgress,
   invalidAnalysisOutput,
   notFound,
   providerUnavailable,
 } from '../errors.js';
-import { recordUsage, assertWithinQuota } from '../domain/limits.js';
+import { assertWithinQuota, recordUsage, reserveAnalysis } from '../domain/limits.js';
 import { aggregatePayloadSchema, findDisallowedFields } from '../domain/payload.js';
 import { PROMPT_VERSION, buildPrompt } from '../domain/prompt.js';
 import { validateAnalysis } from '../domain/validateAnalysis.js';
@@ -88,9 +89,9 @@ export function analysesRouter(deps: RouteDeps, authenticated: RequestHandler): 
     if (!idempotencyKey) throw badRequest('Idempotency-Key header is required');
     if (idempotencyKey.length > 200) throw badRequest('Idempotency-Key is too long');
 
-    assertNoDeletionInProgress(deps, auth.ownerId);
+    await assertNoDeletionInProgress(deps, auth.ownerId);
 
-    const consent = deps.store.latestConsent(auth.ownerId, 'AI_PROCESSING');
+    const consent = await deps.store.latestConsent(auth.ownerId, 'AI_PROCESSING');
     if (!consent || consent.decision !== 'GRANTED') throw consentRequired();
 
     const disallowed = [...new Set(findDisallowedFields(body.payload))];
@@ -104,7 +105,7 @@ export function analysesRouter(deps: RouteDeps, authenticated: RequestHandler): 
       .update(JSON.stringify({ monthId: body.monthId, inputRevision: body.inputRevision, payload: body.payload }))
       .digest('hex');
 
-    const replay = deps.store.findAnalysisByIdempotencyKey(auth.ownerId, idempotencyKey);
+    const replay = await deps.store.findAnalysisByIdempotencyKey(auth.ownerId, idempotencyKey);
     if (replay) {
       if (replay.requestHash !== requestHash) {
         throw conflict('This Idempotency-Key was already used with a different body');
@@ -114,13 +115,13 @@ export function analysesRouter(deps: RouteDeps, authenticated: RequestHandler): 
     }
 
     const now = deps.now();
-    assertWithinQuota(deps.store, deps.config, auth.ownerId, now);
+    await assertWithinQuota(deps.store, deps.config, auth.ownerId, now);
 
     // The summary is the anchor for the analysis; creating it here keeps the reference intact even
     // when the client only posts the payload with the analysis request.
-    let summary = deps.store.getSummary(auth.ownerId, body.monthId);
+    let summary = await deps.store.getSummary(auth.ownerId, body.monthId);
     if (!summary || summary.inputRevision !== body.inputRevision) {
-      summary = deps.store.upsertSummary({
+      summary = await deps.store.upsertSummary({
         ownerId: auth.ownerId,
         monthId: body.monthId,
         inputRevision: body.inputRevision,
@@ -129,7 +130,7 @@ export function analysesRouter(deps: RouteDeps, authenticated: RequestHandler): 
       });
     }
 
-    const cached = deps.store.findAnalysisByCacheKey({
+    const cached = await deps.store.findAnalysisByCacheKey({
       ownerId: auth.ownerId,
       monthId: body.monthId,
       inputRevision: body.inputRevision,
@@ -141,6 +142,10 @@ export function analysesRouter(deps: RouteDeps, authenticated: RequestHandler): 
       response.status(200).json(analysisToResponse(cached));
       return;
     }
+
+    // F4: the provider call is admitted by an atomic reservation, so concurrent requests cannot
+    // both pass a read-only quota check. Throws 429 when the limit is already reached.
+    await reserveAnalysis(deps.store, deps.config, auth.ownerId, now);
 
     const usage = { promptTokens: 0, completionTokens: 0 };
     let issues: string[] = [];
@@ -188,7 +193,7 @@ export function analysesRouter(deps: RouteDeps, authenticated: RequestHandler): 
     }
 
     // The provider was called; the tokens are spent even when the output is rejected.
-    recordUsage(deps.store, deps.config, auth.ownerId, now, usage);
+    await recordUsage(deps.store, deps.config, auth.ownerId, now, usage);
 
     if (!analysis) {
       deps.logger.warn('analysis_output_rejected', {
@@ -198,7 +203,7 @@ export function analysesRouter(deps: RouteDeps, authenticated: RequestHandler): 
       throw invalidAnalysisOutput();
     }
 
-    const record = deps.store.insertAnalysis({
+    const record = await deps.store.insertAnalysisUnlessDeletionPending({
       ownerId: auth.ownerId,
       monthId: body.monthId,
       summaryId: summary.id,
@@ -215,14 +220,24 @@ export function analysesRouter(deps: RouteDeps, authenticated: RequestHandler): 
       at: now.toISOString(),
     });
 
+    if (!record) {
+      // A deletion request became PENDING while the provider was working (contract §4.3).
+      throw deletionInProgress();
+    }
+
     response.status(200).json(analysisToResponse(record));
   });
 
-  router.get('/v1/analyses/:monthId', authenticated, (request, response) => {
+  router.get('/v1/analyses/:monthId', authenticated, async (request, response) => {
     const auth = request.auth!;
     const monthId = readMonthId(request.params.monthId);
-    const record = deps.store.latestAnalysis(auth.ownerId, monthId);
+    const record = await deps.store.latestAnalysis(auth.ownerId, monthId);
     if (!record) throw notFound('No analysis for that month');
+    if (!record) {
+      // A deletion request became PENDING while the provider was working (contract §4.3).
+      throw deletionInProgress();
+    }
+
     response.status(200).json(analysisToResponse(record));
   });
 

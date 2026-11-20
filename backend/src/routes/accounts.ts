@@ -36,7 +36,7 @@ export function accountsRouter(deps: RouteDeps): Router {
     const email = normalizeEmail(body.email);
     const digest = await hashPassword(body.password);
     const now = deps.now().toISOString();
-    const account = deps.store.createAccount({
+    const account = await deps.store.createAccount({
       ownerId: ownerIdForEmail(email),
       email,
       displayName: body.displayName?.trim() || null,

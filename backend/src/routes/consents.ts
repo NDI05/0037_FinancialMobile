@@ -18,10 +18,10 @@ const consentSchema = z
 export function consentsRouter(deps: RouteDeps, authenticated: RequestHandler): Router {
   const router = Router();
 
-  router.post('/v1/consents', authenticated, (request, response) => {
+  router.post('/v1/consents', authenticated, async (request, response) => {
     const auth = request.auth!;
     const body = parseBody(consentSchema, request.body);
-    const record = deps.store.appendConsent({
+    const record = await deps.store.appendConsent({
       ownerId: auth.ownerId,
       purpose: body.purpose,
       decision: body.decision,
@@ -37,9 +37,9 @@ export function consentsRouter(deps: RouteDeps, authenticated: RequestHandler): 
     });
   });
 
-  router.get('/v1/consents', authenticated, (request, response) => {
+  router.get('/v1/consents', authenticated, async (request, response) => {
     const auth = request.auth!;
-    const consents = deps.store.listConsents(auth.ownerId);
+    const consents = await deps.store.listConsents(auth.ownerId);
     response.status(200).json({
       consents: consents.map((consent) => ({
         id: consent.id,

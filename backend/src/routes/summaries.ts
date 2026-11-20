@@ -20,15 +20,15 @@ const putSummarySchema = z
 export function summariesRouter(deps: RouteDeps, authenticated: RequestHandler): Router {
   const router = Router();
 
-  router.put('/v1/summaries/:monthId', authenticated, (request, response) => {
+  router.put('/v1/summaries/:monthId', authenticated, async (request, response) => {
     const auth = request.auth!;
     const monthId = readMonthId(request.params.monthId);
     const body = parseBody(putSummarySchema, request.body);
     if (body.payload.monthId !== monthId) {
       throw badRequest('payload.monthId must match the month in the path');
     }
-    assertNoDeletionInProgress(deps, auth.ownerId);
-    const record = deps.store.upsertSummary({
+    await assertNoDeletionInProgress(deps, auth.ownerId);
+    const record = await deps.store.upsertSummary({
       ownerId: auth.ownerId,
       monthId,
       inputRevision: body.inputRevision,
@@ -43,10 +43,10 @@ export function summariesRouter(deps: RouteDeps, authenticated: RequestHandler):
     });
   });
 
-  router.get('/v1/summaries/:monthId', authenticated, (request, response) => {
+  router.get('/v1/summaries/:monthId', authenticated, async (request, response) => {
     const auth = request.auth!;
     const monthId = readMonthId(request.params.monthId);
-    const record = deps.store.getSummary(auth.ownerId, monthId);
+    const record = await deps.store.getSummary(auth.ownerId, monthId);
     if (!record) throw notFound('No summary for that month');
     response.status(200).json({
       monthId: record.monthId,
