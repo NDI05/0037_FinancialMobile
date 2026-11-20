@@ -126,6 +126,8 @@
     <string name="consent_disclosure_leaves">Dikirim saat analisis: total pemasukan dan pengeluaran, total per kategori, jumlah transaksi, dan status cakupan.</string>
     <string name="consent_disclosure_stays">Tetap di perangkat: isi email, subjek, pengirim, ID pesan, nama merchant, catatan pribadi, token, dan nomor kartu.</string>
     <string name="consent_footer">Anda bisa mencabut izin AI kapan saja; laporan lama akan ditandai sebagai riwayat.</string>
+    <string name="consent_decline_gmail">Lanjut tanpa menghubungkan Gmail</string>
+    <string name="consent_decline_gmail_body">Transaksi bisa diisi manual. Izin Gmail bisa diberikan nanti dari Pengaturan.</string>
 
     <!-- Gmail connection -->
     <string name="gmail_title">Kotak masuk</string>
@@ -139,6 +141,8 @@
     <string name="gmail_revoke_failed">Koneksi sudah diputus di perangkat ini, tetapi sesi IMAP belum bisa ditutup. Cabut Sandi aplikasi di Akun Google bila perlu.</string>
     <string name="gmail_connect">Hubungkan kotak masuk</string>
     <string name="gmail_disconnect">Putuskan koneksi</string>
+    <string name="gmail_demo_mailbox">Gunakan kotak masuk demo</string>
+    <string name="gmail_demo_mailbox_body">Mode demo tanpa server: PAM membaca notifikasi Livin contoh bawaan, bukan kotak masuk sungguhan. Data contoh diganti oleh hasil impor.</string>
     <string name="gmail_state_not_connected">Belum terhubung</string>
     <string name="gmail_state_pending">Menunggu izin</string>
     <string name="gmail_state_connected">Terhubung</string>

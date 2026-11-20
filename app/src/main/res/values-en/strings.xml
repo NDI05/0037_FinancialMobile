@@ -117,6 +117,8 @@
     <string name="consent_disclosure_leaves">Sent for analysis: inflow and outflow totals, per-category totals, transaction counts and coverage status.</string>
     <string name="consent_disclosure_stays">Stays on device: email bodies, subjects, senders, message ids, merchant names, private notes, tokens and card numbers.</string>
     <string name="consent_footer">You can withdraw AI consent at any time; older reports become historical.</string>
+    <string name="consent_decline_gmail">Continue without connecting Gmail</string>
+    <string name="consent_decline_gmail_body">You can enter transactions manually. Gmail access can be granted later from Settings.</string>
 
     <string name="gmail_title">Mailbox</string>
     <string name="gmail_eyebrow">Data source</string>
@@ -129,6 +131,8 @@
     <string name="gmail_revoke_failed">The device connection is closed, but the IMAP session could not be ended. Revoke the App Password in your Google Account if needed.</string>
     <string name="gmail_connect">Connect inbox</string>
     <string name="gmail_disconnect">Disconnect</string>
+    <string name="gmail_demo_mailbox">Use the demo inbox</string>
+    <string name="gmail_demo_mailbox_body">Offline demo mode: PAM reads the bundled sample Livin notifications, not a real inbox. Sample rows are replaced by the import result.</string>
     <string name="gmail_state_not_connected">Not connected</string>
     <string name="gmail_state_pending">Waiting for permission</string>
     <string name="gmail_state_connected">Connected</string>
