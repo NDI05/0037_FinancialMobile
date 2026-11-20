@@ -223,6 +223,16 @@ class ImapGmailSource @Inject constructor(
 
     private fun Message.toRaw(reference: String): RawMessage {
         val body = extractMimeBody(this)
+        SafeLogger.counts(
+            TAG,
+            "imap_mime",
+            "parts" to body.visitedParts,
+            "plain" to body.plainParts,
+            "html" to body.htmlParts,
+            "attachments" to body.attachmentCount,
+            "chars" to body.text.length,
+            *body.kindCounts.map { (kind, count) -> kind to count }.toTypedArray(),
+        )
         return RawMessage(
             messageId = reference,
             sender = runCatching { from?.firstOrNull()?.toString() }.getOrNull(),

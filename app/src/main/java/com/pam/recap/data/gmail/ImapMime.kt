@@ -10,6 +10,12 @@ import javax.mail.Part
 internal data class MimeBody(
     val text: String,
     val attachmentCount: Int,
+    /** Structural counts, for diagnostics only — no content is ever carried here. */
+    val plainParts: Int = 0,
+    val htmlParts: Int = 0,
+    val visitedParts: Int = 0,
+    /** Counts of the structural kinds actually seen, for diagnostics. Never content. */
+    val kindCounts: Map<String, Int> = emptyMap(),
 )
 
 /**
@@ -26,34 +32,66 @@ internal fun extractMimeBody(part: Part): MimeBody {
     val html = mutableListOf<String>()
     var attachments = 0
 
+    var visited = 0
+    val kinds = mutableMapOf<String, Int>()
+    fun record(kind: String) { kinds[kind] = (kinds[kind] ?: 0) + 1 }
+
+    /**
+     * Dispatches on the **content object** rather than on the `Content-Type` header string.
+     *
+     * Deciding by header alone silently produced `parts=1 plain=0 html=0` for a real Gmail
+     * notification: the header form did not match any branch, so the tree was never walked and
+     * every message looked body-less. Asking the part what its content actually is cannot be
+     * fooled by header spelling, `multipart/related`, a charset parameter or an unusual casing.
+     */
     fun walk(current: Part) {
+        visited += 1
         val disposition = runCatching { current.disposition }.getOrNull()
         val fileName = runCatching { current.fileName }.getOrNull()
         if (Part.ATTACHMENT.equals(disposition, ignoreCase = true) || !fileName.isNullOrBlank()) {
             attachments += 1
             return
         }
-        when {
-            current.isMimeType("text/plain") -> contentOf(current)?.let { plain += it }
-            current.isMimeType("text/html") -> contentOf(current)?.let { html += stripHtml(it) }
-            current.isMimeType("multipart/*") -> {
-                val multipart = runCatching { current.content as? Multipart }.getOrNull()
-                if (multipart != null) {
-                    for (index in 0 until multipart.count) {
-                        runCatching { multipart.getBodyPart(index) }.getOrNull()?.let(::walk)
-                    }
+        when (val content = runCatching { current.content }.getOrNull()) {
+            is Multipart -> {
+                record(
+                    when {
+                        runCatching { current.isMimeType("multipart/alternative") }.getOrDefault(false) -> "mp_alternative"
+                        runCatching { current.isMimeType("multipart/mixed") }.getOrDefault(false) -> "mp_mixed"
+                        runCatching { current.isMimeType("multipart/related") }.getOrDefault(false) -> "mp_related"
+                        else -> "mp_other"
+                    },
+                )
+                for (index in 0 until content.count) {
+                    runCatching { content.getBodyPart(index) }.getOrNull()?.let(::walk)
                 }
             }
-            current.isMimeType("message/rfc822") -> {
-                val nested = runCatching { current.content as? Part }.getOrNull()
-                if (nested != null) walk(nested)
+            // A nested message/rfc822 part.
+            is Part -> walk(content)
+            is String -> when (textKindOf(current)) {
+                TextKind.Html -> { record("text_html"); html += stripHtml(content) }
+                TextKind.Plain -> { record("text_plain"); if (content.isNotBlank()) plain += content }
+                TextKind.Other -> record("text_other")
             }
+            // A binary body without a file name: never parsed, only counted.
+            // A binary body without a file name is a *body* the runtime could not type, not an
+            // attachment: counting it as one would report the misleading ATTACHMENT_ONLY reason.
+            is java.io.InputStream -> record("untyped_body")
+            null -> record("unreadable")
+            else -> record("other")
         }
     }
 
     walk(part)
     val chosen = if (plain.any { it.isNotBlank() }) plain else html
-    return MimeBody(text = chosen.joinToString(separator = "\n").trim(), attachmentCount = attachments)
+    return MimeBody(
+        text = chosen.joinToString(separator = "\n").trim(),
+        attachmentCount = attachments,
+        plainParts = plain.size,
+        htmlParts = html.size,
+        visitedParts = visited,
+        kindCounts = kinds,
+    )
 }
 
 private fun contentOf(part: Part): String? =
@@ -89,3 +127,21 @@ private val ENTITIES = listOf(
     "&#39;" to "'",
     "&apos;" to "'",
 )
+
+/** How a string-valued body part should be treated. */
+internal enum class TextKind { Plain, Html, Other }
+
+/**
+ * Classifies a text part by its declared type, tolerating parameters, casing and the
+ * `text/calendar`-style values that must not be mistaken for the message body.
+ */
+internal fun textKindOf(part: Part): TextKind {
+    val type = runCatching { part.contentType }.getOrNull().orEmpty().lowercase()
+    return when {
+        type.contains("text/html") -> TextKind.Html
+        type.contains("text/plain") -> TextKind.Plain
+        type.startsWith("text/") -> TextKind.Plain
+        type.isBlank() -> TextKind.Plain
+        else -> TextKind.Other
+    }
+}

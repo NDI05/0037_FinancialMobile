@@ -136,6 +136,13 @@ class ImportMonthUseCase @Inject constructor(
                                 matched++
                                 when (val parsed = parser.parse(fetched.value)) {
                                     is ParseResult.Unresolved -> {
+                                        // The reason enum is safe to log: it names the failed rule,
+                                        // never the message content.
+                                        SafeLogger.counts(
+                                            TAG,
+                                            "import_skip_reason",
+                                            parsed.reason.name.lowercase() to 1,
+                                        )
                                         skipped++
                                         skippedCandidates += skippedCandidate(
                                             jobId = jobId,
@@ -149,6 +156,11 @@ class ImportMonthUseCase @Inject constructor(
                                     is ParseResult.Parsed -> {
                                         if (!month.contains(parsed.eventAt)) {
                                             // The search window is widened; membership is not (BR-01).
+                                            SafeLogger.counts(
+                                                TAG,
+                                                "import_skip_reason",
+                                                "not_in_month" to 1,
+                                            )
                                             skipped++
                                             skippedCandidates += skippedCandidate(
                                                 jobId = jobId,
