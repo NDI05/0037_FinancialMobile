@@ -20,12 +20,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.util.Properties
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import javax.mail.Folder
 import javax.mail.Message
 import javax.mail.Session
+import javax.mail.internet.MimeMessage
 import javax.mail.UIDFolder
 import javax.mail.Store
 import javax.mail.search.AndTerm
@@ -63,6 +70,11 @@ class ImapGmailSource @Inject constructor(
     private val connection = MutableStateFlow(GmailConnectionState.NOT_CONNECTED)
     private val mutex = Mutex()
     private var handle: StoreHandle? = null
+    /** Kept open for the whole import job: opening INBOX per message cost ~1.8 s each. */
+    private var openFolder: Folder? = null
+    private var session: Session? = null
+    /** Folder search results, so page 2 does not re-run the same Gmail SEARCH. */
+    private var cachedSearch: SearchHit? = null
 
     @Volatile
     private var cachedLabel: String? = null
@@ -114,15 +126,35 @@ class ImapGmailSource @Inject constructor(
         withFolder { folder ->
             val offset = parseOffset(pageToken)
             val limit = query.pageSize.coerceIn(1, LivinQuery.MAX_PAGE_SIZE)
-            val matches = folder.search(query.toSearchTerm())
-                .sortedByDescending { it.receivedDate?.time ?: 0L }
-            val window = matches.drop(offset).take(limit)
+            // Offset paging used to re-run SEARCH for every page; the ids are fetched once per job.
+            val cacheKey = query.cacheKey(limit)
+            val refs = if (pageToken == null) {
+                folder.search(query.toSearchTerm())
+                    .sortedByDescending { it.receivedDate?.time ?: 0L }
+                    .mapNotNull { folder.toRef(it) }
+                    .also { cachedSearch = SearchHit(cacheKey, it) }
+            } else {
+                cachedSearch?.takeIf { it.key == cacheKey }?.refs
+                    ?: folder.search(query.toSearchTerm())
+                        .sortedByDescending { it.receivedDate?.time ?: 0L }
+                        .mapNotNull { folder.toRef(it) }
+                        .also { cachedSearch = SearchHit(cacheKey, it) }
+            }
+            val window = refs.drop(offset).take(limit)
             val nextOffset = offset + window.size
+            SafeLogger.counts(
+                TAG,
+                "imap_page",
+                "offset" to offset,
+                "window" to window.size,
+                "matches" to refs.size,
+                "cached" to if (cachedSearch?.key == cacheKey && pageToken != null) 1 else 0,
+            )
             Outcome.Success(
                 GmailPage(
-                    messages = window.mapNotNull { folder.toRef(it) },
-                    nextPageToken = if (nextOffset < matches.size) "offset:$nextOffset" else null,
-                    resultSizeEstimate = matches.size,
+                    messages = window,
+                    nextPageToken = if (nextOffset < refs.size) "offset:$nextOffset" else null,
+                    resultSizeEstimate = refs.size,
                 ),
             )
         }
@@ -143,7 +175,7 @@ class ImapGmailSource @Inject constructor(
 
     override suspend fun disconnect(): Outcome<Unit> = withContext(ioDispatcher) {
         mutex.withLock {
-            closeHandle()
+            closeTransport()
             cachedLabel = null
             connection.value = GmailConnectionState.DISCONNECTED
             Outcome.Success(Unit)
@@ -154,6 +186,14 @@ class ImapGmailSource @Inject constructor(
     // Internals
     // ---------------------------------------------------------------------------------------
 
+    /**
+     * Runs [block] against the shared, read-only INBOX.
+     *
+     * The folder stays open between calls (one session per import job). A watchdog closes the
+     * transport if a single operation exceeds [OP_DEADLINE_MILLIS]: closing the socket from another
+     * thread turns a stalled read — which the IMAP read timeout alone did not end — into a mapped
+     * failure, so the job can reach a terminal state.
+     */
     private suspend fun <T> withFolder(block: (Folder) -> Outcome<T>): Outcome<T> =
         withContext(ioDispatcher) {
             val credential = vault.read()
@@ -162,23 +202,37 @@ class ImapGmailSource @Inject constructor(
                 return@withContext Outcome.Failure(AppError.Configuration("imap_not_configured"))
             }
             mutex.withLock {
-                var folder: Folder? = null
+                var watchdog: ScheduledFuture<*>? = null
                 try {
-                    val store = currentStore(credential.email, credential.appPassword)
-                    folder = store.getFolder(INBOX)
-                    // FR-55: EXAMINE semantics — this mailbox is never written to.
-                    folder.open(Folder.READ_ONLY)
+                    val folder = ensureFolder(credential)
+                    watchdog = WATCHDOG.schedule(
+                        { runCatching { closeTransport() } },
+                        OP_DEADLINE_MILLIS,
+                        TimeUnit.MILLISECONDS,
+                    )
                     block(folder)
                 } catch (error: Throwable) {
                     connection.value = stateForFailure(error)
                     SafeLogger.failure(TAG, "imap_request_failed")
-                    closeHandle()
+                    closeTransport()
                     Outcome.Failure(mapImapFailure(error))
                 } finally {
-                    folder?.let { open -> runCatching { if (open.isOpen) open.close(false) } }
+                    watchdog?.cancel(false)
                 }
             }
         }
+
+    private fun ensureFolder(credential: com.pam.recap.domain.model.GmailCredential): Folder {
+        openFolder?.let { folder ->
+            if (folder.isOpen) return folder
+        }
+        val store = currentStore(credential.email, credential.appPassword)
+        val folder = store.getFolder(INBOX)
+        // FR-55: EXAMINE semantics — this mailbox is never written to.
+        folder.open(Folder.READ_ONLY)
+        openFolder = folder
+        return folder
+    }
 
     private fun currentStore(email: String, appPassword: String): Store {
         val existing = handle
@@ -191,16 +245,21 @@ class ImapGmailSource @Inject constructor(
     }
 
     private fun connect(email: String, appPassword: String): Store {
-        val session = Session.getInstance(properties())
+        val session = Session.getInstance(properties()).also { this.session = it }
         val store = session.getStore(PROTOCOL)
         store.connect(HOST, PORT, email, appPassword)
         return store
     }
 
-    private fun closeHandle() {
+    /** Closes the folder and the store; safe to call from the watchdog thread. */
+    private fun closeTransport() {
+        val folder = openFolder
+        openFolder = null
+        runCatching { if (folder != null && folder.isOpen) folder.close(false) }
         val existing = handle ?: return
         handle = null
         runCatching { if (existing.store.isConnected) existing.store.close() }
+        cachedSearch = null
     }
 
     private fun properties(): Properties = Properties().apply {
@@ -222,7 +281,77 @@ class ImapGmailSource @Inject constructor(
     }
 
     private fun Message.toRaw(reference: String): RawMessage {
-        val body = extractMimeBody(this)
+        // Mechanism: an IMAP message fetched by UID can come back with its body untyped (the
+        // provider hands an InputStream instead of a parsed part). Re-parsing the raw RFC822 bytes
+        // locally makes the MIME tree authoritative — the same fix covers every server quirk.
+        // Diagnostic (integer only): what the provider actually handed back for the root part.
+        // 1 = InputStream (untyped) 2 = String 3 = Multipart 4 = nested Part 0 = other/null.
+        val providerKind = when (runCatching { content }.getOrNull()) {
+            is java.io.InputStream -> 1
+            is String -> 2
+            is javax.mail.Multipart -> 3
+            is javax.mail.Part -> 4
+            else -> 0
+        }
+        val reparsed = reparseRaw()
+        val body = extractMimeBody(reparsed ?: this, session)
+        if (com.pam.recap.BuildConfig.DEBUG) {
+            // Debug-only shape measurement: which allow-listed labels survive, and whether the
+            // recovered text still has separators. Integers only — never the text itself.
+            val text = body.text.lowercase()
+            fun count(token: String): Int {
+                var found = 0
+                var index = text.indexOf(token)
+                while (index >= 0) { found += 1; index = text.indexOf(token, index + token.length) }
+                return found
+            }
+            val lines = text.lines()
+            fun startsWith(label: String): Int = lines.count { it.trim().startsWith(label) }
+            fun withColon(label: String): Int = lines.count { line ->
+                val trimmed = line.trim()
+                trimmed.startsWith(label) && trimmed.indexOf(':') > 0
+            }
+            val nextLen: Int = lines.firstOrNull { it.trim().startsWith("nominal") }
+                ?.let { line -> lines.dropWhile { it != line }.drop(1).firstOrNull { it.isNotBlank() } }
+                ?.trim()?.length ?: 0
+            fun tailMax(label: String): Int = lines
+                .filter { it.trim().startsWith(label) }
+                .map { line -> line.trim().let { l -> l.indexOf(':').let { if (it < 0) 0 else l.length - it - 1 } } }
+                .maxOrNull() ?: 0
+            SafeLogger.counts(
+                TAG,
+                "imap_mime_shape",
+                "lines" to lines.size,
+                "colon" to text.count { it == ':' },
+                "nominal" to count("nominal"),
+                "tanggal" to count("tanggal"),
+                "status" to count("status"),
+                "merchant" to count("merchant"),
+                "berhasil" to count("berhasil"),
+                "nom_start" to startsWith("nominal"),
+                "nom_colon" to withColon("nominal"),
+                "nom_tail" to tailMax("nominal"),
+                "tgl_start" to startsWith("tanggal"),
+                "tgl_colon" to withColon("tanggal"),
+                "tgl_tail" to tailMax("tanggal"),
+                "mer_start" to startsWith("merchant"),
+                "mer_colon" to withColon("merchant"),
+                "mer_tail" to tailMax("merchant"),
+                "rp" to count("rp"),
+                "next_len" to nextLen,
+            )
+            // Layout skeleton (integers only): per line, its length and a flag.
+            // flag: 1 = contains ':' ; 2 = starts with an allow-listed label ; 3 = both.
+            val labels = listOf("nominal", "tanggal", "merchant", "status", "jenis", "jumlah")
+            val shapeLens = lines.take(24).joinToString(",") { it.trim().length.toString() }
+            val shapeFlags = lines.take(24).joinToString(",") { raw ->
+                val line = raw.trim().lowercase()
+                val colon = if (line.contains(':')) 1 else 0
+                val label = if (labels.any { line.startsWith(it) }) 2 else 0
+                (colon + label).toString()
+            }
+            android.util.Log.i(TAG, "imap_mime_layout lens=$shapeLens flags=$shapeFlags")
+        }
         SafeLogger.counts(
             TAG,
             "imap_mime",
@@ -231,6 +360,8 @@ class ImapGmailSource @Inject constructor(
             "html" to body.htmlParts,
             "attachments" to body.attachmentCount,
             "chars" to body.text.length,
+            "reparsed" to if (reparsed != null) 1 else 0,
+            "provider_kind" to providerKind,
             *body.kindCounts.map { (kind, count) -> kind to count }.toTypedArray(),
         )
         return RawMessage(
@@ -241,6 +372,26 @@ class ImapGmailSource @Inject constructor(
             textParts = listOf(body.text),
             attachmentCount = body.attachmentCount,
         )
+    }
+
+    /** Raw message bytes re-parsed locally, or null when the message is too large or unreadable. */
+    private fun Message.reparseRaw(): Message? = runCatching {
+        if (size > MAX_RAW_BYTES) return null
+        val out = ByteArrayOutputStream()
+        writeTo(out)
+        val bytes = out.toByteArray()
+        if (bytes.size > MAX_RAW_BYTES) return null
+        MimeMessage(session, ByteArrayInputStream(bytes))
+    }.getOrNull()
+
+    private data class SearchHit(val key: String, val refs: List<GmailMessageRef>)
+
+    private fun LivinQuery.cacheKey(limit: Int): String = buildString {
+        append(limit).append('|')
+        append(fromInclusive.toEpochMilliseconds()).append('|')
+        append(toExclusive.toEpochMilliseconds()).append('|')
+        append(senderPatterns.joinToString(",")).append('|')
+        append(subjectPatterns.joinToString(","))
     }
 
     /** Allow-listed sender + subject + received-date window; every term comes from the registry. */
@@ -278,6 +429,12 @@ class ImapGmailSource @Inject constructor(
         const val PORT = 993
         const val CONNECT_TIMEOUT_MILLIS = 15_000
         const val READ_TIMEOUT_MILLIS = 30_000
+        /** A single folder operation may not exceed this; the watchdog closes the socket. */
+        const val OP_DEADLINE_MILLIS = 45_000L
+        const val MAX_RAW_BYTES = 1024 * 1024
+        val WATCHDOG: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor { runnable ->
+            Thread(runnable, "imap-watchdog").apply { isDaemon = true }
+        }
         const val INBOX = "INBOX"
     }
 }

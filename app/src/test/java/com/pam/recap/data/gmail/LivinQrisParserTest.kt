@@ -183,6 +183,99 @@ class LivinQrisParserTest {
     }
 
     @Test
+    fun `a bill payment without a status label parses when the subject confirms success`() {
+        // Measured on a real Gmail message: Nominal/Tanggal/Merchant only, the subject says
+        // "Pembayaran Berhasil!", and there is no "Status:"/"Jenis Transaksi:" line at all.
+        val body = """
+            Pembayaran Berhasil!
+            Nominal: Rp175.000
+            Tanggal: 19 Februari 2026 11:10:00
+            Merchant: Indomaret
+        """.trimIndent()
+        val message = RawMessage(
+            messageId = "bill-1",
+            sender = "Livin <noreply.livin@bankmandiri.co.id>",
+            subject = "Pembayaran Berhasil!",
+            internalDate = null,
+            textParts = listOf(body),
+        )
+
+        val parsed = parser.parse(message) as ParseResult.Parsed
+        assertEquals(Money.ofMinor(17_500_000), parsed.amount)
+        assertEquals(Direction.DEBIT, parsed.direction)
+        assertEquals("Indomaret", parsed.merchantLabel)
+    }
+
+    @Test
+    fun `a table layout with the value on the next line still parses`() {
+        val body = """
+            Pembayaran Berhasil!
+            Nominal :
+            Rp175.000
+            Tanggal :
+            19 Februari 2026 11:10:00
+            Merchant :
+            Indomaret
+        """.trimIndent()
+        val message = RawMessage(
+            messageId = "bill-table",
+            sender = "Livin <noreply.livin@bankmandiri.co.id>",
+            subject = "Pembayaran Berhasil!",
+            internalDate = null,
+            textParts = listOf(body),
+        )
+
+        val parsed = parser.parse(message) as ParseResult.Parsed
+        assertEquals(Money.ofMinor(17_500_000), parsed.amount)
+        assertEquals("Indomaret", parsed.merchantLabel)
+    }
+
+    @Test
+    fun `qualified labels from the real HTML layout still parse`() {
+        val body = """
+            Pembayaran Berhasil!
+            Nominal Pembayaran
+            Rp175.000
+            Tanggal Transaksi
+            19 Februari 2026 11:10:00
+            Merchant
+            Indomaret
+        """.trimIndent()
+        val message = RawMessage(
+            messageId = "bill-qualified",
+            sender = "Livin <noreply.livin@bankmandiri.co.id>",
+            subject = "Pembayaran Berhasil!",
+            internalDate = null,
+            textParts = listOf(body),
+        )
+
+        val parsed = parser.parse(message) as ParseResult.Parsed
+        assertEquals(Money.ofMinor(17_500_000), parsed.amount)
+        assertEquals("Indomaret", parsed.merchantLabel)
+    }
+
+    @Test
+    fun `a bill payment with no success marker anywhere is unresolved`() {
+        val body = """
+            Nominal: Rp175.000
+            Tanggal: 19 Februari 2026 11:10:00
+            Merchant: Indomaret
+        """.trimIndent()
+        val message = RawMessage(
+            messageId = "bill-2",
+            sender = "Livin <noreply.livin@bankmandiri.co.id>",
+            subject = "Pembayaran tagihan",
+            internalDate = null,
+            textParts = listOf(body),
+        )
+
+        assertEquals(
+            RedactionReason.MISSING_STATUS,
+            (parser.parse(message) as ParseResult.Unresolved).reason,
+        )
+    }
+
+    @Test
     fun `missing recipient is unresolved`() {
         val body = """
             Transaksi QRIS Berhasil

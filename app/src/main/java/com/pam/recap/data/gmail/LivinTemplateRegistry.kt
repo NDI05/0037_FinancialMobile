@@ -190,12 +190,14 @@ class LivinTemplateRegistry(
                 subjectPatterns = listOf("pembayaran tagihan", "pembayaran berhasil"),
                 direction = Direction.DEBIT,
                 description = "Pembayaran",
+                // The real bill-payment body has Nominal/Tanggal/Merchant only: its subject says
+                // "Pembayaran Berhasil!", so the success marker lives in the subject, not a
+                // "Status:" field. Verified against a real Gmail message (F1/F2 device run).
                 requiredFields = setOf(
                     LivinField.AMOUNT,
                     LivinField.EVENT_TIME,
                     LivinField.DIRECTION,
                     LivinField.RECIPIENT,
-                    LivinField.STATUS,
                 ),
                 successMarkers = listOf("berhasil"),
                 failureMarkers = listOf("gagal", "tidak berhasil", "dibatalkan", "ditolak"),

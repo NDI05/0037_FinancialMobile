@@ -107,6 +107,74 @@ class ImapMimeTest {
         assertEquals(1, body.attachmentCount)
     }
 
+    /**
+     * The device shape: Gmail hands the root part back as an untyped `application/octet-stream`
+     * whose bytes are a MIME entity. Without recovery this was `parts=1 plain=0 html=0 chars=0` and
+     * every notification was rejected.
+     */
+    @Test
+    fun `an untyped body that is itself a MIME entity is recovered`() {
+        val body = extractMimeBody(
+            parse(
+                """
+                Subject: Notifikasi Transaksi
+                From: Livin <noreply.livin@bankmandiri.co.id>
+                Content-Type: application/octet-stream
+
+                Content-Type: text/plain; charset=UTF-8
+
+                Nominal: Rp175.000
+                Tanggal: 19 Februari 2026 11:10:00
+                Jenis Transaksi: DEBIT
+                Merchant: Indomaret
+                Status: Berhasil
+                """,
+            ),
+            session,
+        )
+
+        assertTrue(body.text.contains("Nominal: Rp175.000"))
+        assertTrue(body.text.contains("Merchant: Indomaret"))
+        assertEquals(0, body.attachmentCount)
+        assertEquals(1, body.kindCounts["embedded_mime"])
+    }
+
+    @Test
+    fun `an untyped HTML body is stripped`() {
+        val body = extractMimeBody(
+            parse(
+                """
+                Subject: Notifikasi Transaksi
+                Content-Type: application/octet-stream
+
+                <html><body><p>Nominal: <b>Rp250.000</b></p><script>x()</script></body></html>
+                """,
+            ),
+            session,
+        )
+
+        assertTrue(body.text.contains("Nominal: Rp250.000"))
+        assertTrue(!body.text.contains("<"))
+        assertTrue(!body.text.contains("script"))
+    }
+
+    @Test
+    fun `an untyped binary body never becomes text and is not an attachment`() {
+        val pdf = "%PDF-1.4\u0000\u0001\u0002\u0003binary\u0000data".toByteArray()
+        val part = javax.mail.internet.MimeBodyPart()
+        part.setHeader("Content-Type", "application/octet-stream")
+        part.setDataHandler(
+            javax.activation.DataHandler(javax.mail.util.ByteArrayDataSource(pdf, "application/octet-stream")),
+        )
+
+        val body = extractMimeBody(part, session)
+
+        assertEquals("", body.text)
+        // A body without a filename is not an attachment; it is simply not text.
+        assertEquals(0, body.attachmentCount)
+        assertEquals(1, body.kindCounts["binary_skipped"])
+    }
+
     @Test
     fun `a message without a usable body yields empty text`() {
         val body = extractMimeBody(

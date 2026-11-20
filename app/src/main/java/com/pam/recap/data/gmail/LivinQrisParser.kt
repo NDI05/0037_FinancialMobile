@@ -38,6 +38,7 @@ class LivinQrisParser(
 ) : LivinNotificationParser {
 
     private val jakarta: ZoneId = ZoneId.of(JakartaMonth.ZONE.id)
+    private val WHITESPACE_RUN = Regex("\\s+")
 
     override fun parse(message: RawMessage): ParseResult {
         val template = registry.match(message.sender, message.subject)
@@ -70,6 +71,16 @@ class LivinQrisParser(
                 return ParseResult.Unresolved(RedactionReason.MISSING_STATUS)
             }
             if (template.successMarkers.none { statusValue.contains(it) }) {
+                return ParseResult.Unresolved(RedactionReason.MISSING_STATUS)
+            }
+        } else {
+            // Some real notifications carry no status label at all (bill payment: the subject
+            // itself says "Pembayaran Berhasil!"). The success marker must then appear in the
+            // subject or the headline — never in the body, where a footer could mention it.
+            val confirmed = template.successMarkers.any { marker ->
+                subject.contains(marker) || headline.contains(marker)
+            }
+            if (!confirmed) {
                 return ParseResult.Unresolved(RedactionReason.MISSING_STATUS)
             }
         }
@@ -147,18 +158,60 @@ class LivinQrisParser(
         }
         val result = LinkedHashMap<String, String>()
         for (part in textParts) {
-            for (rawLine in part.lines()) {
-                val line = rawLine.trim()
+            val lines = part.lines().map { it.trim() }
+            for (index in lines.indices) {
+                val line = lines[index]
+                if (line.isEmpty()) continue
                 val separator = line.indexOf(':')
-                if (separator <= 0) continue
-                val key = line.substring(0, separator).trim().lowercase()
-                if (key !in allowed) continue
-                val value = line.substring(separator + 1).trim()
-                if (value.isEmpty()) continue
-                result.putIfAbsent(key, value)
+                if (separator > 0) {
+                    val key = labelKey(line.substring(0, separator), allowed) ?: continue
+                    val value = line.substring(separator + 1).trim()
+                    if (value.isNotEmpty()) {
+                        result.putIfAbsent(key, value)
+                        continue
+                    }
+                    // "Nominal :" with the value in the next cell/line — how Gmail's HTML
+                    // rendition of a Livin notification arrives after stripHtml.
+                    valueAfter(lines, index + 1, allowed)?.let { result.putIfAbsent(key, it) }
+                    continue
+                }
+                // A bare label line from a table layout: "Nominal", or a qualified label such as
+                // "Nominal Pembayaran" / "Tanggal Transaksi" (measured on a real notification).
+                val bare = labelKey(line, allowed) ?: continue
+                valueAfter(lines, index + 1, allowed)?.let { result.putIfAbsent(bare, it) }
             }
         }
         return result
+    }
+
+    /**
+     * Maps a line (or the part before its colon) to an allow-listed label.
+     *
+     * Real Livin HTML renders "Nominal Pembayaran" and "Tanggal Transaksi": the label is followed
+     * by a short qualifier. Only an allow-listed word as the *first* word, with at most two extra
+     * words, is accepted — a sentence that merely contains "nominal" is still ignored.
+     */
+    private fun labelKey(raw: String, allowed: Set<String>): String? {
+        val normalized = raw.lowercase().removeSuffix(":").trim()
+        if (normalized in allowed) return normalized
+        val words = normalized.split(WHITESPACE_RUN).filter { it.isNotEmpty() }
+        if (words.size in 2..3 && words.first() in allowed) return words.first()
+        return null
+    }
+
+    /**
+     * The first non-empty line after a label that is not itself a label or a dangling separator.
+     * Returning null instead of guessing keeps a prose sentence from becoming an amount.
+     */
+    private fun valueAfter(lines: List<String>, from: Int, allowed: Set<String>): String? {
+        for (index in from until lines.size) {
+            val candidate = lines[index].trim()
+            if (candidate.isEmpty()) continue
+            if (candidate.endsWith(":")) return null
+            if (labelKey(candidate, allowed) != null) return null
+            return candidate
+        }
+        return null
     }
 
     private fun firstValue(fields: Map<String, String>, labelAliases: List<String>): String? =

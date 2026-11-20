@@ -1,5 +1,12 @@
 package com.pam.recap.domain.usecase
 
+import com.pam.recap.core.result.Outcome
+import com.pam.recap.domain.model.GmailConnectionState
+import com.pam.recap.domain.repository.GmailMessageRef
+import com.pam.recap.domain.repository.GmailPage
+import com.pam.recap.domain.repository.GmailSource
+import com.pam.recap.domain.repository.LivinQuery
+import com.pam.recap.domain.repository.RawMessage
 import com.pam.recap.core.money.Money
 import com.pam.recap.core.security.FingerprintFactory
 import com.pam.recap.core.time.ClockProvider
@@ -193,6 +200,34 @@ class ImportMonthUseCaseTest {
         }
         // The own-account transfer is recognised as an internal transfer and stays out of classified.
         assertTrue(rows.any { it.isInternalTransfer })
+    }
+
+    @Test
+    fun `a stalled mailbox ends the job at the deadline instead of leaving it running`() = runTest {
+        val stalling = StallingGmailSource(now)
+        val stalledCase = ImportMonthUseCase(
+            gmailSource = stalling,
+            queryBuilder = LivinQueryBuilder(registry),
+            parser = LivinQrisParser(registry),
+            fingerprints = FingerprintFactory { ownerId -> "test-key::$ownerId".toByteArray() },
+            categoryRules = MerchantCategoryRules(),
+            transactions = transactions,
+            imports = imports,
+            summaries = summaries,
+            analyses = analyses,
+            gmailConnection = connections,
+            deletion = deletion,
+            clock = fixedClock,
+            idGenerator = IdGenerator { "id-stall" },
+        )
+
+        val job = (stalledCase("u_demo", month) as com.pam.recap.core.result.Outcome.Success).value
+
+        // NFR-08: never RUNNING after the deadline; the page that never completed is not claimed.
+        assertEquals(ImportState.FAILED, job.state)
+        assertEquals("deadline_exceeded", job.errorCode)
+        assertEquals(0, job.pagesProcessed)
+        assertNotNull(job.finishedAt)
     }
 
     @Test
@@ -399,4 +434,30 @@ class ImportMonthUseCaseTest {
 
         override suspend fun deleteAll(ownerId: String) = Unit
     }
+}
+
+/** A mailbox that answers the search but never returns a message body. */
+private class StallingGmailSource(private val at: Instant) : GmailSource {
+    private val state = MutableStateFlow(GmailConnectionState.CONNECTED)
+
+    override suspend fun authorize(): Outcome<Unit> = Outcome.Success(Unit)
+
+    override fun connectionState(): Flow<GmailConnectionState> = state
+
+    override suspend fun search(query: LivinQuery, pageToken: String?): Outcome<GmailPage> =
+        Outcome.Success(
+            GmailPage(
+                messages = listOf(GmailMessageRef(id = "1:1", internalDate = at)),
+                nextPageToken = null,
+                resultSizeEstimate = 1,
+            ),
+        )
+
+    override suspend fun fetchMessage(id: String): Outcome<RawMessage> {
+        // Longer than the job deadline: the use case must cut the wait and finish.
+        kotlinx.coroutines.delay(10 * 60 * 60 * 1000L)
+        return Outcome.Failure(com.pam.recap.core.result.AppError.Network("never"))
+    }
+
+    override suspend fun disconnect(): Outcome<Unit> = Outcome.Success(Unit)
 }

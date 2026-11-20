@@ -1,5 +1,7 @@
 package com.pam.recap.domain.usecase
 
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
@@ -105,9 +107,26 @@ class ImportMonthUseCase @Inject constructor(
         var failureState: ImportState? = null
         var failureCode: String? = null
         val skippedCandidates = mutableListOf<SkippedCandidate>()
+        // NFR-08: a *stalled* mailbox must end in a terminal state, not stay RUNNING for ever.
+        // This is an inactivity bound, not a stopwatch on a healthy import: each completed fetch or
+        // page counts as progress, so a slow-but-working mailbox is never killed mid-page.
+        var lastProgressAt = startedAt
+        var exhausted = false
+
+        fun stalled(): Boolean = clock.now() - lastProgressAt > IMPORT_STALL_MILLIS.milliseconds
 
         pageLoop@ while (true) {
-            when (val page = gmailSource.search(query, pageToken)) {
+            if (stalled()) {
+                exhausted = true
+                break@pageLoop
+            }
+            when (val page = withTimeoutOrNull(IMPORT_STALL_MILLIS.milliseconds) {
+                    gmailSource.search(query, pageToken)
+                }) {
+                null -> {
+                    exhausted = true
+                    break@pageLoop
+                }
                 is Outcome.Failure -> {
                     failureState = if (page.error is AppError.PermissionRequired) {
                         ImportState.PERMISSION_REQUIRED
@@ -124,12 +143,23 @@ class ImportMonthUseCase @Inject constructor(
                 is Outcome.Success -> {
                     val batch = mutableListOf<Transaction>()
                     for ((index, ref) in page.value.messages.withIndex()) {
-                        when (val fetched = gmailSource.fetchMessage(ref.id)) {
+                        if (stalled()) {
+                            exhausted = true
+                            break@pageLoop
+                        }
+                        when (val fetched = withTimeoutOrNull(IMPORT_STALL_MILLIS.milliseconds) {
+                                gmailSource.fetchMessage(ref.id)
+                            }) {
+                            null -> {
+                                exhausted = true
+                                break@pageLoop
+                            }
                             is Outcome.Failure -> {
                                 unresolved++
                             }
 
                             is Outcome.Success -> {
+                                lastProgressAt = clock.now()
                                 // Any allow-listed message that reached the parser counts as a
                                 // match, even when it is then rejected: an all-rejected page is a
                                 // complete import with skips, never "no matching email" (FR-20).
@@ -208,6 +238,7 @@ class ImportMonthUseCase @Inject constructor(
                         }
                     }
 
+                    lastProgressAt = clock.now()
                     pageOrdinal++
                     SafeLogger.counts(
                         TAG,
@@ -237,6 +268,13 @@ class ImportMonthUseCase @Inject constructor(
 
         if (skippedCandidates.isNotEmpty()) {
             imports.saveSkipped(skippedCandidates)
+        }
+
+        if (exhausted) {
+            // Whatever arrived before the deadline is kept; the job is never left RUNNING.
+            failureState = if (pageOrdinal == 0) ImportState.FAILED else ImportState.PARTIAL
+            failureCode = IMPORT_DEADLINE_CODE
+            SafeLogger.counts(TAG, "import_deadline", "exceeded" to 1, "pages" to pageOrdinal)
         }
 
         val finalState = failureState ?: if (matched == 0) ImportState.EMPTY else ImportState.COMPLETE
@@ -356,3 +394,7 @@ class RetryImportUseCase @Inject constructor(
         return importMonth(ownerId, month, previous?.templateVersion)
     }
 }
+
+/** NFR-08: no progress for this long ends the job; the source's watchdog bounds each operation. */
+private const val IMPORT_STALL_MILLIS = 90_000L
+private const val IMPORT_DEADLINE_CODE = "deadline_exceeded"
