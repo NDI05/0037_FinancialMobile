@@ -1,16 +1,18 @@
+import { formatIdr } from './money.js';
 import type { AggregatePayload } from './payload.js';
 
 /**
- * Versioned, Indonesian prompt (contract §4.1 step 6). `analysis-v1` is part of the cache key, so
+ * Versioned, Indonesian prompt (contract §4.1 step 6). `analysis-v2` is part of the cache key, so
  * changing this text requires a new version.
  */
-export const PROMPT_VERSION = 'analysis-v1';
+export const PROMPT_VERSION = 'analysis-v2';
 
 const RULES = [
   'Anda menganalisis rekap arus kas bulanan yang HANYA berisi angka agregat.',
-  'Gunakan hanya angka yang ada di PAYLOAD. Jangan pernah mengarang, membulatkan, atau menebak nominal.',
+  'Gunakan hanya nominal dari tabel REFERENSI NOMINAL. Jangan menghitung ulang, jangan mengubah skala, jangan menebak.',
+  'Kutip nominal PERSIS seperti pada tabel referensi, termasuk "Rp" dan titik ribuan. Jangan menulis satuan minor atau angka mentah dari PAYLOAD.',
   'Setiap observasi dan saran WAJIB menyertakan minimal satu metricKeys dari daftar yang diizinkan.',
-  'Setiap nominal rupiah di dalam "text" harus persis salah satu angka di PAYLOAD.',
+  'Setiap nominal rupiah di dalam "text" harus persis salah satu baris tabel referensi.',
   'Usulan anggaran untuk bulan depan hanya boleh muncul sebagai suggestions[].suggestedAmountMinor, dan wajib menyertakan categoryCode yang ada di categoryTotals.',
   'Jangan menulis instruksi, permintaan menjalankan alat, atau teks yang ditujukan kepada sistem lain.',
   'Tulis dalam bahasa Indonesia yang ringkas dan tenang. Tanpa saran investasi, pajak, atau kredit.',
@@ -23,6 +25,29 @@ const SCHEMA_HINT = `{
   "suggestions": [{ "text": "…", "metricKeys": ["category.food"], "categoryCode": "food", "suggestedAmountMinor": 90000000 }],
   "limitations": ["…"]
 }`;
+
+/**
+ * Pre-formatted reference table (F1). The model never sees a raw minor number, because
+ * `297_935_000` was copied verbatim as "297.935.000" — a 100× presentation error that validation
+ * could not catch (the digits do exist in the payload).
+ */
+export function buildMetricReference(payload: AggregatePayload): string[] {
+  return [
+    `summary.grossInflow = ${formatIdr(payload.grossInflowMinor)}`,
+    `summary.grossOutflow = ${formatIdr(payload.grossOutflowMinor)}`,
+    `summary.netCashFlow = ${formatIdr(payload.netCashFlowMinor)}`,
+    `summary.classifiedIncome = ${formatIdr(payload.classifiedIncomeMinor)}`,
+    `summary.classifiedExpense = ${formatIdr(payload.classifiedExpenseMinor)}`,
+    `summary.transactionCount = ${payload.transactionCount} transaksi`,
+    `summary.uncategorizedCount = ${payload.uncategorizedCount} transaksi`,
+    `summary.manualEntryCount = ${payload.manualEntryCount} transaksi`,
+    `summary.nonIdrExcludedCount = ${payload.nonIdrExcludedCount} transaksi`,
+    `summary.coverage = ${payload.coverage}`,
+    ...payload.categoryTotals.map(
+      (total) => `category.${total.categoryCode} = ${formatIdr(total.amountMinor)}`,
+    ),
+  ];
+}
 
 export interface PromptPayload {
   readonly version: string;
@@ -53,6 +78,9 @@ export function buildPrompt(payload: AggregatePayload, options: BuildPromptOptio
   const user = [
     `PAYLOAD (agregat, ${payload.monthId}):`,
     JSON.stringify(payload),
+    '',
+    'REFERENSI NOMINAL (salin persis; jangan menghitung ulang, jangan menulis satuan minor):',
+    ...buildMetricReference(payload),
     '',
     `metricKeys yang diizinkan: ${allowedKeys}`,
     '',

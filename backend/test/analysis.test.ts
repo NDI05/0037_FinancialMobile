@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { formatMinorDigits } from '../src/domain/money.js';
 import { FakeProvider } from '../src/llm/fake.js';
 import { analyze, createHarness, grantConsent, login, samplePayload } from './helpers.js';
 
@@ -29,14 +30,32 @@ test('a valid provider answer is accepted and matches the client shape', async (
       'promptVersion',
       'suggestions',
     ]);
-    assert.equal(body.promptVersion, 'analysis-v1');
+    assert.equal(body.promptVersion, 'analysis-v2');
     const observations = body.observations as Array<{ text: string; metricKeys: string[] }>;
     assert.ok(observations.length > 0);
     for (const observation of observations) {
       assert.ok(observation.metricKeys.length > 0);
     }
     assert.ok(Array.isArray(body.limitations) && (body.limitations as string[]).length > 0);
+    // F1: money is quoted in rupiah display form, never as a bare minor value.
+    const texts = observations.map((observation) => observation.text);
+    assert.ok(texts.some((text) => /Rp[0-9]/.test(text)), 'at least one rupiah figure');
+    for (const minor of [585_000_000, 287_065_000, 297_935_000]) {
+      assert.ok(!texts.join(' ').includes(formatMinorDigits(minor)));
+    }
     assert.equal(provider.calls, 1);
+  } finally {
+    await harness.close();
+  }
+});
+
+test('the ambiguous bare minor output from a real model is rejected', async () => {
+  const { harness, token, provider } = await harnessWith('bare_minor');
+  try {
+    const result = await analyze(harness, token);
+    assert.equal(result.status, 422);
+    assert.equal(result.json.code, 'invalid_analysis_output');
+    assert.equal(provider.calls, 2, 'one regeneration, then rejection');
   } finally {
     await harness.close();
   }
@@ -166,7 +185,7 @@ test('GET /v1/analyses/{monthId} returns the stored analysis', async () => {
     await analyze(harness, token);
     const result = await (await import('./helpers.js')).api(harness, 'GET', '/v1/analyses/2026-02', { token });
     assert.equal(result.status, 200);
-    assert.equal(result.json.promptVersion, 'analysis-v1');
+    assert.equal(result.json.promptVersion, 'analysis-v2');
     const missing = await (await import('./helpers.js')).api(harness, 'GET', '/v1/analyses/2026-09', { token });
     assert.equal(missing.status, 404);
     assert.equal(missing.json.code, 'not_found');

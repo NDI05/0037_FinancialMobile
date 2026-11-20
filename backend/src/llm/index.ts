@@ -5,7 +5,8 @@ import type { AnalysisProvider } from './provider.js';
 
 export type { AnalysisProvider, ProviderCall, ProviderResult } from './provider.js';
 export { ProviderError } from './provider.js';
-export { FakeProvider, formatIdr } from './fake.js';
+export { FakeProvider } from './fake.js';
+export { formatIdr } from '../domain/money.js';
 export { OpenAiCompatibleProvider } from './openai.js';
 
 /** Fake by default: `npm start` needs zero external services (contract §5, DoD). */

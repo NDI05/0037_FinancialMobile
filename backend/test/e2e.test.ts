@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { formatMinorDigits } from '../src/domain/money.js';
 import { FakeProvider } from '../src/llm/fake.js';
 import { api, analyze, createHarness, login, samplePayload } from './helpers.js';
 
@@ -39,6 +40,13 @@ test('end-to-end: session, consent, summary, analysis, cache, plan, deletion', a
     const first = await analyze(harness, token, { inputRevision: 7, idempotencyKey: 'e2e-1' });
     assert.equal(first.status, 200);
     assert.equal(provider.calls, 1);
+
+    // F1: the persisted analysis quotes rupiah, never a bare minor figure.
+    const texts = (first.json.observations as Array<{ text: string }>).map((o) => o.text).join(' ');
+    assert.match(texts, /Rp[0-9]/);
+    for (const minor of [585_000_000, 287_065_000, 297_935_000]) {
+      assert.ok(!texts.includes(formatMinorDigits(minor)), `must not quote ${minor} as minor units`);
+    }
 
     const cached = await analyze(harness, token, { inputRevision: 7, idempotencyKey: 'e2e-2' });
     assert.equal(cached.status, 200);

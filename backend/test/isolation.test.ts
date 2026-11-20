@@ -50,7 +50,7 @@ test('analyses are owner-scoped', async () => {
   // gets a fresh provider call (and his own stored analysis) rather than Alice's.
   const bobCreated = await analyze(harness, bob, { idempotencyKey: 'iso-b' });
   assert.equal(bobCreated.status, 200);
-  assert.equal(bobCreated.json.promptVersion, 'analysis-v1');
+  assert.equal(bobCreated.json.promptVersion, 'analysis-v2');
   assert.ok(Array.isArray(bobCreated.json.observations));
 });
 

@@ -1,3 +1,4 @@
+import { formatIdr, formatMinorDigits } from '../domain/money.js';
 import type { CategoryTotal } from '../domain/payload.js';
 import type { AnalysisProvider, ProviderCall, ProviderResult } from './provider.js';
 
@@ -16,6 +17,7 @@ export type FakeScenario =
   | 'malformed'
   | 'invented'
   | 'injection'
+  | 'bare_minor'
   | 'invalid_then_valid';
 
 export class FakeProvider implements AnalysisProvider {
@@ -46,6 +48,21 @@ export class FakeProvider implements AnalysisProvider {
               {
                 text: `Pengeluaran bulan ini mencapai Rp99.000.000 menurut catatan tambahan.`,
                 metricKeys: ['summary.grossOutflow'],
+              },
+            ],
+          }),
+          promptTokens: 120,
+          completionTokens: 40,
+        };
+      case 'bare_minor':
+        // Exactly the real-model failure from F1: minor units copied into prose without `Rp`.
+        return {
+          text: JSON.stringify({
+            ...this.validBody(call),
+            observations: [
+              {
+                text: `Aliran kas masuk bersih mencapai ${plainDigits(call.payload.netCashFlowMinor)}, didominasi pendapatan klasifikasi sebesar ${plainDigits(call.payload.classifiedIncomeMinor)}.`,
+                metricKeys: ['summary.netCashFlow', 'summary.classifiedIncome'],
               },
             ],
           }),
@@ -121,13 +138,8 @@ export class FakeProvider implements AnalysisProvider {
   }
 }
 
-/** Same shape as `IdrFormatter`: `Rp` + dot grouping, no space, cents only when present. */
-export function formatIdr(minor: number): string {
-  const negative = minor < 0;
-  const absolute = Math.abs(Math.trunc(minor));
-  const major = Math.trunc(absolute / 100);
-  const cents = absolute % 100;
-  const grouped = major.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  const body = cents === 0 ? grouped : `${grouped},${cents.toString().padStart(2, '0')}`;
-  return `Rp${negative ? '-' : ''}${body}`;
+
+/** `297935000` → `297.935.000`: a raw minor value dressed up as an amount. */
+function plainDigits(minor: number): string {
+  return formatMinorDigits(minor);
 }

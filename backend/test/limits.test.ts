@@ -85,7 +85,7 @@ test('quota is checked before the cache, and GET still serves the stored analysi
 
     const read = await api(harness, 'GET', '/v1/analyses/2026-02', { token });
     assert.equal(read.status, 200);
-    assert.equal(read.json.promptVersion, 'analysis-v1');
+    assert.equal(read.json.promptVersion, 'analysis-v2');
   } finally {
     await harness.close();
   }
