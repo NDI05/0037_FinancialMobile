@@ -169,6 +169,14 @@ needed to switch it on — the two OAuth clients, the consent screen with the re
 troubleshooting table of every `DEVELOPER_ERROR` you can hit — is in
 [`docs/05_REAL_GOOGLE_SETUP.md`](docs/05_REAL_GOOGLE_SETUP.md).
 
+## Cost
+
+The entire stack runs at **zero cost, with no credit card**: the Gmail API + OAuth client path is
+free (the $300 Free Trial that asks for payment details is not needed), the LLM can be a local
+Ollama model with no account at all, and the backend is a single Node process with SQLite that
+runs on a laptop. [`docs/07_FREE_STACK.md`](docs/07_FREE_STACK.md) has the per-component cost
+table, the three free LLM presets and the fully-offline fallback.
+
 ## Architecture
 
 Single Gradle module, Hilt, MVVM with unidirectional state. The dependency rule is

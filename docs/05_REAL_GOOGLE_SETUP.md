@@ -7,6 +7,10 @@ sendiri; tidak ada satu pun yang bisa saya kerjakan dari sisi kode.
 > Ringkasnya: **1 project Google Cloud, 2 OAuth client (Android + Web), 1 consent screen dengan
 > scope `gmail.readonly`, dan 1 privacy policy URL.** Sisanya konfigurasi build.
 
+> **Soal biaya:** langkah-langkah di dokumen ini **tidak memerlukan billing, kartu kredit, atau
+> program Free Trial $300.** Yang meminta verifikasi pembayaran adalah *Free Trial*, dan itu tidak
+> dipakai di sini. Lihat [`07_FREE_STACK.md`](07_FREE_STACK.md) untuk jalur 100% gratis.
+
 ---
 
 ## 0. Ringkasan yang paling sering bikin gagal
