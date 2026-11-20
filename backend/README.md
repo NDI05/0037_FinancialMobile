@@ -54,6 +54,47 @@ cp .env.example .env
 kosong, `AUTH_DEV_FAKE_TOKENS=true`, atau client ID yang masih placeholder. Pesannya menyebut
 variabel mana yang harus diperbaiki.
 
+## Opsi LLM gratis
+
+Backend ini tidak butuh API key berbayar. Tiga preset yang didukung:
+
+| Opsi | Biaya | Konfigurasi |
+|---|---|---|
+| **Ollama** (offline) | gratis penuh, tanpa akun | `LLM_PROVIDER=openai`, `LLM_BASE_URL=http://127.0.0.1:11434/v1`, `LLM_MODEL=qwen3-vl:8b-instruct`, `LLM_API_KEY=` (kosong) |
+| **Groq** | gratis, tanpa kartu kredit | `LLM_BASE_URL=https://api.groq.com/openai/v1`, `LLM_MODEL=llama-3.3-70b-versatile`, `LLM_API_KEY=<key Groq>` |
+| **OpenRouter free** | gratis untuk model `:free` | `LLM_BASE_URL=https://openrouter.ai/api/v1`, `LLM_MODEL=<vendor>/<model>:free`, `LLM_API_KEY=<key OpenRouter>` |
+
+Default tetap `LLM_PROVIDER=fake` (deterministik, tanpa jaringan) supaya `npm start` dan `npm test`
+jalan tanpa apa pun.
+
+Ollama, sekali saja:
+
+```bash
+ollama pull qwen3-vl:8b-instruct
+```
+
+lalu di `.env`:
+
+```bash
+LLM_PROVIDER=openai
+LLM_BASE_URL=http://127.0.0.1:11434/v1
+LLM_MODEL=qwen3-vl:8b-instruct
+LLM_API_KEY=
+LLM_TIMEOUT_MS=120000
+```
+
+Runtime lokal tidak memerlukan header Authorization (backend mengirimkannya hanya bila
+`LLM_API_KEY` terisi), dan `NODE_ENV=production` menolak key kosong hanya untuk host remote.
+
+Catatan model lokal:
+
+- Model *thinking* (mis. `gemma4:e2b-it-q4_K_M`) menghabiskan `max_tokens` di kanal `reasoning`
+  sehingga `content` bisa kosong (`finish_reason=length`) dan permintaan berakhir `502
+  provider_unavailable`. Naikkan `LLM_MAX_OUTPUT_TOKENS` (mis. 2048) atau pilih model *instruct*.
+- `qwen3-vl:8b-instruct` lolos validasi apa adanya dengan `LLM_MAX_OUTPUT_TOKENS=800`.
+- Bila model kecil mengembalikan JSON rusak, backend sudah meregenerasi satu kali lalu menjawab
+  `422 invalid_analysis_output`; turunkan `temperature` atau ganti model bila sering terjadi.
+
 ## Cara tes
 
 ```bash

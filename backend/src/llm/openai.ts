@@ -34,7 +34,9 @@ export class OpenAiCompatibleProvider implements AnalysisProvider {
     const url = `${this.options.baseUrl.replace(/\/+$/, '')}/chat/completions`;
     const headers: Record<string, string> = {
       'content-type': 'application/json',
-      authorization: `Bearer ${this.options.apiKey}`,
+      // A local runtime (Ollama/LM Studio) accepts no credential; sending an empty bearer
+      // would be rejected by some gateways.
+      ...(this.options.apiKey ? { authorization: `Bearer ${this.options.apiKey}` } : {}),
     };
     if (this.options.baseUrl.includes('openrouter')) {
       headers['HTTP-Referer'] = 'https://pam.app';

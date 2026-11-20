@@ -44,7 +44,7 @@ const schema = z.object({
   LLM_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(64).max(4096).default(800),
   LLM_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(45_000),
   FAKE_LLM_SCENARIO: z
-    .enum(['valid', 'malformed', 'invented', 'injection', 'invalid_then_valid'])
+    .enum(['valid', 'malformed', 'invented', 'injection', 'bare_minor', 'invalid_then_valid'])
     .default('valid'),
 
   RATE_LIMIT_ANALYSES_PER_HOUR: z.coerce.number().int().min(1).max(10_000).default(10),
@@ -80,6 +80,7 @@ export interface AppConfig {
       | 'malformed'
       | 'invented'
       | 'injection'
+      | 'bare_minor'
       | 'invalid_then_valid';
   };
   readonly limits: {
@@ -106,6 +107,21 @@ function decodeDataKey(raw: string): Buffer | null {
     return decoded.length === 32 ? decoded : null;
   } catch {
     return null;
+  }
+}
+
+
+/**
+ * A local OpenAI-compatible runtime (Ollama, LM Studio, llama.cpp) needs no credential. Detecting
+ * it by host keeps the free, fully-offline path working without asking the user to invent a key.
+ */
+export function isLocalLlmHost(baseUrl: string): boolean {
+  try {
+    // URL.hostname keeps IPv6 brackets (`[::1]`), so strip them before comparing.
+    const host = new URL(baseUrl).hostname.replace(/^\[(.*)\]$/, '$1');
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.local');
+  } catch {
+    return false;
   }
 }
 
@@ -149,8 +165,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
         'GOOGLE_WEB_CLIENT_ID is still the development placeholder; set the Web client ID from docs/05_REAL_GOOGLE_SETUP.md',
       );
     }
-    if (value.LLM_PROVIDER === 'openai' && !value.LLM_API_KEY) {
-      problems.push('LLM_API_KEY is required when LLM_PROVIDER=openai');
+    if (value.LLM_PROVIDER === 'openai' && !value.LLM_API_KEY && !isLocalLlmHost(value.LLM_BASE_URL)) {
+      problems.push(
+        'LLM_API_KEY is required when LLM_PROVIDER=openai unless LLM_BASE_URL points at a local runtime',
+      );
     }
   } else {
     if (!sessionPepper) {
@@ -166,7 +184,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     }
   }
 
-  if (value.LLM_PROVIDER === 'openai' && !value.LLM_API_KEY) {
+  if (value.LLM_PROVIDER === 'openai' && !value.LLM_API_KEY && !isLocalLlmHost(value.LLM_BASE_URL)) {
     warnings.push('LLM_PROVIDER=openai without LLM_API_KEY: analysis calls will fail with 502');
   }
 
