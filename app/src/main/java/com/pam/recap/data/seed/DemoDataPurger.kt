@@ -19,7 +19,9 @@ import javax.inject.Singleton
  * - import jobs: exactly the two seeded job ids,
  * - summaries: the reference month and the month before it (recomputed on next render).
  *
- * Owner-scoped at every step, so imported (EMAIL) and manual rows are untouchable.
+ * Owner-scoped at every step, so imported (EMAIL) and manual rows are untouchable. Every table the
+ * purge touches is a field of [DemoPurge], and every id/month it uses comes from [DemoDataset], so a
+ * future bundle cannot silently remove more than it reports.
  */
 @Singleton
 class DemoDataPurger @Inject constructor(
@@ -34,10 +36,8 @@ class DemoDataPurger @Inject constructor(
 
     override suspend fun purge(ownerId: String): DemoPurge {
         val removedTransactions = transactions.deleteByIdPrefix(ownerId, DemoDataset.ID_PREFIX)
-        val removedJobs = listOf(DemoDataset.DEMO_JOB_ID, DemoDataset.PREVIOUS_JOB_ID)
-            .count { jobId -> imports.delete(ownerId, jobId) }
-        val months = listOf(DemoDataset.REFERENCE_MONTH, DemoDataset.REFERENCE_MONTH.previous())
-        val removedSummaries = months.sumOf { month -> summaries.delete(ownerId, month) }
+        val removedJobs = DemoDataset.DEMO_JOB_IDS.count { jobId -> imports.delete(ownerId, jobId) }
+        val removedSummaries = DemoDataset.DEMO_MONTHS.sumOf { month -> summaries.delete(ownerId, month) }
 
         val result = DemoPurge(
             transactions = removedTransactions,

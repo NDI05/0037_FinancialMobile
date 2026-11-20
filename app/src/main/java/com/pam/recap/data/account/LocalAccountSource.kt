@@ -6,6 +6,7 @@ import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.AccountRepository
+import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.domain.repository.DemoDataMaintenance
 import com.pam.recap.domain.repository.SessionRepository
@@ -21,9 +22,10 @@ import javax.inject.Singleton
  * (email + display name, no password) signs in on this device only — nothing leaves the phone and
  * the account screen says so.
  *
- * Demo data belongs to the offline demo only (F1): `seedDemo` is true exactly when no backend is
- * configured. A server-backed account never receives sample rows, and any demo rows written by an
- * earlier build are purged on sign-in (F2).
+ * Demo data belongs to the offline demo only (F1): `seedDemo` requires **offline mode and no stored
+ * app password**. Once a credential exists the account can hold genuinely imported data, so sample
+ * rows are never written again, in any mode; whatever an earlier build left behind is purged on
+ * sign-in (F2).
  *
  * `isDemo` is now a display/labelling flag: true in offline mode, false for a server account,
  * independent of whether a Gmail app password is stored.
@@ -34,6 +36,7 @@ class LocalAccountSource @Inject constructor(
     private val signIn: SignInUseCase,
     private val backendSessions: BackendSessionRepository,
     private val demoData: DemoDataMaintenance,
+    private val appPasswordVault: AppPasswordVault,
 ) : AccountRepository {
 
     override val isBackendEnabled: Boolean get() = backendSessions.isEnabled
@@ -90,15 +93,17 @@ class LocalAccountSource @Inject constructor(
 
     private suspend fun createProfile(email: String, displayName: String?): Outcome<Session> {
         val offline = !isBackendEnabled
+        // A stored app password means real imports are possible: no sample rows, in any mode.
+        val seedable = offline && !appPasswordVault.hasCredential()
         val result = signIn(
             accountId = email,
             displayName = displayName ?: email.substringBefore('@'),
             mailboxLabel = email,
-            // Offline mode is the demo; a server account is never demo, connected or not.
+            // The label still describes the mode; seeding has its own condition.
             isDemo = offline,
-            seedDemo = offline,
+            seedDemo = seedable,
         )
-        if (!offline && result is Outcome.Success) {
+        if (!seedable && result is Outcome.Success) {
             // F2 self-healing: an installation that seeded sample rows before this rule existed.
             runCatching { demoData.purge(result.value.ownerId) }
         }

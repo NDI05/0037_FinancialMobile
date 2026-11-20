@@ -35,6 +35,12 @@ object DemoDataset {
     const val DEMO_JOB_ID: String = "demo-job-2026-02"
     const val PREVIOUS_JOB_ID: String = "demo-job-2026-01"
 
+    /** The seeded jobs, in one place so the seeder and the purger cannot drift apart. */
+    val DEMO_JOB_IDS: List<String> = listOf(DEMO_JOB_ID, PREVIOUS_JOB_ID)
+
+    /** The months the seeder writes summaries for. */
+    val DEMO_MONTHS: List<JakartaMonth> = listOf(REFERENCE_MONTH, REFERENCE_MONTH.previous())
+
     private const val HOUSING_FIXTURE_ID = "seed-apartemen"
     private const val REFUND_FIXTURE_ID = "seed-refund-apartemen"
     private const val CURRENCY_IDR = "IDR"

@@ -1,5 +1,7 @@
 package com.pam.recap.data.account
 
+import com.pam.recap.domain.repository.AppPasswordVault
+import com.pam.recap.testing.FakeAppPasswordVault
 import com.pam.recap.testing.FakeDemoDataPort
 import com.pam.recap.testing.FakeTransactionRepository
 import android.content.Context
@@ -51,6 +53,7 @@ class LocalAccountSourceTest {
     private lateinit var sessions: FakeSessionRepository
     private lateinit var demoData: FakeDemoDataMaintenance
     private val now = Instant.parse("2026-03-01T02:00:00Z")
+    private val EmptyVault = FakeAppPasswordVault()
     private val clock = object : ClockProvider {
         override fun now(): Instant = now
     }
@@ -187,6 +190,36 @@ class LocalAccountSourceTest {
     }
 
     @Test
+    fun `offline mode with a stored credential seeds nothing and purges leftovers`() = runTest {
+        val ownerId = OwnerIdFactory.ownerIdFor("andhika@example.test")
+        val seed = com.pam.recap.data.seed.DemoDataset.build(
+            ownerId = ownerId,
+            now = now,
+            parser = com.pam.recap.data.gmail.LivinQrisParser(),
+            rules = com.pam.recap.domain.usecase.MerchantCategoryRules(),
+            fingerprints = com.pam.recap.core.security.FingerprintFactory { id -> "k::$id".toByteArray() },
+        ).first()
+        val transactions = FakeTransactionRepository(listOf(seed.copy(id = "demo-leftover", fingerprint = "fp")))
+        demoData = FakeDemoDataMaintenance(transactions = transactions)
+        val source = LocalAccountSource(
+            sessions = sessions,
+            signIn = SignInUseCase(sessions, demoDataPort, clock),
+            backendSessions = NoopBackendSessionRepository(),
+            demoData = demoData,
+            appPasswordVault = FakeAppPasswordVault(
+                com.pam.recap.domain.model.GmailCredential("andhika@example.test", "abcdefghijklmnop"),
+            ),
+        )
+
+        val result = source.loginOffline("andhika@example.test", "Andhika")
+
+        assertTrue(result is Outcome.Success)
+        assertEquals(emptyList<String>(), demoDataPort.seededOwners)
+        assertEquals(0, demoData.countDemoRows(ownerId))
+        assertEquals(listOf(ownerId), demoData.purgedOwners)
+    }
+
+    @Test
     fun `offline mode seeds the demo dataset and labels the session`() = runTest {
         val source = offlineSource()
 
@@ -221,6 +254,7 @@ class LocalAccountSourceTest {
             signIn = SignInUseCase(sessions, demoDataPort, clock),
             backendSessions = backendSessions(),
             demoData = demoData,
+            appPasswordVault = EmptyVault,
         )
 
         val result = source.login("andi@example.test", "correct-horse-battery")
@@ -232,11 +266,12 @@ class LocalAccountSourceTest {
 
     // ---- helpers -------------------------------------------------------------------------
 
-    private fun offlineSource() = LocalAccountSource(
+    private fun offlineSource(vault: AppPasswordVault = EmptyVault) = LocalAccountSource(
         sessions = sessions,
         signIn = SignInUseCase(sessions, demoDataPort, clock),
         backendSessions = NoopBackendSessionRepository(),
         demoData = demoData,
+        appPasswordVault = vault,
     )
 
     private fun backendSource(): LocalAccountSource = LocalAccountSource(
@@ -244,6 +279,7 @@ class LocalAccountSourceTest {
         signIn = SignInUseCase(sessions, demoDataPort, clock),
         backendSessions = backendSessions(),
         demoData = demoData,
+        appPasswordVault = EmptyVault,
     )
 
     private fun backendSessions(): BackendSessionRepository {
