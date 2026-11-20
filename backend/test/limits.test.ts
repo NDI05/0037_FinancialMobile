@@ -15,7 +15,7 @@ test('the hourly limit rejects the third analysis without calling the provider',
     env: { RATE_LIMIT_ANALYSES_PER_HOUR: '2', RATE_LIMIT_ANALYSES_PER_DAY: '40' },
   });
   try {
-    const token = await login(harness, 'google-sub-hourly');
+    const token = await login(harness, 'user-hourly');
     await grantConsent(harness, token);
 
     assert.equal((await analyze(harness, token, { inputRevision: 1, idempotencyKey: 'h1' })).status, 200);
@@ -38,7 +38,7 @@ test('the daily limit rejects a second analysis when the limit is one', async ()
     env: { RATE_LIMIT_ANALYSES_PER_HOUR: '10', RATE_LIMIT_ANALYSES_PER_DAY: '1' },
   });
   try {
-    const token = await login(harness, 'google-sub-daily');
+    const token = await login(harness, 'user-daily');
     await grantConsent(harness, token);
     assert.equal((await analyze(harness, token, { inputRevision: 1, idempotencyKey: 'd1' })).status, 200);
     const limited = await analyze(harness, token, { inputRevision: 2, idempotencyKey: 'd2' });
@@ -54,7 +54,7 @@ test('the global daily ceiling rejects before any provider call', async () => {
   const provider = new FakeProvider('valid');
   const harness = await createHarness({ provider, env: { DAILY_AI_CEILING_USD: '0' } });
   try {
-    const token = await login(harness, 'google-sub-ceiling');
+    const token = await login(harness, 'user-ceiling');
     await grantConsent(harness, token);
     const limited = await analyze(harness, token, { idempotencyKey: 'c1' });
     assert.equal(limited.status, 429);
@@ -74,7 +74,7 @@ test('quota is checked before the cache, and GET still serves the stored analysi
     env: { RATE_LIMIT_ANALYSES_PER_HOUR: '1' },
   });
   try {
-    const token = await login(harness, 'google-sub-cache-quota');
+    const token = await login(harness, 'user-cache-quota');
     await grantConsent(harness, token);
     assert.equal((await analyze(harness, token, { inputRevision: 1, idempotencyKey: 'q1' })).status, 200);
 

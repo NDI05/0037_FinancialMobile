@@ -14,7 +14,7 @@ after(async () => {
 });
 
 test('analysis without consent is 403 consent_required (FR-34)', async () => {
-  const token = await login(harness, 'google-sub-no-consent');
+  const token = await login(harness, 'user-no-consent');
   const result = await api(harness, 'POST', '/v1/analyses', {
     token,
     headers: { 'idempotency-key': 'no-consent' },
@@ -26,7 +26,7 @@ test('analysis without consent is 403 consent_required (FR-34)', async () => {
 });
 
 test('a DECLINED decision does not open the gate', async () => {
-  const token = await login(harness, 'google-sub-declined');
+  const token = await login(harness, 'user-declined');
   await grantConsent(harness, token, 'DECLINED');
   const result = await api(harness, 'POST', '/v1/analyses', {
     token,
@@ -38,7 +38,7 @@ test('a DECLINED decision does not open the gate', async () => {
 });
 
 test('GRANTED opens the gate and WITHDRAWN closes it again (FR-04/FR-41)', async () => {
-  const token = await login(harness, 'google-sub-toggle');
+  const token = await login(harness, 'user-toggle');
   await grantConsent(harness, token);
   const granted = await api(harness, 'POST', '/v1/analyses', {
     token,
@@ -58,7 +58,7 @@ test('GRANTED opens the gate and WITHDRAWN closes it again (FR-04/FR-41)', async
 });
 
 test('the ledger is append-only and returns newest first (FR-03/FR-49)', async () => {
-  const token = await login(harness, 'google-sub-ledger');
+  const token = await login(harness, 'user-ledger');
   await grantConsent(harness, token, 'GRANTED');
   await grantConsent(harness, token, 'WITHDRAWN');
   await api(harness, 'POST', '/v1/consents', {
@@ -80,7 +80,7 @@ test('the ledger is append-only and returns newest first (FR-03/FR-49)', async (
 });
 
 test('an unknown consent purpose is a 400', async () => {
-  const token = await login(harness, 'google-sub-bad-consent');
+  const token = await login(harness, 'user-bad-consent');
   const result = await api(harness, 'POST', '/v1/consents', {
     token,
     body: { purpose: 'ADVERTISING', decision: 'GRANTED', noticeVersion: 'v1' },

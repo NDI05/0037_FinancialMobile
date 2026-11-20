@@ -28,9 +28,7 @@ const schema = z.object({
   DATABASE_PATH: z.string().min(1).default('./data/pam.db'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 
-  GOOGLE_WEB_CLIENT_ID: z.string().min(1).default('dev-client-id.apps.googleusercontent.com'),
-  GOOGLE_JWKS_URL: z.string().url().default('https://www.googleapis.com/oauth2/v3/certs'),
-  AUTH_DEV_FAKE_TOKENS: booleanish.default(true),
+  REGISTRATION_INVITE_CODE: z.string().default(''),
   SESSION_PEPPER: z.string().default(''),
   SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
 
@@ -61,9 +59,7 @@ export interface AppConfig {
   readonly port: number;
   readonly databasePath: string;
   readonly logLevel: 'debug' | 'info' | 'warn' | 'error';
-  readonly googleClientId: string;
-  readonly googleJwksUrl: string;
-  readonly devFakeTokens: boolean;
+  readonly registrationInviteCode: string;
   readonly sessionPepper: string;
   readonly sessionTtlDays: number;
   readonly dataKey: Buffer;
@@ -98,6 +94,8 @@ export interface AppConfig {
 
 /** Dev-only deterministic secret, clearly marked so it can never be mistaken for a real one. */
 const DEV_PEPPER = 'dev-session-pepper-not-for-production-use';
+/** Development-only invite code so `npm start` + smoke work with no .env. */
+export const DEV_INVITE_CODE = 'pam-dev';
 const DEV_DATA_KEY = createHash('sha256').update('pam-dev-data-key').digest();
 
 function decodeDataKey(raw: string): Buffer | null {
@@ -135,6 +133,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   }
   const value = parsed.data;
   const isProduction = value.NODE_ENV === 'production';
+  let registrationInviteCode = value.REGISTRATION_INVITE_CODE || (isProduction ? '' : DEV_INVITE_CODE);
   const problems: string[] = [];
   const warnings: string[] = [];
 
@@ -157,12 +156,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
         'INTERNAL_SWEEP_TOKEN must be at least 16 characters (protects POST /v1/internal/sweep)',
       );
     }
-    if (value.AUTH_DEV_FAKE_TOKENS) {
-      problems.push('AUTH_DEV_FAKE_TOKENS must be false in production (dev tokens bypass Google)');
-    }
-    if (value.GOOGLE_WEB_CLIENT_ID.startsWith('dev-')) {
+    if (value.REGISTRATION_INVITE_CODE.length < 8) {
       problems.push(
-        'GOOGLE_WEB_CLIENT_ID is still the development placeholder; set the Web client ID from docs/05_REAL_GOOGLE_SETUP.md',
+        'REGISTRATION_INVITE_CODE must be at least 8 characters (it gates account registration)',
       );
     }
     if (value.LLM_PROVIDER === 'openai' && !value.LLM_API_KEY && !isLocalLlmHost(value.LLM_BASE_URL)) {
@@ -182,6 +178,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (!value.INTERNAL_SWEEP_TOKEN) {
       warnings.push('INTERNAL_SWEEP_TOKEN missing: the internal sweep endpoint stays closed');
     }
+    if (!value.REGISTRATION_INVITE_CODE) {
+      warnings.push('REGISTRATION_INVITE_CODE missing: using the development invite code');
+    }
   }
 
   if (value.LLM_PROVIDER === 'openai' && !value.LLM_API_KEY && !isLocalLlmHost(value.LLM_BASE_URL)) {
@@ -195,9 +194,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     port: value.PORT,
     databasePath: value.DATABASE_PATH,
     logLevel: value.LOG_LEVEL,
-    googleClientId: value.GOOGLE_WEB_CLIENT_ID,
-    googleJwksUrl: value.GOOGLE_JWKS_URL,
-    devFakeTokens: value.AUTH_DEV_FAKE_TOKENS,
+    registrationInviteCode,
     sessionPepper,
     sessionTtlDays: value.SESSION_TTL_DAYS,
     dataKey: dataKey as Buffer,

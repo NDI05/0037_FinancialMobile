@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { ownerIdFromSubject } from '../src/auth/owner.js';
+import { ownerIdForSeed } from './helpers.js';
 import { analyze, api, createHarness, grantConsent, login, samplePayload, tempDatabasePath } from './helpers.js';
 
 /**
@@ -17,7 +17,7 @@ test('sealed fields never appear in the database file, and decrypt correctly', a
   const databasePath = tempDatabasePath();
   const harness = await createHarness({ databasePath });
   try {
-    const token = await login(harness, 'google-sub-crypto');
+    const token = await login(harness, 'user-crypto');
     await grantConsent(harness, token);
     const payload = samplePayload({ grossInflowMinor: MARKER_AMOUNT, monthId: '2026-02' });
 
@@ -46,7 +46,7 @@ test('sealed fields never appear in the database file, and decrypt correctly', a
 
     // Write a marker into an analysis text by using a provider-free path: the fake's own prose is
     // already distinctive, so assert on both the amount and a sentence fragment.
-    const ownerId = ownerIdFromSubject('google-sub-crypto');
+    const ownerId = ownerIdForSeed('user-crypto');
     const stored = harness.store.getSummary(ownerId, '2026-02');
     assert.ok(stored);
     assert.equal(stored.payload.grossInflowMinor, MARKER_AMOUNT);
@@ -73,8 +73,8 @@ test('a ciphertext copied to another owner fails to decrypt (AAD binds the owner
   const databasePath = tempDatabasePath();
   const harness = await createHarness({ databasePath });
   try {
-    const aliceToken = await login(harness, 'google-sub-crypto-a');
-    const bobToken = await login(harness, 'google-sub-crypto-b');
+    const aliceToken = await login(harness, 'user-crypto-a');
+    const bobToken = await login(harness, 'user-crypto-b');
     await grantConsent(harness, aliceToken);
     await grantConsent(harness, bobToken);
     const alicePayload = samplePayload({ grossInflowMinor: 555_000_000 });
@@ -93,8 +93,8 @@ test('a ciphertext copied to another owner fails to decrypt (AAD binds the owner
       );
     }
 
-    const aliceOwner = ownerIdFromSubject('google-sub-crypto-a');
-    const bobOwner = ownerIdFromSubject('google-sub-crypto-b');
+    const aliceOwner = ownerIdForSeed('user-crypto-a');
+    const bobOwner = ownerIdForSeed('user-crypto-b');
     const aliceRow = harness.store.getSummary(aliceOwner, '2026-02');
     assert.ok(aliceRow);
 

@@ -16,6 +16,21 @@ import type { AggregatePayload, PlanSummary } from '../domain/payload.js';
 
 export type SealedPurpose = 'summary' | 'analysis' | 'budget_plan';
 
+export interface AccountRecord {
+  readonly ownerId: string;
+  readonly email: string;
+  readonly displayName: string | null;
+  readonly salt: Buffer;
+  readonly passwordHash: Buffer;
+  readonly kdf: string;
+  readonly createdAt: string;
+}
+
+export interface LoginFailureState {
+  readonly failedCount: number;
+  readonly windowStartMs: number;
+}
+
 export interface SessionRecord {
   readonly id: string;
   readonly ownerId: string;
@@ -131,28 +146,117 @@ export class Store {
   // Users & sessions
   // ---------------------------------------------------------------------------------------------
 
-  upsertUser(input: {
+  /** FR-51: creates a PAM account. Returns null when the email is already registered. */
+  createAccount(input: {
     ownerId: string;
-    googleSub: string;
+    email: string;
     displayName: string | null;
+    salt: Buffer;
+    passwordHash: Buffer;
+    kdf: string;
     at: string;
-  }): void {
-    this.db
-      .prepare(
-        `INSERT INTO users (owner_id, google_sub, display_name, created_at, last_seen_at)
-         VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(owner_id) DO UPDATE SET
-           display_name = COALESCE(excluded.display_name, users.display_name),
-           last_seen_at = excluded.last_seen_at`,
-      )
-      .run(input.ownerId, input.googleSub, input.displayName, input.at, input.at);
+  }): AccountRecord | null {
+    if (this.findAccountByEmail(input.email)) return null;
+    try {
+      this.db
+        .prepare(
+          `INSERT INTO users (
+             owner_id, email, display_name, salt, password_hash, kdf, created_at, last_seen_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          input.ownerId,
+          input.email,
+          input.displayName,
+          input.salt,
+          input.passwordHash,
+          input.kdf,
+          input.at,
+          input.at,
+        );
+    } catch {
+      // A concurrent insert hit the unique index first: still a duplicate, never a 500.
+      return null;
+    }
+    return this.findAccountByEmail(input.email);
   }
 
-  getUser(ownerId: string): { displayName: string | null } | null {
+  findAccountByEmail(email: string): AccountRecord | null {
     const row = this.db
-      .prepare('SELECT display_name FROM users WHERE owner_id = ?')
-      .get(ownerId) as { display_name: string | null } | undefined;
-    return row ? { displayName: row.display_name } : null;
+      .prepare(
+        `SELECT owner_id, email, display_name, salt, password_hash, kdf, created_at
+         FROM users WHERE email = ?`,
+      )
+      .get(email) as
+      | {
+          owner_id: string;
+          email: string;
+          display_name: string | null;
+          salt: Uint8Array;
+          password_hash: Uint8Array;
+          kdf: string;
+          created_at: string;
+        }
+      | undefined;
+    if (!row) return null;
+    return {
+      ownerId: row.owner_id,
+      email: row.email,
+      displayName: row.display_name,
+      salt: Buffer.from(row.salt),
+      passwordHash: Buffer.from(row.password_hash),
+      kdf: row.kdf,
+      createdAt: row.created_at,
+    };
+  }
+
+  getUser(ownerId: string): { displayName: string | null; email: string | null } | null {
+    const row = this.db
+      .prepare('SELECT display_name, email FROM users WHERE owner_id = ?')
+      .get(ownerId) as { display_name: string | null; email: string | null } | undefined;
+    return row ? { displayName: row.display_name, email: row.email } : null;
+  }
+
+  touchAccount(ownerId: string, at: string): void {
+    this.db.prepare('UPDATE users SET last_seen_at = ? WHERE owner_id = ?').run(at, ownerId);
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Login throttling (FR-53). The key is already a hash; nothing identifying is stored here.
+  // ---------------------------------------------------------------------------------------------
+
+  loginFailureState(attemptKey: string, now: Date, windowMs: number): LoginFailureState {
+    const row = this.db
+      .prepare('SELECT failed_count, window_start FROM login_attempts WHERE attempt_key = ?')
+      .get(attemptKey) as { failed_count: number; window_start: string } | undefined;
+    if (!row) return { failedCount: 0, windowStartMs: now.getTime() };
+    const windowStartMs = Date.parse(row.window_start);
+    if (!Number.isFinite(windowStartMs) || now.getTime() - windowStartMs >= windowMs) {
+      // An expired window starts over rather than carrying old failures forward.
+      return { failedCount: 0, windowStartMs: now.getTime() };
+    }
+    return { failedCount: row.failed_count, windowStartMs };
+  }
+
+  registerLoginFailure(attemptKey: string, now: Date, windowMs: number): number {
+    const state = this.loginFailureState(attemptKey, now, windowMs);
+    const next = state.failedCount + 1;
+    const windowStart = new Date(state.failedCount === 0 ? now.getTime() : state.windowStartMs);
+    this.db
+      .prepare(
+        `INSERT INTO login_attempts (attempt_key, failed_count, window_start, updated_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(attempt_key) DO UPDATE SET
+           failed_count = excluded.failed_count,
+           window_start = excluded.window_start,
+           updated_at = excluded.updated_at`,
+      )
+      .run(attemptKey, next, windowStart.toISOString(), now.toISOString());
+    return next;
+  }
+
+  deleteLoginFailures(attemptKey: string): void {
+    this.db.prepare('DELETE FROM login_attempts WHERE attempt_key = ?').run(attemptKey);
   }
 
   createSession(input: {

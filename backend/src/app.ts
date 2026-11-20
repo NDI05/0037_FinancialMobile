@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import express, { type NextFunction, type Request, type Response, Router } from 'express';
 import { ApiError, badRequest, notFound } from './errors.js';
 import { ownerRef, type Logger } from './logger.js';
+import { accountsRouter } from './routes/accounts.js';
 import { analysesRouter } from './routes/analyses.js';
 import { budgetPlansRouter } from './routes/budgetPlans.js';
 import { consentsRouter } from './routes/consents.js';
@@ -12,16 +13,13 @@ import { meRouter } from './routes/me.js';
 import { sessionsRouter } from './routes/sessions.js';
 import { summariesRouter } from './routes/summaries.js';
 import { requireSession } from './auth/session.js';
-import type { GoogleVerifier } from './auth/google.js';
 import type { RouteDeps } from './routes/deps.js';
 
 /**
  * App factory (contract §1). Every dependency is injected, so tests build the whole HTTP surface
  * without a network, a real Google key or a real LLM.
  */
-export interface AppDeps extends RouteDeps {
-  readonly verifier: GoogleVerifier;
-}
+export type AppDeps = RouteDeps;
 
 function correlationMiddleware(request: Request, response: Response, next: NextFunction): void {
   // Always server-generated: an inbound value could inject newlines into the log.
@@ -84,10 +82,11 @@ export function createApp(deps: AppDeps): express.Express {
   const authenticated = requireSession(deps.store, deps.config.sessionPepper, deps.logger);
 
   app.use(healthRouter(Date.now()));
-  app.use(sessionsRouter(deps, deps.verifier, authenticated));
+  app.use(sessionsRouter(deps, authenticated));
 
   // Auth is attached per route (not mounted on a scope): a scope-level middleware would run for
   // paths that belong to another router, turning a 404 or the internal sweep into a 401.
+  app.use(accountsRouter(deps));
   app.use(meRouter(deps, authenticated));
   app.use(consentsRouter(deps, authenticated));
   app.use(summariesRouter(deps, authenticated));

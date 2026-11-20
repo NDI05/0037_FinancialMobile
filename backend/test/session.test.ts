@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { hashAccessToken } from '../src/auth/session.js';
-import { api, createHarness, grantConsent, login, samplePayload, type Harness } from './helpers.js';
+import {
+  api,
+  createHarness,
+  emailFor,
+  grantConsent,
+  login,
+  register,
+  samplePayload,
+  TEST_PASSWORD,
+  type Harness,
+} from './helpers.js';
 
 /** Contract §2.2 / §8 bullet 2: mint, use, revoke, and refuse anything else. */
 let harness: Harness;
@@ -23,7 +33,7 @@ test('the session token authenticates /v1/me', async () => {
 });
 
 test('sign out revokes immediately (FR-05)', async () => {
-  const token = await login(harness, 'google-sub-revoke');
+  const token = await login(harness, 'user-revoke');
   assert.equal((await api(harness, 'GET', '/v1/me', { token })).status, 200);
 
   const revoked = await api(harness, 'DELETE', '/v1/sessions', { token });
@@ -45,13 +55,9 @@ test('a missing bearer token is rejected', async () => {
 });
 
 test('an expired session is rejected', async () => {
-  const ownerId = 'u_expired-test';
-  harness.store.upsertUser({
-    ownerId,
-    googleSub: 'google-sub-expired',
-    displayName: 'Expired',
-    at: new Date().toISOString(),
-  });
+  const email = emailFor('user-expired');
+  await register(harness, email, TEST_PASSWORD, 'Expired');
+  const ownerId = harness.store.findAccountByEmail(email)!.ownerId;
   const rawToken = 'expired-token-value';
   harness.store.createSession({
     ownerId,
@@ -64,7 +70,7 @@ test('an expired session is rejected', async () => {
 });
 
 test('the raw token is never stored', async () => {
-  const token = await login(harness, 'google-sub-storage');
+  const token = await login(harness, 'user-storage');
   const rows = harness.store.findSessionByHash(hashAccessToken(token, harness.config.sessionPepper));
   assert.ok(rows, 'session row exists for the hash');
   // There is no API that returns a token hash; prove the token itself is not a column value.
@@ -73,8 +79,8 @@ test('the raw token is never stored', async () => {
 });
 
 test('a token from one user does not authenticate another', async () => {
-  const alice = await login(harness, 'google-sub-a');
-  const bob = await login(harness, 'google-sub-b');
+  const alice = await login(harness, 'user-a');
+  const bob = await login(harness, 'user-b');
   assert.notEqual(alice, bob);
   await grantConsent(harness, alice);
   const aliceMe = await api(harness, 'GET', '/v1/me', { token: alice });

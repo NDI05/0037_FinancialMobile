@@ -98,28 +98,39 @@ SUMMARY_PAYLOAD="$(node -e '
   process.stdout.write(JSON.stringify({ inputRevision: payload.inputRevision, payload: payload.payload }));
 ' "$ANALYSIS_PAYLOAD")"
 
-say "1/9 health"
+say "1/10 health"
 request GET /healthz
 
-say "2/9 session ($SMOKE_USER, token dev tanpa Google)"
-request POST /v1/sessions "{\"idToken\":\"dev:$SMOKE_USER:Andhika\"}"
-TOKEN="$(json_field accessToken)"
-if [ -z "$TOKEN" ] || [ "$TOKEN" = "undefined" ]; then
-  printf '\nTidak ada accessToken — backend hidup dengan AUTH_DEV_FAKE_TOKENS=false?\n' >&2
+INVITE="${REGISTRATION_INVITE_CODE:-pam-dev}"
+EMAIL="smoke-$SMOKE_USER@example.test"
+PASSWORD="smoke-password-$SMOKE_USER"
+
+say "2/9 daftar akun ($EMAIL, kode undangan dari env)"
+request POST /v1/accounts "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\",\"displayName\":\"Andhika\",\"inviteCode\":\"$INVITE\"}"
+if [ "$LAST_CODE" != "201" ]; then
+  printf '\nPendaftaran gagal. Set REGISTRATION_INVITE_CODE (dev default: pam-dev) atau pakai SMOKE_USER lain.\n' >&2
   exit 1
 fi
 
-say "3/9 consent AI (FR-34)"
+say "3/10 masuk (email + password)"
+request POST /v1/sessions "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}"
+TOKEN="$(json_field accessToken)"
+if [ -z "$TOKEN" ] || [ "$TOKEN" = "undefined" ]; then
+  printf '\nTidak ada accessToken — periksa kredensial akun smoke.\n' >&2
+  exit 1
+fi
+
+say "4/10 consent AI (FR-34)"
 request POST /v1/consents '{"purpose":"AI_PROCESSING","decision":"GRANTED","noticeVersion":"v1"}' "$TOKEN"
 
-say "4/9 simpan agregat 2026-02 (FR-33, terenkripsi)"
+say "5/10 simpan agregat 2026-02 (FR-33, terenkripsi)"
 request PUT /v1/summaries/2026-02 "$SUMMARY_PAYLOAD" "$TOKEN"
 
-say "5/9 analisis pertama (provider palsu)"
+say "6/10 analisis pertama (provider palsu)"
 request POST /v1/analyses "$ANALYSIS_PAYLOAD" "$TOKEN" "smoke-1-$SMOKE_USER"
 FIRST_ANALYSIS="$(cat "$BODY")"
 
-say "6/9 analisis kedua dengan revision sama (cache FR-40)"
+say "7/10 analisis kedua dengan revision sama (cache FR-40)"
 request POST /v1/analyses "$ANALYSIS_PAYLOAD" "$TOKEN" "smoke-2-$SMOKE_USER"
 SECOND_ANALYSIS="$(cat "$BODY")"
 if [ "$FIRST_ANALYSIS" = "$SECOND_ANALYSIS" ]; then
@@ -128,7 +139,7 @@ else
   printf '\033[33mcache: respons berbeda — periksa revision/promptVersion\033[0m\n'
 fi
 
-say "7/9 rencana anggaran 2026-03 (FR-42…FR-45)"
+say "8/10 rencana anggaran 2026-03 (FR-42…FR-45)"
 request PUT /v1/budget-plans/2026-03 '{
   "plan": {
     "expectedIncomeMinor": 287500000,
@@ -141,10 +152,10 @@ request PUT /v1/budget-plans/2026-03 '{
 }' "$TOKEN"
 request GET /v1/budget-plans/2026-03 "" "$TOKEN"
 
-say "8/9 status akun (FR-49)"
+say "9/10 status akun (FR-49)"
 request GET /v1/me "" "$TOKEN"
 
-say "9/9 penghapusan (FR-47/FR-48)"
+say "10/10 penghapusan (FR-47/FR-48)"
 request POST /v1/deletion-requests "" "$TOKEN"
 DELETION_ID="$(json_field id)"
 request GET "/v1/deletion-requests/$DELETION_ID" "" "$TOKEN"

@@ -3,7 +3,6 @@ import { createAnalysisProvider } from './llm/index.js';
 import { createJsonLogger, type Logger } from './logger.js';
 import { openDatabase } from './store/db.js';
 import { Store } from './store/store.js';
-import { createVerifierForConfig } from './auth/google.js';
 import { createApp } from './app.js';
 
 /**
@@ -26,12 +25,6 @@ export function buildServer(config: AppConfig) {
   const swept = store.sweepDeletions(new Date().toISOString());
   if (swept > 0) logger.info('deletion_sweep_on_boot', { completed: swept });
 
-  const verifier = createVerifierForConfig({
-    clientId: config.googleClientId,
-    jwksUrl: config.googleJwksUrl,
-    devFakeTokens: config.devFakeTokens,
-    nodeEnv: config.nodeEnv,
-  });
   const provider = createAnalysisProvider(config);
 
   const app = createApp({
@@ -39,7 +32,6 @@ export function buildServer(config: AppConfig) {
     store,
     logger,
     provider,
-    verifier,
     now: () => new Date(),
   });
 

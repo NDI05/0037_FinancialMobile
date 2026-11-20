@@ -11,7 +11,7 @@ import { analyze, createHarness, grantConsent, login, samplePayload } from './he
 async function harnessWith(scenario: ConstructorParameters<typeof FakeProvider>[0]) {
   const provider = new FakeProvider(scenario);
   const harness = await createHarness({ provider });
-  const token = await login(harness, `google-sub-${scenario}`);
+  const token = await login(harness, `user-${scenario}`);
   await grantConsent(harness, token);
   return { harness, token, provider };
 }

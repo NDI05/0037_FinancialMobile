@@ -12,7 +12,7 @@ let token: string;
 
 before(async () => {
   harness = await createHarness();
-  token = await login(harness, 'google-sub-payload');
+  token = await login(harness, 'user-payload');
   await grantConsent(harness, token);
 });
 

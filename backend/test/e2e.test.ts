@@ -2,7 +2,15 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { formatMinorDigits } from '../src/domain/money.js';
 import { FakeProvider } from '../src/llm/fake.js';
-import { api, analyze, createHarness, login, samplePayload } from './helpers.js';
+import {
+  api,
+  analyze,
+  createHarness,
+  emailFor,
+  register,
+  samplePayload,
+  TEST_PASSWORD,
+} from './helpers.js';
 
 /**
  * Contract §8 happy path, in the order the Android app drives it:
@@ -16,8 +24,13 @@ test('end-to-end: session, consent, summary, analysis, cache, plan, deletion', a
     assert.equal(health.status, 200);
     assert.equal(health.json.status, 'ok');
 
+    const email = emailFor('user-e2e');
+    const account = await register(harness, email, TEST_PASSWORD, 'Andhika');
+    assert.equal(account.status, 201);
+    assert.equal(account.json.displayName, 'Andhika');
+
     const session = await api(harness, 'POST', '/v1/sessions', {
-      body: { idToken: 'dev:google-sub-e2e:Andhika' },
+      body: { email, password: TEST_PASSWORD },
     });
     assert.equal(session.status, 201);
     const token = session.json.accessToken as string;

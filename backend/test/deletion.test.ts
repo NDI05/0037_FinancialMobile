@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ownerIdFromSubject } from '../src/auth/owner.js';
+import { ownerIdForSeed } from './helpers.js';
 import { analyze, api, createHarness, grantConsent, login, samplePayload } from './helpers.js';
 
 /**
@@ -9,7 +9,7 @@ import { analyze, api, createHarness, grantConsent, login, samplePayload } from 
  */
 async function seeded() {
   const harness = await createHarness({ env: { INTERNAL_SWEEP_TOKEN: 'sweep-token-for-tests' } });
-  const token = await login(harness, 'google-sub-delete');
+  const token = await login(harness, 'user-delete');
   await grantConsent(harness, token);
   assert.equal(
     (await api(harness, 'PUT', '/v1/summaries/2026-02', {
@@ -96,7 +96,7 @@ test('the sweep also runs on boot', async () => {
   const { harness, token } = await seeded();
   try {
     await api(harness, 'POST', '/v1/deletion-requests', { token });
-    const ownerId = ownerIdFromSubject('google-sub-delete');
+    const ownerId = ownerIdForSeed('user-delete');
     assert.equal(harness.store.hasPendingDeletion(ownerId), true);
 
     // `buildServer` runs exactly this on boot.

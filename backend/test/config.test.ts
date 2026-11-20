@@ -11,8 +11,7 @@ const productionBase = {
   SESSION_PEPPER: 'x'.repeat(40),
   DATA_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
   INTERNAL_SWEEP_TOKEN: 'y'.repeat(24),
-  AUTH_DEV_FAKE_TOKENS: 'false',
-  GOOGLE_WEB_CLIENT_ID: '123.apps.googleusercontent.com',
+  REGISTRATION_INVITE_CODE: 'invite-for-tests',
   LLM_PROVIDER: 'openai',
 } as const;
 

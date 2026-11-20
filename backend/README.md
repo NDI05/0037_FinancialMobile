@@ -22,7 +22,8 @@ curl localhost:8080/healthz
 ```
 
 Tanpa `.env` pun jalan: SQLite lokal di `./data/pam.db`, provider LLM **palsu** (deterministik),
-dan token sesi dev `dev:<sub>:<nama>` supaya seluruh alur bisa dicoba tanpa Google.
+dan kode undangan dev `pam-dev` supaya seluruh alur (daftar → masuk) bisa dicoba tanpa layanan
+eksternal.
 
 Uji seluruh happy path dari terminal lain:
 
@@ -41,7 +42,7 @@ cp .env.example .env
 
 | Variabel | Kapan wajib | Catatan |
 |---|---|---|
-| `GOOGLE_WEB_CLIENT_ID` | produksi | client ID Web dari `docs/05_REAL_GOOGLE_SETUP.md`; juga menjadi `aud` yang diverifikasi |
+| `REGISTRATION_INVITE_CODE` | produksi | kode undangan pendaftaran akun; minimal 8 karakter (dev: `pam-dev`) |
 | `SESSION_PEPPER` | produksi | `openssl rand -hex 32` |
 | `DATA_ENCRYPTION_KEY` | produksi | `openssl rand -base64 32` (32 byte AES-256-GCM), simpan terpisah dari file DB |
 | `INTERNAL_SWEEP_TOKEN` | produksi | `openssl rand -hex 24`; tanpa ini `POST /v1/internal/sweep` ditutup (404) |
@@ -103,7 +104,7 @@ npm test              # node:test + tsx, tanpa jaringan
 npm run build         # dist/ untuk Docker
 ```
 
-Yang diuji: verifikasi ID token Google (aud/exp/iss/signature), sesi dan pencabutannya, isolasi
+Yang diuji: registrasi/login akun PAM (scrypt, invite, rate limit), sesi dan pencabutannya, isolasi
 antar pengguna, gerbang consent, allowlist payload, penolakan keluaran LLM (JSON rusak, angka
 karangan, prompt-injection) dengan regenerasi maksimal satu kali, cache FR-40, kuota, enkripsi
 at-rest, penghapusan, dan log bebas PII.
@@ -114,7 +115,7 @@ at-rest, penghapusan, dan log bebas PII.
 docker build -t pam-backend .
 docker run -d --name pam-backend -p 8080:8080 \
   -e NODE_ENV=production \
-  -e GOOGLE_WEB_CLIENT_ID=... \
+  -e REGISTRATION_INVITE_CODE=... \
   -e SESSION_PEPPER=... \
   -e DATA_ENCRYPTION_KEY=... \
   -e INTERNAL_SWEEP_TOKEN=... \
@@ -136,7 +137,7 @@ src/
   config.ts            env + validasi produksi (fail fast)
   app.ts               factory Express (semua dependensi di-inject)
   server.ts            bootstrap: config → DB → sweep → HTTP
-  auth/                verifikasi ID token Google, sesi opaque, owner id turunan
+  auth/                akun PAM (scrypt), rate limit login, sesi opaque, owner id turunan
   store/               migrasi + seluruh query (selalu owner_id)
   domain/              skema payload, prompt analysis-v1, validasi keluaran, kuota
   llm/                 AnalysisProvider: fake (default) dan OpenAI/OpenRouter
@@ -146,7 +147,7 @@ src/
 
 ## Catatan keamanan
 
-- Tidak ada email, subject, sender, message id, token Google, PAN, nama merchant, catatan, atau
+- Tidak ada body/subject email, sender, message id, token, PAN, nama merchant, catatan, atau
   baris transaksi yang diterima maupun disimpan (FR-35).
 - Payload agregat, hasil analisis, dan rencana anggaran disimpan sebagai ciphertext AES-256-GCM
   per baris; AAD mengikat ciphertext ke pemilik dan tujuannya.

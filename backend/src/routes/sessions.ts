@@ -1,52 +1,68 @@
 import { Router, type RequestHandler } from 'express';
 import { z } from 'zod';
-import type { GoogleVerifier } from '../auth/google.js';
-import { ownerIdFromSubject } from '../auth/owner.js';
+import { unauthorized } from '../errors.js';
+import { assertLoginAllowed, clearLoginFailures, recordLoginFailure } from '../auth/rateLimit.js';
+import { dummyVerify, verifyPassword } from '../auth/password.js';
+import { normalizeEmail } from '../auth/owner.js';
 import { issueSession } from '../auth/session.js';
 import { notFound } from '../errors.js';
 import { parseBody } from '../http/validate.js';
 import type { RouteDeps } from './deps.js';
 
-const sessionRequestSchema = z
+const loginSchema = z
   .object({
-    idToken: z.string().min(1).max(6_000),
+    email: z.string().trim().max(254).email(),
+    password: z.string().min(1).max(200),
   })
   .strict();
 
 /**
- * POST /v1/sessions (contract §2.1) and DELETE /v1/sessions (§2.2).
+ * POST /v1/sessions (FR-51/FR-53) and DELETE /v1/sessions (§2.2).
  *
- * The token exchange is the only place the Google ID token is seen; it is verified, reduced to a
- * subject, and never stored or logged.
+ * Login answers `401 unauthorized` for both an unknown email and a wrong password, and it spends
+ * the same scrypt work in both cases, so neither the response nor its timing discloses whether the
+ * account exists. Five failures per email + address class within fifteen minutes answer 429; a
+ * successful login clears the counter.
  */
-export function sessionsRouter(
-  deps: RouteDeps,
-  verifier: GoogleVerifier,
-  authenticated: RequestHandler,
-): Router {
+export function sessionsRouter(deps: RouteDeps, authenticated: RequestHandler): Router {
   const router = Router();
 
   router.post('/v1/sessions', async (request, response) => {
-    const body = parseBody(sessionRequestSchema, request.body);
-    const identity = await verifier.verify(body.idToken);
-    const ownerId = ownerIdFromSubject(identity.sub);
+    const body = parseBody(loginSchema, request.body);
+    const email = normalizeEmail(body.email);
     const now = deps.now();
-    deps.store.upsertUser({
-      ownerId,
-      googleSub: identity.sub,
-      displayName: identity.name,
-      at: now.toISOString(),
+    const key = assertLoginAllowed(deps.store, email, clientAddress(request), now);
+
+    const account = deps.store.findAccountByEmail(email);
+    if (!account) {
+      // Same work as a real verify: no timing side channel.
+      await dummyVerify(body.password);
+      recordLoginFailure(deps.store, key, now);
+      throw unauthorized('Email or password is incorrect');
+    }
+
+    const valid = await verifyPassword(body.password, {
+      salt: account.salt,
+      hash: account.passwordHash,
+      kdf: account.kdf,
     });
-    const session = issueSession(deps.store, {
-      ownerId,
+    if (!valid) {
+      recordLoginFailure(deps.store, key, now);
+      throw unauthorized('Email or password is incorrect');
+    }
+
+    clearLoginFailures(deps.store, key);
+    deps.store.touchAccount(account.ownerId, now.toISOString());
+    const issued = issueSession(deps.store, {
+      ownerId: account.ownerId,
       pepper: deps.config.sessionPepper,
       ttlDays: deps.config.sessionTtlDays,
       now,
     });
     response.status(201).json({
-      accessToken: session.accessToken,
-      expiresAt: session.expiresAt,
-      displayName: identity.name,
+      accessToken: issued.accessToken,
+      expiresAt: issued.expiresAt,
+      displayName: account.displayName,
     });
   });
 
@@ -59,4 +75,9 @@ export function sessionsRouter(
   });
 
   return router;
+}
+
+/** Express reports the peer address as `request.ip`; the limiter only keeps a hashed class of it. */
+function clientAddress(request: { ip?: string; socket?: { remoteAddress?: string } }): string {
+  return request.ip ?? request.socket?.remoteAddress ?? 'unknown';
 }

@@ -4,9 +4,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Express } from 'express';
-import { createLocalJWKSet, generateKeyPair, exportJWK, SignJWT, type JWK } from 'jose';
 import { createApp } from '../src/app.js';
-import { createVerifierForConfig, createGoogleVerifier, type GoogleVerifier } from '../src/auth/google.js';
+import { ownerIdForEmail } from '../src/auth/owner.js';
 import { loadConfig, type AppConfig } from '../src/config.js';
 import type { AggregatePayload } from '../src/domain/payload.js';
 import { FakeProvider, type FakeScenario } from '../src/llm/fake.js';
@@ -31,7 +30,6 @@ export interface Harness {
 
 export interface HarnessOptions {
   readonly provider?: AnalysisProvider;
-  readonly verifier?: GoogleVerifier;
   readonly env?: Record<string, string>;
   readonly databasePath?: string;
   readonly now?: () => Date;
@@ -45,7 +43,6 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
   const config = loadConfig({
     NODE_ENV: 'test',
     DATABASE_PATH: options.databasePath ?? ':memory:',
-    GOOGLE_WEB_CLIENT_ID: 'test-client-id.apps.googleusercontent.com',
     ...options.env,
   } as NodeJS.ProcessEnv);
 
@@ -54,21 +51,12 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
   const logs: string[] = [];
   const logger = createJsonLogger({ level: 'debug', sink: (line) => logs.push(line) });
   const provider = options.provider ?? new FakeProvider('valid');
-  const verifier =
-    options.verifier ??
-    createVerifierForConfig({
-      clientId: config.googleClientId,
-      jwksUrl: config.googleJwksUrl,
-      devFakeTokens: true,
-      nodeEnv: 'development',
-    });
 
   const app = createApp({
     config,
     store,
     logger,
     provider,
-    verifier,
     now: options.now ?? (() => new Date()),
   });
 
@@ -121,13 +109,50 @@ export async function api(
   return { status: response.status, json, text, headers: response.headers };
 }
 
+/** One password for every test account; scrypt is deliberately slow, so tests reuse it. */
+export const TEST_PASSWORD = 'correct-horse-battery-staple';
+
+export function emailFor(seed: string): string {
+  return `${seed.trim().toLowerCase()}@example.test`;
+}
+
+export function ownerIdForSeed(seed: string): string {
+  return ownerIdForEmail(emailFor(seed));
+}
+
+export async function register(
+  harness: Harness,
+  email: string,
+  password: string = TEST_PASSWORD,
+  displayName: string | null = 'Alice',
+  inviteCode: string = harness.config.registrationInviteCode,
+): Promise<ApiResult> {
+  return api(harness, 'POST', '/v1/accounts', {
+    body: {
+      email,
+      password,
+      ...(displayName === null ? {} : { displayName }),
+      inviteCode,
+    },
+  });
+}
+
+/**
+ * Registers (idempotently) and logs in, returning the opaque access token. Every test that needs an
+ * authenticated user goes through here, so the account flow is exercised by the whole suite.
+ */
 export async function login(
   harness: Harness,
-  sub = 'google-sub-alice',
+  seed = 'alice',
   name = 'Alice',
 ): Promise<string> {
+  const email = emailFor(seed);
+  const registered = await register(harness, email, TEST_PASSWORD, name);
+  if (registered.status !== 201 && registered.status !== 409) {
+    throw new Error(`register failed: ${registered.status} ${registered.text}`);
+  }
   const result = await api(harness, 'POST', '/v1/sessions', {
-    body: { idToken: `dev:${sub}:${name}` },
+    body: { email, password: TEST_PASSWORD },
   });
   if (result.status !== 201) {
     throw new Error(`login failed: ${result.status} ${result.text}`);
@@ -198,55 +223,6 @@ export async function analyze(
       payload: options.payload ?? samplePayload({ monthId }),
     },
   });
-}
-
-// -------------------------------------------------------------------------------------------
-// Google token fixtures for the auth tests
-// -------------------------------------------------------------------------------------------
-
-export interface GoogleFixture {
-  readonly privateKey: Awaited<ReturnType<typeof generateKeyPair>>['privateKey'];
-  readonly verifier: GoogleVerifier;
-  readonly clientId: string;
-  sign(options?: {
-    kid?: string;
-    issuer?: string;
-    audience?: string;
-    subject?: string;
-    issuedAt?: number;
-    expiresIn?: number;
-    key?: Awaited<ReturnType<typeof generateKeyPair>>['privateKey'];
-  }): Promise<string>;
-}
-
-export async function createGoogleFixture(clientId: string): Promise<GoogleFixture> {
-  const { privateKey, publicKey } = await generateKeyPair('RS256');
-  const { privateKey: otherKey } = await generateKeyPair('RS256');
-  const jwk = (await exportJWK(publicKey)) as JWK;
-  jwk.kid = 'test-key';
-  jwk.alg = 'RS256';
-  jwk.use = 'sig';
-  const jwks = createLocalJWKSet({ keys: [jwk] });
-  const verifier = createGoogleVerifier({ clientId, jwks });
-
-  return {
-    privateKey,
-    verifier,
-    clientId,
-    async sign(options = {}) {
-      const nowSeconds = Math.floor(Date.now() / 1000);
-      const issuedAt = options.issuedAt ?? nowSeconds;
-      const expiresIn = options.expiresIn ?? 600;
-      return new SignJWT({ name: 'Alice' })
-        .setProtectedHeader({ alg: 'RS256', kid: options.kid ?? 'test-key' })
-        .setIssuer(options.issuer ?? 'https://accounts.google.com')
-        .setAudience(options.audience ?? clientId)
-        .setSubject(options.subject ?? 'google-sub-auth')
-        .setIssuedAt(issuedAt)
-        .setExpirationTime(issuedAt + expiresIn)
-        .sign(options.key ?? privateKey);
-    },
-  };
 }
 
 export { FakeProvider };

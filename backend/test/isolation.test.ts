@@ -13,8 +13,8 @@ let bob: string;
 
 before(async () => {
   harness = await createHarness();
-  alice = await login(harness, 'google-sub-owner-a', 'Alice');
-  bob = await login(harness, 'google-sub-owner-b', 'Bob');
+  alice = await login(harness, 'user-owner-a', 'Alice');
+  bob = await login(harness, 'user-owner-b', 'Bob');
   await grantConsent(harness, alice);
   await grantConsent(harness, bob);
 });

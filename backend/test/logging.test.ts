@@ -9,7 +9,7 @@ import { analyze, api, createHarness, grantConsent, login, samplePayload } from 
 test('request logs are structured and contain no PII', async () => {
   const harness = await createHarness();
   try {
-    const token = await login(harness, 'google-sub-logging', 'Andhika Pratama');
+    const token = await login(harness, 'user-logging', 'Andhika Pratama');
     await grantConsent(harness, token);
     const created = await analyze(harness, token, { idempotencyKey: 'log-1' });
     assert.equal(created.status, 200);
@@ -41,7 +41,7 @@ test('request logs are structured and contain no PII', async () => {
     const raw = harness.logs.join('\n');
     const forbidden = [
       token,
-      'dev:google-sub-logging',
+      'dev:user-logging',
       'Andhika Pratama',
       '585000000',
       'Rp',
@@ -64,7 +64,7 @@ test('request logs are structured and contain no PII', async () => {
 test('an error response carries the same correlationId as its log line', async () => {
   const harness = await createHarness();
   try {
-    const token = await login(harness, 'google-sub-correlation');
+    const token = await login(harness, 'user-correlation');
     const response = await api(harness, 'GET', '/v1/analyses/2026-04', { token });
     assert.equal(response.status, 404);
     const correlationId = response.json.correlationId as string;

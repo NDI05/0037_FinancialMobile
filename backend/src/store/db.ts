@@ -22,20 +22,32 @@ export function openDatabase(path: string): DatabaseSync {
 }
 
 export function migrate(db: DatabaseSync): void {
+  let applied = false;
   const current = Number(
     (db.prepare('PRAGMA user_version').get() as { user_version?: number } | undefined)
       ?.user_version ?? 0,
   );
-  for (const migration of migrations) {
-    if (migration.version <= current) continue;
-    db.exec('BEGIN');
-    try {
-      db.exec(migration.sql);
-      db.exec(`PRAGMA user_version = ${migration.version}`);
-      db.exec('COMMIT');
-    } catch (error) {
-      db.exec('ROLLBACK');
-      throw error;
+  if (migrations.every((migration) => migration.version <= current)) return;
+
+  // A table rebuild (migration 2) cannot run with foreign keys enforced, and the pragma is a
+  // no-op inside a transaction, so it is toggled around the whole batch.
+  db.exec('PRAGMA foreign_keys = OFF');
+  try {
+    for (const migration of migrations) {
+      if (migration.version <= current) continue;
+      db.exec('BEGIN');
+      try {
+        db.exec(migration.sql);
+        db.exec(`PRAGMA user_version = ${migration.version}`);
+        db.exec('COMMIT');
+        applied = true;
+      } catch (error) {
+        db.exec('ROLLBACK');
+        throw error;
+      }
     }
+  } finally {
+    db.exec('PRAGMA foreign_keys = ON');
   }
+  if (applied) db.exec('PRAGMA foreign_key_check');
 }
