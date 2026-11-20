@@ -37,7 +37,7 @@ yang terkena, dampak pengguna, konsekuensi integrasi/keamanan, dan pembaruan acc
 | | |
 |---|---|
 | **Lama** | Enam state dipetakan ke kondisi OAuth. |
-| **Baru** | Enam state yang sama, dipetakan ke kondisi IMAP: `AUTHENTICATIONFAILED` ⇒ `REAUTHORIZATION_REQUIRED`; DNS/TLS/timeout ⇒ `UNAVAILABLE`; login OK ⇒ `CONNECTED`. |
+| **Baru** | Enam state yang sama, dipetakan ke kondisi IMAP: `AUTHENTICATIONFAILED` ⇒ `REAUTHORIZATION_REQUIRED`; DNS/TLS/timeout ⇒ `UNAVAILABLE`; login OK ⇒ `CONNECTED`. Saat `REAUTHORIZATION_REQUIRED`, data yang sudah diimpor **tetap terbaca** (NFR-22) dan UI harus menyatakan itu, bukan menyembunyikannya sebagai "tidak ada data". |
 | **Dampak** | teks bantuan berubah: "kata sandi aplikasi dicabut" menggantikan "izin OAuth dicabut". |
 
 ### FR-10 — konfigurasi tidak lengkap
@@ -51,14 +51,14 @@ yang terkena, dampak pengguna, konsekuensi integrasi/keamanan, dan pembaruan acc
 | | |
 |---|---|
 | **Lama** | "query Gmail only for the configured Livin sender and approved notification subjects". |
-| **Baru** | "…query the mailbox over IMAP with the allow-listed sender and subject criteria (Gmail `X-GM-RAW`), so that an email display name or body mention alone shall not make a message eligible." |
+| **Baru** | "…query the mailbox over IMAP using standard RFC 3501 search keys (`FROM`, `SUBJECT`, `SINCE`/`BEFORE`) restricted to the allow-listed sender and subject criteria, so that an email display name or body mention alone shall not make a message eligible. Provider-specific extensions shall not be required." |
 | **Dampak** | tetap; `X-GM-RAW` mempertahankan ekspresi pencarian yang setara. |
 
 ### FR-16 — pagination
 | | |
 |---|---|
 | **Lama** | pagination Gmail API + ingestion buffer. |
-| **Baru** | "…fetch matching messages in bounded UID batches with an ingestion buffer, then determine month membership from the parsed transaction timestamp in Asia/Jakarta rather than the received time." |
+| **Baru** | "…page over the search result set in bounded batches (default 100 messages) with an ingestion buffer, then determine month membership from the parsed transaction timestamp in Asia/Jakarta rather than the received time." |
 
 ### FR-18 — deduplikasi
 | | |
@@ -72,6 +72,11 @@ yang terkena, dampak pengguna, konsekuensi integrasi/keamanan, dan pembaruan acc
 |---|---|
 | **Lama** | HTTPS + TLS 1.2 untuk Google API. |
 | **Baru** | "…IMAP over TLS 1.2+ on port 993 with certificate and hostname verification; no cleartext IMAP." |
+
+### NFR-05 — retry (klarifikasi)
+| | |
+|---|---|
+| **Baru (klarifikasi)** | Pada jalur IMAP, kegagalan autentikasi **tidak pernah** diulang otomatis. Kegagalan jaringan **tidak** di-retry di dalam sumber data; pemulihan dilakukan pada tingkat job impor (pengguna menekan coba lagi). Aturan "maksimal dua kali retry dengan backoff" tetap berlaku untuk panggilan backend, bukan untuk sesi IMAP. |
 
 ### NFR-14 — kredensial
 | | |
@@ -117,7 +122,7 @@ FR-54 **adalah pengganti langsung FR-08**, bukan requirement tambahan yang tidak
 | **FR-51** | The system shall authenticate the user with a PAM account (email + password) hashed using a memory-hard KDF (scrypt, N=2^15, r=8, p=1, 16-byte salt). Passwords shall be 8–200 characters. Registration shall be invite-only, so no separate registration throttle is required. Password, salt and hash shall never be logged. |
 | **FR-52** | The system shall allow the application to operate fully without a backend account, using a local profile and a local session, so offline use is preserved. |
 | **FR-53** | The system shall rate-limit failed account-login attempts to 5 per 15 minutes per email+address-class, where address-class is IPv4 `/24` and IPv6 `/64` behind a trusted proxy header, and shall not disclose whether an email exists. Both real and unknown emails shall take the same time to reject. |
-| **FR-54** | The system shall obtain mailbox credentials only from a user-entered Gmail app password, validate them with an IMAP login before storing, wrap them with an Android Keystore key, and clear them on sign out or disconnect. |
+| **FR-54** | The system shall obtain mailbox credentials only from a user-entered Gmail app password, validate them with an IMAP login **before** storing, wrap them with an Android Keystore key, and clear them on sign out, on disconnect, and on workspace deletion. A failed validation shall store nothing. |
 | **FR-55** | The system shall open the mailbox read-only and issue no IMAP command that mutates message or folder state. |
 | **FR-56** | The system shall store consented monthly aggregates and reports in a managed cloud database, encrypted at rest and at field level, while transaction-level rows remain on the device. **Pending Fase 4** — Fase 2 belum menyentuh storage. |
 
@@ -129,7 +134,7 @@ FR-54 **adalah pengganti langsung FR-08**, bukan requirement tambahan yang tidak
 | | |
 |---|---|
 | **Lama** | fingerprint dari Gmail message ID; sumber "Gmail body/header". |
-| **Baru** | fingerprint dari HMAC(`X-GM-MSGID` + fields); sumber "IMAP body". Larangan menyimpan raw identifier tetap: `X-GM-MSGID` **tidak** disimpan, hanya turunan HMAC-nya. Kunci HMAC per-pengguna dibangkitkan sekali, dibungkus kunci Android Keystore (pola yang sama dengan passphrase SQLCipher), dan dihapus saat workspace dihapus. Rotasi kunci mengubah fingerprint sehingga baris lama tidak lagi cocok — karena itu rotasi dilarang tanpa migrasi ulang. |
+| **Baru** | fingerprint dari HMAC(`UIDVALIDITY` + `UID` + fields); sumber "IMAP body". Larangan menyimpan raw identifier tetap: `UIDVALIDITY` dan `UID` **tidak** disimpan, hanya turunan HMAC 32-hex. Identitas bersifat **scoped ke folder**: pesan yang dipindah keluar INBOX tidak dibaca ulang — dapat diterima untuk deduplikasi, dan pesan tetap ada di data lokal. Kunci HMAC per-pengguna dibangkitkan sekali, dibungkus kunci Android Keystore (pola yang sama dengan passphrase SQLCipher), dan dihapus saat workspace dihapus. Rotasi kunci mengubah fingerprint sehingga baris lama tidak lagi cocok — karena itu rotasi dilarang tanpa migrasi ulang. |
 | **Tidak berubah** | larangan menyimpan body, header penuh, PAN, terminal ID, lampiran. |
 
 ---
@@ -182,7 +187,7 @@ AC01, AC02, AC03 harus ditulis ulang mengikuti alur baru.
 
 | ID | Isu | Owner | Gate |
 |---|---|---|---|
-| **OI-13** | Risiko App Password (akses kirim, kredensial panjang) **diterima**; mitigasi FR-54/FR-55 wajib diverifikasi | owner + security reviewer | G2 |
+| **OI-13** | Risiko App Password (akses kirim, kredensial panjang) **diterima**; mitigasi FR-54/FR-55 wajib diverifikasi. `FLAG_SECURE` dipasang **app-wide** di `MainActivity`, bukan hanya pada layar kredensial | owner + security reviewer | G2 |
 | **OI-14** | Google dapat menghentikan App Password kapan saja; rencana keluar: kembali ke OAuth bila perlu | Android lead | G3 |
 | **OI-15** | Turso free tier: kuota, backup, dan jalur pindah ke Postgres. "Portabel" berarti **dialek SQL tetap kompatibel** dan hanya driver klien yang diganti di balik lapisan store; migrasi ke Postgres bukan sekadar tukar driver karena tipe dan klausa `ON CONFLICT` berbeda | backend lead | G2 |
 | **OI-16** | Pengguna tanpa 2FA tidak bisa memakai fitur import email; harus dijelaskan di panduan | owner | G2 |
@@ -210,6 +215,16 @@ menerjemahkan change record ini menjadi kode:
 6. FR-56 ditandai *pending Fase 4*.
 7. OI-15 menjelaskan arti portabilitas dan mengapa pindah ke Postgres bukan tukar driver.
 8. Pemetaan eksplisit FR-08 → FR-54/FR-55 ditambahkan di §3a.
+
+Amandemen kedua setelah Fase 3 (IMAP) — semua keputusan implementasi yang harus masuk requirement:
+
+9. DR-02: basis fingerprint menjadi `UIDVALIDITY + UID`, dengan catatan scoped-folder.
+10. FR-11: memakai search key standar RFC 3501, bukan `X-GM-RAW`; ekstensi vendor tidak diperlukan.
+11. FR-16: paging berbasis offset dengan batas 100 pesan, bukan rentang UID.
+12. NFR-05: retry otomatis tidak berlaku untuk IMAP; pemulihan di tingkat job.
+13. FR-54: penghapusan workspace juga menghapus kredensial; validasi gagal tidak menyimpan apa pun.
+14. OI-13: `FLAG_SECURE` ditegaskan app-wide.
+15. FR-07: saat `REAUTHORIZATION_REQUIRED`, data lokal tetap terbaca dan UI wajib menyatakannya.
 
 ## 11. Sign-off
 
