@@ -17,26 +17,37 @@ it maps every requirement ID to where it is implemented.
 Bagian ini diperbarui setiap kali ada kemajuan. Kalau ragu apakah masih akurat, `git log` adalah
 kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 
-**Terakhir diperbarui:** 20 November 2026 · commit `8d1640d` + rancangan migrasi
+**Terakhir diperbarui:** 21 November 2026 · branch `fix/onboarding-import-stability` dari `c10ca67`
 
 | Area | Status |
 |---|---|
 | SRS v0.2 → v0.3 change record (CR-001, tanpa GCP) | ✅ selesai |
-| Aplikasi Android — 13 destinasi, 203 test JVM | ✅ jalan |
+| Aplikasi Android — 13 destinasi, 223 test JVM | ✅ jalan |
 | Akun PAM (email + password, scrypt) menggantikan Google Sign-In | ✅ selesai |
-| Gmail lewat **IMAP + App Password** (tanpa Google Cloud) | 🟡 tersambung; impor belum menyimpan |
+| Onboarding: akun baru → Persetujuan, tolak Gmail → jalur manual | ✅ diperbaiki + tes |
+| Gmail lewat **IMAP + App Password** (tanpa Google Cloud) | 🟡 MIME/HTML terbaca; impor fixture lulus; **Gmail nyata belum diverifikasi** |
+| Impor Livin → baris transaksi → total bulanan | 🟡 fixture end-to-end lulus; Gmail nyata ⬜ |
 | Backend Node + **Turso** (database cloud), 111 test | ✅ jalan |
 | LLM **Ollama lokal** (gratis, offline) | ✅ jalan |
 | Fase 5 — backup harian + deploy | ⬜ belum |
 | Fase 6 — APK release bertanda tangan | ⬜ belum |
 | **Kepatuhan Pedoman Project Akhir 2026** | 🟡 dianalisis, rancangan selesai, belum dieksekusi |
 
-**Sedang dikerjakan.** Parser menolak isi email Livin asli dengan `missing_amount`: pada email
-nyata labelnya ditulis `Nominal` **tanpa titik dua** (`nom_start=1 nom_colon=0`), sedangkan
-ekstraktor mencari `Nominal:`. Isi email sendiri sudah terbaca (765 karakter), jadi yang tersisa
-adalah format label — bukan lagi soal MIME.
+**Selesai pada tahap ini.** (1) Gate onboarding: profil baru langsung ke Persetujuan tanpa Back,
+sesi berakhir tidak memulihkan layar terlindungi, dan Persetujuan tetap bisa dibuka lagi untuk
+mengubah keputusan. (2) Tombol **Lanjut tanpa menghubungkan Gmail** mencatat penolakan secara
+eksplisit. (3) Impor: batas sel tabel HTML kini dipertahankan, sehingga label tanpa titik dua dan
+nilai di sel berikutnya terbaca; lampiran di dalam MIME tak bertipe ikut dihitung. Fixture impor
+menghasilkan 25 baris dan total Februari, dan impor ulang menghasilkan 0 baris baru.
 
-**Bukti terakhir di perangkat:** IMAP terkoneksi, 20 notifikasi Livin ditemukan, 0 tersimpan.
+**Belum selesai.** Impor ke mailbox Gmail sungguhan belum diuji ulang pada kode ini. Pemilik perlu
+menjalankan langkah di bagian *Real Gmail check* dan mengirim hasil yang sudah disanitasi. Bukti
+historis "20 ditemukan, 0 tersimpan" berlaku untuk build sebelum perbaikan ini.
+
+**Bukti emulator API 36 (21 November 2026):** profil lokal baru → Persetujuan tanpa interaksi
+tambahan; tolak Gmail → Ringkasan; impor kotak masuk demo **28 cocok / 25 tersimpan / 3 dilewati**;
+total Februari berubah `Rp0` → `Rp3.896.150`; impor ulang **0 tersimpan / 25 duplikat**; Back dan
+sign-out tidak memulihkan layar terlindungi.
 
 ### Kepatuhan pedoman
 
@@ -45,6 +56,7 @@ dengan SRS v0.3, dan pedoman yang menentukan nilai. Enam butir belum terpenuhi:
 
 | Butir | Syarat | Kondisi |
 |---|---|---|
+| D.3 | Navigasi Compose, alur awal benar | ✅ transisi akun baru dan back stack diperbaiki + tes |
 | D.8 | Database minimal MySQL; **Room dilarang** | ❌ masih Room + SQLCipher |
 | D.1 | Access token **JWT** + **refresh token** | ❌ token opaque |
 | D.2 | **Role-based UI**, minimal 1 peran | ❌ belum ada |
@@ -271,7 +283,11 @@ The suite is the specification, not decoration. Highlights:
 |---|---|
 | `CashFlowCalculatorTest` | The SRS B5 worked example, transfer exclusion, refund netting, non-IDR exclusion, zero-base percentage |
 | `LivinQrisParserTest` | Supported fixture, failed payment rejected, missing amount never zero, attachment-only and unknown template excluded, injected instructions ignored |
-| `ImportMonthUseCaseTest` | Pagination, retry, duplicate suppression, month boundaries |
+| `LivinMimeImportTest` | Untyped MIME → HTML table (no colon, value in the next cell) → parsed row → monthly total; re-import dedupe; owner separation; malformed amount, failed payment and attachment-only add nothing |
+| `ImapMimeTest` | Plain/HTML/attachment shapes, untyped root recovery, table-cell boundary |
+| `ImportMonthUseCaseTest` | Pagination, retry (partial and complete), duplicate suppression, timeout, month boundaries |
+| `GateRoutingTest` | New profile → Consent, saved decision → Overview, ended session never keeps a protected screen, Consent re-openable |
+| `ConsentViewModelTest` | Untouched switch is not a decision; explicit decline records DECLINED for Gmail and AI |
 | `FingerprintFactoryTest` | Determinism, per-user scoping, field sensitivity |
 | `AiPayloadBuilderTest` | Forbidden-field scan: no body, subject, sender, id, token, PAN or merchant |
 | `AnalysisValidatorTest`, `RequestAnalysisUseCaseTest` | Invented totals rejected, one regeneration max, no call without consent, mid-run withdrawal discarded |
@@ -280,10 +296,25 @@ The suite is the specification, not decoration. Highlights:
 | `PlanningGapTest` | Income 5.000.000 − savings 1.000.000 − limits 4.500.000 ⇒ shortfall 500.000 |
 | `DemoDatasetTest` | The demo numbers above |
 
+### Real Gmail check (owner-run)
+
+Fixture evidence does not prove a live mailbox. To close that gap on a **demo account**, run this
+and report only sanitized results:
+
+1. Build and install the debug APK, sign in, and grant Gmail consent.
+2. Settings → *Kelola kotak masuk* → enter the demo Gmail address and its 16-character App
+   Password → *Hubungkan kotak masuk*. (Never paste the password into a prompt, issue or commit.)
+3. Open the month that has Livin notifications and press *Impor sekarang*.
+4. Send back only: app commit, job state, and the four counters (`matched`, `saved`, `skipped`,
+   `unresolved`), plus the skip **reason codes** shown on the result screen.
+5. If it still fails, `adb logcat -d | grep -E "ImportMonth|ImapGmail"` contains integer-only
+   diagnostics (`chars`, `plain`, `html`, `nom_start`, `nom_colon`, `next_len`). Send those numbers
+   only — never the email body, sender address, message id, or any amount.
+
 ### Design review harness
 
-A device emulator cannot run in this sandbox, so screens are rendered on the JVM with
-Roborazzi + Robolectric native graphics:
+Screens are also rendered on the JVM with Roborazzi + Robolectric native graphics, so layout can
+be reviewed without a device:
 
 ```bash
 ./scripts/build.sh :app:recordRoborazziDebug --tests "com.pam.recap.screenshot.ScreenScreenshotsTest"
@@ -312,9 +343,10 @@ These come from the SRS's own open-issues list (Appendix C) and are recorded rat
 
 - **OI-13** The IMAP App Password also permits sending mail and never expires on its own. It is
   stored Keystore-wrapped, never leaves the device, and is cleared on sign-out.
-- **Parser coverage** Only the notification layouts exercised by fixtures are understood. A real
-  `Pembayaran Berhasil!` body is currently rejected (`missing_amount`, label without a colon) —
-  the open blocker in Progress above.
+- **Parser coverage** Only the notification layouts exercised by fixtures are understood. The
+  measured table layout (label without a colon, value in the next cell) is now covered and the
+  import path is proven with anonymized MIME fixtures, but a live Gmail run is still required
+  before claiming real-mailbox success.
 - **OI-02 / OI-06** The Livin sender and subject allow-list reflects one manually reviewed QRIS
   payment notification. MIME/HTML variants and language changes are not exhaustively covered.
 - **OI-03** Incoming-transfer templates are unverified, so income is manual-entry only (A4).
