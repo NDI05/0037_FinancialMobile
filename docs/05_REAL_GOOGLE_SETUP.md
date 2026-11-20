@@ -1,3 +1,13 @@
+> ## ⚠️ DOKUMEN INI SUDAH DIGANTIKAN (20 Nov 2026)
+>
+> Owner memutuskan proyek **lepas penuh dari Google Cloud Platform**: Gmail dibaca lewat
+> **IMAP + App Password**, dan identitas memakai **akun PAM** (email + password), bukan Google
+> Sign-In. Lihat [`08_ROADMAP.md`](08_ROADMAP.md) dan
+> [`09_SRS_CHANGE_v0.3.md`](09_SRS_CHANGE_v0.3.md).
+>
+> Dokumen ini disimpan hanya sebagai **referensi historis** — berguna kalau suatu saat OAuth
+> dibutuhkan lagi (mis. Google menghentikan App Password, OI-14). **Jangan diikuti lagi.**
+
 # Menyiapkan Google sungguhan untuk PAM
 
 Dokumen ini adalah daftar lengkap hal yang **harus Anda siapkan** sebelum aplikasi bisa keluar
