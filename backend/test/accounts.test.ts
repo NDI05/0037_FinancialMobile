@@ -152,7 +152,7 @@ test('sign out revokes the token immediately', async () => {
 test('the stored digest is scrypt with a random salt and verifies correctly', async () => {
   const email = emailFor('scrypt');
   await register(harness, email, TEST_PASSWORD);
-  const account = harness.store.findAccountByEmail(email);
+  const account = await harness.store.findAccountByEmail(email);
   assert.ok(account);
   assert.match(account.kdf, /^scrypt:N=32768,r=8,p=1$/);
   assert.equal(account.salt.length, 16);

@@ -97,13 +97,13 @@ test('the sweep also runs on boot', async () => {
   try {
     await api(harness, 'POST', '/v1/deletion-requests', { token });
     const ownerId = ownerIdForSeed('user-delete');
-    assert.equal(harness.store.hasPendingDeletion(ownerId), true);
+    assert.equal(await harness.store.hasPendingDeletion(ownerId), true);
 
     // `buildServer` runs exactly this on boot.
-    const completed = harness.store.sweepDeletions(new Date().toISOString());
+    const completed = await harness.store.sweepDeletions(new Date().toISOString());
     assert.equal(completed, 1);
-    assert.equal(harness.store.hasPendingDeletion(ownerId), false);
-    assert.equal(harness.store.getSummary(ownerId, '2026-02'), null);
+    assert.equal(await harness.store.hasPendingDeletion(ownerId), false);
+    assert.equal(await harness.store.getSummary(ownerId, '2026-02'), null);
   } finally {
     await harness.close();
   }

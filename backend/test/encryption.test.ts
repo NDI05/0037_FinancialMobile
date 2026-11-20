@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import { createClient } from '@libsql/client';
 import { test } from 'node:test';
 import { ownerIdForSeed } from './helpers.js';
 import { analyze, api, createHarness, grantConsent, login, samplePayload, tempDatabasePath } from './helpers.js';
@@ -47,11 +47,11 @@ test('sealed fields never appear in the database file, and decrypt correctly', a
     // Write a marker into an analysis text by using a provider-free path: the fake's own prose is
     // already distinctive, so assert on both the amount and a sentence fragment.
     const ownerId = ownerIdForSeed('user-crypto');
-    const stored = harness.store.getSummary(ownerId, '2026-02');
+    const stored = await harness.store.getSummary(ownerId, '2026-02');
     assert.ok(stored);
     assert.equal(stored.payload.grossInflowMinor, MARKER_AMOUNT);
-    assert.equal(harness.store.getBudgetPlan(ownerId, '2026-03')?.plan.expectedIncomeMinor, MARKER_AMOUNT);
-    assert.ok(harness.store.latestAnalysis(ownerId, '2026-02')?.analysis.observations.length);
+    assert.equal((await harness.store.getBudgetPlan(ownerId, '2026-03'))?.plan.expectedIncomeMinor, MARKER_AMOUNT);
+    assert.ok((await harness.store.latestAnalysis(ownerId, '2026-02'))?.analysis.observations.length);
 
     const directory = dirname(databasePath);
     const files = readdirSync(directory).filter((name) => name.includes('pam.db'));
@@ -95,22 +95,31 @@ test('a ciphertext copied to another owner fails to decrypt (AAD binds the owner
 
     const aliceOwner = ownerIdForSeed('user-crypto-a');
     const bobOwner = ownerIdForSeed('user-crypto-b');
-    const aliceRow = harness.store.getSummary(aliceOwner, '2026-02');
+    const aliceRow = await harness.store.getSummary(aliceOwner, '2026-02');
     assert.ok(aliceRow);
 
-    // Copy Alice's sealed columns onto Bob's row, straight in the database.
-    const db = new DatabaseSync(databasePath);
-    const columns = db
-      .prepare('SELECT ciphertext, iv, tag, key_version FROM summaries WHERE owner_id = ?')
-      .get(aliceOwner) as { ciphertext: Uint8Array; iv: Uint8Array; tag: Uint8Array; key_version: number };
-    db.prepare(
-      'UPDATE summaries SET ciphertext = ?, iv = ?, tag = ?, key_version = ? WHERE owner_id = ?',
-    ).run(columns.ciphertext, columns.iv, columns.tag, columns.key_version, bobOwner);
-    db.close();
+    // Copy Alice's sealed columns onto Bob's row, straight in the database (same libSQL driver).
+    const raw = createClient({ url: `file:${databasePath}` });
+    try {
+      const columns = (
+        await raw.execute({
+          sql: 'SELECT ciphertext, iv, tag, key_version FROM summaries WHERE owner_id = ?',
+          args: [aliceOwner],
+        })
+      ).rows[0] as unknown as { ciphertext: ArrayBuffer; iv: ArrayBuffer; tag: ArrayBuffer; key_version: number };
+      await raw.execute({
+        sql: 'UPDATE summaries SET ciphertext = ?, iv = ?, tag = ?, key_version = ? WHERE owner_id = ?',
+        args: [columns.ciphertext, columns.iv, columns.tag, columns.key_version, bobOwner],
+      });
+    } finally {
+      raw.close();
+    }
 
-    assert.throws(() => harness.store.getSummary(bobOwner, '2026-02'));
+    await assert.rejects(async () => {
+      await harness.store.getSummary(bobOwner, '2026-02');
+    });
     // Alice's own row is untouched.
-    assert.equal(harness.store.getSummary(aliceOwner, '2026-02')?.payload.grossInflowMinor, 555_000_000);
+    assert.equal((await harness.store.getSummary(aliceOwner, '2026-02'))?.payload.grossInflowMinor, 555_000_000);
   } finally {
     await harness.close();
   }

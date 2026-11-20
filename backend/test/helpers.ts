@@ -40,14 +40,22 @@ export function tempDatabasePath(): string {
 }
 
 export async function createHarness(options: HarnessOptions = {}): Promise<Harness> {
+  const databasePath = options.databasePath ?? ':memory:';
+  const databaseUrl =
+    databasePath === ':memory:' ||
+    databasePath.startsWith('file:') ||
+    databasePath.startsWith('libsql:') ||
+    databasePath.startsWith('http')
+      ? databasePath
+      : `file:${databasePath}`;
   const config = loadConfig({
     NODE_ENV: 'test',
-    DATABASE_PATH: options.databasePath ?? ':memory:',
+    DATABASE_URL: databaseUrl,
     ...options.env,
   } as NodeJS.ProcessEnv);
 
-  const db = openDatabase(config.databasePath);
-  const store = new Store({ db, dataKey: config.dataKey, keyVersion: config.dataKeyVersion });
+  const client = await openDatabase(config.database);
+  const store = new Store({ client, dataKey: config.dataKey, keyVersion: config.dataKeyVersion });
   const logs: string[] = [];
   const logger = createJsonLogger({ level: 'debug', sink: (line) => logs.push(line) });
   const provider = options.provider ?? new FakeProvider('valid');
@@ -73,7 +81,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
     logs,
     async close() {
       await new Promise<void>((resolve) => server.close(() => resolve()));
-      store.close();
+      await store.close();
     },
   };
 }

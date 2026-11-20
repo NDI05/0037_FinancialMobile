@@ -57,9 +57,9 @@ test('a missing bearer token is rejected', async () => {
 test('an expired session is rejected', async () => {
   const email = emailFor('user-expired');
   await register(harness, email, TEST_PASSWORD, 'Expired');
-  const ownerId = harness.store.findAccountByEmail(email)!.ownerId;
+  const ownerId = (await harness.store.findAccountByEmail(email))!.ownerId;
   const rawToken = 'expired-token-value';
-  harness.store.createSession({
+  await harness.store.createSession({
     ownerId,
     tokenHash: hashAccessToken(rawToken, harness.config.sessionPepper),
     createdAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
@@ -71,7 +71,7 @@ test('an expired session is rejected', async () => {
 
 test('the raw token is never stored', async () => {
   const token = await login(harness, 'user-storage');
-  const rows = harness.store.findSessionByHash(hashAccessToken(token, harness.config.sessionPepper));
+  const rows = await harness.store.findSessionByHash(hashAccessToken(token, harness.config.sessionPepper));
   assert.ok(rows, 'session row exists for the hash');
   // There is no API that returns a token hash; prove the token itself is not a column value.
   const stored = JSON.stringify(rows);
