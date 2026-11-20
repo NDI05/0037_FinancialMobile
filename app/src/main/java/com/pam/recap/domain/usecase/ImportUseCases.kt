@@ -197,6 +197,16 @@ class ImportMonthUseCase @Inject constructor(
                     }
 
                     pageOrdinal++
+                    SafeLogger.counts(
+                        TAG,
+                        "import_page",
+                        "page" to pageOrdinal,
+                        "fetched" to page.value.messages.size,
+                        "saved" to imported,
+                        "duplicate" to duplicates,
+                        "skipped" to skipped,
+                        "unresolved" to unresolved,
+                    )
                     pageToken = page.value.nextPageToken
                     job = job.copy(
                         pagesProcessed = pageOrdinal,

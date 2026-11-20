@@ -21,6 +21,16 @@ object SafeLogger {
         Log.w(normalizeTag(tag), event + (error?.let { " code=${it.kind.name}" } ?: ""))
     }
 
+    /**
+     * Structured progress line. Values are [Int] only, so a caller cannot accidentally pass a
+     * subject, address or amount — the allow-list property of this logger is preserved while still
+     * making long-running work observable (`adb logcat -s ImportMonth`).
+     */
+    fun counts(tag: String, event: String, vararg values: Pair<String, Int>) {
+        val rendered = values.joinToString(" ") { (key, value) -> "$key=$value" }
+        Log.i(normalizeTag(tag), if (rendered.isEmpty()) event else "$event $rendered")
+    }
+
     fun failure(tag: String, event: String, error: AppError? = null) {
         Log.e(normalizeTag(tag), event + (error?.let { " code=${it.kind.name}" } ?: ""))
     }

@@ -10,6 +10,16 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LOG="$ROOT/backend/.dev-server.log"
+
+if [[ "${1:-}" == "--logs" || "${1:-}" == "-l" ]]; then
+  if [[ ! -f "$LOG" ]]; then
+    echo "Belum ada log di $LOG — jalankan ./scripts/dev.sh dulu." >&2
+    exit 1
+  fi
+  echo "Menampilkan log backend (Ctrl+C untuk berhenti melihat, server tetap jalan)."
+  exec tail -f "$LOG"
+fi
 ADB="${ADB:-$HOME/Library/Android/sdk/platform-tools/adb}"
 PORT="${PAM_PORT:-8080}"
 
@@ -42,13 +52,13 @@ elif curl -fsS --max-time 2 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; th
   echo "  sudah hidup di port $PORT"
 else
   echo "  menyalakan backend…"
-  ( cd "$ROOT/backend" && nohup npm start >"$ROOT/backend/.dev-server.log" 2>&1 & )
+  ( cd "$ROOT/backend" && nohup npm start >"$LOG" 2>&1 & )
   for _ in $(seq 1 30); do
     sleep 1
     if curl -fsS --max-time 2 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then break; fi
   done
   if curl -fsS --max-time 2 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
-    echo "  hidup (log: backend/.dev-server.log)"
+    echo "  hidup (log: backend/.dev-server.log — lihat dengan: ./scripts/dev.sh --logs)"
   else
     echo "  GAGAL menyala — lihat backend/.dev-server.log" >&2
     exit 1
@@ -64,6 +74,9 @@ else
   exit 1
 fi
 
+echo
+echo "Lihat log backend : ./scripts/dev.sh --logs"
+echo "Hentikan backend  : pkill -f 'tsx src/server.ts'"
 echo
 echo "Siap. Jalankan aplikasi dari Android Studio atau:"
 echo "  $ADB shell am start -n com.pam.recap.debug/com.pam.recap.MainActivity"
