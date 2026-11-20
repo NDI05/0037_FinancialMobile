@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,6 +9,22 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.roborazzi)
 }
+
+
+// Build properties can come from three places, in this order:
+//   1. -PPAM_... on the command line (CI, ./scripts/build.sh)
+//   2. gradle.properties
+//   3. local.properties — the file Android Studio already manages per machine, so pressing
+//      Run in the IDE points at the local backend without any extra Gradle arguments.
+// Without this fallback an IDE Run produces an empty PAM_BACKEND_BASE_URL and the app silently
+// falls back to the offline demo, which looks like a broken backend.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+fun buildProperty(name: String): String =
+    project.findProperty(name)?.toString() ?: localProperties.getProperty(name) ?: ""
 
 android {
     namespace = "com.pam.recap"
@@ -29,12 +47,12 @@ android {
         buildConfigField(
             "String",
             "PAM_BACKEND_BASE_URL",
-            "\"${project.findProperty("PAM_BACKEND_BASE_URL")?.toString().orEmpty()}\"",
+            "\"${buildProperty("PAM_BACKEND_BASE_URL")}\"",
         )
         buildConfigField(
             "String",
             "PAM_ANALYSIS_BACKEND_URL",
-            "\"${project.findProperty("PAM_ANALYSIS_BACKEND_URL")?.toString().orEmpty()}\"",
+            "\"${buildProperty("PAM_ANALYSIS_BACKEND_URL")}\"",
         )
     }
 
