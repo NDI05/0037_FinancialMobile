@@ -179,6 +179,27 @@ Kolom kanonik dan DDL ada di [`10_MIGRASI_PEDOMAN.md`](10_MIGRASI_PEDOMAN.md). P
   login dan disimpan Keystore. Kunci yang sama dipakai setelah reinstall/perangkat baru. Rotasi
   hanya dengan migrasi re-fingerprint; penghapusan akun menghancurkan kunci.
 
+### 6.1 Teks notice privasi v0.4 (target, diterapkan saat C2)
+
+> **Yang disimpan di server PAM.** Untuk akun Anda, PAM menyimpan baris transaksi, kategori,
+> rencana anggaran, metadata lampiran, dan riwayat impor di database cloud PAM. Merchant, catatan,
+> deskripsi, dan atribut bebas ikut tersimpan terenkripsi agar Anda dapat membukanya lagi di
+> perangkat lain.
+>
+> **Yang tetap di perangkat ini.** Email mentah, subjek, pengirim, ID pesan, lampiran email, dan
+> Sandi aplikasi Gmail tidak pernah dikirim ke server PAM. File foto/PDF yang Anda lampirkan hanya
+> ada di perangkat tempat Anda memilihnya; perangkat lain hanya melihat metadatanya.
+>
+> **Yang dikirim ke penyedia AI.** Hanya total agregat bulanan dan total kategori bawaan setelah
+> Anda memberi consent AI. Merchant, catatan, nama file, label kategori buatan Anda, dan atribut
+> bebas tidak pernah masuk payload AI.
+>
+> **Penghapusan.** Menghapus akun menghapus data aktif dan metadata lampiran; salinan backup
+> kedaluwarsa paling lama 30 hari. File lokal dihapus dari perangkat saat Anda menghapus lampiran.
+
+Notice versi ini menggantikan teks v0.3 yang menyatakan seluruh baris transaksi tetap di perangkat.
+Jangan menerapkan teks baru sebelum cutover C2 dan sign-off.
+
 ---
 
 ## 7. UI dan lima CRUDS
