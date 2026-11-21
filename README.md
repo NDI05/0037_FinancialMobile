@@ -17,7 +17,7 @@ it maps every requirement ID to where it is implemented.
 Bagian ini diperbarui setiap kali ada kemajuan. Kalau ragu apakah masih akurat, `git log` adalah
 kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 
-**Terakhir diperbarui:** 21 November 2026 · branch `design/v0.4-cloud-contract` (paket B)
+**Terakhir diperbarui:** 21 November 2026 · branch `feat/go-backend` (paket B + slice Go)
 
 | Area | Status |
 |---|---|
@@ -27,7 +27,9 @@ kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 | Onboarding: akun baru → Persetujuan, tolak Gmail → jalur manual | ✅ diperbaiki + tes |
 | Gmail lewat **IMAP + App Password** | 🟡 MIME/HTML + fixture impor lulus; **Gmail nyata belum diverifikasi** |
 | Impor Livin → baris transaksi → total bulanan | 🟡 fixture end-to-end lulus; Gmail nyata ⬜ |
-| Backend Node + libSQL/Turso existing | ✅ **122 test** lulus |
+| Backend Node (referensi/rollback) | ✅ **124 test** lulus, termasuk interop Go |
+| **Backend Go (`backend-go/`)** | 🟡 slice register/login/refresh/consent/summary/CRUD inti; **11 test Go**, race/vet/build PASS |
+| Android ↔ Go | 🟡 register/login/consent/Ringkasan di emulator API 36 |
 | **Kontrak v0.4 (SRS, API, data, UI, acceptance)** | ✅ draft review siap disahkan |
 | **Migrasi libSQL `version: 3`** | ✅ teruji lokal `file:`; **cloud NOT RUN** |
 | Implementasi v0.4 (JWT/refresh, CRUD server, admin, lampiran) | ⬜ paket C1/C2/D |
@@ -36,20 +38,22 @@ kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 | Fase 6 — APK release bertanda tangan | ⬜ belum |
 | **Kepatuhan Pedoman Project Akhir 2026** | 🟡 kontrak v0.4 siap, implementasi belum |
 
-**Selesai pada paket B.** Kontrak v0.4 dikonsolidasikan: SRS review, API v0.4 (JWT/refresh,
-transaksi/kategori CRUDS, impor batch, ringkasan server, anggaran, lampiran, admin), DDL/migrasi
-`version: 3` yang additive, ERD, perubahan UI, T01–T11 dan 25 pemeriksaan CRUDS. Migrasi diuji
-pada database lokal terisolasi: FK lintas owner, fingerprint per owner, batas nominal, JSON TEXT,
-soft delete, reassign kategori, last-admin, rotasi refresh, dan index pagination.
+**Selesai pada paket B + slice Go.** Kontrak v0.4 dikonsolidasikan: SRS review, API v0.4
+(JWT/refresh, transaksi/kategori CRUDS, impor batch, ringkasan server, anggaran, lampiran, admin),
+DDL/migrasi `version: 3` yang additive, ERD, perubahan UI, T01–T11 dan 25 pemeriksaan CRUDS.
+Backend Go berjalan dengan `net/http`, `database/sql`, driver libSQL; password/AES-GCM dibuktikan
+dua arah dengan fixture Node; migrasi 1–3 dan constraint diuji lokal. Android di emulator API 36
+berhasil register → login → consent → Ringkasan terhadap Go.
 
 **Selesai pada paket A (dipertahankan).** Gate onboarding, tombol **Lanjut tanpa menghubungkan
 Gmail** (hanya Gmail yang dipaksa `DECLINED`; pilihan AI yang sudah dibuat dipertahankan), batas sel
 HTML MIME, propagasi jumlah lampiran, dan fixture impor end-to-end.
 
-**Belum selesai.** Implementasi C1/C2 belum dimulai; Room/SQLCipher masih runtime v0.3. Impor Gmail
-nyata belum diuji ulang. Bukti historis "20 ditemukan, 0 tersimpan" berlaku untuk build sebelum
-perbaikan. Kredensial database **uji** Turso belum tersedia, jadi cloud acceptance dan restore drill
-**NOT RUN**.
+**Belum selesai.** Import batch server, admin, deletion sweep, daily USD ceiling, dan validator
+analisis lengkap belum diport ke Go. C2 (Compose → repository remote) belum menghapus Room/SQLCipher;
+fitur UI transaksi/kategori/anggaran/lampiran/admin masih v0.3. Impor Gmail nyata belum diuji ulang.
+Kredensial database **uji** Turso belum tersedia, jadi cloud acceptance dan restore drill **NOT
+RUN**. Klaim performa Go belum dibuat tanpa benchmark.
 
 **Bukti emulator API 36 (paket A, 21 November 2026):** profil lokal baru → Persetujuan tanpa
 interaksi tambahan; tolak Gmail → Ringkasan; impor kotak masuk demo **28 cocok / 25 tersimpan / 3
@@ -64,8 +68,12 @@ Back dan sign-out tidak memulihkan layar terlindungi.
 | [`06_BACKEND_CONTRACT.md`](docs/06_BACKEND_CONTRACT.md) | endpoint, request/response/error, JWT/refresh, atomisitas, pencarian, lampiran, admin |
 | [`10_MIGRASI_PEDOMAN.md`](docs/10_MIGRASI_PEDOMAN.md) | DDL kandidat `version: 3`, acceptance lokal, cloud NOT RUN, rollback |
 | [`01_SCOPE_TRACEABILITY.md`](docs/01_SCOPE_TRACEABILITY.md) | traceability, T01–T11, 25 CRUDS, rubrik D.1–D.10 |
-| [`03_ARCHITECTURE.md`](docs/03_ARCHITECTURE.md) | target remote, perubahan UI, editor field dinamis, lampiran lokal |
+| [`03_ARCHITECTURE.md`](docs/03_ARCHITECTURE.md) | target remote Go, perubahan UI, editor field dinamis, lampiran lokal |
+| [`13_GO_BACKEND_MIGRATION.md`](docs/13_GO_BACKEND_MIGRATION.md) | toolchain, struktur Go, matriks parity, interop, auth transition, rollback |
 | [`11_SRS_CHANGE_v0.4.md`](docs/11_SRS_CHANGE_v0.4.md) | CR-002, riwayat revisi, status sign-off |
+
+**Sudah disetujui:** cloud database gratis dan **pergantian backend ke Go** (21 November 2026).
+Implementasi Go dimulai; Node tetap rollback sampai parity diterima.
 
 **Siap disahkan (belum disetujui):** transaksi/kategori/anggaran/metadata lampiran di Turso/libSQL;
 mode offline terbatas dan kebutuhan internet; dua peran `USER`/`ADMIN` dengan admin terakhir
@@ -73,7 +81,7 @@ dilindungi; lampiran lokal + metadata server; cutover bertahap dan rollback deng
 
 **Keputusan tersisa sebelum aktivasi data pengguna** (satu blok):
 
-1. Sign-off paket v0.4 dan urutan cutover.
+1. Sign-off paket v0.4 dan urutan cutover Go (Node tetap rollback sampai parity diterima).
 2. Hosting API demo/24 jam + URL HTTPS (sekarang laptop).
 3. Retensi data server setelah akun dihapus (usulan: 30 hari backup, data aktif segera).
 4. Apakah rencana anggaran boleh dihapus hard (usulan) dan apakah admin boleh mengubah email.
@@ -220,16 +228,20 @@ allow-listed aggregate projection only (FR-35).
 
 ## Backend
 
-`backend/` is a Node 24 + TypeScript service (Express 5, `node:sqlite`, zero native deps) that
-owns everything the device must not: account authentication (scrypt), revocable sessions, consent
-enforcement, aggregate storage, the LLM call with output validation, quotas, and deletion.
+`backend-go/` is the target Go 1.27.4 service (`net/http`, `database/sql`, libSQL driver). The
+existing `backend/` Node service remains the behavioural reference and rollback path during the
+migration. The service owns everything the device must not: account authentication (scrypt),
+revocable JWT sessions + rotated refresh tokens, consent enforcement, account-scoped finance data,
+the LLM call with output validation, quotas, and deletion.
 
 ```bash
-cd backend
-npm install
-npm start                     # http://127.0.0.1:8080 — fake LLM, local SQLite, no config needed
-bash scripts/smoke.sh         # 13-step happy path against the running server
-npm test                      # 83 contract tests
+cd backend-go
+../scripts/go.sh run ./cmd/api       # http://127.0.0.1:8080 — fake LLM, local libSQL file
+../scripts/go.sh test ./...          # 11 Go tests, including Node interop fixtures
+../scripts/go.sh test -race ./...
+
+# Node reference/rollback only (separate database, never both runners on one file)
+cd ../backend && npm install && npm test
 ```
 
 Then build the app pointed at it:
@@ -311,7 +323,11 @@ Key decisions, each traceable to a requirement:
 
 ```bash
 ./scripts/build.sh :app:testDebugUnitTest
-cd backend && npm test        # migrations + schema + API contract tests
+cd backend && npm test                 # Node reference + interop fixtures
+cd backend-go
+../scripts/go.sh test ./...            # Go target
+../scripts/go.sh test -race ./...      # concurrency
+../scripts/go.sh vet ./... && ../scripts/go.sh build ./cmd/api
 ```
 
 The suite is the specification, not decoration. Highlights:
@@ -327,6 +343,9 @@ The suite is the specification, not decoration. Highlights:
 | `ConsentViewModelTest` | Untouched switch is not a decision; explicit decline records Gmail DECLINED and preserves an already-chosen AI grant |
 | `ImapMimeTest` (bound) | An unknown-size message stops at the MIME byte bound instead of buffering first |
 | `schemaV04.test.ts` (backend) | v0.4 DDL: cross-owner FK, per-owner fingerprint, amount/JSON checks, soft delete, category reassign, last admin, refresh rotation, index pagination |
+| `goInterop.test.ts` (Node) + Go interop tests | Node verifies Go scrypt/AES fixture and Go verifies Node fixtures, with owner AAD binding |
+| Go `httpapi` tests | register/login/refresh/replay/concurrency, consent, transaction CRUD, cross-owner isolation, budget/reassign, analysis allowlist/cache/deletion |
+| Go `finance` test | SRS B5 worked example and unlinked credit rules |
 | `FingerprintFactoryTest` | Determinism, per-user scoping, field sensitivity |
 | `AiPayloadBuilderTest` | Forbidden-field scan: no body, subject, sender, id, token, PAN or merchant |
 | `AnalysisValidatorTest`, `RequestAnalysisUseCaseTest` | Invented totals rejected, one regeneration max, no call without consent, mid-run withdrawal discarded |

@@ -5,7 +5,7 @@ Diperbarui 21 November 2026 untuk rancangan v0.4. [Rancangan dan fase](10_MIGRAS
 | Kebutuhan | Pilihan |
 |---|---|
 | Cloud database | Turso Free, engine libSQL yang kompatibel dengan `@libsql/client` existing |
-| API | Node 24/Express di laptop untuk development dan presentasi |
+| API | **Go 1.27.4 + `net/http`** di laptop untuk development dan presentasi |
 | Mobile | Kotlin/Jetpack Compose/Navigation Compose/MVVM |
 | Mailbox | Gmail IMAP read-only melalui App Password dan vault Keystore existing |
 | AI | Ollama lokal melalui backend existing, dengan consent dan validasi proyeksi agregat |
@@ -44,9 +44,27 @@ batas ini, tetapi angka pemakaian aktual harus dicatat dari dashboard.
 | Pemeriksaan | Status |
 |---|---|
 | Migrasi lokal `file:` + acceptance schema | PASS (lihat `docs/10` §9) |
+| Go `test`/`race`/`vet`/`build` | PASS lokal, 11 tes |
+| Node reference + interop fixtures | PASS, 124 tes |
 | Koneksi Turso Cloud uji + migrasi + rollback | **NOT RUN** — belum ada kredensial uji |
 | Backup/PITR/restore cloud | **NOT RUN** |
 | Engine libSQL cocok dengan `@libsql/client` | **NOT RUN** — harus dibuktikan saat provisioning |
 
 Backend API masih berjalan di laptop selama development/presentasi; hosting publik 24 jam belum
 diputuskan dan tidak termasuk paket B.
+
+## Toolchain Go
+
+Toolchain dipasang di `.toolchain/go` (diabaikan Git) dan dijalankan lewat `scripts/go.sh`:
+
+```bash
+mkdir -p .toolchain && cd .toolchain
+curl -L -o go.tar.gz https://go.dev/dl/go1.27.4.darwin-arm64.tar.gz
+mkdir go && tar -xzf go.tar.gz -C go --strip-components=1
+cd .. && ./scripts/go.sh version
+```
+
+Backend Node tetap ada di `backend/` sebagai referensi perilaku/rollback. Jangan menjalankan dua
+runner migrasi pada database yang sama. Driver Go: `github.com/tursodatabase/libsql-client-go/libsql`
+untuk `libsql://` dan `file:`; `modernc.org/sqlite` menyediakan engine lokal pure-Go untuk tes.
+Cloud/engine test tetap **NOT RUN** sampai kredensial uji tersedia.

@@ -31,7 +31,8 @@ setelah restart. Email mentah tetap diproses di perangkat dan tidak pernah dikir
 | Keputusan | Status |
 |---|---|
 | Cloud database gratis; MySQL baseline minimum, alternatif cloud diizinkan | **Disetujui pemilik** (21 Nov 2026) |
-| Turso Cloud Free + engine libSQL + `@libsql/client` | Pilihan lead, menunggu sign-off paket |
+| Turso Cloud Free + engine libSQL | Pilihan lead, menunggu sign-off paket |
+| Backend Go (`net/http`, `database/sql`, driver libSQL) | **Disetujui pemilik** (21 Nov 2026) |
 | Transaksi server-side, offline terbatas, dua peran, lampiran lokal, lima CRUDS | **Diajukan** di v0.4, belum sign-off |
 | Reset/migrasi data nyata, deployment publik, biaya berbayar | **Belum diotorisasi** |
 
@@ -246,6 +247,7 @@ Dua puluh lima pemeriksaan demo (5 fitur × C/R/U/D/S) ada di
 | v0.2 | 18 Nov 2026 | SRS awal (Gmail OAuth, Room lokal, backend agregat) | baseline |
 | v0.3 / CR-001 | 20 Nov 2026 | IMAP + App Password, akun PAM, backend Turso agregat | disetujui owner |
 | v0.4 / CR-002 review | 21 Nov 2026 | Cloud gratis disetujui; Turso/libSQL untuk transaksi server-side, JWT/refresh, peran, lima CRUDS, lampiran, field dinamis; Room keluar | **draft review, belum sign-off** |
+| Go slice | 21 Nov 2026 | Backend Go disetujui; register/login/refresh/consent/summary/CRUD inti + interop Node↔Go | slicer berjalan |
 | Paket B | 21 Nov 2026 | Konsolidasi SRS, kontrak API, DDL/migrasi lokal teruji, ERD, UI dan test plan | draft review |
 
 Perubahan v0.3 → v0.4 yang belum disetujui penuh ditandai **diajukan** pada tabel keputusan §1.
@@ -256,7 +258,8 @@ Yang sudah disetujui hanyalah arah cloud database gratis.
 | Pemeriksaan | Status | Sumber |
 |---|---|---|
 | Android JVM | PASS | **225 tes**, 0 gagal; `assembleDebug`; lint 0 error |
-| Backend | PASS | `typecheck`, `build`, **122 tes**, 0 gagal |
+| Backend Node (referensi) | PASS | `typecheck`, `build`, **124 tes**, 0 gagal (termasuk interop Go) |
+| Backend Go (target) | PASS lokal | **11 tes Go**, `go test -race`, `go vet`, `go build` |
 | Migrasi libSQL lokal | PASS | `file:` dari kosong, upgrade v0.3, boot kedua |
 | Cloud Turso/engine/libSQL | NOT RUN | kredensial database uji belum tersedia |
 | Gmail nyata / perangkat fisik | NOT RUN | di luar paket B |

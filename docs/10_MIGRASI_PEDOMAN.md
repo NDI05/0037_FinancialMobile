@@ -11,7 +11,7 @@ Dokumen ini adalah rancangan target. Kode pada `fix/onboarding-import-stability`
 | Komponen | Rancangan |
 |---|---|
 | Database demo | Turso Cloud Free, engine libSQL yang kompatibel dengan driver existing |
-| Backend | Node 24 + Express + TypeScript yang sudah ada, berjalan di laptop saat pengembangan dan presentasi |
+| Backend | **Go 1.27.4 + `net/http` + `database/sql`** (`backend-go/`), berjalan di laptop saat pengembangan dan presentasi |
 | Android | Kotlin + Compose + Navigation Compose + MVVM/Hilt, mengakses REST backend |
 | Model | Ollama lokal melalui adapter yang sudah tersedia, dengan analisis deterministik saat layanan model gagal sesuai kontrak |
 | File | Foto/PDF dipilih pengguna dan disalin ke penyimpanan privat Android, metadata disimpan di database |
@@ -27,7 +27,7 @@ Backend hidup selama laptop hidup. Emulator mengakses host melalui `10.0.2.2`, H
 flowchart LR
     Gmail[Gmail IMAP read-only] --> Parser[Parser di Android]
     Parser --> App[Compose / ViewModel / Use case]
-    App -->|REST + JWT| API[Backend Express]
+    App -->|REST + JWT| API[Backend Go]
     API -->|libSQL + token server| DB[(Turso Cloud Free)]
     App --> Files[File privat per pemilik]
     API --> Projection[Proyeksi agregat yang diizinkan]
@@ -105,16 +105,17 @@ Room/SQLCipher dihapus dari jalur aktif, dependensi dan skema varian penilaian p
 | E — pembuktian | Lima CRUDS lewat UI, dua pengguna dan admin, restart/persistensi cloud, backup/restore, demo dan SRS konsolidasi |
 
 Tahap A memiliki implementasi pada `fe3a183`. Laporan worker tahap A mencatat 223 tes Android dan
-111 backend; setelah paket B (dua tes regresi tambahan + 11 tes schema) hasilnya **225 Android**
-dan **122 backend**. Impor fixture emulator tahap A: 28 cocok / 25 tersimpan / 3 dilewati, impor
-kedua 25 duplikat. Gmail nyata dan perangkat fisik masih perlu diuji. Bukti cloud v0.4 harus merekam API, database target, dan pembacaan ulang setelah restart aplikasi, dengan kredensial disembunyikan.
+111 backend. Setelah paket B + slice Go: **225 Android**, **124 Node** (termasuk 2 tes interop), dan
+**11 Go**. Impor fixture emulator tahap A: 28 cocok / 25 tersimpan / 3 dilewati, impor kedua 25
+duplikat. Gmail nyata dan perangkat fisik masih perlu diuji. Bukti cloud v0.4 harus merekam API, database target, dan pembacaan ulang setelah restart aplikasi, dengan kredensial disembunyikan.
 
 ## 8. Skema fisik v0.4 (review draft)
 
-Migrasi baru adalah `version: 3` di `backend/src/store/migrations.ts`. Migrasi 1–2 tidak diubah;
-`version: 3` hanya menambah kolom/tabel dan mempertahankan baris v0.3. Trigger last-admin dikirim
-sebagai `extraStatements` karena body `BEGIN … END` mengandung titik koma dan tidak boleh dipotong
-oleh splitter migrasi.
+Sumber migrasi untuk database baru adalah **Go** (`backend-go/internal/store/migrations/001–003.sql`
+dan `003.triggers.sql`), dijalankan oleh `internal/store/db.go`. SQL 001–002 disalin dari riwayat
+Node yang sudah diterapkan; 003 adalah v0.4 yang sudah diuji Node. Go memakai splitter yang
+mempertahankan blok `CREATE TRIGGER ... BEGIN ... END`. Node tetap sebagai referensi dan tidak boleh
+menjalankan migrasi pada database yang sama secara bersamaan.
 
 ### 8.1 ERD
 
@@ -193,7 +194,9 @@ erDiagram
 | Upgrade v0.3 → v0.4 pada database lokal | PASS | baris `users` lama tetap ada; default `USER/ACTIVE`; tabel v0.4 dibuat |
 | FK lintas owner, fingerprint, amount, JSON | PASS | `schemaV04.test.ts` (11 tes) |
 | Soft delete, reassign kategori, admin terakhir, rotasi refresh, index pagination, account key | PASS | `schemaV04.test.ts` |
-| Seluruh backend | PASS | `npm run typecheck`, `npm run build`, **122 tes lulus, 0 gagal** |
+| Backend Node (referensi) | PASS | `npm run typecheck`, `npm run build`, **124 tes lulus, 0 gagal** |
+| Backend Go (target) | PASS lokal | **11 tes**, `go test -race`, `go vet`, `go build ./cmd/api` |
+| Go: migrasi 1–3, upgrade, trigger, scrypt/AES interop | PASS | `backend-go` 11 tes; `go test -race`, `go vet`, `go build` |
 | Turso Cloud aktual + engine libSQL | **NOT RUN** | belum ada kredensial database uji; jangan memakai database existing |
 | Backup/PITR/restore cloud | **NOT RUN** | menunggu kredensial/otorisasi |
 | Migrasi pada database berisi data nyata | **NOT RUN** | butuh keputusan pemilik |

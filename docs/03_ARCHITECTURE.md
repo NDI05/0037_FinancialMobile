@@ -17,6 +17,9 @@ ui (Compose) → domain (use case/repository interface) ← data (remote REST, l
 - `domain` tetap murni Kotlin: tidak ada OkHttp, Room, Android, atau serialisasi transport.
 - `data/remote/` berisi implementasi REST + DTO; `data/local/` hanya untuk Keystore/DataStore dan
   file privat, **bukan** database transaksi. Room/SQLCipher dihapus dari varian penilaian pada D.
+- API target adalah layanan **Go** (`backend-go/`, Go 1.27.4, `net/http`, `database/sql`, driver
+  libSQL remote/lokal). Node `backend/` hanya referensi perilaku dan rollback selama migrasi; lihat
+  [`13_GO_BACKEND_MIGRATION.md`](13_GO_BACKEND_MIGRATION.md).
 - `data/gmail/` tetap di perangkat (IMAP read-only); `data/ai/` tetap di balik `AnalysisEngine`.
 - Repository interface di `domain/repository/` dipertahankan; implementasi berganti dari Room ke
   REST. Use case tetap memiliki aturan (validasi, owner, revisi), bukan ViewModel.
@@ -29,7 +32,7 @@ flowchart LR
   VM --> UC[Use case]
   UC --> Repo[Repository interface]
   Repo --> Remote[Remote repository + OkHttp]
-  Remote --> API[Express/JWT]
+  Remote --> API[Go net/http + JWT]
   API --> DB[(Turso libSQL)]
   UC --> IMAP[IMAP di perangkat]
   UC --> Files[File privat per owner]

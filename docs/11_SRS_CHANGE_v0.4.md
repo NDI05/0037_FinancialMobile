@@ -2,7 +2,11 @@
 
 PAM-SRS-001 · CR-002 · diperbarui 21 November 2026.
 
-**Status** — rancangan arsitektur dan kebutuhan. Arahan cloud database gratis dari pemilik telah diterima. Lead memilih Turso Cloud Free/libSQL berdasarkan integrasi existing. Sign-off keseluruhan v0.4 masih terbuka, termasuk lokasi transaksi, offline, retensi dan cutover data nyata. [Rancangan teknis](10_MIGRASI_PEDOMAN.md)
+**Status** — rancangan arsitektur dan kebutuhan. Arahan cloud database gratis dari pemilik telah
+diterima. Lead memilih Turso Cloud Free/libSQL berdasarkan integrasi existing. Pemilik menyetujui
+**pergantian backend ke Go** pada 21 November 2026; implementasi target ada di `backend-go/`.
+Sign-off keseluruhan v0.4 masih terbuka, termasuk lokasi transaksi, offline, retensi dan cutover data
+nyata. [Rancangan teknis](10_MIGRASI_PEDOMAN.md)
 
 ## 1. Alasan perubahan
 
@@ -98,6 +102,7 @@ backend/database gagal. BR-01…BR-06 tidak berubah. Email mentah dan kredensial
 | 21 Nov 2026 | Pemilik mengarahkan cloud database gratis; lead memilih Turso Free/libSQL; MySQL menjadi baseline minimum | arah cloud disetujui |
 | 21 Nov 2026 | Paket A selesai (`fe3a183`): gate/consent/MIME/import fixture | 223 Android, 111 backend |
 | 21 Nov 2026 | Paket B: konsolidasi SRS, kontrak API, DDL `version: 3`, acceptance lokal, ERD/UI/test plan | **review draft** |
+| 21 Nov 2026 | Pemilik menyetujui backend **Go**; irisan register/login/consent/summary, JWT/refresh, CRUD inti dan interop Node↔Go | slicer berjalan, C2/D belum |
 
 ## 7. Sign-off paket v0.4
 
@@ -105,6 +110,7 @@ backend/database gagal. BR-01…BR-06 tidak berubah. Email mentah dan kredensial
 |---|---|---|
 | Arah cloud database gratis | Owner | disetujui 21 Nov 2026 |
 | Turso Free/libSQL sebagai target | Lead | dipilih, menunggu sign-off paket |
+| Pergantian backend ke Go | Owner | **disetujui 21 Nov 2026** |
 | Transaksi server-side | Owner | **belum sign-off** |
 | Offline terbatas + kebutuhan internet | Owner | **belum sign-off** |
 | Dua peran USER/ADMIN + provisioning | Owner | **belum sign-off** |

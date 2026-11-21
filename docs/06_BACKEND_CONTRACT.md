@@ -5,6 +5,10 @@ paket v0.4 belum tercatat. Kontrak ini adalah target C1/C2, bukan deskripsi kode
 berjalan. Sumber requirement: [`12_SRS_v0.4_REVIEW.md`](12_SRS_v0.4_REVIEW.md) FR-02/35/52/56–63,
 DR-02/04/05, NFR-15/16/19/21/22/23.
 
+**Implementasi target:** layanan Go di `backend-go/` (Go 1.27.4, `net/http`, `database/sql`,
+driver libSQL remote + SQLite lokal untuk tes). `backend/` Node adalah referensi perilaku dan jalur
+rollback; lihat [`13_GO_BACKEND_MIGRATION.md`](13_GO_BACKEND_MIGRATION.md). Migrasi SQL dimiliki
+oleh Go untuk database baru.
 **Base:** `https://<api>/v1` (lokal `http://127.0.0.1:8080`). JSON UTF-8. Waktu ISO-8601 UTC.
 Bulan `YYYY-MM` dalam **Asia/Jakarta**. Nominal selalu **integer minor IDR** (1/100 rupiah).
 
