@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -152,7 +151,12 @@ func (s *Store) UpdateCategory(ctx context.Context, ownerID, id string, patch Ca
 	if err != nil {
 		return Category{}, err
 	}
-	result, err := s.DB.ExecContext(ctx, `UPDATE categories SET
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return Category{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	result, err := tx.ExecContext(ctx, `UPDATE categories SET
 		kind = ?, label_ciphertext = ?, label_iv = ?, label_tag = ?, color = ?,
 		attributes_ciphertext = ?, attributes_iv = ?, attributes_tag = ?, key_version = ?,
 		revision = revision + 1, updated_at = ?
@@ -166,6 +170,18 @@ func (s *Store) UpdateCategory(ctx context.Context, ownerID, id string, patch Ca
 	changed, _ := result.RowsAffected()
 	if changed != 1 {
 		return Category{}, ErrRevisionConflict
+	}
+	months, err := categoryMonthsTx(ctx, tx, ownerID, id)
+	if err != nil {
+		return Category{}, err
+	}
+	for _, month := range months {
+		if err := bumpMonthRevision(ctx, tx, ownerID, month, now); err != nil {
+			return Category{}, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return Category{}, err
 	}
 	return s.GetCategory(ctx, ownerID, id)
 }
@@ -300,16 +316,30 @@ func scanCategory(ctx context.Context, scanner rowScanner, s *Store, ownerID str
 	return c, nil
 }
 
+func categoryMonthsTx(ctx context.Context, tx *sql.Tx, ownerID, categoryID string) ([]string, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT DISTINCT month_id FROM transactions
+		WHERE owner_id = ? AND category_id = ? AND deleted_at IS NULL`, ownerID, categoryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var months []string
+	for rows.Next() {
+		var month string
+		if err := rows.Scan(&month); err != nil {
+			return nil, err
+		}
+		months = append(months, month)
+	}
+	return months, rows.Err()
+}
+
 func (s *Store) sealAttributes(ctx context.Context, ownerID, purpose string, attributes map[string]any) (crypto.Sealed, error) {
 	if len(attributes) == 0 {
 		return crypto.Sealed{}, nil
 	}
-	raw, err := json.Marshal(attributes)
-	if err != nil {
+	if err := validateAttributes(attributes); err != nil {
 		return crypto.Sealed{}, err
-	}
-	if len(raw) > 2048 {
-		return crypto.Sealed{}, fmt.Errorf("attributes exceed 2 KB")
 	}
 	return crypto.SealJSON(attributes, s.DataKey, s.KeyVersion, ownerID, purpose)
 }

@@ -150,6 +150,9 @@ func (s *Store) PutBudgetPlan(ctx context.Context, ownerID, monthID string, inpu
 			return BudgetPlan{}, err
 		}
 	}
+	if err := bumpMonthRevision(ctx, tx, ownerID, monthID, now); err != nil {
+		return BudgetPlan{}, err
+	}
 	if err := tx.Commit(); err != nil {
 		return BudgetPlan{}, err
 	}
@@ -160,7 +163,12 @@ func (s *Store) DeleteBudgetPlan(ctx context.Context, ownerID, monthID string) e
 	if err := s.ensureNoDeletion(ctx, ownerID); err != nil {
 		return err
 	}
-	result, err := s.DB.ExecContext(ctx, `DELETE FROM budget_plans WHERE owner_id = ? AND month_id = ?`,
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	result, err := tx.ExecContext(ctx, `DELETE FROM budget_plans WHERE owner_id = ? AND month_id = ?`,
 		ownerID, monthID)
 	if err != nil {
 		return err
@@ -169,5 +177,8 @@ func (s *Store) DeleteBudgetPlan(ctx context.Context, ownerID, monthID string) e
 	if affected == 0 {
 		return ErrNotFound
 	}
-	return nil
+	if err := bumpMonthRevision(ctx, tx, ownerID, monthID, time.Now().UTC()); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

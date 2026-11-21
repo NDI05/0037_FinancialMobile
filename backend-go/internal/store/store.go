@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -14,14 +15,17 @@ import (
 )
 
 var (
-	ErrNotFound           = errors.New("not found")
-	ErrEmailExists        = errors.New("email already registered")
-	ErrConflict           = errors.New("conflict")
-	ErrCategoryInUse      = errors.New("category is still referenced")
-	ErrBuiltinCategory    = errors.New("built-in category cannot be deleted")
-	ErrRevisionConflict   = errors.New("revision conflict")
-	ErrDeletionInProgress = errors.New("deletion in progress")
-	ErrCrossOwner         = errors.New("object belongs to another owner")
+	ErrNotFound            = errors.New("not found")
+	ErrEmailExists         = errors.New("email already registered")
+	ErrConflict            = errors.New("conflict")
+	ErrCategoryInUse       = errors.New("category is still referenced")
+	ErrBuiltinCategory     = errors.New("built-in category cannot be deleted")
+	ErrRevisionConflict    = errors.New("revision conflict")
+	ErrDeletionInProgress  = errors.New("deletion in progress")
+	ErrIdempotencyConflict = errors.New("idempotency key conflict")
+	ErrConsentChanged      = errors.New("consent changed")
+	ErrSessionStale        = errors.New("session no longer active")
+	ErrCrossOwner          = errors.New("object belongs to another owner")
 )
 
 // Store is the owner-scoped persistence layer. Every method that touches finance data takes the
@@ -117,6 +121,25 @@ func mustLoadJakarta() *time.Location {
 		return time.FixedZone("Asia/Jakarta", 7*60*60)
 	}
 	return loc
+}
+
+func validateAttributes(attributes map[string]any) error {
+	if len(attributes) > 10 {
+		return fmt.Errorf("attributes must contain at most 10 key/value pairs")
+	}
+	for key := range attributes {
+		if strings.TrimSpace(key) == "" || len(key) > 40 {
+			return fmt.Errorf("attribute key is invalid")
+		}
+	}
+	raw, err := json.Marshal(attributes)
+	if err != nil {
+		return fmt.Errorf("attributes are not JSON")
+	}
+	if len(raw) > 2048 {
+		return fmt.Errorf("attributes exceed 2 KB")
+	}
+	return nil
 }
 
 // ParseMonth validates YYYY-MM and returns the half-open Jakarta month range.

@@ -57,7 +57,7 @@ func run() error {
 	issuer := auth.NewIssuer(cfg.JWT.Secret, cfg.JWT.Issuer, cfg.JWT.Audience, cfg.JWT.AccessTTL)
 	// The deterministic provider keeps local runs network-free; the OpenAI-compatible adapter is
 	// used only when explicitly configured (Ollama/OpenAI/OpenRouter).
-	var provider llm.Provider = llm.Fake{Scenario: cfg.LLM.FakeScenario}
+	var provider llm.Provider = &llm.Fake{Scenario: cfg.LLM.FakeScenario}
 	if cfg.LLM.Provider == "openai" {
 		provider = llm.NewOpenAI(cfg.LLM.BaseURL, cfg.LLM.APIKey, cfg.LLM.Model,
 			cfg.LLM.MaxTokens, cfg.LLM.Timeout)

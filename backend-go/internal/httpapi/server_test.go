@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/pam/recap/backend-go/internal/auth"
 	"github.com/pam/recap/backend-go/internal/config"
@@ -28,13 +32,26 @@ type harness struct {
 
 func newHarness(t *testing.T) *harness {
 	t.Helper()
+	return newHarnessWithProvider(t, &llm.Fake{Scenario: "valid"})
+}
+
+func newHarnessWithProvider(t *testing.T, provider llm.Provider) *harness {
+	return newHarnessWithConfig(t, provider, nil)
+}
+
+func newHarnessWithConfig(t *testing.T, provider llm.Provider, extraEnv map[string]string) *harness {
+	t.Helper()
 	path := filepath.Join(t.TempDir(), "pam.db")
-	cfg, err := config.Load(map[string]string{
+	env := map[string]string{
 		"APP_ENV": "test", "DATABASE_URL": "file:" + path,
 		"REGISTRATION_INVITE_CODE": "pam-test",
 		"JWT_SECRET":               "0123456789abcdef0123456789abcdef",
 		"REFRESH_PEPPER":           "abcdef0123456789abcdef0123456789",
-	})
+	}
+	for key, value := range extraEnv {
+		env[key] = value
+	}
+	cfg, err := config.Load(env)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +61,7 @@ func newHarness(t *testing.T) *harness {
 	}
 	s := store.New(db, cfg.DataKey, cfg.KeyVersion)
 	issuer := auth.NewIssuer(cfg.JWT.Secret, cfg.JWT.Issuer, cfg.JWT.Audience, cfg.JWT.AccessTTL)
-	api := New(s, cfg, issuer, testLogger(), llm.Fake{Scenario: "valid"})
+	api := New(s, cfg, issuer, testLogger(), provider)
 	server := httptest.NewServer(api.Handler())
 	t.Cleanup(func() { server.Close(); s.Close() })
 	return &harness{t: t, server: server, store: s}
@@ -55,9 +72,19 @@ func (h *harness) request(method, path, token string, body any) (int, map[string
 	return h.requestWithHeaders(method, path, token, body, nil)
 }
 
+var idempotencyCounter atomic.Int64
+
 func (h *harness) requestWithHeaders(method, path, token string, body any,
 	headers map[string]string) (int, map[string]any) {
 	h.t.Helper()
+	if method == http.MethodPost && path == "/v1/transactions" {
+		if headers == nil {
+			headers = map[string]string{}
+		}
+		if headers["Idempotency-Key"] == "" {
+			headers["Idempotency-Key"] = fmt.Sprintf("test-tx-%d", idempotencyCounter.Add(1))
+		}
+	}
 	var reader io.Reader
 	if body != nil {
 		raw, err := json.Marshal(body)
@@ -226,14 +253,17 @@ func TestRefreshRotationReplayAndConcurrentUse(t *testing.T) {
 	}
 	wg.Wait()
 	close(statuses)
-	successes := 0
+	successes, failures := 0, 0
 	for status := range statuses {
-		if status == 200 {
+		switch status {
+		case 200:
 			successes++
+		case 401:
+			failures++
 		}
 	}
-	if successes > 1 {
-		t.Fatalf("concurrent refresh produced %d successes", successes)
+	if successes != 1 || failures != 1 {
+		t.Fatalf("concurrent refresh must have exactly one winner and one loser: %d/%d", successes, failures)
 	}
 }
 
@@ -338,6 +368,13 @@ func TestAnalysisConsentAllowlistCacheAndDeletion(t *testing.T) {
 	h := newHarness(t)
 	h.register("analysis@example.test")
 	token, _ := h.login("analysis@example.test")
+	foodForAnalysis := h.category(token, "food")
+	if status, body := h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 17_500_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": foodForAnalysis,
+	}); status != 201 {
+		t.Fatalf("seed transaction: %d %#v", status, body)
+	}
 	payload := sampleAnalysisPayload("2026-11")
 
 	// No AI consent yet.
@@ -399,5 +436,730 @@ func TestAnalysisConsentAllowlistCacheAndDeletion(t *testing.T) {
 	})
 	if status != 409 || body["code"] != "deletion_in_progress" {
 		t.Fatalf("deletion write gate: %d %#v", status, body)
+	}
+}
+
+func TestManualTransactionIdempotency(t *testing.T) {
+	h := newHarness(t)
+	h.register("idem@example.test")
+	token, _ := h.login("idem@example.test")
+	food := h.category(token, "food")
+	body := map[string]any{
+		"direction": "DEBIT", "amountMinor": 12_500_000, "currency": "IDR",
+		"eventAt": "2026-11-10T04:00:00Z", "categoryId": food, "description": "Synthetic",
+	}
+	headers := map[string]string{"Idempotency-Key": "manual-retry-1"}
+
+	status, first := h.requestWithHeaders("POST", "/v1/transactions", token, body, headers)
+	if status != 201 {
+		t.Fatalf("first create: %d %#v", status, first)
+	}
+	status, replay := h.requestWithHeaders("POST", "/v1/transactions", token, body, headers)
+	if status != 200 || replay["id"] != first["id"] {
+		t.Fatalf("retry must replay the same row: %d %#v", status, replay)
+	}
+	_, summary := h.request("GET", "/v1/summaries/2026-11", token, nil)
+	if summary["transactionCount"].(float64) != 1 || summary["inputRevision"].(float64) != 1 {
+		t.Fatalf("retry changed totals/revision: %#v", summary)
+	}
+
+	conflicting := map[string]any{
+		"direction": "DEBIT", "amountMinor": 99_000, "currency": "IDR",
+		"eventAt": "2026-11-10T04:00:00Z", "categoryId": food,
+	}
+	status, conflict := h.requestWithHeaders("POST", "/v1/transactions", token, conflicting, headers)
+	if status != 409 || conflict["code"] != "idempotency_conflict" {
+		t.Fatalf("same key/different body: %d %#v", status, conflict)
+	}
+
+	// Owner B may reuse the same key without seeing owner A's result.
+	h.register("idem-b@example.test")
+	bob, _ := h.login("idem-b@example.test")
+	bobFood := h.category(bob, "food")
+	bobBody := map[string]any{
+		"direction": "DEBIT", "amountMinor": 1_000, "currency": "IDR",
+		"eventAt": "2026-11-10T04:00:00Z", "categoryId": bobFood,
+	}
+	status, bobRow := h.requestWithHeaders("POST", "/v1/transactions", bob, bobBody, headers)
+	if status != 201 || bobRow["id"] == first["id"] {
+		t.Fatalf("cross-owner key isolation: %d %#v", status, bobRow)
+	}
+
+	// Two parallel writers with the same key must produce one row and one winner.
+	h.register("idem-race@example.test")
+	raceToken, _ := h.login("idem-race@example.test")
+	raceFood := h.category(raceToken, "food")
+	raceBody := map[string]any{
+		"direction": "DEBIT", "amountMinor": 2_500, "currency": "IDR",
+		"eventAt": "2026-11-11T04:00:00Z", "categoryId": raceFood,
+	}
+	raceHeaders := map[string]string{"Idempotency-Key": "parallel-manual"}
+	statuses := make(chan int, 2)
+	ids := make(chan string, 2)
+	var wg sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			status, row := h.requestWithHeaders("POST", "/v1/transactions", raceToken, raceBody, raceHeaders)
+			statuses <- status
+			if id, ok := row["id"].(string); ok {
+				ids <- id
+			}
+		}()
+	}
+	wg.Wait()
+	close(statuses)
+	close(ids)
+	created, replayed := 0, 0
+	for status := range statuses {
+		if status == 201 {
+			created++
+		}
+		if status == 200 {
+			replayed++
+		}
+	}
+	if created != 1 || replayed != 1 {
+		t.Fatalf("parallel idempotency statuses: created=%d replayed=%d", created, replayed)
+	}
+	firstID := ""
+	for id := range ids {
+		if firstID == "" {
+			firstID = id
+		} else if id != firstID {
+			t.Fatalf("parallel writers returned different ids: %s %s", firstID, id)
+		}
+	}
+	_, raceSummary := h.request("GET", "/v1/summaries/2026-11", raceToken, nil)
+	if raceSummary["transactionCount"].(float64) != 1 {
+		t.Fatalf("parallel writers inserted more than one row: %#v", raceSummary)
+	}
+
+	// A replayed key after soft delete returns the tombstone, not a resurrected row.
+	status, _ = h.request("DELETE", "/v1/transactions/"+first["id"].(string), token, nil)
+	if status != 204 {
+		t.Fatalf("delete: %d", status)
+	}
+	status, deletedReplay := h.requestWithHeaders("POST", "/v1/transactions", token, body, headers)
+	if status != 200 || deletedReplay["deletedAt"] == nil || deletedReplay["id"] != first["id"] {
+		t.Fatalf("replay after delete: %d %#v", status, deletedReplay)
+	}
+	_, after := h.request("GET", "/v1/summaries/2026-11", token, nil)
+	if after["transactionCount"].(float64) != 0 {
+		t.Fatalf("replay resurrected a deleted row: %#v", after)
+	}
+}
+
+type blockingProvider struct {
+	entered chan struct{}
+	release chan struct{}
+	once    sync.Once
+}
+
+func (p *blockingProvider) ID() string    { return "blocking" }
+func (p *blockingProvider) Model() string { return "blocking-v1" }
+func (p *blockingProvider) Analyze(ctx context.Context, payload map[string]any) (store.AnalysisResponse, error) {
+	p.once.Do(func() { close(p.entered) })
+	select {
+	case <-p.release:
+	case <-ctx.Done():
+		return store.AnalysisResponse{}, ctx.Err()
+	}
+	return store.AnalysisResponse{
+		PromptVersion: "analysis-v1",
+		Observations:  []store.Observation{{Text: "Agregat tersedia.", MetricKeys: []string{"summary.grossOutflow"}}},
+		Limitations:   []string{"Data sintetis."},
+	}, nil
+}
+
+func TestAnalysisRaceWithConsentAndDeletion(t *testing.T) {
+	for _, action := range []string{"withdraw", "delete", "mutate"} {
+		t.Run(action, func(t *testing.T) {
+			provider := &blockingProvider{entered: make(chan struct{}), release: make(chan struct{})}
+			h := newHarnessWithProvider(t, provider)
+			h.register("race-analysis@example.test")
+			token, _ := h.login("race-analysis@example.test")
+			food := h.category(token, "food")
+			h.request("POST", "/v1/transactions", token, map[string]any{
+				"direction": "DEBIT", "amountMinor": 17_500_000, "currency": "IDR",
+				"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+			})
+			for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+				h.request("POST", "/v1/consents", token, map[string]any{
+					"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+				})
+			}
+			payload := sampleAnalysisPayload("2026-11")
+			result := make(chan int, 1)
+			go func() {
+				status, _ := h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+					"monthId": "2026-11", "inputRevision": 1, "payload": payload,
+				}, map[string]string{"Idempotency-Key": "race-" + action})
+				result <- status
+			}()
+			select {
+			case <-provider.entered:
+			case <-time.After(5 * time.Second):
+				t.Fatal("provider was not entered")
+			}
+			switch action {
+			case "withdraw":
+				status, _ := h.request("POST", "/v1/consents", token, map[string]any{
+					"purpose": "AI_PROCESSING", "decision": "WITHDRAWN", "noticeVersion": "v0.4-review",
+				})
+				if status != 201 {
+					t.Fatalf("withdraw: %d", status)
+				}
+			case "delete":
+				if status, _ := h.request("POST", "/v1/deletion-requests", token, nil); status != 202 {
+					t.Fatalf("deletion: %d", status)
+				}
+			case "mutate":
+				if status, _ := h.request("POST", "/v1/transactions", token, map[string]any{
+					"direction": "DEBIT", "amountMinor": 2_500, "currency": "IDR",
+					"eventAt": "2026-11-20T04:10:00Z", "categoryId": food,
+				}); status != 201 {
+					t.Fatalf("mutation: %d", status)
+				}
+			}
+			close(provider.release)
+			select {
+			case status := <-result:
+				if status != 409 {
+					t.Fatalf("in-flight analysis after %s = %d, want 409", action, status)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("analysis did not finish")
+			}
+			var count int
+			if err := h.store.DB.QueryRow(`SELECT COUNT(*) FROM analyses WHERE idempotency_key = ?`,
+				"race-"+action).Scan(&count); err != nil {
+				t.Fatal(err)
+			}
+			if count != 0 {
+				t.Fatalf("analysis was persisted after %s", action)
+			}
+			// The provider call must still be billed, with unknown usage recorded conservatively.
+			var calls, unknown int
+			var cost float64
+			if err := h.store.DB.QueryRow(`SELECT provider_calls, usage_unknown, cost_usd
+				FROM usage_counters WHERE scope = '*' ORDER BY bucket DESC LIMIT 1`).Scan(
+				&calls, &unknown, &cost); err != nil {
+				t.Fatal(err)
+			}
+			if calls < 1 || unknown < 1 || cost <= 0 {
+				t.Fatalf("usage not recorded: calls=%d unknown=%d cost=%f", calls, unknown, cost)
+			}
+		})
+	}
+}
+
+type captureProvider struct {
+	mu      sync.Mutex
+	payload map[string]any
+	calls   int
+}
+
+func (p *captureProvider) ID() string    { return "capture" }
+func (p *captureProvider) Model() string { return "capture-v1" }
+func (p *captureProvider) Analyze(_ context.Context, payload map[string]any) (store.AnalysisResponse, error) {
+	p.mu.Lock()
+	p.calls++
+	p.payload = payload
+	p.mu.Unlock()
+	return store.AnalysisResponse{PromptVersion: "analysis-v1",
+		Observations: []store.Observation{{Text: "Agregat.", MetricKeys: []string{"summary.grossOutflow"}}},
+		Limitations:  []string{"Data sintetis."}}, nil
+}
+
+func TestAnalysisUsesCanonicalServerPayloadAndStaleRevisionFails(t *testing.T) {
+	provider := &captureProvider{}
+	h := newHarnessWithProvider(t, provider)
+	h.register("canonical@example.test")
+	token, _ := h.login("canonical@example.test")
+	food := h.category(token, "food")
+	h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 17_500_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+	})
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	clientPayload := sampleAnalysisPayload("2026-11")
+	clientPayload["grossOutflowMinor"] = 1 // deliberately false; server must ignore it
+	status, body := h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 1, "payload": clientPayload,
+	}, map[string]string{"Idempotency-Key": "canonical-1"})
+	if status != 200 {
+		t.Fatalf("canonical analysis: %d %#v", status, body)
+	}
+	provider.mu.Lock()
+	seenOutflow, _ := provider.payload["grossOutflowMinor"].(float64)
+	provider.mu.Unlock()
+	if seenOutflow != 17_500_000 {
+		t.Fatalf("provider saw client value instead of server aggregate: %v", seenOutflow)
+	}
+
+	callsBefore := provider.calls
+	for _, revision := range []int{101, 102, 103, 104, 105, 106} {
+		status, body = h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+			"monthId": "2026-11", "inputRevision": revision, "payload": sampleAnalysisPayload("2026-11"),
+		}, map[string]string{"Idempotency-Key": fmt.Sprintf("canonical-stale-%d", revision)})
+		if status != 409 || body["code"] != "revision_conflict" {
+			t.Fatalf("stale revision %d: %d %#v", revision, status, body)
+		}
+	}
+	if provider.calls != callsBefore {
+		t.Fatal("provider was called for a stale revision")
+	}
+}
+
+type usageProvider struct {
+	response store.AnalysisResponse
+	mu       sync.Mutex
+	calls    int
+}
+
+func (p *usageProvider) ID() string    { return "usage" }
+func (p *usageProvider) Model() string { return "usage-v1" }
+func (p *usageProvider) Analyze(context.Context, map[string]any) (store.AnalysisResponse, error) {
+	p.mu.Lock()
+	p.calls++
+	p.mu.Unlock()
+	return p.response, nil
+}
+
+func TestProviderUsageIsRecordedForEveryCall(t *testing.T) {
+	prompt, completion := int64(10), int64(5)
+	provider := &usageProvider{response: store.AnalysisResponse{
+		PromptVersion: "analysis-v1",
+		Observations:  []store.Observation{{Text: "Agregat.", MetricKeys: []string{"summary.grossOutflow"}}},
+		Limitations:   []string{"Data sintetis."}, PromptTokens: &prompt, CompletionTokens: &completion,
+	}}
+	h := newHarnessWithProvider(t, provider)
+	h.register("usage@example.test")
+	token, _ := h.login("usage@example.test")
+	food := h.category(token, "food")
+	h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 17_500_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+	})
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	status, body := h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 1, "payload": sampleAnalysisPayload("2026-11"),
+	}, map[string]string{"Idempotency-Key": "usage-1"})
+	if status != 200 {
+		t.Fatalf("analysis: %d %#v", status, body)
+	}
+	var calls, unknown int
+	var promptTokens, completionTokens int64
+	var cost float64
+	if err := h.store.DB.QueryRow(`SELECT provider_calls, usage_unknown, tokens_prompt,
+		tokens_completion, cost_usd FROM usage_counters WHERE scope = '*' ORDER BY bucket DESC LIMIT 1`).Scan(
+		&calls, &unknown, &promptTokens, &completionTokens, &cost); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 || unknown != 0 || promptTokens != 10 || completionTokens != 5 || cost <= 0 {
+		t.Fatalf("usage not recorded: calls=%d unknown=%d tokens=%d/%d cost=%f",
+			calls, unknown, promptTokens, completionTokens, cost)
+	}
+}
+
+func TestImportBatchIdempotencyAndSummary(t *testing.T) {
+	h := newHarness(t)
+	h.register("import@example.test")
+	token, _ := h.login("import@example.test")
+	food := h.category(token, "food")
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	status, job := h.request("POST", "/v1/import-jobs", token, map[string]any{
+		"monthId": "2026-11", "templateVersion": "livin-v1",
+	})
+	if status != 201 {
+		t.Fatalf("create job: %d %#v", status, job)
+	}
+	jobID := job["id"].(string)
+	candidate := map[string]any{
+		"fingerprint": "a" + strings.Repeat("0", 31), "status": "PARSED", "direction": "DEBIT",
+		"amountMinor": 17_500_000, "eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+		"parserVersion": "livin-v1", "confidence": 0.9, "description": "Impor",
+	}
+	batch := map[string]any{"batchKey": "page-1", "pageOrdinal": 0, "candidates": []any{
+		candidate,
+		candidate, // same fingerprint in one batch = duplicate, not a second row
+		map[string]any{"fingerprint": strings.Repeat("b", 32), "status": "UNRESOLVED",
+			"reason": "FAILED_PAYMENT"},
+	}}
+	status, counts := h.request("POST", "/v1/import-jobs/"+jobID+"/batches", token, batch)
+	if status != 200 || counts["imported"].(float64) != 1 || counts["duplicates"].(float64) != 1 ||
+		counts["skipped"].(float64) != 1 {
+		t.Fatalf("batch counts: %d %#v", status, counts)
+	}
+	status, replay := h.request("POST", "/v1/import-jobs/"+jobID+"/batches", token, batch)
+	if status != 200 || replay["imported"].(float64) != 1 {
+		t.Fatalf("batch replay: %d %#v", status, replay)
+	}
+	_, summary := h.request("GET", "/v1/summaries/2026-11", token, nil)
+	if summary["transactionCount"].(float64) != 1 || summary["inputRevision"].(float64) != 1 {
+		t.Fatalf("import totals: %#v", summary)
+	}
+	// Same batch key with a different body must conflict.
+	different := map[string]any{"batchKey": "page-1", "pageOrdinal": 0, "candidates": []any{candidate}}
+	status, conflict := h.request("POST", "/v1/import-jobs/"+jobID+"/batches", token, different)
+	if status != 409 || conflict["code"] != "idempotency_conflict" {
+		t.Fatalf("batch conflict: %d %#v", status, conflict)
+	}
+	status, finalized := h.request("PATCH", "/v1/import-jobs/"+jobID, token, map[string]any{"state": "COMPLETE"})
+	if status != 200 || finalized["state"] != "COMPLETE" {
+		t.Fatalf("finalize: %d %#v", status, finalized)
+	}
+	// A lost batch response can be retried even after finalization.
+	status, replay = h.request("POST", "/v1/import-jobs/"+jobID+"/batches", token, batch)
+	if status != 200 || replay["imported"].(float64) != 1 {
+		t.Fatalf("batch replay after finalize: %d %#v", status, replay)
+	}
+	_, summary = h.request("GET", "/v1/summaries/2026-11", token, nil)
+	if summary["coverage"] != "COMPLETE" {
+		t.Fatalf("coverage after finalize: %#v", summary)
+	}
+}
+
+func TestImportRejectsInvalidCandidateAtomicallyAndWithoutConsent(t *testing.T) {
+	h := newHarness(t)
+	h.register("import-atomic@example.test")
+	token, _ := h.login("import-atomic@example.test")
+	status, _ := h.request("POST", "/v1/import-jobs", token, map[string]any{
+		"monthId": "2026-11", "templateVersion": "livin-v1",
+	})
+	if status != 403 {
+		t.Fatalf("import without Gmail consent: %d", status)
+	}
+	if status, _ := h.request("POST", "/v1/consents", token, map[string]any{
+		"purpose": "GMAIL_READ", "decision": "GRANTED", "noticeVersion": "v0.4-review",
+	}); status != 201 {
+		t.Fatalf("gmail consent: %d", status)
+	}
+	_, job := h.request("POST", "/v1/import-jobs", token, map[string]any{
+		"monthId": "2026-11", "templateVersion": "livin-v1",
+	})
+	jobID := job["id"].(string)
+	batch := map[string]any{"batchKey": "page-1", "pageOrdinal": 0, "candidates": []any{
+		map[string]any{"fingerprint": strings.Repeat("c", 32), "status": "PARSED",
+			"direction": "DEBIT", "amountMinor": 1_000, "eventAt": "2026-11-19T04:10:00Z",
+			"parserVersion": "livin-v1"},
+		map[string]any{"fingerprint": "bad", "status": "PARSED", "direction": "DEBIT",
+			"amountMinor": 1_000, "eventAt": "2026-11-19T04:10:00Z", "parserVersion": "livin-v1"},
+	}}
+	status, body := h.request("POST", "/v1/import-jobs/"+jobID+"/batches", token, batch)
+	if status != 400 {
+		t.Fatalf("invalid batch: %d %#v", status, body)
+	}
+	_, summary := h.request("GET", "/v1/summaries/2026-11", token, nil)
+	if summary["transactionCount"].(float64) != 0 {
+		t.Fatalf("invalid batch partially imported: %#v", summary)
+	}
+}
+
+func TestDeletionSweepRemovesFinanceAndRevokesSessions(t *testing.T) {
+	h := newHarness(t)
+	h.register("sweep@example.test")
+	token, refresh := h.login("sweep@example.test")
+	food := h.category(token, "food")
+	h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 1_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+	})
+	if status, _ := h.request("POST", "/v1/deletion-requests", token, nil); status != 202 {
+		t.Fatalf("deletion request: %d", status)
+	}
+	if status, _ := h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 2_000, "currency": "IDR",
+		"eventAt": "2026-11-20T04:10:00Z", "categoryId": food,
+	}); status != 409 {
+		t.Fatalf("write during deletion: %d", status)
+	}
+	completed, err := h.store.SweepDeletions(context.Background(), time.Now())
+	if err != nil || completed != 1 {
+		t.Fatalf("sweep: completed=%d err=%v", completed, err)
+	}
+	var transactions, categories, analyses int
+	_ = h.store.DB.QueryRow(`SELECT COUNT(*) FROM transactions`).Scan(&transactions)
+	_ = h.store.DB.QueryRow(`SELECT COUNT(*) FROM categories`).Scan(&categories)
+	_ = h.store.DB.QueryRow(`SELECT COUNT(*) FROM analyses`).Scan(&analyses)
+	if transactions != 0 || categories != 0 || analyses != 0 {
+		t.Fatalf("finance rows remain: tx=%d cat=%d analyses=%d", transactions, categories, analyses)
+	}
+	var status string
+	_ = h.store.DB.QueryRow(`SELECT status FROM users WHERE email = ?`, "sweep@example.test").Scan(&status)
+	if status != "DELETED" {
+		t.Fatalf("account status = %s", status)
+	}
+	if code, _ := h.request("POST", "/v1/sessions/refresh", "", map[string]any{"refreshToken": refresh}); code != 401 {
+		t.Fatalf("refresh after sweep: %d", code)
+	}
+	if code, _ := h.request("GET", "/v1/transactions?month=2026-11", token, nil); code != 401 {
+		t.Fatalf("access after sweep: %d", code)
+	}
+	if code, _ := h.request("POST", "/v1/sessions", "", map[string]any{
+		"email": "sweep@example.test", "password": testPassword,
+	}); code != 403 {
+		t.Fatalf("login after deletion: %d", code)
+	}
+}
+
+func TestDailyCostCeilingStopsMoreProviderCalls(t *testing.T) {
+	provider := &usageProvider{response: store.AnalysisResponse{
+		PromptVersion: "analysis-v1",
+		Observations:  []store.Observation{{Text: "Agregat.", MetricKeys: []string{"summary.grossOutflow"}}},
+		Limitations:   []string{"Data sintetis."},
+	}}
+	h := newHarnessWithConfig(t, provider, map[string]string{
+		"DAILY_AI_CEILING_USD": "0.0005", "UNKNOWN_AI_CALL_COST_USD": "0.001",
+	})
+	h.register("ceiling@example.test")
+	token, _ := h.login("ceiling@example.test")
+	food := h.category(token, "food")
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 1_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+	})
+	status, body := h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 1, "payload": sampleAnalysisPayload("2026-11"),
+	}, map[string]string{"Idempotency-Key": "ceiling-1"})
+	if status != 200 {
+		t.Fatalf("first analysis: %d %#v", status, body)
+	}
+	h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 2_000, "currency": "IDR",
+		"eventAt": "2026-11-20T04:10:00Z", "categoryId": food,
+	})
+	status, body = h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 2, "payload": sampleAnalysisPayload("2026-11"),
+	}, map[string]string{"Idempotency-Key": "ceiling-2"})
+	if status != 429 || body["code"] != "daily_ceiling_reached" {
+		t.Fatalf("daily ceiling: %d %#v", status, body)
+	}
+}
+
+func TestIdempotencyFailureDoesNotReserveKey(t *testing.T) {
+	h := newHarness(t)
+	h.register("idem-fail@example.test")
+	token, _ := h.login("idem-fail@example.test")
+	headers := map[string]string{"Idempotency-Key": "failed-create"}
+	status, body := h.requestWithHeaders("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 1_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": "cat_missing",
+	}, headers)
+	if status != 404 {
+		t.Fatalf("invalid create: %d %#v", status, body)
+	}
+	food := h.category(token, "food")
+	status, created := h.requestWithHeaders("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 1_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+	}, headers)
+	if status != 201 {
+		t.Fatalf("retry after failed transaction was blocked: %d %#v", status, created)
+	}
+	var count int
+	_ = h.store.DB.QueryRow(`SELECT COUNT(*) FROM http_idempotency WHERE idem_key = 'failed-create'`).Scan(&count)
+	if count != 1 {
+		t.Fatalf("idempotency rows = %d", count)
+	}
+}
+
+func TestAnalysisLifecycleWithConsentWithdrawal(t *testing.T) {
+	h := newHarness(t)
+	h.register("lifecycle@example.test")
+	token, _ := h.login("lifecycle@example.test")
+	food := h.category(token, "food")
+	h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 1_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+	})
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	status, _ := h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 1, "payload": sampleAnalysisPayload("2026-11"),
+	}, map[string]string{"Idempotency-Key": "life-1"})
+	if status != 200 {
+		t.Fatalf("initial analysis: %d", status)
+	}
+	if status, _ := h.request("POST", "/v1/consents", token, map[string]any{
+		"purpose": "AI_PROCESSING", "decision": "WITHDRAWN", "noticeVersion": "v0.4-review",
+	}); status != 201 {
+		t.Fatalf("withdraw: %d", status)
+	}
+	status, stored := h.request("GET", "/v1/analyses/2026-11", token, nil)
+	if status != 200 || stored["status"] != "HISTORICAL" {
+		t.Fatalf("stored analysis after withdrawal: %d %#v", status, stored)
+	}
+	status, _ = h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 1, "payload": sampleAnalysisPayload("2026-11"),
+	}, map[string]string{"Idempotency-Key": "life-2"})
+	if status != 403 {
+		t.Fatalf("new analysis after withdrawal: %d", status)
+	}
+	status, _ = h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 1, "payload": sampleAnalysisPayload("2026-11"),
+	}, map[string]string{"Idempotency-Key": "life-1"})
+	if status != 403 {
+		t.Fatalf("replay after withdrawal: %d", status)
+	}
+	if status, _ := h.request("POST", "/v1/consents", token, map[string]any{
+		"purpose": "AI_PROCESSING", "decision": "GRANTED", "noticeVersion": "v0.4-review",
+	}); status != 201 {
+		t.Fatalf("regrant: %d", status)
+	}
+	status, _ = h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 1, "payload": sampleAnalysisPayload("2026-11"),
+	}, map[string]string{"Idempotency-Key": "life-3"})
+	if status != 200 {
+		t.Fatalf("analysis after regrant: %d", status)
+	}
+}
+
+func TestInvalidAnalysisIsBilledButNotStored(t *testing.T) {
+	provider := &usageProvider{response: store.AnalysisResponse{
+		PromptVersion: "analysis-v1", Observations: []store.Observation{}, Limitations: []string{},
+	}}
+	h := newHarnessWithProvider(t, provider)
+	h.register("invalid-output@example.test")
+	token, _ := h.login("invalid-output@example.test")
+	food := h.category(token, "food")
+	h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 1_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+	})
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	status, _ := h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 1, "payload": sampleAnalysisPayload("2026-11"),
+	}, map[string]string{"Idempotency-Key": "invalid-1"})
+	if status != 422 {
+		t.Fatalf("invalid output status: %d", status)
+	}
+	var calls, unknown int
+	_ = h.store.DB.QueryRow(`SELECT provider_calls, usage_unknown FROM usage_counters
+		WHERE scope = '*' ORDER BY bucket DESC LIMIT 1`).Scan(&calls, &unknown)
+	if calls < 2 || unknown < 2 {
+		t.Fatalf("billable invalid/regenerated calls not recorded: calls=%d unknown=%d", calls, unknown)
+	}
+	var analyses int
+	_ = h.store.DB.QueryRow(`SELECT COUNT(*) FROM analyses`).Scan(&analyses)
+	if analyses != 0 {
+		t.Fatalf("invalid analysis was stored: %d", analyses)
+	}
+}
+
+func TestLastAdminCannotBeSwept(t *testing.T) {
+	h := newHarness(t)
+	h.register("last-admin@example.test")
+	token, _ := h.login("last-admin@example.test")
+	if _, err := h.store.DB.Exec(`UPDATE users SET role = 'ADMIN' WHERE email = ?`, "last-admin@example.test"); err != nil {
+		t.Fatal(err)
+	}
+	// Role changed in the database: the old JWT is stale by design. Issue an ADMIN token.
+	token, _ = h.login("last-admin@example.test")
+	if status, _ := h.request("POST", "/v1/deletion-requests", token, nil); status != 202 {
+		t.Fatalf("deletion request: %d", status)
+	}
+	if _, err := h.store.SweepDeletions(context.Background(), time.Now()); err == nil {
+		t.Fatal("last active admin workspace was swept")
+	}
+	var status string
+	_ = h.store.DB.QueryRow(`SELECT status FROM users WHERE email = ?`, "last-admin@example.test").Scan(&status)
+	if status != "ACTIVE" {
+		t.Fatalf("admin status changed to %s", status)
+	}
+}
+
+func TestAnalysisRegeneratesAtMostOnce(t *testing.T) {
+	provider := &llm.Fake{Scenario: "invalid_then_valid"}
+	h := newHarnessWithProvider(t, provider)
+	h.register("regen@example.test")
+	token, _ := h.login("regen@example.test")
+	food := h.category(token, "food")
+	h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 1_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+	})
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	status, body := h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 1, "payload": sampleAnalysisPayload("2026-11"),
+	}, map[string]string{"Idempotency-Key": "regen-1"})
+	if status != 200 {
+		t.Fatalf("regenerated analysis: %d %#v", status, body)
+	}
+	if provider.Calls() != 2 {
+		t.Fatalf("provider calls = %d, want 2", provider.Calls())
+	}
+	var calls int
+	_ = h.store.DB.QueryRow(`SELECT provider_calls FROM usage_counters
+		WHERE scope = '*' ORDER BY bucket DESC LIMIT 1`).Scan(&calls)
+	if calls != 2 {
+		t.Fatalf("billed provider calls = %d", calls)
+	}
+}
+
+func TestCustomCategoryRollsUpToSafeProjectionCode(t *testing.T) {
+	provider := &captureProvider{}
+	h := newHarnessWithProvider(t, provider)
+	h.register("rollup@example.test")
+	token, _ := h.login("rollup@example.test")
+	status, custom := h.request("POST", "/v1/categories", token, map[string]any{
+		"label": "PRIVATE_CATEGORY_LABEL", "kind": "EXPENSE",
+	})
+	if status != 201 {
+		t.Fatalf("category: %d %#v", status, custom)
+	}
+	h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 3_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": custom["id"],
+	})
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	status, body := h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 1, "payload": sampleAnalysisPayload("2026-11"),
+	}, map[string]string{"Idempotency-Key": "rollup-1"})
+	if status != 200 {
+		t.Fatalf("analysis: %d %#v", status, body)
+	}
+	provider.mu.Lock()
+	raw, _ := json.Marshal(provider.payload)
+	provider.mu.Unlock()
+	if strings.Contains(string(raw), "PRIVATE_CATEGORY_LABEL") || strings.Contains(string(raw), "cat_") {
+		t.Fatalf("custom category identifier leaked to provider: %s", raw)
+	}
+	if !strings.Contains(string(raw), "other_expense") {
+		t.Fatalf("custom expense was not rolled into other_expense: %s", raw)
 	}
 }

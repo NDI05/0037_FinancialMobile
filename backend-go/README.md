@@ -59,17 +59,23 @@ credentials exist.
 | `DATA_ENCRYPTION_KEY` | dev-only derived key |
 | `DATA_KEY_VERSION` | `1` |
 | `LLM_PROVIDER` | `fake` (`openai` for an OpenAI-compatible endpoint) |
+| `UNKNOWN_AI_CALL_COST_USD` | `0.001` conservative cost when the provider omits usage |
+| `INTERNAL_SWEEP_TOKEN` | empty: `/v1/internal/sweep` is closed (404) |
 
 Production refuses short/absent JWT/refresh secrets and a `libsql://` URL without a token.
 
 ## Implemented slice
 
 - health/readiness; register/login/refresh/logout/me; JWT + rotated refresh;
-- consent ledger; account fingerprint key;
-- transactions and categories CRUD, owner scoping, soft delete, revision, cursor search;
+- consent ledger; account fingerprint key; production encryption-key guard;
+- transactions and categories CRUD, owner scoping, soft delete, revision, cursor search,
+  idempotent manual create (`Idempotency-Key`);
 - server-side summary from active transactions + legacy sealed summary upload;
-- budget plans/limits; analysis with consent/allowlist/cache/idempotency/fake/OpenAI adapter;
-- deletion request + write blocking.
+- import job/batch/finalize with batch-key replay, atomic insert and month revision;
+- budget plans/limits; canonical analysis snapshot, strict FR-37 validator, consent/deletion/
+  session/revision guard, cache by consent+snapshot, one regeneration, fake/OpenAI adapter;
+- usage/cost recording with a global daily USD ceiling; deletion request, sweep, session revoke
+  and last-admin protection; token-gated internal sweep.
 
-Not yet ported: import job/batch, admin users/invitations, deletion sweep worker, daily USD
-ceiling, full Node analysis-validation/regeneration parity. See the parity matrix.
+Not yet ported: admin users/invitations (FR-65), attachments (FR-59), full Android C2 remote
+repository. See the parity matrix.

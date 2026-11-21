@@ -120,6 +120,9 @@ func (s *Store) CreateTransaction(ctx context.Context, ownerID string, input Tra
 			return Transaction{}, err
 		}
 	}
+	if err := validateAttributes(input.Attributes); err != nil {
+		return Transaction{}, err
+	}
 	sealed, err := crypto.SealJSON(TransactionSensitive{
 		Description: input.Description, MerchantLabel: input.MerchantLabel,
 		Note: input.Note, Attributes: input.Attributes,
@@ -306,6 +309,9 @@ func (s *Store) UpdateTransaction(ctx context.Context, ownerID, id string, patch
 	if patch.LinkedRefundOf != nil {
 		linked = *patch.LinkedRefundOf
 	}
+	if err := validateAttributes(sensitive.Attributes); err != nil {
+		return Transaction{}, err
+	}
 	sealed, err := crypto.SealJSON(sensitive, s.DataKey, s.KeyVersion, ownerID, "transaction")
 	if err != nil {
 		return Transaction{}, err
@@ -458,4 +464,48 @@ func nullableString(value string) any {
 		return nil
 	}
 	return value
+}
+
+const transactionSelect = `SELECT t.id, t.owner_id, COALESCE(t.category_id, ''),
+	COALESCE(c.code, ''), COALESCE(c.kind, 'UNCATEGORIZED'), t.direction, t.source,
+	t.amount_minor, t.currency, t.event_at_ms, t.month_id, t.fingerprint,
+	COALESCE(t.parser_version, ''), COALESCE(t.parser_confidence, 0), t.category_origin,
+	t.sensitive_ciphertext, t.sensitive_iv, t.sensitive_tag, t.key_version,
+	t.is_internal_transfer, COALESCE(t.linked_refund_of, ''), t.revision,
+	t.created_at, t.updated_at, COALESCE(t.deleted_at, '')
+	FROM transactions t LEFT JOIN categories c
+	  ON c.owner_id = t.owner_id AND c.id = t.category_id`
+
+func scanTransactionWithDeleted(ctx context.Context, scanner rowScanner, s *Store, ownerID string) (Transaction, error) {
+	var t Transaction
+	var categoryID, categoryCode, categoryKind, parserVersion, linked, deleted string
+	var confidence float64
+	var ciphertext, iv, tag []byte
+	var keyVersion int
+	var internal int
+	var eventAtMs int64
+	var created, updated string
+	if err := scanner.Scan(&t.ID, &t.OwnerID, &categoryID, &categoryCode, &categoryKind,
+		&t.Direction, &t.Source, &t.AmountMinor, &t.Currency, &eventAtMs, &t.MonthID,
+		&t.Fingerprint, &parserVersion, &confidence, &t.CategoryOrigin, &ciphertext, &iv, &tag,
+		&keyVersion, &internal, &linked, &t.Revision, &created, &updated, &deleted); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Transaction{}, ErrNotFound
+		}
+		return Transaction{}, err
+	}
+	t.CategoryID, t.CategoryCode, t.CategoryKind = categoryID, categoryCode, categoryKind
+	t.ParserVersion, t.ParserConfidence, t.LinkedRefundOf = parserVersion, confidence, linked
+	t.IsInternalTransfer = internal == 1
+	t.EventAt = time.UnixMilli(eventAtMs).UTC()
+	t.CreatedAt, t.UpdatedAt = parseTime(created), parseTime(updated)
+	if deleted != "" {
+		when := parseTime(deleted)
+		t.DeletedAt = &when
+	}
+	if err := crypto.OpenJSON(crypto.Sealed{Ciphertext: ciphertext, IV: iv, Tag: tag, KeyVersion: keyVersion},
+		s.DataKey, ownerID, "transaction", &t.Sensitive); err != nil {
+		return Transaction{}, err
+	}
+	return t, nil
 }

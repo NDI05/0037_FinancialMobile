@@ -5,6 +5,7 @@
 package config
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -15,31 +16,30 @@ import (
 )
 
 const (
-	DefaultPort             = 8080
-	DefaultAccessTTL        = 15 * time.Minute
-	DefaultRefreshTTLDays   = 30
-	DefaultDataKeyVersion   = 1
-	defaultInviteCode       = "pam-dev"
-	defaultSessionPepper    = "dev-session-pepper-not-for-production-use"
-	defaultJWTSecret        = "dev-jwt-secret-not-for-production-use-32b"
-	defaultRefreshPepper    = "dev-refresh-pepper-not-for-production-use"
-	defaultDatabaseURL      = "file:./data/pam.db"
-	defaultInviteProduction = ""
+	DefaultPort           = 8080
+	DefaultAccessTTL      = 15 * time.Minute
+	DefaultRefreshTTLDays = 30
+	DefaultDataKeyVersion = 1
+	defaultInviteCode     = "pam-dev"
+	defaultJWTSecret      = "dev-jwt-secret-not-for-production-use-32b"
+	defaultRefreshPepper  = "dev-refresh-pepper-not-for-production-use"
+	defaultDatabaseURL    = "file:./data/pam.db"
 )
 
 // Config is the complete runtime configuration. Secrets are kept only in this process.
 type Config struct {
-	Env        string
-	Port       int
-	LogLevel   string
-	Database   Database
-	InviteCode string
-	JWT        JWT
-	DataKey    []byte
-	KeyVersion int
-	LLM        LLM
-	Limits     Limits
-	Warnings   []string
+	Env                string
+	Port               int
+	LogLevel           string
+	Database           Database
+	InviteCode         string
+	InternalSweepToken string
+	JWT                JWT
+	DataKey            []byte
+	KeyVersion         int
+	LLM                LLM
+	Limits             Limits
+	Warnings           []string
 }
 
 type Database struct {
@@ -72,6 +72,7 @@ type Limits struct {
 	DailyCeilingUSD float64
 	PromptPer1K     float64
 	CompletionPer1K float64
+	UnknownCallUSD  float64
 }
 
 // Load parses env. It returns an error for invalid values and production-unsafe secrets.
@@ -80,9 +81,10 @@ func Load(env map[string]string) (*Config, error) {
 		env = environ()
 	}
 	cfg := &Config{
-		Env:        get(env, "APP_ENV", get(env, "NODE_ENV", "development")),
-		LogLevel:   get(env, "LOG_LEVEL", "info"),
-		InviteCode: get(env, "REGISTRATION_INVITE_CODE", ""),
+		Env:                get(env, "APP_ENV", get(env, "NODE_ENV", "development")),
+		LogLevel:           get(env, "LOG_LEVEL", "info"),
+		InviteCode:         get(env, "REGISTRATION_INVITE_CODE", ""),
+		InternalSweepToken: get(env, "INTERNAL_SWEEP_TOKEN", ""),
 		Database: Database{
 			URL:       normalizeDatabaseURL(get(env, "DATABASE_URL", defaultDatabaseURL)),
 			AuthToken: get(env, "DATABASE_AUTH_TOKEN", ""),
@@ -108,6 +110,7 @@ func Load(env map[string]string) (*Config, error) {
 			DailyCeilingUSD: floatValue(env, "DAILY_AI_CEILING_USD", 1),
 			PromptPer1K:     floatValue(env, "PRICE_PROMPT_PER_1K_USD", 0.00015),
 			CompletionPer1K: floatValue(env, "PRICE_COMPLETION_PER_1K_USD", 0.0006),
+			UnknownCallUSD:  floatValue(env, "UNKNOWN_AI_CALL_COST_USD", 0.001),
 		},
 	}
 	port, err := strconv.Atoi(get(env, "PORT", strconv.Itoa(DefaultPort)))
@@ -127,16 +130,31 @@ func Load(env map[string]string) (*Config, error) {
 	}
 	cfg.JWT.RefreshTTL = time.Duration(refreshDays) * 24 * time.Hour
 
+	rawJWT := get(env, "JWT_SECRET", "")
+	rawRefresh := get(env, "REFRESH_PEPPER", "")
+	rawDataKey := get(env, "DATA_ENCRYPTION_KEY", "")
+	dataKey, dataKeyErr := decodeDataKeyStrict(rawDataKey)
+	if rawDataKey != "" && dataKeyErr != nil {
+		return nil, fmt.Errorf("DATA_ENCRYPTION_KEY is invalid: %w", dataKeyErr)
+	}
+	devKeySum := sha256.Sum256([]byte("pam-dev-data-key"))
+	devKey := devKeySum[:]
+
 	if cfg.Env == "production" {
 		problems := []string{}
-		if cfg.InviteCode == "" {
-			problems = append(problems, "REGISTRATION_INVITE_CODE is required")
+		if cfg.InviteCode == "" || cfg.InviteCode == defaultInviteCode {
+			problems = append(problems, "REGISTRATION_INVITE_CODE must be set to a non-development value")
 		}
-		if len(get(env, "JWT_SECRET", "")) < 32 {
-			problems = append(problems, "JWT_SECRET must be at least 32 bytes")
+		if len(rawJWT) < 32 || rawJWT == defaultJWTSecret {
+			problems = append(problems, "JWT_SECRET must be at least 32 bytes and not the development value")
 		}
-		if len(get(env, "REFRESH_PEPPER", "")) < 32 {
-			problems = append(problems, "REFRESH_PEPPER must be at least 32 bytes")
+		if len(rawRefresh) < 32 || rawRefresh == defaultRefreshPepper {
+			problems = append(problems, "REFRESH_PEPPER must be at least 32 bytes and not the development value")
+		}
+		if rawDataKey == "" || dataKeyErr != nil {
+			problems = append(problems, "DATA_ENCRYPTION_KEY is required and must be base64 for exactly 32 bytes")
+		} else if bytes.Equal(dataKey, devKey) {
+			problems = append(problems, "DATA_ENCRYPTION_KEY must not be the known development key")
 		}
 		if len(cfg.Database.AuthToken) == 0 && strings.HasPrefix(cfg.Database.URL, "libsql://") {
 			problems = append(problems, "DATABASE_AUTH_TOKEN is required for a libsql:// URL")
@@ -152,19 +170,23 @@ func Load(env map[string]string) (*Config, error) {
 	if cfg.Env != "production" {
 		cfg.Warnings = append(cfg.Warnings, "development secrets are in use; do not run this configuration in production")
 	}
-	cfg.JWT.Secret = []byte(get(env, "JWT_SECRET", defaultJWTSecret))
-	if len(cfg.JWT.Secret) < 32 {
+	cfg.JWT.Secret = []byte(rawJWT)
+	if rawJWT == "" {
+		cfg.JWT.Secret = []byte(defaultJWTSecret)
+	} else if len(rawJWT) < 32 {
 		return nil, fmt.Errorf("JWT_SECRET must be at least 32 bytes")
 	}
-	cfg.JWT.RefreshPepper = get(env, "REFRESH_PEPPER", defaultRefreshPepper)
-	if cfg.JWT.RefreshPepper == "" {
+	cfg.JWT.RefreshPepper = rawRefresh
+	if rawRefresh == "" {
 		cfg.JWT.RefreshPepper = defaultRefreshPepper
+	} else if len(rawRefresh) < 32 {
+		return nil, fmt.Errorf("REFRESH_PEPPER must be at least 32 bytes")
 	}
-	cfg.DataKey = decodeDataKey(get(env, "DATA_ENCRYPTION_KEY", ""))
-	if cfg.DataKey == nil {
-		sum := sha256.Sum256([]byte("pam-dev-data-key"))
-		cfg.DataKey = sum[:]
-		cfg.Warnings = append(cfg.Warnings, "DATA_ENCRYPTION_KEY missing/invalid: using the development key")
+	if rawDataKey == "" {
+		cfg.DataKey = devKey
+		cfg.Warnings = append(cfg.Warnings, "DATA_ENCRYPTION_KEY missing: using the development key")
+	} else {
+		cfg.DataKey = dataKey
 	}
 	if cfg.KeyVersion < 1 {
 		cfg.KeyVersion = 1
@@ -186,15 +208,15 @@ func normalizeDatabaseURL(raw string) string {
 	return raw
 }
 
-func decodeDataKey(raw string) []byte {
-	if raw == "" {
-		return nil
-	}
+func decodeDataKeyStrict(raw string) ([]byte, error) {
 	decoded, err := base64.StdEncoding.DecodeString(raw)
-	if err != nil || len(decoded) != 32 {
-		return nil
+	if err != nil {
+		return nil, fmt.Errorf("must be base64")
 	}
-	return decoded
+	if len(decoded) != 32 {
+		return nil, fmt.Errorf("must decode to 32 bytes")
+	}
+	return decoded, nil
 }
 
 func environ() map[string]string {

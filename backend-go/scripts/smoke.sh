@@ -31,6 +31,7 @@ CATEGORY=$(curl -s "$BASE/v1/categories" -H "authorization: Bearer $TOKEN" \
   | python3 -c "import json,sys; print(next(c['id'] for c in json.load(sys.stdin)['categories'] if c['code']=='food'))")
 code=$(curl -s -o /tmp/pam-go-tx.json -w '%{http_code}' -X POST "$BASE/v1/transactions" \
   -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -H 'Idempotency-Key: smoke-transaction' \
   -d "{\"direction\":\"DEBIT\",\"amountMinor\":17500000,\"currency\":\"IDR\",\"eventAt\":\"2026-11-19T04:10:00Z\",\"categoryId\":\"$CATEGORY\",\"description\":\"Smoke\"}")
 [[ "$code" == "201" ]] || { echo "transaction failed: $code"; cat /tmp/pam-go-tx.json; exit 1; }
 

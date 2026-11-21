@@ -82,8 +82,13 @@ func (o OpenAI) Analyze(ctx context.Context, payload map[string]any) (store.Anal
 		return store.AnalysisResponse{}, fmt.Errorf("provider returned no choices")
 	}
 	var analysis store.AnalysisResponse
-	if err := json.Unmarshal([]byte(extractJSON(decoded.Choices[0].Message.Content)), &analysis); err != nil {
+	decoder := json.NewDecoder(strings.NewReader(extractJSON(decoded.Choices[0].Message.Content)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&analysis); err != nil {
 		return store.AnalysisResponse{}, fmt.Errorf("provider returned invalid analysis json")
+	}
+	if decoder.More() {
+		return store.AnalysisResponse{}, fmt.Errorf("provider returned trailing analysis json")
 	}
 	promptTokens, completionTokens := decoded.Usage.PromptTokens, decoded.Usage.CompletionTokens
 	analysis.PromptTokens, analysis.CompletionTokens = &promptTokens, &completionTokens

@@ -20,11 +20,27 @@ func (s *Store) AppendConsent(ctx context.Context, ownerID, purpose, decision, n
 		ID: NewID("consent"), Purpose: purpose, Decision: decision,
 		NoticeVersion: noticeVersion, CreatedAt: now.UTC(),
 	}
-	_, err := s.DB.ExecContext(ctx, `INSERT INTO consents
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return Consent{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if _, err := tx.ExecContext(ctx, `INSERT INTO consents
 		(id, owner_id, purpose, decision, notice_version, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)`,
-		record.ID, ownerID, purpose, decision, noticeVersion, nowString(now))
-	return record, err
+		record.ID, ownerID, purpose, decision, noticeVersion, nowString(now)); err != nil {
+		return Consent{}, err
+	}
+	if purpose == "AI_PROCESSING" && decision == "WITHDRAWN" {
+		if _, err := tx.ExecContext(ctx, `UPDATE analyses SET status = 'HISTORICAL'
+			WHERE owner_id = ? AND status = 'AVAILABLE'`, ownerID); err != nil {
+			return Consent{}, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return Consent{}, err
+	}
+	return record, nil
 }
 
 func (s *Store) ListConsents(ctx context.Context, ownerID string, limit int) ([]Consent, error) {

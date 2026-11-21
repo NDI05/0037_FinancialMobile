@@ -1,6 +1,9 @@
 package httpapi
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -202,26 +205,67 @@ func (s *Server) createTransaction(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &body) {
 		return
 	}
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if !validIdempotencyKey(idempotencyKey) {
+		writeError(w, http.StatusBadRequest, "invalid_request", "Idempotency-Key is required (1..200 printable characters)", correlationOf(r))
+		return
+	}
 	eventAt, err := time.Parse(time.RFC3339, body.EventAt)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_request", "eventAt must be RFC3339", correlationOf(r))
 		return
 	}
+	if body.Currency == "" {
+		body.Currency = "IDR"
+	}
+	if body.Source == "" {
+		body.Source = "MANUAL"
+	}
+	if body.CategoryOrigin == "" {
+		body.CategoryOrigin = "USER"
+	}
+	body.EventAt = eventAt.UTC().Format(time.RFC3339)
+	// Hash the normalized request, not the raw bytes: whitespace/field order must not change identity.
+	requestHash := hashTransactionRequest(body)
 	info, _ := authFrom(r)
-	transaction, err := s.Store.CreateTransaction(r.Context(), info.OwnerID, store.TransactionInput{
-		CategoryID: body.CategoryID, Direction: body.Direction, Source: body.Source,
-		AmountMinor: body.AmountMinor, Currency: body.Currency, EventAt: eventAt,
-		Fingerprint: body.Fingerprint, ParserVersion: body.ParserVersion,
-		ParserConfidence: body.ParserConfidence, CategoryOrigin: body.CategoryOrigin,
-		Description: body.Description, MerchantLabel: body.MerchantLabel, Note: body.Note,
-		Attributes: body.Attributes, IsInternalTransfer: body.IsInternalTransfer,
-		LinkedRefundOf: body.LinkedRefundOf,
-	}, s.Now())
+	result, err := s.Store.CreateTransactionIdempotent(r.Context(), info.OwnerID, idempotencyKey,
+		requestHash, store.TransactionInput{
+			CategoryID: body.CategoryID, Direction: body.Direction, Source: body.Source,
+			AmountMinor: body.AmountMinor, Currency: body.Currency, EventAt: eventAt,
+			Fingerprint: body.Fingerprint, ParserVersion: body.ParserVersion,
+			ParserConfidence: body.ParserConfidence, CategoryOrigin: body.CategoryOrigin,
+			Description: body.Description, MerchantLabel: body.MerchantLabel, Note: body.Note,
+			Attributes: body.Attributes, IsInternalTransfer: body.IsInternalTransfer,
+			LinkedRefundOf: body.LinkedRefundOf,
+		}, s.Now())
 	if err != nil {
 		s.mapWriteError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, transactionJSON(transaction))
+	w.Header().Set("Idempotency-Replayed", strconv.FormatBool(result.Replayed))
+	status := http.StatusCreated
+	if result.Replayed {
+		status = http.StatusOK
+	}
+	writeJSON(w, status, transactionJSON(result.Transaction))
+}
+
+func validIdempotencyKey(key string) bool {
+	if len(key) == 0 || len(key) > 200 {
+		return false
+	}
+	for _, r := range key {
+		if r < 0x20 || r == 0x7f {
+			return false
+		}
+	}
+	return true
+}
+
+func hashTransactionRequest(body transactionCreate) string {
+	raw, _ := json.Marshal(body)
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
 }
 
 func (s *Server) listTransactions(w http.ResponseWriter, r *http.Request) {
@@ -296,6 +340,7 @@ func transactionJSON(t store.Transaction) map[string]any {
 		"note": t.Sensitive.Note, "attributes": t.Sensitive.Attributes,
 		"isInternalTransfer": t.IsInternalTransfer, "linkedRefundOf": nullString(t.LinkedRefundOf),
 		"revision": t.Revision, "createdAt": t.CreatedAt, "updatedAt": t.UpdatedAt,
+		"deletedAt": t.DeletedAt,
 	}
 }
 
@@ -460,6 +505,8 @@ func (s *Server) mapWriteError(w http.ResponseWriter, r *http.Request, err error
 		writeError(w, http.StatusConflict, "revision_conflict", "Revision changed", correlationOf(r))
 	case errors.Is(err, store.ErrDeletionInProgress):
 		writeError(w, http.StatusConflict, "deletion_in_progress", "A deletion request is in progress", correlationOf(r))
+	case errors.Is(err, store.ErrIdempotencyConflict):
+		writeError(w, http.StatusConflict, "idempotency_conflict", "This Idempotency-Key was already used with a different body", correlationOf(r))
 	default:
 		// Validation errors from the store are client errors, not 500s.
 		message := err.Error()

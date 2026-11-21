@@ -4,32 +4,19 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
-	"strconv"
 	"strings"
 
+	"github.com/pam/recap/backend-go/internal/analysis"
 	"github.com/pam/recap/backend-go/internal/store"
 )
 
-// ALLOWED_PAYLOAD_FIELDS mirrors the Kotlin AiAggregatePayload allowlist. It is deliberately a
-// closed set: a body containing subject/body/sender/messageId/token/pan is rejected, not ignored.
-var allowedPayloadFields = map[string]bool{
-	"schemaVersion": true, "monthId": true, "coverage": true,
-	"grossInflowMinor": true, "grossOutflowMinor": true, "netCashFlowMinor": true,
-	"classifiedIncomeMinor": true, "classifiedExpenseMinor": true,
-	"transactionCount": true, "uncategorizedCount": true, "manualEntryCount": true,
-	"nonIdrExcludedCount": true, "categoryTotals": true, "priorMonth": true, "plan": true,
-	"categoryCode": true, "amountMinor": true, "limitMinor": true, "expenseMinor": true,
-	"incomeMinor": true, "expectedIncomeMinor": true, "plannedSavingsMinor": true,
-	"categoryLimitTotals": true,
-}
-
 type analysisRequest struct {
-	MonthID       string         `json:"monthId"`
-	InputRevision int            `json:"inputRevision"`
-	Payload       map[string]any `json:"payload"`
+	MonthID       string          `json:"monthId"`
+	InputRevision int             `json:"inputRevision"`
+	Payload       json.RawMessage `json:"payload"`
 }
 
 func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
@@ -41,22 +28,17 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_request", "monthId must be YYYY-MM", correlationOf(r))
 		return
 	}
-	if body.Payload == nil {
+	if len(body.Payload) == 0 {
 		writeError(w, http.StatusBadRequest, "invalid_request", "payload is required", correlationOf(r))
 		return
 	}
-	if payloadMonth, _ := body.Payload["monthId"].(string); payloadMonth != body.MonthID {
+	clientPayload, err := analysis.ParseClientPayload(body.Payload)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_request", err.Error(), correlationOf(r))
+		return
+	}
+	if clientPayload.MonthID != body.MonthID {
 		writeError(w, http.StatusBadRequest, "invalid_request", "payload.monthId must match monthId", correlationOf(r))
-		return
-	}
-	if disallowed := findDisallowedFields(body.Payload, ""); len(disallowed) > 0 {
-		writeError(w, http.StatusBadRequest, "invalid_request",
-			"payload contains fields that may never leave the device: "+strings.Join(disallowed[:min(3, len(disallowed))], ", "),
-			correlationOf(r))
-		return
-	}
-	if !validPayloadShape(body.Payload) {
-		writeError(w, http.StatusBadRequest, "invalid_request", "payload does not match the aggregate schema", correlationOf(r))
 		return
 	}
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
@@ -74,11 +56,27 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "consent_required", "AI consent has not been granted", correlationOf(r))
 		return
 	}
-	requestHash := hashAnalysisRequest(body)
+	snapshot, err := analysis.Build(r.Context(), s.Store, info.OwnerID, body.MonthID)
+	if err != nil {
+		s.databaseOrInternal(w, r, err)
+		return
+	}
+	if body.InputRevision != snapshot.Revision {
+		writeError(w, http.StatusConflict, "revision_conflict",
+			fmt.Sprintf("inputRevision is stale; server revision is %d", snapshot.Revision), correlationOf(r))
+		return
+	}
+	requestHash := hashAnalysisRequest(body.MonthID, body.InputRevision, snapshot.Hash, body.Payload)
 	existing, existingHash, err := s.Store.FindAnalysisByIdempotency(r.Context(), info.OwnerID, idempotencyKey)
 	if err == nil {
 		if existingHash != requestHash {
-			writeError(w, http.StatusConflict, "conflict", "This Idempotency-Key was already used with a different body", correlationOf(r))
+			writeError(w, http.StatusConflict, "idempotency_conflict", "This Idempotency-Key was already used with a different body", correlationOf(r))
+			return
+		}
+		// A replay after withdrawal/deletion must not be published as a fresh AVAILABLE report.
+		if current, cErr := s.Store.LatestConsent(r.Context(), info.OwnerID, "AI_PROCESSING"); cErr != nil ||
+			current.ID != consent.ID || current.Decision != "GRANTED" {
+			writeError(w, http.StatusConflict, "consent_required", "AI consent changed while the analysis was running", correlationOf(r))
 			return
 		}
 		writeJSON(w, http.StatusOK, analysisJSON(existing))
@@ -90,7 +88,7 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cached, err := s.Store.FindAnalysisByCache(r.Context(), info.OwnerID, body.MonthID,
-		body.InputRevision, "analysis-v1", provider.ID(), provider.Model())
+		snapshot.Revision, analysis.PromptVersion, provider.ID(), provider.Model(), snapshot.Hash, consent.ID)
 	if err == nil {
 		writeJSON(w, http.StatusOK, analysisJSON(cached))
 		return
@@ -105,30 +103,80 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusTooManyRequests, reason, "Analysis limit reached", correlationOf(r))
 		return
 	}
-	response, err := provider.Analyze(r.Context(), body.Payload)
-	if err != nil {
+	payloadMap := snapshot.Payload.ToMap()
+	var response store.AnalysisResponse
+	var providerErr error
+	regenerations := 0
+	for attempt := 0; attempt < 2; attempt++ {
+		allowed, err := s.Store.ReserveProviderCost(r.Context(), s.Config.Limits.DailyCeilingUSD,
+			s.Config.Limits.UnknownCallUSD, s.Now())
+		if err != nil {
+			s.databaseOrInternal(w, r, err)
+			return
+		}
+		if !allowed {
+			writeError(w, http.StatusTooManyRequests, "daily_ceiling_reached", "Daily AI cost ceiling reached", correlationOf(r))
+			return
+		}
+		response, providerErr = provider.Analyze(r.Context(), payloadMap)
+		s.recordProviderUsage(r, info.OwnerID, response)
+		if providerErr != nil {
+			break
+		}
+		if err := validateAnalysisResponse(response, snapshot.Payload); err == nil {
+			break
+		} else if attempt == 1 {
+			writeError(w, http.StatusUnprocessableEntity, "invalid_analysis_output", err.Error(), correlationOf(r))
+			return
+		}
+		regenerations = 1
+	}
+	if providerErr != nil {
 		writeError(w, http.StatusBadGateway, "provider_unavailable", "Analysis provider failed", correlationOf(r))
 		return
 	}
-	if err := validateAnalysisResponse(response, body.Payload); err != nil {
+	if err := validateAnalysisResponse(response, snapshot.Payload); err != nil {
 		writeError(w, http.StatusUnprocessableEntity, "invalid_analysis_output", err.Error(), correlationOf(r))
 		return
 	}
-	record, err := s.Store.InsertAnalysis(r.Context(), info.OwnerID, body.MonthID, body.InputRevision,
-		consent.ID, provider.ID(), provider.Model(), "analysis-v1", idempotencyKey, requestHash,
-		response, "AVAILABLE", 0, s.Now())
+	record, err := s.Store.InsertAnalysisGuarded(r.Context(), store.AnalysisFinalizeInput{
+		OwnerID: info.OwnerID, SessionID: info.SessionID, MonthID: body.MonthID,
+		InputRevision: snapshot.Revision, SnapshotHash: snapshot.Hash, ConsentID: consent.ID,
+		Provider: provider.ID(), Model: provider.Model(), PromptVersion: analysis.PromptVersion,
+		IdempotencyKey: idempotencyKey, RequestHash: requestHash, Response: response,
+		RegenerationCount: regenerations, Now: s.Now(),
+	})
 	if err != nil {
-		if err == store.ErrConflict {
-			existing, _, findErr := s.Store.FindAnalysisByIdempotency(r.Context(), info.OwnerID, idempotencyKey)
-			if findErr == nil {
-				writeJSON(w, http.StatusOK, analysisJSON(existing))
-				return
-			}
+		switch {
+		case errors.Is(err, store.ErrConsentChanged):
+			writeError(w, http.StatusConflict, "consent_required", "AI consent changed while the analysis was running", correlationOf(r))
+		case errors.Is(err, store.ErrDeletionInProgress):
+			writeError(w, http.StatusConflict, "deletion_in_progress", "A deletion request is in progress", correlationOf(r))
+		case errors.Is(err, store.ErrRevisionConflict):
+			writeError(w, http.StatusConflict, "revision_conflict", "The monthly revision changed while the analysis was running", correlationOf(r))
+		case errors.Is(err, store.ErrSessionStale):
+			writeError(w, http.StatusUnauthorized, "session_stale", "Session is no longer active", correlationOf(r))
+		default:
+			s.databaseOrInternal(w, r, err)
 		}
-		s.databaseOrInternal(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, analysisJSON(record))
+}
+
+func (s *Server) recordProviderUsage(r *http.Request, ownerID string, response store.AnalysisResponse) {
+	prompt, completion := int64(0), int64(0)
+	known := response.PromptTokens != nil && response.CompletionTokens != nil
+	if known {
+		prompt, completion = *response.PromptTokens, *response.CompletionTokens
+	}
+	cost := float64(prompt)/1000*s.Config.Limits.PromptPer1K +
+		float64(completion)/1000*s.Config.Limits.CompletionPer1K
+	reserved := s.Config.Limits.UnknownCallUSD
+	if !known {
+		cost = reserved
+	}
+	_ = s.Store.RecordUsage(r.Context(), ownerID, prompt, completion, cost, reserved, known, s.Now())
 }
 
 func (s *Server) getAnalysis(w http.ResponseWriter, r *http.Request) {
@@ -149,127 +197,12 @@ func analysisJSON(record store.AnalysisRecord) map[string]any {
 		"limitations":      record.Response.Limitations,
 		"promptTokens":     record.Response.PromptTokens,
 		"completionTokens": record.Response.CompletionTokens,
+		"status":           record.Status,
 	}
 }
 
-func findDisallowedFields(value any, path string) []string {
-	switch typed := value.(type) {
-	case map[string]any:
-		var found []string
-		for key, child := range typed {
-			if !allowedPayloadFields[key] {
-				if path == "" {
-					found = append(found, key)
-				} else {
-					found = append(found, path+"."+key)
-				}
-			}
-			childPath := key
-			if path != "" {
-				childPath = path + "." + key
-			}
-			found = append(found, findDisallowedFields(child, childPath)...)
-		}
-		return found
-	case []any:
-		var found []string
-		for _, child := range typed {
-			found = append(found, findDisallowedFields(child, path)...)
-		}
-		return found
-	default:
-		return nil
-	}
-}
-
-func validPayloadShape(payload map[string]any) bool {
-	if schema, _ := payload["schemaVersion"].(float64); schema != 1 {
-		return false
-	}
-	coverage, _ := payload["coverage"].(string)
-	if coverage != "COMPLETE" && coverage != "PARTIAL" && coverage != "UNKNOWN" {
-		return false
-	}
-	for _, key := range []string{"grossInflowMinor", "grossOutflowMinor", "netCashFlowMinor",
-		"classifiedIncomeMinor", "classifiedExpenseMinor", "transactionCount",
-		"uncategorizedCount", "manualEntryCount", "nonIdrExcludedCount"} {
-		value, ok := payload[key].(float64)
-		if !ok || value != float64(int64(value)) {
-			return false
-		}
-	}
-	return true
-}
-
-var rupiahPattern = regexp.MustCompile(`Rp\s?([0-9][0-9.,]*)`)
-
-func validateAnalysisResponse(response store.AnalysisResponse, payload map[string]any) error {
-	if response.PromptVersion != "analysis-v1" {
-		return fmt.Errorf("unexpected prompt version")
-	}
-	if len(response.Observations) > 12 || len(response.Suggestions) > 8 || len(response.Limitations) > 8 {
-		return fmt.Errorf("analysis exceeds the item limits")
-	}
-	allowed := allowedAmounts(payload)
-	for _, text := range allAnalysisText(response) {
-		if len(text) == 0 || len(text) > 600 {
-			return fmt.Errorf("analysis text length is invalid")
-		}
-		if strings.Contains(strings.ToLower(text), "abaikan instruksi") ||
-			strings.Contains(strings.ToLower(text), "ignore previous") {
-			return fmt.Errorf("analysis contains instruction-like prose")
-		}
-		for _, match := range rupiahPattern.FindAllStringSubmatch(text, -1) {
-			digits := strings.NewReplacer(".", "", ",", "").Replace(match[1])
-			value, err := strconv.ParseInt(digits, 10, 64)
-			if err != nil || !allowed[value] {
-				return fmt.Errorf("analysis mentions an amount absent from the payload")
-			}
-		}
-	}
-	return nil
-}
-
-func allAnalysisText(response store.AnalysisResponse) []string {
-	var out []string
-	for _, observation := range response.Observations {
-		out = append(out, observation.Text)
-	}
-	for _, suggestion := range response.Suggestions {
-		out = append(out, suggestion.Text)
-	}
-	out = append(out, response.Limitations...)
-	return out
-}
-
-func allowedAmounts(payload map[string]any) map[int64]bool {
-	allowed := map[int64]bool{0: true}
-	var walk func(value any)
-	walk = func(value any) {
-		switch typed := value.(type) {
-		case map[string]any:
-			for key, child := range typed {
-				if strings.HasSuffix(key, "Minor") {
-					if number, ok := child.(float64); ok {
-						allowed[int64(number)] = true
-						allowed[int64(-number)] = true
-					}
-				}
-				walk(child)
-			}
-		case []any:
-			for _, child := range typed {
-				walk(child)
-			}
-		}
-	}
-	walk(payload)
-	return allowed
-}
-
-func hashAnalysisRequest(body analysisRequest) string {
-	// encoding/json sorts object keys, so the hash is stable for the same semantic body.
-	raw, _ := json.Marshal(body)
-	sum := sha256.Sum256(raw)
+func hashAnalysisRequest(monthID string, revision int, snapshotHash string, clientPayload json.RawMessage) string {
+	raw := fmt.Sprintf("%s|%d|%s|%s", monthID, revision, snapshotHash, string(clientPayload))
+	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
 }

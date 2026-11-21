@@ -72,10 +72,15 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /v1/budget-plans/{monthID}", s.authed(s.getBudget))
 	mux.Handle("PUT /v1/budget-plans/{monthID}", s.authed(s.putBudget))
 	mux.Handle("DELETE /v1/budget-plans/{monthID}", s.authed(s.deleteBudget))
+	mux.Handle("POST /v1/import-jobs", s.authed(s.createImportJob))
+	mux.Handle("GET /v1/import-jobs/{id}", s.authed(s.getImportJob))
+	mux.Handle("POST /v1/import-jobs/{id}/batches", s.authed(s.importBatch))
+	mux.Handle("PATCH /v1/import-jobs/{id}", s.authed(s.finalizeImportJob))
 	mux.Handle("POST /v1/analyses", s.authed(s.createAnalysis))
 	mux.Handle("GET /v1/analyses/{monthID}", s.authed(s.getAnalysis))
 	mux.Handle("POST /v1/deletion-requests", s.authed(s.createDeletion))
 	mux.Handle("GET /v1/deletion-requests/{id}", s.authed(s.getDeletion))
+	mux.HandleFunc("POST /v1/internal/sweep", s.internalSweep)
 	return s.middleware(mux)
 }
 
