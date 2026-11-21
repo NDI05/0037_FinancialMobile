@@ -44,17 +44,19 @@ Gunakan tabel yang sudah ada dan migrasi baru yang berurutan. Tabel berikut adal
 
 | Entitas | Field dan relasi inti | Tampilan/field dinamis |
 |---|---|---|
-| users | owner_id, email, password hash/salt, display_name, role, status | Profil dan administrasi |
-| categories | id, owner_id, code, label, kind, color, attributes_json, deleted_at | Editor kategori dengan atribut tambahan |
-| transactions | id, owner_id, category_id, direction, amount_minor, currency, event_at, fingerprint, source, revision, metadata_json, deleted_at | Daftar/detail/editor transaksi |
-| budget_plans | id, owner_id, month_id, expected_income_minor, planned_savings_minor, revision, attributes_json, deleted_at | Daftar/detail/editor anggaran |
+| users | owner_id, email, password hash/salt, display_name, role, status, auth_version, revision | Profil dan administrasi |
+| categories | id, owner_id, code, label (sealed), kind, color, attributes (sealed), deleted_at | Editor kategori dengan atribut tambahan |
+| transactions | id, owner_id, category_id, direction, amount_minor, currency, event_at_ms, month_id, fingerprint, source, sensitive payload (sealed), revision, deleted_at | Daftar/detail/editor transaksi |
+| budget_plans | id, owner_id, month_id, expected_income_minor, planned_savings_minor, attributes (sealed), revision | Daftar/detail/editor anggaran; delete hard |
 | budget_limits | owner_id, plan_id, category_id, amount_minor | Batas per kategori pada rencana |
-| attachments | id, owner_id, transaction_id, device_ref, local_file_id, display_name, mime, size_bytes, attributes_json, deleted_at | Lampiran transaksi dan pencarian nama |
-| refresh_tokens | id, owner_id, session_family_id, token_hash, expires_at, revoked_at, replaced_by | Internal auth |
-| import_jobs | id, owner_id, month_id, progress, coverage, imported_count, revision | Kemajuan dan hasil impor |
+| attachments | id, owner_id, transaction_id, device_ref, local_file_id, mime, size_bytes, sensitive payload (sealed), revision, deleted_at | Lampiran transaksi dan pencarian nama |
+| refresh_tokens | id, owner_id, session_id, family_id, token_hash, issued_at, expires_at, revoked_at, replaced_by_id | Internal auth |
+| auth_sessions | id, owner_id, family_id, created_at, last_seen_at, expires_at, revoked_at/reason | Referensi `sid` JWT |
+| account_keys | owner_id, key_version, fingerprint sealed | Kunci HMAC fingerprint |
+| import_jobs | id, owner_id, month_id, state, counters_json, started_at/finished_at, error_code | Kemajuan dan hasil impor |
 | summaries, analyses, consents, deletion_requests | Perluasan tabel existing dengan referensi dan revisi yang sesuai | Ringkasan, analisis, izin, penghapusan |
 
-Empat entitas utama untuk D.5 adalah kategori, transaksi, rencana anggaran, dan metadata lampiran. Setiap entitas memiliki form dinamis yang dapat ditulis, dibaca ulang, diedit, dan tampil di UI. Simpan objek JSON sebagai TEXT terverifikasi sesuai dialect libSQL. Batasi ukuran, jumlah, dan tipe atribut dalam kontrak.
+Empat entitas utama untuk D.5 adalah kategori, transaksi, rencana anggaran, dan metadata lampiran. Setiap entitas memiliki form dinamis yang dapat ditulis, dibaca ulang, diedit, dan tampil di UI. Atribut yang dapat memuat data pribadi disegel sebagai JSON AES-GCM; JSON non-sensitif (counter impor, audit admin) disimpan sebagai TEXT dengan `CHECK(json_valid(...))`. Batasi ukuran, jumlah, dan tipe atribut dalam kontrak.
 
 Gunakan UUID/string stabil untuk ID. Owner berasal dari sesi terverifikasi. Relasi kategori, transaksi, rencana/batas, dan lampiran harus memeriksa kesamaan owner, termasuk lewat composite foreign key ketika sesuai. Pertahankan `UNIQUE(owner_id, fingerprint)`, indeks pencarian berbasis owner, dan mata uang dalam unit minor integer. Periksa integer aman saat serialisasi TypeScript serta tolak overflow.
 
@@ -72,7 +74,7 @@ Desain pencarian perlu mengakomodasi enkripsi. Pertahankan AES-GCM untuk payload
 | Lampiran | Pilih dan salin file | Buka ulang | Nama/atribut | Hapus file dan metadata | Nama |
 | Pengguna admin | Buat/invite dari UI admin | Daftar/detail | Nama, peran/status | Soft delete dengan revoke sesi | Email/nama |
 
-Soft delete mengecualikan data dari daftar aktif dan total, menyimpan aturan retensi, dan bisa diperlihatkan lewat UI. Penghapusan kategori yang direferensikan memerlukan pilihan pemindahan kategori yang atomik atau penolakan yang jelas. Admin mengelola akun. Akses finance tetap owner-scoped. Lindungi admin aktif terakhir dan larang eskalasi peran dari endpoint profil biasa.
+Soft delete mengecualikan transaksi, kategori, lampiran dan pengguna dari daftar aktif/total, menyimpan aturan retensi, dan bisa diperlihatkan lewat UI. Rencana anggaran dihapus hard (tidak memengaruhi arus kas) setelah konfirmasi. Penghapusan kategori yang direferensikan memerlukan pemilihan kategori pengganti yang atomik atau penolakan yang jelas. Admin mengelola akun. Akses finance tetap owner-scoped. Lindungi admin aktif terakhir dan larang eskalasi peran dari endpoint profil biasa.
 
 File dibaca lewat pemilih dokumen dan disalin ke direktori privat yang terikat owner. Server menyimpan referensi lokal abstrak dan metadata yang diperlukan. Pada perangkat lain, metadata dapat muncul dengan status file belum tersedia. Uji kegagalan simpan metadata setelah copy file, kegagalan hapus file, restart, sign-out berganti pemilik, dan penghapusan transaksi. Cleanup/retry harus menjaga konsistensi. [Android SAF](https://developer.android.com/guide/topics/providers/document-provider)
 
