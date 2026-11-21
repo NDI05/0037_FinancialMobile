@@ -17,57 +17,89 @@ it maps every requirement ID to where it is implemented.
 Bagian ini diperbarui setiap kali ada kemajuan. Kalau ragu apakah masih akurat, `git log` adalah
 kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 
-**Terakhir diperbarui:** 21 November 2026 · branch `fix/onboarding-import-stability` dari `c10ca67`
+**Terakhir diperbarui:** 21 November 2026 · branch `design/v0.4-cloud-contract` (paket B)
 
 | Area | Status |
 |---|---|
 | SRS v0.2 → v0.3 change record (CR-001, tanpa GCP) | ✅ selesai |
-| Aplikasi Android — 13 destinasi, 223 test JVM | ✅ jalan |
+| Aplikasi Android — 13 destinasi, **225 test JVM** | ✅ jalan |
 | Akun PAM (email + password, scrypt) menggantikan Google Sign-In | ✅ selesai |
 | Onboarding: akun baru → Persetujuan, tolak Gmail → jalur manual | ✅ diperbaiki + tes |
-| Gmail lewat **IMAP + App Password** (tanpa Google Cloud) | 🟡 MIME/HTML terbaca; impor fixture lulus; **Gmail nyata belum diverifikasi** |
+| Gmail lewat **IMAP + App Password** | 🟡 MIME/HTML + fixture impor lulus; **Gmail nyata belum diverifikasi** |
 | Impor Livin → baris transaksi → total bulanan | 🟡 fixture end-to-end lulus; Gmail nyata ⬜ |
-| Backend Node + **Turso** (database cloud), 111 test | ✅ jalan |
+| Backend Node + libSQL/Turso existing | ✅ **122 test** lulus |
+| **Kontrak v0.4 (SRS, API, data, UI, acceptance)** | ✅ draft review siap disahkan |
+| **Migrasi libSQL `version: 3`** | ✅ teruji lokal `file:`; **cloud NOT RUN** |
+| Implementasi v0.4 (JWT/refresh, CRUD server, admin, lampiran) | ⬜ paket C1/C2/D |
 | LLM **Ollama lokal** (gratis, offline) | ✅ jalan |
 | Fase 5 — backup harian + deploy | ⬜ belum |
 | Fase 6 — APK release bertanda tangan | ⬜ belum |
-| **Kepatuhan Pedoman Project Akhir 2026** | 🟡 dianalisis, rancangan selesai, belum dieksekusi |
+| **Kepatuhan Pedoman Project Akhir 2026** | 🟡 kontrak v0.4 siap, implementasi belum |
 
-**Selesai pada tahap ini.** (1) Gate onboarding: profil baru langsung ke Persetujuan tanpa Back,
-sesi berakhir tidak memulihkan layar terlindungi, dan Persetujuan tetap bisa dibuka lagi untuk
-mengubah keputusan. (2) Tombol **Lanjut tanpa menghubungkan Gmail** mencatat penolakan secara
-eksplisit. (3) Impor: batas sel tabel HTML kini dipertahankan, sehingga label tanpa titik dua dan
-nilai di sel berikutnya terbaca; lampiran di dalam MIME tak bertipe ikut dihitung. Fixture impor
-menghasilkan 25 baris dan total Februari, dan impor ulang menghasilkan 0 baris baru.
+**Selesai pada paket B.** Kontrak v0.4 dikonsolidasikan: SRS review, API v0.4 (JWT/refresh,
+transaksi/kategori CRUDS, impor batch, ringkasan server, anggaran, lampiran, admin), DDL/migrasi
+`version: 3` yang additive, ERD, perubahan UI, T01–T11 dan 25 pemeriksaan CRUDS. Migrasi diuji
+pada database lokal terisolasi: FK lintas owner, fingerprint per owner, batas nominal, JSON TEXT,
+soft delete, reassign kategori, last-admin, rotasi refresh, dan index pagination.
 
-**Belum selesai.** Impor ke mailbox Gmail sungguhan belum diuji ulang pada kode ini. Pemilik perlu
-menjalankan langkah di bagian *Real Gmail check* dan mengirim hasil yang sudah disanitasi. Bukti
-historis "20 ditemukan, 0 tersimpan" berlaku untuk build sebelum perbaikan ini.
+**Selesai pada paket A (dipertahankan).** Gate onboarding, tombol **Lanjut tanpa menghubungkan
+Gmail** (hanya Gmail yang dipaksa `DECLINED`; pilihan AI yang sudah dibuat dipertahankan), batas sel
+HTML MIME, propagasi jumlah lampiran, dan fixture impor end-to-end.
 
-**Bukti emulator API 36 (21 November 2026):** profil lokal baru → Persetujuan tanpa interaksi
-tambahan; tolak Gmail → Ringkasan; impor kotak masuk demo **28 cocok / 25 tersimpan / 3 dilewati**;
-total Februari berubah `Rp0` → `Rp3.896.150`; impor ulang **0 tersimpan / 25 duplikat**; Back dan
-sign-out tidak memulihkan layar terlindungi.
+**Belum selesai.** Implementasi C1/C2 belum dimulai; Room/SQLCipher masih runtime v0.3. Impor Gmail
+nyata belum diuji ulang. Bukti historis "20 ditemukan, 0 tersimpan" berlaku untuk build sebelum
+perbaikan. Kredensial database **uji** Turso belum tersedia, jadi cloud acceptance dan restore drill
+**NOT RUN**.
+
+**Bukti emulator API 36 (paket A, 21 November 2026):** profil lokal baru → Persetujuan tanpa
+interaksi tambahan; tolak Gmail → Ringkasan; impor kotak masuk demo **28 cocok / 25 tersimpan / 3
+dilewati**; total Februari berubah `Rp0` → `Rp3.896.150`; impor ulang **0 tersimpan / 25 duplikat**;
+Back dan sign-out tidak memulihkan layar terlindungi.
+
+### Kontrak v0.4 (paket B)
+
+| Dokumen | Isi |
+|---|---|
+| [`12_SRS_v0.4_REVIEW.md`](docs/12_SRS_v0.4_REVIEW.md) | SRS review: scope, lokasi data, peran, FR-57–63, ERD, privasi, cutover, riwayat |
+| [`06_BACKEND_CONTRACT.md`](docs/06_BACKEND_CONTRACT.md) | endpoint, request/response/error, JWT/refresh, atomisitas, pencarian, lampiran, admin |
+| [`10_MIGRASI_PEDOMAN.md`](docs/10_MIGRASI_PEDOMAN.md) | DDL kandidat `version: 3`, acceptance lokal, cloud NOT RUN, rollback |
+| [`01_SCOPE_TRACEABILITY.md`](docs/01_SCOPE_TRACEABILITY.md) | traceability, T01–T11, 25 CRUDS, rubrik D.1–D.10 |
+| [`03_ARCHITECTURE.md`](docs/03_ARCHITECTURE.md) | target remote, perubahan UI, editor field dinamis, lampiran lokal |
+| [`11_SRS_CHANGE_v0.4.md`](docs/11_SRS_CHANGE_v0.4.md) | CR-002, riwayat revisi, status sign-off |
+
+**Siap disahkan (belum disetujui):** transaksi/kategori/anggaran/metadata lampiran di Turso/libSQL;
+mode offline terbatas dan kebutuhan internet; dua peran `USER`/`ADMIN` dengan admin terakhir
+dilindungi; lampiran lokal + metadata server; cutover bertahap dan rollback dengan rekonsiliasi.
+
+**Keputusan tersisa sebelum aktivasi data pengguna** (satu blok):
+
+1. Sign-off paket v0.4 dan urutan cutover.
+2. Hosting API demo/24 jam + URL HTTPS (sekarang laptop).
+3. Retensi data server setelah akun dihapus (usulan: 30 hari backup, data aktif segera).
+4. Apakah rencana anggaran boleh dihapus hard (usulan) dan apakah admin boleh mengubah email.
+5. Kredensial database Turso **uji** terpisah + konfirmasi engine `libsql://`.
 
 ### Kepatuhan pedoman
 
 **Pembaruan rancangan 21 November 2026.** Pemilik menetapkan cloud database gratis sebagai arah project. Lead memilih **Turso Cloud Free/libSQL** yang sudah dipakai backend. Rancangan terbaru mengganti usulan MySQL di dokumen sebelumnya. Target berikutnya meliputi JWT/refresh, peran, CRUDS, file lokal dan penghapusan Room dari varian penilaian. Kode saat ini masih v0.3. [Rancangan cloud](docs/10_MIGRASI_PEDOMAN.md) · [CR-002](docs/11_SRS_CHANGE_v0.4.md)
 
-Pedoman mata kuliah (`PEDOMAN PROJECT AKHIR PAM 2026`) menetapkan syarat yang **bertentangan**
-dengan SRS v0.3, dan pedoman yang menentukan nilai. Enam butir belum terpenuhi:
+Pedoman mata kuliah (`PEDOMAN PROJECT AKHIR PAM 2026`) menetapkan syarat yang menentukan nilai.
+Kontrak v0.4 sudah menutup desainnya; implementasi belum:
 
 | Butir | Syarat | Kondisi |
 |---|---|---|
+| D.1 | Access token **JWT** + **refresh token** | 🟡 kontrak + migrasi; C1 |
+| D.2 | **Role-based UI**, minimal 1 peran | 🟡 USER/ADMIN dirancang; C1/D |
 | D.3 | Navigasi Compose, alur awal benar | ✅ transisi akun baru dan back stack diperbaiki + tes |
-| D.8 | Database minimal MySQL; **Room dilarang** | ❌ masih Room + SQLCipher |
-| D.1 | Access token **JWT** + **refresh token** | ❌ token opaque |
-| D.2 | **Role-based UI**, minimal 1 peran | ❌ belum ada |
-| D.9 | **Simpan & baca file lokal** | ❌ belum ada |
-| D.6 | **5 fitur CRUDS penuh** | ⚠️ Delete belum ada |
-| C.1 | Progress **mingguan** di README + push rutin | 🟡 dimulai hari ini |
+| D.5 | 4 entitas + field dinamis | 🟡 kontrak; D |
+| D.6 | **5 fitur CRUDS penuh** | 🟡 25 pemeriksaan didefinisikan; C2/D |
+| D.8 | Database minimal MySQL; **Room dilarang** | 🟡 Turso/libSQL + migrasi lokal; Room keluar pada D |
+| D.9 | **Simpan & baca file lokal** | 🟡 lifecycle lampiran dirancang; D |
+| C.1 | Progress **mingguan** di README + push rutin | 🟡 progress dicatat per paket |
 
 Rancangan migrasi: [`docs/10_MIGRASI_PEDOMAN.md`](docs/10_MIGRASI_PEDOMAN.md) ·
-Perubahan SRS: [`docs/11_SRS_CHANGE_v0.4.md`](docs/11_SRS_CHANGE_v0.4.md)
+Perubahan SRS: [`docs/11_SRS_CHANGE_v0.4.md`](docs/11_SRS_CHANGE_v0.4.md) ·
+SRS review: [`docs/12_SRS_v0.4_REVIEW.md`](docs/12_SRS_v0.4_REVIEW.md)
 
 ---
 
@@ -230,7 +262,9 @@ backend. No Google Cloud project is involved anywhere.
 
 The decisions that removed Google Cloud from the architecture (IMAP, local accounts, hybrid
 storage, Turso) are recorded in [`docs/08_ROADMAP.md`](docs/08_ROADMAP.md) and
-[`docs/09_SRS_CHANGE_v0.3.md`](docs/09_SRS_CHANGE_v0.3.md).
+[`docs/09_SRS_CHANGE_v0.3.md`](docs/09_SRS_CHANGE_v0.3.md). The v0.4 target moves transaction rows
+from Room to Turso over REST; until the C1/C2 cutover, the app still runs the v0.3 local storage.
+See [`docs/12_SRS_v0.4_REVIEW.md`](docs/12_SRS_v0.4_REVIEW.md).
 
 ## Cost
 
@@ -249,7 +283,7 @@ Single Gradle module, Hilt, MVVM with unidirectional state. The dependency rule 
 com.pam.recap
 ├── core/      money (exact minor units) · time (Asia/Jakarta months) · result · security
 ├── domain/    models · repository interfaces · ports (GmailSource, AnalysisEngine) · use cases
-├── data/      Room+SQLCipher · DataStore · Gmail sources · analysis engines · seeds
+├── data/      Room (v0.3, keluar pada D) · remote REST (target) · DataStore · Gmail · AI · seeds
 └── ui/        theme tokens · design-system components · navigation · feature screens
 ```
 
@@ -277,6 +311,7 @@ Key decisions, each traceable to a requirement:
 
 ```bash
 ./scripts/build.sh :app:testDebugUnitTest
+cd backend && npm test        # migrations + schema + API contract tests
 ```
 
 The suite is the specification, not decoration. Highlights:
@@ -289,7 +324,9 @@ The suite is the specification, not decoration. Highlights:
 | `ImapMimeTest` | Plain/HTML/attachment shapes, untyped root recovery, table-cell boundary |
 | `ImportMonthUseCaseTest` | Pagination, retry (partial and complete), duplicate suppression, timeout, month boundaries |
 | `GateRoutingTest` | New profile → Consent, saved decision → Overview, ended session never keeps a protected screen, Consent re-openable |
-| `ConsentViewModelTest` | Untouched switch is not a decision; explicit decline records DECLINED for Gmail and AI |
+| `ConsentViewModelTest` | Untouched switch is not a decision; explicit decline records Gmail DECLINED and preserves an already-chosen AI grant |
+| `ImapMimeTest` (bound) | An unknown-size message stops at the MIME byte bound instead of buffering first |
+| `schemaV04.test.ts` (backend) | v0.4 DDL: cross-owner FK, per-owner fingerprint, amount/JSON checks, soft delete, category reassign, last admin, refresh rotation, index pagination |
 | `FingerprintFactoryTest` | Determinism, per-user scoping, field sensitivity |
 | `AiPayloadBuilderTest` | Forbidden-field scan: no body, subject, sender, id, token, PAN or merchant |
 | `AnalysisValidatorTest`, `RequestAnalysisUseCaseTest` | Invented totals rejected, one regeneration max, no call without consent, mid-run withdrawal discarded |
