@@ -51,6 +51,8 @@ sign-out tidak memulihkan layar terlindungi.
 
 ### Kepatuhan pedoman
 
+**Pembaruan rancangan 21 November 2026.** Pemilik menetapkan cloud database gratis sebagai arah project. Lead memilih **Turso Cloud Free/libSQL** yang sudah dipakai backend. Rancangan terbaru mengganti usulan MySQL di dokumen sebelumnya. Target berikutnya meliputi JWT/refresh, peran, CRUDS, file lokal dan penghapusan Room dari varian penilaian. Kode saat ini masih v0.3. [Rancangan cloud](docs/10_MIGRASI_PEDOMAN.md) · [CR-002](docs/11_SRS_CHANGE_v0.4.md)
+
 Pedoman mata kuliah (`PEDOMAN PROJECT AKHIR PAM 2026`) menetapkan syarat yang **bertentangan**
 dengan SRS v0.3, dan pedoman yang menentukan nilai. Enam butir belum terpenuhi:
 
