@@ -100,6 +100,8 @@ FR-01…FR-55 yang tidak disentuh.
 | NFR-21 | Impor idempoten dan atomik per batch; retry tidak menghidupkan kembali baris yang sudah dihapus dan tidak menduplikasi fingerprint. |
 | NFR-22 | Availability backend ditargetkan dan diukur; kegagalan Gmail/AI tidak memblokir data server; kegagalan backend/database menghasilkan state unavailable. |
 | NFR-23 | Backup terenkripsi harian + restore drill; PITR Free 24 jam; kunci dikembalikan terpisah; sesi yang dicabut setelah waktu backup tetap dicabut setelah restore. |
+| NFR-27 | Layanan Go wajib memvalidasi request, membatasi body/timeout, menangani cancellation/graceful shutdown, error eksplisit tanpa panic input, logging terstruktur tanpa PII, dan migration/retry yang aman. |
+| NFR-28 | Migrasi Go mempertahankan identitas akun, verifikasi password, format ciphertext, owner scope, migration re-entry dan kompatibilitas kontrak Android; parity Node↔Go dibuktikan sebelum cutover. |
 | §1.4, §2, §4.3, App. B/C | Scope, aliran data, kontrak REST, diagram, notice privasi, open issue dan acceptance diperbarui untuk data server-side. |
 
 ### 4.2 Requirement baru
@@ -113,6 +115,8 @@ FR-01…FR-55 yang tidak disentuh.
 | **FR-61** | Minimal empat entitas terkait — transaksi, kategori, rencana anggaran, metadata lampiran — masing-masing memiliki field dinamis tervalidasi yang dapat diisi, disimpan, dibaca ulang, diedit, dan ditampilkan. |
 | **FR-62** | Klien mengoordinasikan satu refresh untuk request paralel dan mengulang tiap request paling banyak sekali. Refresh gagal membawa ke pemulihan sesi sambil mempertahankan isian yang belum terkirim bila memungkinkan. |
 | **FR-63** | Lima fitur CRUDS lengkap melalui Compose: transaksi, kategori, anggaran, lampiran, pengguna admin. Masing-masing mendukung Create, Read, Update, Delete, Search; create/invite admin dapat dijalankan dari UI admin. |
+| **FR-64** | Kategori mendukung create/list/detail/update/delete/search owner-scoped di Compose dan REST. Kategori yang direferensikan dilindungi atau dipindahkan atomik; kategori bawaan mempertahankan kode aman untuk kalkulasi dan proyeksi AI. |
+| **FR-65** | ADMIN memiliki create/invite, list/detail, update, soft-delete dan search akun dari UI mobile. USER mendapat 403 di endpoint admin. Deaktivasi mencabut akses/sesi. Admin aktif terakhir dilindungi dan eskalasi peran mandiri dilarang. |
 
 ### 4.3 Business rules (tidak berubah)
 
@@ -249,6 +253,7 @@ Dua puluh lima pemeriksaan demo (5 fitur × C/R/U/D/S) ada di
 | v0.4 / CR-002 review | 21 Nov 2026 | Cloud gratis disetujui; Turso/libSQL untuk transaksi server-side, JWT/refresh, peran, lima CRUDS, lampiran, field dinamis; Room keluar | **draft review, belum sign-off** |
 | Go slice | 21 Nov 2026 | Backend Go disetujui; register/login/refresh/consent/summary/CRUD inti + interop Node↔Go | slicer berjalan |
 | Paket B | 21 Nov 2026 | Konsolidasi SRS, kontrak API, DDL/migrasi lokal teruji, ERD, UI dan test plan | draft review |
+| C1 lanjutan | 21 Nov 2026 | Go idempotensi create, canonical analysis/validator, consent/deletion race guard, usage/ceiling, import batch, deletion sweep, config produksi | lokal PASS; C2/D berikutnya |
 
 Perubahan v0.3 → v0.4 yang belum disetujui penuh ditandai **diajukan** pada tabel keputusan §1.
 Yang sudah disetujui hanyalah arah cloud database gratis.
@@ -259,7 +264,7 @@ Yang sudah disetujui hanyalah arah cloud database gratis.
 |---|---|---|
 | Android JVM | PASS | **225 tes**, 0 gagal; `assembleDebug`; lint 0 error |
 | Backend Node (referensi) | PASS | `typecheck`, `build`, **124 tes**, 0 gagal (termasuk interop Go) |
-| Backend Go (target) | PASS lokal | **11 tes Go**, `go test -race`, `go vet`, `go build` |
+| Backend Go (target) | PASS lokal | **31 tes Go**, `go test -race`, `go vet`, `go build` |
 | Migrasi libSQL lokal | PASS | `file:` dari kosong, upgrade v0.3, boot kedua |
 | Cloud Turso/engine/libSQL | NOT RUN | kredensial database uji belum tersedia |
 | Gmail nyata / perangkat fisik | NOT RUN | di luar paket B |

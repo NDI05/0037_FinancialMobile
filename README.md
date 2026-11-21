@@ -28,30 +28,34 @@ kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 | Gmail lewat **IMAP + App Password** | 🟡 MIME/HTML + fixture impor lulus; **Gmail nyata belum diverifikasi** |
 | Impor Livin → baris transaksi → total bulanan | 🟡 fixture end-to-end lulus; Gmail nyata ⬜ |
 | Backend Node (referensi/rollback) | ✅ **124 test** lulus, termasuk interop Go |
-| **Backend Go (`backend-go/`)** | 🟡 slice register/login/refresh/consent/summary/CRUD inti; **11 test Go**, race/vet/build PASS |
-| Android ↔ Go | 🟡 register/login/consent/Ringkasan di emulator API 36 |
+| **Backend Go (`backend-go/`)** | 🟡 C1 backend lokal PASS: auth/JWT, consent, finance CRUD, import batch, analysis canonical, deletion sweep; **31 test Go**, race/vet/build PASS |
+| Android ↔ Go | 🟡 register/login/consent/Ringkasan di emulator API 36; transaksi/import/analysis masih HTTP-only |
 | **Kontrak v0.4 (SRS, API, data, UI, acceptance)** | ✅ draft review siap disahkan |
 | **Migrasi libSQL `version: 3`** | ✅ teruji lokal `file:`; **cloud NOT RUN** |
-| Implementasi v0.4 (JWT/refresh, CRUD server, admin, lampiran) | ⬜ paket C1/C2/D |
+| Implementasi v0.4 (JWT/refresh, CRUD server, admin, lampiran) | 🟡 C1 backend lokal; C2/D belum |
 | LLM **Ollama lokal** (gratis, offline) | ✅ jalan |
 | Fase 5 — backup harian + deploy | ⬜ belum |
 | Fase 6 — APK release bertanda tangan | ⬜ belum |
 | **Kepatuhan Pedoman Project Akhir 2026** | 🟡 kontrak v0.4 siap, implementasi belum |
 
-**Selesai pada paket B + slice Go.** Kontrak v0.4 dikonsolidasikan: SRS review, API v0.4
+**Selesai pada C1 lokal.** Temuan review ditutup: konfigurasi produksi menolak encryption key
+development; create manual idempoten dengan key/hash/result atomik; analisis memakai payload
+canonical server, validator FR-37, guard consent/deletion/revisi saat finalisasi; usage/biaya
+tercatat dan ceiling harian; import batch idempoten; deletion sweep + revoke sesi. **31 tes Go**
+lulus. **Selesai pada paket B + slice Go.** Kontrak v0.4 dikonsolidasikan: SRS review, API v0.4
 (JWT/refresh, transaksi/kategori CRUDS, impor batch, ringkasan server, anggaran, lampiran, admin),
 DDL/migrasi `version: 3` yang additive, ERD, perubahan UI, T01–T11 dan 25 pemeriksaan CRUDS.
 Backend Go berjalan dengan `net/http`, `database/sql`, driver libSQL; password/AES-GCM dibuktikan
-dua arah dengan fixture Node; migrasi 1–3 dan constraint diuji lokal. Android di emulator API 36
+dua arah dengan fixture Node; migrasi 1–5 dan constraint diuji lokal. Android di emulator API 36
 berhasil register → login → consent → Ringkasan terhadap Go.
 
 **Selesai pada paket A (dipertahankan).** Gate onboarding, tombol **Lanjut tanpa menghubungkan
 Gmail** (hanya Gmail yang dipaksa `DECLINED`; pilihan AI yang sudah dibuat dipertahankan), batas sel
 HTML MIME, propagasi jumlah lampiran, dan fixture impor end-to-end.
 
-**Belum selesai.** Import batch server, admin, deletion sweep, daily USD ceiling, dan validator
-analisis lengkap belum diport ke Go. C2 (Compose → repository remote) belum menghapus Room/SQLCipher;
-fitur UI transaksi/kategori/anggaran/lampiran/admin masih v0.3. Impor Gmail nyata belum diuji ulang.
+**Belum selesai.** Admin/lampiran (FR-65/FR-59) dan C2 (Compose → repository remote) belum
+dikerjakan; UI transaksi/kategori/anggaran masih v0.3 dan Room belum dihapus. Cloud/engine, Gmail
+nyata, perangkat fisik, dan provider nyata tetap NOT RUN. Impor Gmail nyata belum diuji ulang.
 Kredensial database **uji** Turso belum tersedia, jadi cloud acceptance dan restore drill **NOT
 RUN**. Klaim performa Go belum dibuat tanpa benchmark.
 
@@ -237,7 +241,7 @@ the LLM call with output validation, quotas, and deletion.
 ```bash
 cd backend-go
 ../scripts/go.sh run ./cmd/api       # http://127.0.0.1:8080 — fake LLM, local libSQL file
-../scripts/go.sh test ./...          # 11 Go tests, including Node interop fixtures
+../scripts/go.sh test ./...          # 31 Go tests, including Node interop fixtures
 ../scripts/go.sh test -race ./...
 
 # Node reference/rollback only (separate database, never both runners on one file)

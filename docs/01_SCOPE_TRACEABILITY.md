@@ -107,6 +107,8 @@ Bottom bar tetap empat tab; aksi admin hanya muncul untuk `ADMIN`.
 | FR-59 | File lokal per owner + metadata server | **target** D |
 | FR-61 | Field dinamis empat entitas | **target** D |
 | FR-63 | Lima CRUDS Compose | **target** C2/D |
+| FR-64 | Kategori owner-scoped + reassign, kode aman untuk AI | **PASS backend**, UI C2/D |
+| FR-65 | Admin create/invite/list/update/soft-delete/search, USER 403 | **target** D |
 | DR-04/05 | Revisi dependen; minimisasi data server | **target** C1 |
 | NFR-15/16/21/22/23 | Retensi, enkripsi, idempotensi, availability, backup/restore | **target** C1/D/E |
 
@@ -132,6 +134,8 @@ sitasi metrik). Tambahan operasional: amount `> 0` dan `≤ 1e15` minor; IDR-onl
 | NFR-22 | Gmail/AI gagal ≠ data server hilang; DB gagal = unavailable |
 | NFR-23 | Backup/PITR + restore drill; sesi dicabut tetap dicabut; kunci terpisah |
 | NFR-25 | UI tetap dapat dibaca pada font besar dan layar kecil |
+| NFR-27 | Go: validasi request, timeout/body/cancellation, graceful shutdown, error eksplisit, log tanpa PII, migrasi/retry aman |
+| NFR-28 | Migrasi Go: password/ciphertext/owner/migration re-entry/parity Android tetap; dibuktikan sebelum cutover |
 
 ---
 
@@ -149,7 +153,8 @@ sitasi metrik). Tambahan operasional: amount `> 0` dan `≤ 1e15` minor; IDR-onl
 | T08 Privacy & operations | FR-46–49; NFR-14–23; DR-01/05 | deletion, backup/restore, APK/log scan, retensi | target C1/D/E |
 | T09 Mobile quality | NFR-01/02/06/07/25 | TalkBack, font 200%, loading/error/offline, timing | target C2/E |
 | T10 Release audit | NFR-24/26; semua suite | traceability, APK/backend/SRS/engine cloud cocok, signed gate | target E |
-| **T11 v0.4 CRUDS & files** | FR-58–63; D.5/D.6/D.9 | 25 aksi CRUDS, 4 entitas+dynamic fields, 2 user+admin, restart, file lokal | target D/E |
+| **T11 v0.4 CRUDS & files** | FR-58–64; D.5/D.6/D.9 | 25 aksi CRUDS, 4 entitas+dynamic fields, 2 user+admin, restart, file lokal | target D/E |
+| **T12 Go migration** | NFR-27/28 | fixture Node↔Go password/AES, HTTP parity, migrasi re-entry/rollback, libSQL transactions, Android→Go smoke | lokal PASS; cloud NOT RUN |
 
 ---
 

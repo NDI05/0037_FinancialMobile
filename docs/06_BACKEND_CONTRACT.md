@@ -189,6 +189,12 @@ hanya untuk operasi AI/impor yang memerlukan consent.
 
 ### 5.1 Create
 
+`Idempotency-Key` is **required** for manual create (1..200 printable characters). The server stores
+the key, normalized request hash and result id in `http_idempotency` in the same transaction as the
+row. Same key + same body → the original row with `200` and `Idempotency-Replayed: true`; same key +
+different body → `409 idempotency_conflict`; a retry after soft delete returns the tombstone
+(`deletedAt`) and never resurrects the row. Parallel writers are serialized by the unique key.
+
 ```http
 POST /v1/transactions
 Idempotency-Key: <uuid>
@@ -297,7 +303,17 @@ dikirim ke model AI.
 
 `PATCH /v1/import-jobs/{id} { "state": "COMPLETE|PARTIAL|FAILED|EMPTY|PERMISSION_REQUIRED",
 "errorCode": null }` → `200` job. Transisi state invalid → `409`. `matched` dihitung server dari
-kandidat yang diterima; UI tidak boleh mengarang coverage.
+kandidat yang diterima; UI tidak boleh mengarang coverage. `COMPLETE` ditolak bila belum ada
+halaman, bila `imported+duplicates+skipped != matched`, atau bila `matched=0` (harus `EMPTY`).
+Batch key yang sama mengembalikan counts tersimpan bahkan setelah job difinalisasi; hash berbeda →
+`409 idempotency_conflict`.
+
+### 7.4 Sweep internal
+
+`POST /v1/internal/sweep` dengan header `x-internal-token` (nilai dari `INTERNAL_SWEEP_TOKEN`).
+Tanpa token konfigurasi → `404`; token salah → `401`. Sweep menghapus data finance/import/ringkasan/
+analisis/attachment metadata/account key, mencabut sesi/refresh, menandai akun `DELETED`, dan
+melindungi admin aktif terakhir.
 
 ---
 
@@ -312,6 +328,17 @@ Tidak ada upload ringkasan dari klien pada v0.4. Hasil boleh di-cache dengan kun
 
 `coverage` = `COMPLETE|PARTIAL|EMPTY|FAILED` dari import job terakhir + jumlah baris; `EMPTY` tidak
 pernah berarti "tidak ada pengeluaran".
+
+### 8.1 Analisis canonical
+
+Payload dari klien divalidasi sebagai envelope bertipe (unknown key, category code non-allowlist,
+`transactionCount` hilang, dan nominal di luar batas ditolak), tetapi **angka yang dikirim klien
+tidak dipakai**. Server membangun payload dari transaksi/kategori/anggaran aktif dan membandingkan
+`inputRevision` dengan revisi bulan server; revisi basi → `409 revision_conflict` sebelum provider
+dipanggil. Output provider divalidasi terhadap skema, metric key, `Rp` major→minor, angka minor
+ambigu, instruksi, saran, dan jumlah observasi; maksimum satu regenerasi. Finalisasi memeriksa
+ulang sesi, consent terbaru, deletion, dan revisi dalam satu transaksi. Withdrawal menandai report
+lama `HISTORICAL`; cache memakai consent+snapshot hash.
 
 ---
 
@@ -413,6 +440,9 @@ Rotasi kunci hanya dengan migrasi re-fingerprint; kunci dihapus saat akun dihapu
 | Lampiran | 10 MB, 10/transaksi |
 | Analisis | rate + daily ceiling existing (FR-50) |
 
+Konfigurasi wajib produksi: `DATA_ENCRYPTION_KEY` base64 32 byte yang bukan key development;
+`JWT_SECRET`/`REFRESH_PEPPER` ≥32 byte bukan nilai development; `REGISTRATION_INVITE_CODE` bukan
+`pam-dev`. Boot produksi gagal sebelum database dibuka bila salah satu tidak aman.
 Konfigurasi auth (environment backend, tidak pernah di APK):
 `JWT_SECRET` (≥32 byte), `JWT_ISSUER=pam-api`, `JWT_AUDIENCE=pam-android`,
 `ACCESS_TOKEN_TTL_SECONDS=900`, `REFRESH_TOKEN_TTL_DAYS=30`, `REFRESH_PEPPER` (≥32 byte),
