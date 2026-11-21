@@ -5,6 +5,12 @@ Perubahan ini menggeser arsitektur dari OAuth Google ke IMAP, dan menambah datab
 untuk sisi server. Alasan, konsekuensi dan persetujuan tercatat di
 [`09_SRS_CHANGE_v0.3.md`](09_SRS_CHANGE_v0.3.md).
 
+> **Status 21 November 2026.** Dokumen ini adalah roadmap v0.3 yang sudah berjalan. Rancangan v0.4
+> (Turso/libSQL untuk transaksi server-side, JWT/refresh, peran, lima CRUDS, lampiran, cutover)
+> ada di [`10_MIGRASI_PEDOMAN.md`](10_MIGRASI_PEDOMAN.md) dan
+> [`11_SRS_CHANGE_v0.4.md`](11_SRS_CHANGE_v0.4.md). Paket kerja: B kontrak (selesai review) →
+> C1 backend → C2 Android → D kelengkapan/cutover → E pembuktian.
+
 ---
 
 ## 1. Keputusan yang dikunci

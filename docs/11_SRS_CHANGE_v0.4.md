@@ -53,4 +53,64 @@ T01 menguji register/login/JWT/refresh/logout, T02 owner dan peran, T04 impor re
 | Reset/migrasi data nyata, deployment, biaya berbayar | Belum ada otorisasi dari arahan rancangan ini |
 | Tahap A | Worker menyelesaikan pada fe3a183. Gmail nyata masih perlu pengujian |
 
-Dokumen SRS lengkap v0.2 belum dikonsolidasikan menjadi v0.4. Worker berikutnya menyiapkan versi review beserta perubahan requirement dan bukti acceptance. Tanggal/sign-off historis dipertahankan sesuai fakta.
+Dokumen SRS lengkap v0.2 belum dikonsolidasikan menjadi v0.4. Paket B menyiapkan versi review
+beserta perubahan requirement dan acceptance; lihat §5. Tanggal/sign-off historis dipertahankan
+sesuai fakta.
+
+## 5. Konsolidasi paket B (review draft)
+
+| Artefak | Isi | Status |
+|---|---|---|
+| [`12_SRS_v0.4_REVIEW.md`](12_SRS_v0.4_REVIEW.md) | SRS review v0.4: scope, data location, role, FR-57–63, ERD, privasi, cutover, riwayat | draft review |
+| [`06_BACKEND_CONTRACT.md`](06_BACKEND_CONTRACT.md) | kontrak HTTP v0.4: JWT/refresh, transaksi/kategori, impor batch, ringkasan, anggaran, lampiran, admin, error, atomisitas | draft review |
+| [`10_MIGRASI_PEDOMAN.md`](10_MIGRASI_PEDOMAN.md) §8–9 | DDL kandidat `version: 3`, acceptance lokal, cloud NOT RUN, cutover/rollback | migrasi lokal PASS |
+| [`01_SCOPE_TRACEABILITY.md`](01_SCOPE_TRACEABILITY.md) | traceability FR/NFR/DR, T01–T11, 25 pemeriksaan CRUDS, rubrik D.1–D.10 | draft review |
+| [`03_ARCHITECTURE.md`](03_ARCHITECTURE.md) §0 | target arsitektur remote, perubahan UI, lampiran lokal, state auth | draft review |
+
+### 5.1 Klarifikasi requirement baru
+
+- **FR-57**: access JWT ≤15 menit, refresh 30 hari; refresh dirotasi atomik dan replay mencabut
+  keluarga sesi; sesi direferensikan oleh `sid` dan dapat dicabut seketika.
+- **FR-58**: register publik selalu `USER`; `ADMIN` hanya provisioning terkontrol/undangan; admin
+  aktif terakhir tidak dapat diturunkan/dihapus; perubahan role/status mencabut sesi.
+- **FR-59**: server hanya menyimpan metadata lampiran (nama, MIME, ukuran, atribut, referensi lokal
+  abstrak, `deviceRef`); file tetap di perangkat dan tidak disediakan untuk diunduh.
+- **FR-60**: transaksi server-side; field sensitif (merchant, catatan, deskripsi, atribut) disegel
+  AES-GCM; ringkasan dihitung server dari baris aktif dan `month_revisions`.
+- **FR-61**: empat entitas dengan editor atribut key–value: transaksi, kategori, anggaran,
+  metadata lampiran; batas 10 pasangan/2 KB per entitas.
+- **FR-62**: satu refresh single-flight; retry request ≤1; kegagalan refresh → pemulihan sesi,
+  bukan retry buta.
+- **FR-63**: lima CRUDS (transaksi, kategori, anggaran, lampiran, admin); 25 pemeriksaan demo ada
+  di `01_SCOPE_TRACEABILITY.md` §7.
+
+### 5.2 Yang belum berubah
+
+FR-35 dan NFR-19 tetap menjadi batas payload AI (bukan FR-56). FR-56 adalah lokasi penyimpanan
+server. NFR-22 tetap menuntut data terbaca saat Gmail/AI gagal dan state unavailable saat
+backend/database gagal. BR-01…BR-06 tidak berubah. Email mentah dan kredensial IMAP tetap lokal.
+
+## 6. Riwayat revisi CR-002
+
+| Tanggal | Revisi | Status |
+|---|---|---|
+| 20 Nov 2026 | Draf awal: MySQL, transaksi server-side, lampiran, role | draf |
+| 21 Nov 2026 | Pemilik mengarahkan cloud database gratis; lead memilih Turso Free/libSQL; MySQL menjadi baseline minimum | arah cloud disetujui |
+| 21 Nov 2026 | Paket A selesai (`fe3a183`): gate/consent/MIME/import fixture | 223 Android, 111 backend |
+| 21 Nov 2026 | Paket B: konsolidasi SRS, kontrak API, DDL `version: 3`, acceptance lokal, ERD/UI/test plan | **review draft** |
+
+## 7. Sign-off paket v0.4
+
+| Butir | Pemilik | Status |
+|---|---|---|
+| Arah cloud database gratis | Owner | disetujui 21 Nov 2026 |
+| Turso Free/libSQL sebagai target | Lead | dipilih, menunggu sign-off paket |
+| Transaksi server-side | Owner | **belum sign-off** |
+| Offline terbatas + kebutuhan internet | Owner | **belum sign-off** |
+| Dua peran USER/ADMIN + provisioning | Owner | **belum sign-off** |
+| Lampiran lokal + metadata server | Owner | **belum sign-off** |
+| Cutover/hapus data nyata | Owner | **belum diotorisasi** |
+| Cloud acceptance (database uji) | Lead/backend | **NOT RUN** — tanpa kredensial |
+
+Paket C1 tidak dimulai pada data pengguna sebelum butir di atas dicatat. Pekerjaan lokal pada
+database sintetis boleh berlanjut.

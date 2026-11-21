@@ -1,5 +1,9 @@
 # SRS Change Record — v0.2 → v0.3
 
+> **Historis.** Dokumen ini mencatat CR-001 (v0.3) yang sudah disetujui. Target v0.4 diatur oleh
+> [`11_SRS_CHANGE_v0.4.md`](11_SRS_CHANGE_v0.4.md) dan [`12_SRS_v0.4_REVIEW.md`](12_SRS_v0.4_REVIEW.md);
+> teks di bawah tidak boleh dipakai sebagai kontrak v0.4 (mis. token opaque, Room sebagai runtime).
+
 Document ID: PAM-SRS-001
 Change ID: **CR-001**
 Tanggal: 20 November 2026

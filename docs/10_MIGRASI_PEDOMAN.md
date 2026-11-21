@@ -102,4 +102,118 @@ Room/SQLCipher dihapus dari jalur aktif, dependensi dan skema varian penilaian p
 | D — kelengkapan | Anggaran, lampiran, pengguna admin, field dinamis, penghapusan Room/SQLCipher, cutover |
 | E — pembuktian | Lima CRUDS lewat UI, dua pengguna dan admin, restart/persistensi cloud, backup/restore, demo dan SRS konsolidasi |
 
-Tahap A memiliki implementasi pada `fe3a183`. Laporan worker mencatat 223 tes Android, 111 backend, dan impor fixture emulator 28 cocok / 25 tersimpan / 3 dilewati. Impor kedua mencatat 25 duplikat. Gmail nyata dan perangkat fisik masih perlu diuji. Bukti cloud v0.4 harus merekam API, database target, dan pembacaan ulang setelah restart aplikasi, dengan kredensial disembunyikan.
+Tahap A memiliki implementasi pada `fe3a183`. Laporan worker tahap A mencatat 223 tes Android dan
+111 backend; setelah paket B (dua tes regresi tambahan + 11 tes schema) hasilnya **225 Android**
+dan **122 backend**. Impor fixture emulator tahap A: 28 cocok / 25 tersimpan / 3 dilewati, impor
+kedua 25 duplikat. Gmail nyata dan perangkat fisik masih perlu diuji. Bukti cloud v0.4 harus merekam API, database target, dan pembacaan ulang setelah restart aplikasi, dengan kredensial disembunyikan.
+
+## 8. Skema fisik v0.4 (review draft)
+
+Migrasi baru adalah `version: 3` di `backend/src/store/migrations.ts`. Migrasi 1–2 tidak diubah;
+`version: 3` hanya menambah kolom/tabel dan mempertahankan baris v0.3. Trigger last-admin dikirim
+sebagai `extraStatements` karena body `BEGIN … END` mengandung titik koma dan tidak boleh dipotong
+oleh splitter migrasi.
+
+### 8.1 ERD
+
+```mermaid
+erDiagram
+  users ||--o{ auth_sessions : owns
+  users ||--|| account_keys : holds
+  auth_sessions ||--o{ refresh_tokens : rotates
+  users ||--o{ categories : owns
+  users ||--o{ transactions : owns
+  categories ||--o{ transactions : classifies
+  transactions ||--o{ attachments : has
+  users ||--o{ budget_plans : owns
+  budget_plans ||--o{ budget_limits : limits
+  categories ||--o{ budget_limits : caps
+  users ||--o{ import_jobs : runs
+  import_jobs ||--o{ import_batches : batches
+  import_jobs ||--o{ import_skipped : skips
+  users ||--o{ month_revisions : revisions
+  users ||--o{ admin_invitations : creates
+  users ||--o{ admin_audit : actor
+```
+
+### 8.2 Tabel target
+
+| Tabel | Kunci/indeks penting | Catatan |
+|---|---|---|
+| `users` (extend) | `role`, `status`, `auth_version`, `revision`, `updated_at` | default `USER`/`ACTIVE`; admin terakhir dijaga trigger |
+| `account_keys` | PK `owner_id` | kunci HMAC fingerprint tersegel |
+| `auth_sessions` | PK `id`; index `(owner_id, revoked_at)`, `family_id` | `sid` di JWT |
+| `refresh_tokens` | UNIQUE `token_hash`; index `(owner_id, family_id)` | rotasi + `replaced_by_id` |
+| `categories` | UNIQUE `(owner_id, code)`, `(owner_id, id)`; index aktif | label/atribut tersegel |
+| `transactions` | UNIQUE `(owner_id, fingerprint)`, `(owner_id, id)`; index bulan | composite FK ke kategori/refund |
+| `month_revisions` | PK `(owner_id, month_id)` | revisi dependen |
+| `budget_plans` (extend) | `revision`, nominal integer; UNIQUE `(owner_id, id)` | payload lama tetap untuk v0.3 |
+| `budget_limits` | PK `(owner_id, plan_id, category_id)` | FK plan + kategori |
+| `attachments` | UNIQUE `(owner_id, transaction_id, local_file_id)` | metadata; file tidak di server |
+| `import_jobs` | UNIQUE `(owner_id, id)`; index `(owner_id, month_id)` | counters JSON tervalidasi |
+| `import_batches` | UNIQUE `(owner_id, job_id, batch_key)` | replay batch |
+| `import_skipped` | FK job | hanya reason code |
+| `admin_invitations` | UNIQUE `token_hash` | satu-kali, role terbatas |
+| `admin_audit` | index target/waktu | metadata JSON tervalidasi |
+
+### 8.3 Aturan integritas yang diuji lokal
+
+- Composite foreign key `(owner_id, category_id)` / `(owner_id, transaction_id)` menolak referensi
+  lintas pemilik.
+- `UNIQUE(owner_id, fingerprint)` mengizinkan fingerprint sama pada dua owner, menolak duplikat
+  pada owner yang sama.
+- `amount_minor` dibatasi `> 0` dan `<= 1_000_000_000_000_000` (di bawah
+  `Number.MAX_SAFE_INTEGER`); nilai 0/negatif/terlalu besar ditolak.
+- Kolom `counters_json`/`metadata_json` memakai `CHECK(json_valid(...))`.
+- Soft delete mengeluarkan baris dari daftar/total aktif tetapi mempertahankan baris.
+- Reassign kategori + soft delete berjalan dalam satu transaksi.
+- Trigger menolak demosi/penghapusan ADMIN aktif terakhir.
+- Rotasi refresh: insert replacement lebih dulu, lalu revoke lama dengan `replaced_by_id`;
+  replay mencabut seluruh keluarga.
+- Query daftar memakai `idx_transactions_owner_month` dan urutan `(event_at_ms DESC, id)`.
+
+### 8.4 Risiko engine
+
+- `PRAGMA` tulis tetap dilarang di Turso; status migrasi tetap di `schema_migrations`.
+- `json_valid` dan trigger harus diverifikasi pada engine libSQL cloud, bukan hanya `file:`.
+- Tipe integer JavaScript: API wajib memakai `Number.isSafeInteger` dan batas DDL; BigInt tidak
+  dikirim sebagai JSON number.
+- Migrasi additive tidak menghapus `sessions` v0.3; C1 memakai `auth_sessions` dan menghapus tabel
+  lama pada cutover.
+- Rollback v0.4 → v0.3 tidak otomatis. Transaksi v0.4 perlu export/rekonsiliasi sebelum APK lama
+  dibuka kembali.
+
+## 9. Status bukti paket B
+
+| Pemeriksaan | Status | Bukti |
+|---|---|---|
+| Migrasi lokal `file:` dari kosong | PASS | `schema_migrations` 1–3, boot kedua no-op (4 tes migrasi) |
+| Upgrade v0.3 → v0.4 pada database lokal | PASS | baris `users` lama tetap ada; default `USER/ACTIVE`; tabel v0.4 dibuat |
+| FK lintas owner, fingerprint, amount, JSON | PASS | `schemaV04.test.ts` (11 tes) |
+| Soft delete, reassign kategori, admin terakhir, rotasi refresh, index pagination, account key | PASS | `schemaV04.test.ts` |
+| Seluruh backend | PASS | `npm run typecheck`, `npm run build`, **122 tes lulus, 0 gagal** |
+| Turso Cloud aktual + engine libSQL | **NOT RUN** | belum ada kredensial database uji; jangan memakai database existing |
+| Backup/PITR/restore cloud | **NOT RUN** | menunggu kredensial/otorisasi |
+| Migrasi pada database berisi data nyata | **NOT RUN** | butuh keputusan pemilik |
+
+Perintah lokal:
+
+```bash
+cd backend
+npm run typecheck && npm run build
+npm test
+```
+
+Cloud acceptance (setelah kredensial uji tersedia dan engine dicocokkan dengan SDK):
+
+1. Buat database Turso **uji** terpisah dengan plan Free; simpan URL bertipe `libsql://` dan token
+   hanya di environment backend. Jangan memakai database demo/nyata.
+2. Jalankan `backend` dengan `DATABASE_URL`/`DATABASE_AUTH_TOKEN` uji, lalu ulangi
+   `migrate`/boot dua kali dan periksa `schema_migrations` 1–3.
+3. Jalankan acceptance `schemaV04.test.ts` terhadap database uji (butuh harness cloud terpisah;
+   saat ini hanya `file:`). Catat hasil PASS/FAIL dan hapus database uji setelahnya.
+4. Uji PITR/export-restore ke database terpisah, lalu buktikan: `schema_migrations` ikut restore,
+   `account_keys` dapat dibuka dengan kunci dari luar dump, semua sesi/refresh dicabut setelah
+   restore, dan data terenkripsi terbaca. Catat jumlah record sebelum/sesudah.
+5. Uji retensi: deletion request menghapus data aktif; backup kedaluwarsa ≤30 hari; file lampiran
+   lokal tidak ada di backup server.

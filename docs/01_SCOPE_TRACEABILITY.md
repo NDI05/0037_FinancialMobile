@@ -1,209 +1,264 @@
-# PAM — Scope & Requirement Traceability
+# PAM — Scope & Requirement Traceability v0.4 (review draft)
 
-Source: `PAM_SRS_v0.2_Gmail_Livin.pdf` (Document ID PAM-SRS-001, v0.2 draft, 18 Nov 2026).
-This file is the Lead's binding interpretation of that baseline for the Android deliverable.
-Where the SRS leaves a decision open (Appendix C), the resolution is recorded below and must
-be cited in code comments and in the final report — never silently absorbed.
+Status: **DRAFT REVIEW** 21 November 2026. Ini adalah interpretasi lead untuk target v0.4,
+menggantikan pemetaan v0.3 yang masih menyebut OAuth/Google Sign-In dan Room sebagai runtime.
+Sumber: SRS v0.2 + CR-001 (v0.3) + CR-002 review ([`11_SRS_CHANGE_v0.4.md`](11_SRS_CHANGE_v0.4.md),
+[`12_SRS_v0.4_REVIEW.md`](12_SRS_v0.4_REVIEW.md)), Pedoman PAM 2026, dan review lead 21 Nov 2026.
 
----
-
-## 1. Product in one line
-
-PAM is a dark, glass-styled Android app that turns **Livin by Mandiri email notifications**
-into a **deterministic monthly cash-flow recap**, lets the user correct categories, and then
-— only with separate, explicit consent — produces an **evidence-linked AI analysis and next
-month budget suggestion**.
-
-PAM is **not** a bank app, has **no balance**, **no money movement**, and its totals are
-**email-derived**, never a bank ledger.
+Kolom **Status** berarti: `v0.3` = sudah ada di baseline `fe3a183` dan dipertahankan; `target` =
+belum ada, akan dibangun C1/C2/D; `reuse` = endpoint/interface v0.3 dipakai ulang dengan perubahan
+kontrak. Tidak ada status "selesai" untuk v0.4 sebelum kode dan cloud acceptance dijalankan.
 
 ---
 
-## 2. Navigation baseline (SRS §4.1)
+## 1. Produk dan batas
 
-The SRS mandates four top-level destinations. The delivered graph:
+PAM merekap notifikasi **Livin by Mandiri** dan transaksi manual menjadi ringkasan IDR deterministik,
+lalu — hanya dengan consent terpisah — analisis berbasis bukti dan rencana anggaran. Bukan aplikasi
+bank: tanpa saldo, transfer, OCR, API bank, atau klaim kelengkapan ledger.
 
-| Route | Screen | SRS section |
+**Target v0.4.** Transaksi/kategori/anggaran/metadata lampiran/import job disimpan server-side di
+Turso/libSQL, diakses lewat REST. Room/SQLCipher keluar dari varian penilaian. Email mentah dan
+kredensial IMAP tetap di perangkat. AI hanya menerima proyeksi agregat.
+
+---
+
+## 2. Navigasi target
+
+| Route | Screen | Requirement |
 |---|---|---|
-| `welcome` | Welcome + Google sign-in + privacy notice | §4.1, FR-01 |
-| `consent` | Gmail & AI consent, decided separately | FR-03, FR-34 |
-| `gmail_connect` | Mailbox connection states + connect/disconnect | FR-06…FR-10, FR-49 |
-| **`overview`** | Monthly recap, coverage, category split, drill-downs | FR-28…FR-33 |
-| **`transactions`** | Month strip, list, filter, search | FR-27 |
-| `transaction_detail/{id}` | Provenance, correction, note, transfer, refund link | FR-24, FR-25 |
-| `manual_entry` | Manual income/expense, source = Manual | FR-26 |
-| `import_job` | Import progress + matched/skipped/unresolved | FR-19, FR-21 |
-| **`analysis`** | Provider disclosure, generate, observations, evidence | FR-34…FR-41, FR-50 |
-| `budget_plan` | Envelope, limits, feasibility gap, save | FR-42…FR-45 |
-| **`settings`** | Connection, consent history, sign out, delete | FR-46…FR-49 |
-| `consent_history` | Consent ledger with purpose/version/timestamp | FR-03, FR-49 |
-| `data_deletion` | Reauth + confirm + progress | FR-47, FR-48 |
+| `welcome` | Welcome + masuk/daftar | FR-01/FR-51 |
+| `account` | Register/login backend | FR-51/57 |
+| `consent` | Gmail & AI terpisah | FR-03/34 |
+| `gmail_connect` | 6 state koneksi + App Password | FR-06…10/54 |
+| **`overview`** | Ringkasan bulanan dari server | FR-28…33/60 |
+| **`transactions`** | List/filter/search transaksi | FR-27/60 |
+| `transaction_detail` | Detail, kategori, catatan, lampiran | FR-24/25/59 |
+| `manual_entry` | Input manual | FR-26 |
+| `import_job` | Progress + skip reasons | FR-19/21 |
+| **`analysis`** | Analisis AI + consent | FR-34…41 |
+| `budget_plan` | Rencana + batas + field dinamis | FR-42…45/61 |
+| **`settings`** | Sesi, consent, mailbox, retensi | FR-46…49 |
+| `consent_history` | Ledger consent | FR-03/49 |
+| `data_deletion` | Reauth + hapus akun | FR-47/48 |
+| **`admin_users`** | Daftar/cari/invite pengguna | FR-58/63 |
+| `admin_user_detail` | Ubah role/status, soft delete | FR-58/63 |
 
-Bottom bar = `overview`, `transactions`, `analysis`, `settings` (+ a raised **Import/Sync**
-action). Letters of the SRS requirement "persistent EMAIL-DERIVED indicator" are honoured by a
-chip in the Overview header and a badge on every report surface.
+Bottom bar tetap empat tab; aksi admin hanya muncul untuk `ADMIN`.
 
 ---
 
 ## 3. Functional requirement coverage
 
-Legend: **impl** = implemented in app, **adapter** = implemented behind a port with a real and a
-deterministic implementation, **n/a** = explicitly out of release-1 scope per SRS §1.4.
+### 3.1 Identity, auth, consent
 
-### 3.1 Identity & consent — §3.1
-| ID | Requirement | Where |
+| ID | Requirement | Target/status |
 |---|---|---|
-| FR-01 | Auth session required before financial data | `SessionRepository`, `AuthGate` in nav |
-| FR-02 | Owner-scoped access | `ownerId` on every entity + DAO predicates |
-| FR-03 | Separate consent records (purpose, notice version, decision, ts) | `ConsentEntity`, `ConsentRepository` |
-| FR-04 | Withdraw AI consent blocks new requests, marks old reports historical | `WithdrawAiConsentUseCase` |
-| FR-05 | Sign out clears cache, no cross-user leakage | `SignOutUseCase` |
+| FR-01 | Sesi wajib sebelum data keuangan | JWT + gate; **reuse**, ubah token |
+| FR-02 | Owner-scoped setiap akses; admin tidak membaca transaksi orang lain | **target** C1/C2 |
+| FR-03 | Consent per purpose/version/decision/time | **reuse** |
+| FR-04 | Withdraw AI memblokir analisis baru, laporan lama historis | **reuse** |
+| FR-05 | Logout mencabut sesi/refresh, tanpa kebocoran lintas user | **target** C1 |
+| FR-51 | Register/login PAM, scrypt, invite-only | **v0.3**, ditambah role USER |
+| FR-53 | Rate limit login, tanpa oracle email | **reuse** |
+| FR-57 | JWT access ≤15 menit + refresh opaque rotasi/replay | **target** C1 |
+| FR-62 | Single-flight refresh, retry ≤1, recovery | **target** C2 |
 
-### 3.2 Google account & Gmail authorization — §3.2
-| ID | Requirement | Where |
-|---|---|---|
-| FR-06 | Mailbox only after OAuth success | `GmailConnector.authorize()` |
-| FR-07 | 6 explicit connection states | `GmailConnectionState` enum |
-| FR-08 | `gmail.readonly` only, no secret in APK, no passwords | `GoogleGmailSource`, `AuthorizationClient` |
-| FR-09 | Connection + transactions bound to one user | schema |
-| FR-10 | Incomplete config ⇒ blocked with supportable status | `GmailConfigurationError` |
+### 3.2 Mailbox dan Livin
 
-### 3.3 Livin source validation — §3.3
-| ID | Requirement | Where |
+| ID | Requirement | Target/status |
 |---|---|---|
-| FR-11 | Query only allow-listed sender + subject; display name alone insufficient | `LivinQueryBuilder`, `LivinTemplateRegistry` |
-| FR-12 | Extract date/time, amount, recipient, status, acquirer, fingerprint | `LivinQrisParser` |
-| FR-13 | Reject missing/malformed amount, date, direction, status — never coerce 0 | `ParseResult.Unresolved(reason)` |
-| FR-14 | Exclude marketing, merchant payouts, unverified templates, attachments | template allow-list |
-| FR-15 | Field allow-list, ignore embedded instructions, redacted exclusion reason | `RedactedReason` enum |
+| FR-06/07/10 | IMAP + 6 state, data lama tetap terbaca saat reauth | **v0.3** |
+| FR-11–15 | Allowlist sender/subject, parser strict, gagal/attachment ditolak, alasan redacted | **v0.3** + perbaikan MIME Tahap A |
+| FR-54/55 | App Password divalidasi sebelum disimpan, Keystore, read-only | **v0.3** |
+| NFR-03/14 | TLS IMAP, tanpa kredensial di log/backend | **v0.3** |
 
-### 3.4 Import — §3.4
-| ID | Requirement | Where |
-|---|---|---|
-| FR-16 | Pagination + buffer, month membership from parsed event time in Asia/Jakarta | `ImportMonthUseCase` |
-| FR-17 | Preserve exact amount/currency/ts/direction/description/fingerprint/parser version | `TransactionEntity` |
-| FR-18 | Idempotent; per-user `HMAC(messageId + fields)`; flag collisions | `FingerprintFactory`, unique index |
-| FR-19 | Job record with pages, counts, state (Complete/Partial/Failed/PermissionRequired) | `ImportJobEntity` |
-| FR-20 | Empty ≠ failed; "no matching emails" never "no spending" | `ImportState.Empty`, UI copy |
-| FR-21 | Retry incomplete pages without data loss; revoked ⇒ reconnect guidance | `RetryImportUseCase` |
-| FR-22 | Correction/reversal templates reviewed, provenance kept, dependents outdated | `MarkSummariesOutdated` |
+### 3.3 Import dan transaksi
 
-### 3.5 Categorization — §3.5
-| ID | Requirement | Where |
+| ID | Requirement | Target/status |
 |---|---|---|
-| FR-23 | Income/expense/transfer/uncategorized + 8 expense categories | `Category` enum |
-| FR-24 | Origin (rule/user), update time, confidence; low confidence stays reviewable | `CategoryOrigin` |
-| FR-25 | Change category / note / mark transfer without touching amount, date, direction | `UpdateTransactionUseCase` |
-| FR-26 | Manual income/expense marked `Manual`, never shown as imported | `TransactionSource` |
-| FR-27 | Filter by date/category/direction + search descriptions; show provenance | `TransactionsFilter` |
+| FR-16/17 | Pagination, buffer, membership event time Jakarta, field presisi | **v0.3** (lokal) → server batch |
+| FR-18/DR-02 | Idempoten fingerprint HMAC per akun, collision flag | **v0.3 lokal** → kunci server C1 |
+| FR-19/20/21 | Job state, empty≠failed, retry tanpa duplikasi | **v0.3** → server job/batch |
+| FR-22 | Perubahan menandai ringkasan/analisis outdated | **v0.3** → `month_revisions` |
+| FR-23–27 | Kategorisasi, manual, filter/search, provenance | **v0.3** → REST CRUDS |
+| FR-60 | Transaksi server-side owner-scoped via REST | **target** C1/C2 |
+| FR-61 | Empat entitas + field dinamis | **target** D |
 
-### 3.6 Summary — §3.6
-| ID | Requirement | Where |
-|---|---|---|
-| FR-28 | grossIn = ΣCREDIT, grossOut = ΣDEBIT, net = in − out, exact arithmetic | `ComputeMonthlySummary` |
-| FR-29 | classified income/expense by BR-01…BR-06 | `CashFlowCalculator` |
-| FR-30 | Month, mailbox label, all totals, category totals, counts, coverage | `MonthlySummary` |
-| FR-31 | Prior-month delta; zero/missing denominator ⇒ "Not applicable" | `PercentChange.Na` |
-| FR-32 | Every total drills down; partial/provisional/email-derived labels | `SummaryDrillDown` |
-| FR-33 | Summary version + input revision traceability | `summary.inputRevision` |
+### 3.4 Ringkasan, AI, anggaran
 
-### 3.7 AI analysis — §3.7
-| ID | Requirement | Where |
+| ID | Requirement | Target/status |
 |---|---|---|
-| FR-34 | Verify consent + disclose provider, data categories, purpose pre-request | `AiConsentGate` |
-| FR-35 | Aggregate-only payload; no bodies/subjects/senders/ids/tokens/PAN/merchants | `AiPayloadBuilder` + unit test with forbidden-field scan |
-| FR-36 | Observations + evidence refs + suggestions + limitations; amounts validated | `AnalysisValidator` |
-| FR-37 | Reject malformed/inconsistent; ≤1 regeneration; then "Analysis unavailable" | `AnalysisValidator`, `AnalysisJob` |
-| FR-38 | Partial month ⇒ provisional; no records ⇒ no invented trend, no call | `AnalysisEligibility` |
-| FR-39 | Store provider/model/prompt version/revision/ts/validation/usage | `AnalysisEntity` |
-| FR-40 | Reuse saved analysis for unchanged revision+consent+config | `analysisCacheKey` |
-| FR-41 | Consent revoked mid-flight ⇒ discard, never publish | `AnalysisJob` cancellation token |
-| FR-50 | Per-user limits, output-token cap, daily ceiling checked pre-invocation | `AiBudgetGuard` |
+| FR-28–33 | Total deterministik, drill-down, delta, revisi | **v0.3** calculator → server summary C1 |
+| FR-34–41 | Consent, payload agregat, validasi, cache, withdraw | **reuse** backend |
+| FR-35/NFR-19 | Allowlist payload; merchant/catatan/label bebas/atribut dikecualikan | **v0.3 backend**, diperluas C1 |
+| FR-42–45 | Rencana, gap, limit, revision, nilai origin | **v0.3** → server budget C1 |
+| FR-50 | Rate/ceiling AI | **reuse** |
 
-### 3.8 Budget planning — §3.8 (Medium)
-| ID | Requirement | Where |
-|---|---|---|
-| FR-42 | Expected income, planned savings, per-category limits; label historical averages | `BudgetPlanEditor` |
-| FR-43 | gap = income − savings − Σlimits; explicit shortfall when negative | `PlanningGap` |
-| FR-44 | AI values require review before activation; save never moves money | `BudgetPlan` |
-| FR-45 | Plan month/revision/value origin; actual vs limit, transfers excluded | `BudgetComparison` |
+### 3.5 Privasi, file, admin
 
-### 3.9 Privacy — §3.9
-| ID | Requirement | Where |
+| ID | Requirement | Target/status |
 |---|---|---|
-| FR-46 | Disconnect locally, clear token, revoke where supported, surface revoke failure | `DisconnectGmailUseCase` |
-| FR-47 | Recent reauth + confirmation before deletion; sync blocked during deletion | `RequestDeletionUseCase` |
-| FR-48 | Deletion status + retention explanation before confirm | `DeletionStatus` |
-| FR-49 | View connection/consent/last-success times, never tokens | `SettingsScreen` |
+| FR-46–49 | Disconnect, deletion, status retensi, settings | **reuse** + server deletion |
+| FR-52 | Mode v0.4 butuh backend/internet; fixture berlabel | **target** C2 |
+| FR-56 | Turso/libSQL menyimpan data bisnis; kunci di backend | **target** C1 |
+| FR-58 | USER/ADMIN, register→USER, provisioning terkontrol, last admin | **target** C1/D |
+| FR-59 | File lokal per owner + metadata server | **target** D |
+| FR-61 | Field dinamis empat entitas | **target** D |
+| FR-63 | Lima CRUDS Compose | **target** C2/D |
+| DR-04/05 | Revisi dependen; minimisasi data server | **target** C1 |
+| NFR-15/16/21/22/23 | Retensi, enkripsi, idempotensi, availability, backup/restore | **target** C1/D/E |
 
 ---
 
-## 4. Business rules (binding)
+## 4. Business rules dan non-functional
 
-- **BR-01** Month = `[firstOfMonth 00:00 Asia/Jakarta, firstOfNextMonth 00:00 Asia/Jakarta)`.
-  Search window = that interval widened by `INGESTION_BUFFER_DAYS = 3`. Membership is decided by
-  **parsed event time**, never `internalDate`.
-- **BR-02** `grossInflow` = Σ all POSTED CREDIT. `grossOutflow` = Σ all POSTED DEBIT.
-  `classifiedIncome` = CREDIT where classification = Income. `classifiedExpense` = DEBIT where
-  classification ∈ expense categories and not internal transfer.
-  Internal transfers stay in gross, leave classified.
-- **BR-03** Refund = CREDIT; may link to an expense category, reducing that category's **net**
-  for the refund month. Unlinked credits are never netted against unrelated expenses.
-- **BR-04** Exact base-10, two decimals. Internal representation = `Long` minor units (1/100 IDR).
-  Rounding only at display. Non-IDR rows excluded from IDR totals and flagged.
-- **BR-05** `Complete` = every page of the configured query processed. It never means
-  "all bank transactions". Every report carries `EMAIL-DERIVED`.
-- **BR-06** A suggestion must cite summary metric keys. With < 1 complete month, say so.
+BR-01…BR-06 tidak berubah (bulan Jakarta, gross/classified, refund netting, minor unit, coverage,
+sitasi metrik). Tambahan operasional: amount `> 0` dan `≤ 1e15` minor; IDR-only di API v0.4.
 
-**Worked example (SRS B5) must be a unit test assertion:**
+| NFR | Target v0.4 |
+|---|---|
+| NFR-01/02 | Aksesibilitas dan format IDR tetap; state loading/error/offline baru diuji TalkBack/font 200% |
+| NFR-03 | HTTPS API; IMAP TLS; tidak ada trust bypass |
+| NFR-05 | Retry ≤2 dengan backoff untuk API; refresh di luar retry buta |
+| NFR-06/07 | Target performa diukur pada dataset cloud yang ditentukan; angka dikunci sebelum test |
+| NFR-10/11 | Tidak ada pergerakan uang; zero≠empty≠partial≠failed |
+| NFR-13/19 | Teks provider/email = data; allowlist payload di backend |
+| NFR-15/16 | Retensi 24 bulan; AES-GCM payload + field sensitif; Keystore untuk token/file key |
+| NFR-17 | Setiap query memfilter owner; diuji dua akun |
+| NFR-18 | Log tanpa body/email/nominal/merchant/token/path |
+| NFR-21 | Impor atomik/idempoten per batch |
+| NFR-22 | Gmail/AI gagal ≠ data server hilang; DB gagal = unavailable |
+| NFR-23 | Backup/PITR + restore drill; sesi dicabut tetap dicabut; kunci terpisah |
+| NFR-25 | UI tetap dapat dibaca pada font besar dan layar kecil |
+
+---
+
+## 5. Acceptance suites T01–T11
+
+| Suite | Cakupan | Bukti wajib | Status target |
+|---|---|---|---|
+| T01 Identity & consent | FR-01–05, 34, 41, 49, 51, 57, 62; NFR-17 | register/login/JWT/refresh/logout, dua user, consent terpisah, role | target C1/C2 |
+| T02 IMAP authorization | FR-06–10, 54, 55; NFR-03/05/14 | login valid/salah/dicabut, TLS, tanpa kredensial di log | v0.3 sebagian, Gmail nyata belum |
+| T03 Livin source | FR-11–15; NFR-13; DR-05 | fixture supported/gagal/attachment/spoof/injection | v0.3 + fixture MIME |
+| T04 Import integrity | FR-16–22; NFR-21; BR-01/05; DR-02/03 | pagination, boundary, retry, duplicate, batch atomik, fingerprint lintas reinstall | target C1 |
+| T05 Summary correctness | FR-23–33; BR-02–04; DR-04 | total desimal, manual, refund, transfer, delta, revisi | target C1/C2 |
+| T06 AI evaluation | FR-34–41, 50; NFR-09–13/19; BR-06 | consent, allowlist, schema, angka karangan, injection | reuse + audit payload |
+| T07 Budget planning | FR-42–45, 61 | gap, limit, revision, field dinamis, delete | target C1/D |
+| T08 Privacy & operations | FR-46–49; NFR-14–23; DR-01/05 | deletion, backup/restore, APK/log scan, retensi | target C1/D/E |
+| T09 Mobile quality | NFR-01/02/06/07/25 | TalkBack, font 200%, loading/error/offline, timing | target C2/E |
+| T10 Release audit | NFR-24/26; semua suite | traceability, APK/backend/SRS/engine cloud cocok, signed gate | target E |
+| **T11 v0.4 CRUDS & files** | FR-58–63; D.5/D.6/D.9 | 25 aksi CRUDS, 4 entitas+dynamic fields, 2 user+admin, restart, file lokal | target D/E |
+
+---
+
+## 6. Rubrik pedoman → bukti
+
+| Butir | Syarat | Rencana bukti |
+|---|---|---|
+| D.1 | Login/register, JWT, refresh | T01, endpoint §2 06 |
+| D.2 | Role-based UI/akses, min. 1 peran | USER/ADMIN, T01/T11 |
+| D.3 | Navigation Compose multi-page | 16 destinasi + tes gate |
+| D.4 | MVVM | ViewModel/use case/repository tetap; remote repository C2 |
+| D.5 | 4 entitas terkait + field dinamis | transaksi/kategori/anggaran/lampiran; T11 |
+| D.6 | 5 CRUDS penuh | §7, 25 checks |
+| D.7 | REST + JSON | 06, dua user C1/C2 |
+| D.8 | MySQL min./cloud; Room dilarang | Turso/libSQL; Room dihapus D |
+| D.9 | Simpan/baca file lokal | lampiran private + metadata; T11 |
+| D.10 | UI/UX Compose | T09, screenshot + perangkat |
+| C.1/F.3 | Progress mingguan, ≥30 commit | README per minggu; commit bertahap |
+
+---
+
+## 7. Dua puluh lima pemeriksaan CRUDS
+
+| # | Fitur | Aksi | Bukti yang harus terlihat |
+|---|---|---|---|
+| 1 | Transaksi | Create | Manual entry tersimpan server, muncul di daftar |
+| 2 | Transaksi | Read | Detail memuat nominal/tanggal/kategori/provenance |
+| 3 | Transaksi | Update | Ubah kategori/catatan/atribut, revisi naik |
+| 4 | Transaksi | Delete | Soft delete hilang dari daftar dan total, baris retensi tetap |
+| 5 | Transaksi | Search | Cari deskripsi pada bulan/rentang ≤31 hari, cursor benar |
+| 6 | Kategori | Create | Kategori pengguna baru muncul di picker |
+| 7 | Kategori | Read | Daftar/detail label, warna, atribut |
+| 8 | Kategori | Update | Label/atribut berubah dan terbaca ulang |
+| 9 | Kategori | Delete | Reassign transaksi/batas lalu hilang dari daftar aktif |
+| 10 | Kategori | Search | Cari nama kategori milik owner |
+| 11 | Anggaran | Create | Rencana bulan + limits tersimpan |
+| 12 | Anggaran | Read | Detail + gap benar |
+| 13 | Anggaran | Update | Nominal/limits/atribut berubah, revisi naik |
+| 14 | Anggaran | Delete | Plan hilang; cashflow tidak berubah |
+| 15 | Anggaran | Search | Cari bulan/rentang daftar rencana |
+| 16 | Lampiran | Create | File disalin privat + metadata server |
+| 17 | Lampiran | Read | Buka ulang file; perangkat lain `fileAvailable=false` |
+| 18 | Lampiran | Update | Ganti nama/atribut metadata |
+| 19 | Lampiran | Delete | Metadata tombstone + file lokal terhapus/retry |
+| 20 | Lampiran | Search | Cari nama dalam transaksi/owner |
+| 21 | Admin | Create/invite | Undangan satu-kali tampil di UI admin |
+| 22 | Admin | Read | Daftar/detail akun (tanpa data keuangan) |
+| 23 | Admin | Update | Nama/role/status; sesi dicabut; audit |
+| 24 | Admin | Delete | Soft delete, keluar dari daftar, sesi dicabut |
+| 25 | Admin | Search | Cari email/nama; last admin dilindungi |
+
+---
+
+## 8. Keputusan yang masih terbuka
+
+1. Sign-off paket v0.4 (transaksi server-side, offline terbatas, dua peran, lampiran, cutover).
+2. Hosting API publik 24 jam (sekarang laptop) dan URL HTTPS demo.
+3. Retensi data server setelah akun dihapus (30 hari backup vs lebih pendek).
+4. Apakah rencana anggaran boleh dihapus hard (usulan) atau harus soft delete bertombstone.
+5. Apakah admin boleh mengubah email akun; usulan: tidak (email = identitas login).
+6. Kredensial database Turso **uji** dan engine yang cocok; cloud acceptance belum dijalankan.
+
+Sampai keputusan ini dicatat, implementasi C1 hanya boleh memakai dataset sintetis dan database uji
+terisolasi. Tidak ada migrasi/penghapusan data nyata.
+
+---
+
+## 9. Rencana eksekusi dan exit criteria (C1–E)
+
+### 9.1 Lingkungan
+
+| Lingkungan | Isi | Status |
+|---|---|---|
+| Lokal backend | `file:` libSQL di direktori temporer; seed sintetis; tanpa data pengguna | tersedia |
+| Android JVM | Robolectric/Compose test + MockWebServer | tersedia |
+| Emulator API 36 | backend lokal + `adb reverse`; APK debug | tersedia |
+| Turso Cloud **uji** | database terpisah, kredensial dari environment backend, engine `libsql://` | **NOT RUN** — belum ada kredensial |
+| Gmail nyata | akun demo pemilik + App Password | **NOT RUN** — pemilik |
+| Perangkat fisik | HP Android | **NOT RUN** |
+
+Semua data development sintetis. Tidak ada database demo/nyata yang dipakai untuk migrasi atau
+acceptance.
+
+### 9.2 Exit criteria per paket
+
+| Paket | Harus lulus |
+|---|---|
+| C1 backend | Migrasi 1–3 pada database uji; register/login/refresh/logout; dua user; CRUDS transaksi/kategori; batch impor idempoten; ringkasan/revisi; 401/403/409/503; log scan |
+| C2 Android | Register → consent → transaksi → ringkasan lewat Compose; restart memuat dari REST; single-flight refresh; state loading/empty/error/unavailable; bukan Room |
+| D | Anggaran, lampiran, admin, field dinamis; 25 aksi CRUDS; Room/SQLCipher keluar dari dependency/schema/runtime; file terbaca setelah restart |
+| E | Dua user + admin; cloud persistence; gangguan jaringan; backup/restore; APK release; demo 15–30 menit; SRS/README/APK konsisten |
+
+### 9.3 Perintah bukti
+
+```bash
+# Android
+./scripts/build.sh :app:testDebugUnitTest --rerun
+./scripts/build.sh :app:assembleDebug :app:lintDebug
+
+# Backend lokal
+cd backend && npm run typecheck && npm run build && npm test
+
+# Cloud (setelah kredensial uji)
+# DATABASE_URL=libsql://<db-uji> DATABASE_AUTH_TOKEN=... npm test
+# lalu ulangi boot dua kali dan periksa schema_migrations 1–3
 ```
-Salary          CREDIT  5,000,000.00  Income
-Housing         DEBIT   1,000,000.00  Housing expense
-Own transfer    DEBIT     200,000.00  Internal transfer
-Housing refund  CREDIT    100,000.00  Housing refund (linked)
-→ grossInflow 5,100,000.00 | grossOutflow 1,200,000.00 | net 3,900,000.00
-→ classifiedIncome 5,000,000.00 | net housing expense 900,000.00
-→ previous-month expense 0 ⇒ percentage change = "Not applicable"
-```
 
----
+### 9.4 Aturan bukti
 
-## 5. Non-functional obligations that shape the code
-
-| ID | Obligation | Implementation stance |
-|---|---|---|
-| NFR-01 | ≥48 dp targets, 200 % font scale, TalkBack, announced loading/error | `Modifier.minimumInteractiveComponentSize()`, `contentDescription`, `liveRegion` |
-| NFR-02 | IDR display conventions; fingerprints opaque, no Gmail IDs | `IdrFormatter`, `FingerprintFactory` (HMAC, truncated) |
-| NFR-03 | HTTPS only, no debug trust bypass | OkHttp default `CertificatePinner`-free but plain TLS, no `TrustManager` override |
-| NFR-04 | Keep `internalDate` and event ts separately, normalize to Asia/Jakarta | two columns |
-| NFR-05 | ≤2 retries with backoff, honour `Retry-After`, stop on 401 | `RetryPolicy` |
-| NFR-06 | Dashboard ≤2 s p95 | cached Flow + `room` no N+1 |
-| NFR-07 | 10k-row aggregation ≤2 s | SQL aggregate + in-memory fold on minor units |
-| NFR-10/11 | No money movement; zero ≠ unavailable ≠ partial ≠ empty | state enums + dedicated empty copy |
-| NFR-12 | Deterministic arithmetic, tested without LLM | pure `CashFlowCalculator` |
-| NFR-13 | Provider text is untrusted data, never instructions | `SanitizedText`, prompt-injection corpus test |
-| NFR-14 | No secrets in APK/logs | `BuildConfig` gate, no token logging |
-| NFR-15 | 24-month local retention, delete removes immediately | `RetentionPolicy` |
-| NFR-16 | Encrypted DB, Keystore key, no backup, obscured recents | SQLCipher + `KeystoreSecretStore` + `FLAG_SECURE` |
-| NFR-18 | Logs carry no bodies/subjects/mailbox/token/PAN/merchant | `SafeLogger` allow-list |
-| NFR-26 | Gmail + LLM replaceable behind versioned adapters | ports `GmailSource`, `AnalysisEngine` |
-
----
-
-## 6. Decisions taken on open issues (Appendix C)
-
-| OI | Decision for this build | Rationale |
-|---|---|---|
-| OI-01 | Real Google OAuth is **wired but gated** by `BuildConfig.PAM_GOOGLE_WEB_CLIENT_ID`. Empty ⇒ app runs in **Demo mailbox mode** using bundled sanitized QRIS fixtures. | A Cloud project + SHA-1 cannot be provisioned from here. Code path is real, not stubbed. |
-| OI-02 | Sender allow-list + subject patterns are data in `LivinTemplateRegistry`, versioned `v1`. | Configurable without code change; documents the observed template. |
-| OI-03 | Incoming-transfer template unverified ⇒ **manual income only**, as the SRS mandates. | Matches A4. |
-| OI-05 | Ingestion buffer 3 days, historical range 24 months. | Aligns NFR-15. |
-| OI-07 | LLM is reached through `AnalysisEngine`. Default = `OnDeviceAnalysisEngine` (deterministic, evidence-bound). `RemoteAnalysisEngine` present and enabled only when a backend URL + consent exist. | Keeps FR-34…FR-41 semantics testable offline; NFR-26 satisfied. **Resolved:** a backend now exists (`backend/`), reaches OpenAI **or** OpenRouter through one OpenAI-compatible adapter, and is gated by `PAM_BACKEND_BASE_URL`. See `06_BACKEND_CONTRACT.md`. |
-| OI-08 | Single-module app, Hilt, Room+SQLCipher, DataStore, Navigation Compose. Backend: Node 24 + TypeScript + Express 5 + SQLite in `backend/`, field-level AES-256-GCM. | **Resolved** for release 1; Postgres swap is a driver change behind the store layer. |
-| OI-10 | Accepted: one mailbox, Livin only, IDR, Indonesian UI, Asia/Jakarta, API 26+. | Per SRS. |
-| OI-12 | Budget planning **included** (Medium). CSV/PDF export, reminders, background schedules **deferred**. | Medium feature is cheap here; deferrals stay out. |
-
-**Out of scope, do not build:** bank APIs, balance, Ledger-completeness claims, Livin Merchant
-payouts, password-protected statements, other banks/providers, transfers or payments,
-investment/credit/tax advice, shared accounts, receipt scanning, product purchase, autonomous
-execution, export, push reminders, background sync.
+- Setiap klaim PASS menyebut perintah, jumlah tes, dan lingkungan (lokal/emulator/cloud/perangkat).
+- Fixture tidak membuktikan Gmail nyata; `file:` tidak membuktikan Turso Cloud.
+- Jangan menyalin email, token, kredensial, nominal pribadi, atau path file ke laporan/log/commit.
+- Kegagalan yang belum diperbaiki dicatat sebagai FAIL/BLOCKED, bukan dihapus dari laporan.
