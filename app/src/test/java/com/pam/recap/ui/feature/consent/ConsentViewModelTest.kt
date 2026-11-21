@@ -97,6 +97,25 @@ class ConsentViewModelTest {
     }
 
     @Test
+    fun `declining gmail preserves an already-chosen AI grant`() = runTest {
+        // Jangan ubah pilihan AI pengguna secara diam-diam: only the Gmail decision is forced.
+        val viewModel = viewModel()
+        viewModel.decideAi(true)
+
+        viewModel.continueWithoutGmail()
+
+        val ledger = consents.observeLedger(session.ownerId).first()
+        assertEquals(
+            ConsentDecision.DECLINED,
+            ledger.first { it.purpose == ConsentPurpose.GMAIL_READ }.decision,
+        )
+        assertEquals(
+            ConsentDecision.GRANTED,
+            ledger.first { it.purpose == ConsentPurpose.AI_PROCESSING }.decision,
+        )
+    }
+
+    @Test
     fun `granting both switches records two independent grants`() = runTest {
         val viewModel = viewModel()
 

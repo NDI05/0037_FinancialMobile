@@ -55,15 +55,34 @@ internal fun Message.extractIncoming(reference: String, session: Session?): Extr
     )
 }
 
-/** Raw message bytes re-parsed locally, or null when the message is too large or unreadable. */
+/**
+ * Raw message bytes re-parsed locally, or null when the message is too large or unreadable.
+ *
+ * The declared [Message.size] is only a fast path: it is `-1` for a message whose size is not
+ * known, so the bytes are also capped **while they are written**. Buffering first and checking
+ * afterwards would let an unknown-size message allocate without bound.
+ */
 internal fun Message.reparseRaw(session: Session?): Message? = runCatching {
     if (size > MAX_RAW_BYTES) return null
-    val out = ByteArrayOutputStream()
+    val out = BoundedByteArrayOutputStream(MAX_RAW_BYTES)
     writeTo(out)
-    val bytes = out.toByteArray()
-    if (bytes.size > MAX_RAW_BYTES) return null
-    MimeMessage(session, ByteArrayInputStream(bytes))
+    MimeMessage(session, ByteArrayInputStream(out.toByteArray()))
 }.getOrNull()
+
+/** Fails before the buffer grows past [limit]; the exception is turned into null by [reparseRaw]. */
+private class BoundedByteArrayOutputStream(private val limit: Int) : ByteArrayOutputStream() {
+    override fun write(value: Int) {
+        if (count + 1 > limit) throw MessageTooLarge()
+        super.write(value)
+    }
+
+    override fun write(bytes: ByteArray, offset: Int, length: Int) {
+        if (count + length > limit) throw MessageTooLarge()
+        super.write(bytes, offset, length)
+    }
+}
+
+private class MessageTooLarge : java.io.IOException("message exceeds the MIME size bound")
 
 /**
  * Walks a MIME tree and returns **text parts only**.

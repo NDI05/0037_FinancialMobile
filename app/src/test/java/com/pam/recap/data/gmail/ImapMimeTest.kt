@@ -5,6 +5,7 @@ import java.util.Properties
 import javax.mail.Session
 import javax.mail.internet.MimeMessage
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -196,6 +197,26 @@ class ImapMimeTest {
         // A body without a filename is not an attachment; it is simply not text.
         assertEquals(0, body.attachmentCount)
         assertEquals(1, body.kindCounts["binary_skipped"])
+    }
+
+    @Test
+    fun `an unknown-size message that exceeds the bound is rejected while writing`() {
+        // The provider can report size = -1; the old check then wrote the whole body before
+        // checking the byte count. The bounded stream must stop at the limit.
+        var written = 0
+        val oversized = object : MimeMessage(session) {
+            override fun getSize(): Int = -1
+            override fun writeTo(out: java.io.OutputStream) {
+                val chunk = ByteArray(8 * 1024)
+                repeat((1024 * 1024 / chunk.size) + 2) {
+                    out.write(chunk)
+                    written += chunk.size
+                }
+            }
+        }
+
+        assertNull(oversized.reparseRaw(session))
+        assertTrue("wrote $written bytes past the bound", written <= 1024 * 1024)
     }
 
     @Test
