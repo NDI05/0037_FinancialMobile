@@ -31,3 +31,8 @@ gradle/gradle-daemon-jvm.properties
 # Robolectric android-all jars downloaded for JVM screenshots (not part of the app)
 .robolectric-deps/
 backend/.dev-server.log
+backend-go/.dev-server.log
+
+# Go build output / local data
+backend-go/api
+backend-go/data/
