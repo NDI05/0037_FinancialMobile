@@ -146,3 +146,12 @@ diuji lewat HTTP Go; UI Android untuk fitur itu masih v0.3 sampai C2.
 4. OpenAI-compatible adapter belum diuji terhadap provider nyata; prompt Go lebih ringkas daripada
    prompt Node (payload tetap aggregate-only).
 5. Perlu benchmark sebelum mengklaim peningkatan performa Go.
+
+
+## 9. Irisan C2 Android (22 November 2026)
+
+Branch `feat/c2-android` menambahkan access+refresh session, single-flight refresh,
+rotasi atomik, REST client/DTO dan deletion reauth/receipt. Itu belum memindahkan
+transaksi/import/summary/budget/analysis dari Room ke server; status rinci ada di
+[`14_C2_INTEGRASI_ANDROID.md`](14_C2_INTEGRASI_ANDROID.md). C2 penuh tetap
+memerlukan emulator→Go dan penghapusan Room pada D.

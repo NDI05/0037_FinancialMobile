@@ -105,7 +105,7 @@ Room/SQLCipher dihapus dari jalur aktif, dependensi dan skema varian penilaian p
 | E — pembuktian | Lima CRUDS lewat UI, dua pengguna dan admin, restart/persistensi cloud, backup/restore, demo dan SRS konsolidasi |
 
 Tahap A memiliki implementasi pada `fe3a183`. Laporan worker tahap A mencatat 223 tes Android dan
-111 backend. Setelah paket B + C1 Go: **225 Android**, **124 Node** (termasuk 2 tes interop), dan
+111 backend. Setelah paket B + C1 Go: **235 Android**, **124 Node** (termasuk 2 tes interop), dan
 **40 Go**. Impor fixture emulator tahap A: 28 cocok / 25 tersimpan / 3 dilewati, impor kedua 25
 duplikat. Gmail nyata dan perangkat fisik masih perlu diuji. Bukti cloud v0.4 harus merekam API, database target, dan pembacaan ulang setelah restart aplikasi, dengan kredensial disembunyikan.
 

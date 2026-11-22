@@ -262,7 +262,7 @@ Yang sudah disetujui hanyalah arah cloud database gratis.
 
 | Pemeriksaan | Status | Sumber |
 |---|---|---|
-| Android JVM | PASS | **225 tes**, 0 gagal; `assembleDebug`; lint 0 error |
+| Android JVM | PASS | **235 tes**, 0 gagal; `assembleDebug`; lint 0 error |
 | Backend Node (referensi) | PASS | `typecheck`, `build`, **124 tes**, 0 gagal (termasuk interop Go) |
 | Backend Go (target) | PASS lokal | **40 tes Go**, `go test -race`, `go vet`, `go build` |
 | Migrasi libSQL lokal | PASS | `file:` dari kosong, upgrade v0.3, boot kedua |
