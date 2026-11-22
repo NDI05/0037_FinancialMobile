@@ -6,6 +6,14 @@ Target kualitas adalah tidak ada defect kritis/tinggi atau blocker yang diketahu
 
 ## Arahan resume PM — checkpoint ceea72d
 
+**Prioritas owner sesudah `2d279da`:** jalankan
+[`RESUME_2D279DA_GMAIL_CATEGORY.md`](RESUME_2D279DA_GMAIL_CATEGORY.md). Pemilik meminta tautan
+Gmail bertahan saat logout/login akun PAM yang sama dan kategori merchant QRIS diperbaiki.
+[CR-003](../changes/CR_003_GMAIL_SESSION_CATEGORY.md) menggantikan clear-on-logout FR-54 lama;
+owner-scoped vault/routing wajib sebelum mempertahankan credential. Review/probe terbaru:
+[`PM_REVIEW_2D279DA_GMAIL_CATEGORY.md`](../reviews/PM_REVIEW_2D279DA_GMAIL_CATEGORY.md).
+Scope S2–S4 tetap berlanjut. Instruksi checkpoint lebih lama di bawah adalah konteks historis.
+
 **Resume terbaru sesudah worker `4c619f7`:** jalankan
 [`RESUME_4C619F7_IMPORT_ACCEPTANCE.md`](RESUME_4C619F7_IMPORT_ACCEPTANCE.md), dengan
 temuan/evidence pada [`PM_REVIEW_4C619F7.md`](../reviews/PM_REVIEW_4C619F7.md).

@@ -59,7 +59,7 @@ Bottom bar tetap empat tab; aksi admin hanya muncul untuk `ADMIN`.
 | FR-02 | Owner-scoped setiap akses; admin tidak membaca transaksi orang lain | **target** C1/C2 |
 | FR-03 | Consent per purpose/version/decision/time | **reuse** |
 | FR-04 | Withdraw AI memblokir analisis baru, laporan lama historis | **reuse** |
-| FR-05 | Logout mencabut sesi/refresh, tanpa kebocoran lintas user | **target** C1 |
+| FR-05 | Logout mencabut sesi/refresh; tautan Gmail terenkripsi per akun bertahan tanpa kebocoran lintas user | C1 + **CR-003 target C2**, belum diterapkan |
 | FR-51 | Register/login PAM, scrypt, invite-only | **v0.3**, ditambah role USER |
 | FR-53 | Rate limit login, tanpa oracle email | **reuse** |
 | FR-57 | JWT access ≤15 menit + refresh opaque rotasi/replay | **target** C1 |
@@ -71,7 +71,7 @@ Bottom bar tetap empat tab; aksi admin hanya muncul untuk `ADMIN`.
 |---|---|---|
 | FR-06/07/10 | IMAP + 6 state, data lama tetap terbaca saat reauth | **v0.3** |
 | FR-11–15 | Allowlist sender/subject, parser strict, gagal/attachment ditolak, alasan redacted | **v0.3** + perbaikan MIME Tahap A |
-| FR-54/55 | App Password divalidasi sebelum disimpan, Keystore, read-only | **v0.3** |
+| FR-54/55 | App Password tervalidasi, Keystore per akun, read-only; logout preserve, disconnect/withdrawal/deletion clear owner | **CR-003 target C2**, perubahan owner 22 Nov |
 | NFR-03/14 | TLS IMAP, tanpa kredensial di log/backend | **v0.3** |
 
 ### 3.3 Import dan transaksi
@@ -82,7 +82,7 @@ Bottom bar tetap empat tab; aksi admin hanya muncul untuk `ADMIN`.
 | FR-18/DR-02 | Idempoten fingerprint HMAC per akun, collision flag | **v0.3 lokal** → kunci server C1 |
 | FR-19/20/21 | Job state, empty≠failed, retry tanpa duplikasi | **v0.3** → server job/batch |
 | FR-22 | Perubahan menandai ringkasan/analisis outdated | **v0.3** → `month_revisions` |
-| FR-23–27 | Kategorisasi, manual, filter/search, provenance | **v0.3** → REST CRUDS |
+| FR-23–27 | Kategori merchant word/phrase, confidence terpisah, USER override, reclassification, manual/filter/provenance | **v0.3** → REST CRUDS; **CR-003** belum diterapkan |
 | FR-60 | Transaksi server-side owner-scoped via REST | **target** C1/C2 |
 | FR-61 | Empat entitas + field dinamis | **target** D |
 

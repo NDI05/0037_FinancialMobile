@@ -12,6 +12,16 @@ Aturan repo: [`AGENTS.md`](../AGENTS.md). Mandat terkini:
 
 ## Inventaris awal yang dipertahankan
 
+**Prioritas terbaru sesudah checkpoint worker `2d279da`:** owner meminta Gmail tetap tertaut
+setelah logout/login akun PAM yang sama dan kategori QRIS berbasis merchant diperbaiki.
+[CR-003](changes/CR_003_GMAIL_SESSION_CATEGORY.md) mencatat perubahan lifecycle credential yang
+sudah diminta; implementasi belum selesai. [Review PM](reviews/PM_REVIEW_2D279DA_GMAIL_CATEGORY.md)
+mengonfirmasi clear-on-logout/global vault, keyword bakso/mie ayam/coffee yang belum ada, dan
+substring false positives kos/air. [Prompt SE terbaru](agent-prompts/RESUME_2D279DA_GMAIL_CATEGORY.md).
+PM targeted 9 tests PASS, enam probe classifier sintetis, mailbox read-only tanpa isi asli di repo.
+Parser strict dipertahankan. Lost-response PASS terlapor dengan trace yang telah diperiksa PM;
+import subset API→DB→UI bukan full Android uploader E2E. S2 PARTIAL; S3/S4 belum selesai.
+
 Review PM terbaru sesudah worker `4c619f7`:
 [`PM_REVIEW_4C619F7.md`](reviews/PM_REVIEW_4C619F7.md). Arahan lanjut:
 [`RESUME_4C619F7_IMPORT_ACCEPTANCE.md`](agent-prompts/RESUME_4C619F7_IMPORT_ACCEPTANCE.md).
@@ -47,7 +57,7 @@ gate C2A dan seluruh sisa S2–S4. Akun/perangkat nyata tidak dipakai untuk QA d
 |---|---|---|---|
 | S2.1 | C2A gate mapping/provenance/wire | PASS lokal | `ServerFinanceRepositoryImplTest`, `ManualPendingActionStoreTest` |
 | S2.1 | refresh <5s di emulator | **PENDING REVIEW** | worker mengukur 2,53s; mutation baru/baseline/key/row belum terikat evidence yang konsisten |
-| S2.1 | response create hilang → retry satu row | **PARTIAL** | pending key + backend idempotency; fault-injection UI belum |
+| S2.1 | response create hilang → retry satu row | **PASS worker; trace PM cocok** | gate2 JSONL: 201/drop→200, key/body/result sama; DB/UI menurut laporan worker, tidak diulang PM |
 | S2.1 | GET detail 404/unavailable/parsing | PASS kode | error diteruskan; UI banner |
 | S2.2 | R1 B01–B04 | **PARTIAL/PASS kandidat** | screenshot 393 dp; 360/412/200% belum lengkap |
 | S2.3 | consent server-confirmed | PASS kode | local GRANTED bukan bukti server |

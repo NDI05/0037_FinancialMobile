@@ -1,0 +1,23 @@
+{
+  "review_date": "2026-11-22",
+  "tested_commit": "2d279dac9eb94122c6044795f82e2c3e1d3f0b03",
+  "data": "synthetic_only_no_real_mailbox_content",
+  "mechanism": "Reflection invoking compiled MerchantCategoryRules.classify on JVM unit-test runtime classpath; not emulator/Go E2E",
+  "cases": [
+    {"description": "Pembayaran", "merchant": "BAKSO UJI", "actual_category": "UNCATEGORIZED", "actual_confidence": 0.35, "expected_behavior": "food candidate via food-merchant phrase rule"},
+    {"description": "Pembayaran", "merchant": "MIE AYAM UJI", "actual_category": "UNCATEGORIZED", "actual_confidence": 0.35, "expected_behavior": "food candidate via food-merchant phrase rule"},
+    {"description": "Pembayaran", "merchant": "COFFEE UJI", "actual_category": "UNCATEGORIZED", "actual_confidence": 0.35, "expected_behavior": "food candidate via food-merchant phrase rule"},
+    {"description": "Pembayaran", "merchant": "KOPI UJI", "actual_category": "FOOD", "actual_confidence": 0.9, "expected_behavior": "retain existing food matching"},
+    {"description": "Pembayaran", "merchant": "TOKO KOSMETIK UJI", "actual_category": "HOUSING", "actual_confidence": 0.9, "expected_behavior": "must not classify housing through substring kos"},
+    {"description": "Pembayaran", "merchant": "CHAIR STORE UJI", "actual_category": "UTILITIES", "actual_confidence": 0.9, "expected_behavior": "must not classify utilities through substring air"}
+  ],
+  "targeted_test_run": {
+    "command": "./scripts/build.sh :app:testDebugUnitTest --tests '*LivinMimeImportTest' --tests '*SignOutUseCaseTest' --tests '*ServerImportUploaderTest'",
+    "suites": [
+      {"name": "LivinMimeImportTest", "tests": 7, "failures": 0, "errors": 0, "skipped": 0},
+      {"name": "SignOutUseCaseTest", "tests": 1, "failures": 0, "errors": 0, "skipped": 0},
+      {"name": "ServerImportUploaderTest", "tests": 1, "failures": 0, "errors": 0, "skipped": 0}
+    ]
+  },
+  "interpretation": "Existing tests pass; new logout persistence and merchant classification requirements remain unimplemented. Probe results document gaps, not successful new acceptance."
+}

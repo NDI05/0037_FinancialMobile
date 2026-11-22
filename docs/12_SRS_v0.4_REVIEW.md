@@ -5,6 +5,14 @@ Versi: **v0.4 review draft** (21 November 2026)
 Baseline: v0.2 + CR-001 (v0.3, disetujui) + CR-002 (v0.4, **belum disetujui penuh**)
 Status: **DRAFT REVIEW** — cloud gratis disetujui pemilik; sign-off paket produk v0.4 belum tercatat.
 
+**Perubahan owner 22 November 2026:** [CR-003](changes/CR_003_GMAIL_SESSION_CATEGORY.md)
+mengubah lifecycle FR-05/06/54: logout biasa mempertahankan credential Gmail terenkripsi per
+akun PAM di perangkat, dengan akses hanya sesudah login owner yang sama dan consent server
+berlaku. Disconnect/withdrawal/deletion tetap membersihkan owner terkait. FR-23/24 dipertegas
+untuk kategori berbasis merchant, word/phrase matching, provenance dan perlindungan koreksi USER.
+Arah perilaku ini diminta langsung pemilik; implementasi belum selesai dan bukan sign-off paket
+v0.4 penuh. Aturan clear-on-logout pada dokumen v0.3 digantikan CR-003 untuk logout biasa.
+
 Dokumen ini adalah konsolidasi requirement untuk paket B. Ia menggantikan pembacaan v0.2 yang
 masih menyebut OAuth/Google Sign-In. Riwayat perubahan ada di §9; rancangan teknis ada di
 [`10_MIGRASI_PEDOMAN.md`](10_MIGRASI_PEDOMAN.md); kontrak HTTP ada di
@@ -194,6 +202,11 @@ Kolom kanonik dan DDL ada di [`10_MIGRASI_PEDOMAN.md`](10_MIGRASI_PEDOMAN.md). P
 > **Yang tetap di perangkat ini.** Email mentah, subjek, pengirim, ID pesan, lampiran email, dan
 > Sandi aplikasi Gmail tidak pernah dikirim ke server PAM. File foto/PDF yang Anda lampirkan hanya
 > ada di perangkat tempat Anda memilihnya; perangkat lain hanya melihat metadatanya.
+>
+> **Tautan Gmail setelah logout.** Tautan disimpan terenkripsi di perangkat ini untuk akun PAM
+> Anda. Logout menutup sesi aktif; login kembali ke akun yang sama dapat memakai tautan tersebut
+> selama credential dan consent masih berlaku. Putuskan tautan Gmail untuk menghapus credential
+> yang tersimpan. Akun PAM lain tidak dapat memakai tautan Anda. (Target CR-003; belum diterapkan.)
 >
 > **Yang dikirim ke penyedia AI.** Hanya total agregat bulanan dan total kategori bawaan setelah
 > Anda memberi consent AI. Merchant, catatan, nama file, label kategori buatan Anda, dan atribut
