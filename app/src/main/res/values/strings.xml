@@ -364,9 +364,7 @@
     <string name="deletion_retention">Data lokal disimpan paling lama 24 bulan. Menghapus berarti transaksi, ringkasan, analisis, rencana anggaran, riwayat impor, dan koneksi kotak masuk dihapus segera dari perangkat ini.</string>
     <string name="deletion_what_removed">Yang dihapus: transaksi, ringkasan, analisis, rencana anggaran, riwayat impor, koneksi kotak masuk, dan catatan pribadi.</string>
     <string name="deletion_what_stays">Yang tidak bisa dihapus dari sini: email asli di kotak masuk Anda. PAM tidak pernah menyimpannya, jadi tidak ada yang perlu dihapus di sana.</string>
-    <string name="deletion_reauth_required">Verifikasi ulang dulu agar penghapusan tidak bisa dilakukan orang lain yang memegang perangkat Anda.</string>
     <string name="deletion_reauth_done">Verifikasi ulang selesai. Anda bisa melanjutkan penghapusan.</string>
-    <string name="deletion_reauth_action">Verifikasi ulang</string>
     <string name="deletion_password_label">Kata sandi akun untuk verifikasi server</string>
     <string name="deletion_password_required">Masukkan kata sandi akun untuk verifikasi ulang di server.</string>
     <string name="deletion_confirm">Hapus sekarang</string>
