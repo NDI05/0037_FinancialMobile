@@ -101,3 +101,16 @@ menggunakan Google App Password sesuai alur produk; credential tidak dikirim ke 
 Otorisasi login manual itu tidak mengizinkan agent memutus jaringan, menghapus data, memakai proxy
 QA, menjalankan sweep/deletion atau melakukan clear-data pada akun/perangkat asli. Gate reliabilitas
 tetap memakai akun/AVD/database sintetis terisolasi. Login berhasil bukan bukti import/retry/CRUDS lulus.
+
+## Android gate — PASS 22 November 2026
+
+- App build: `http://10.0.2.2:18081` QA proxy, Go `18080`, DB `/tmp/pam-c2a-gate2.db`.
+- Baseline: transactions=0, month revision=0.
+- Attempt 1: proxy `downstream=dropped_before_headers`, upstream 201,
+  `upstream_complete=true`; DB transactions=1, revision=1, idempotency=1.
+- UI after drop: form retained, explicit “Tidak dapat terhubung…” error.
+- Attempt 2 (same form/key): proxy `downstream=forwarded`, upstream 200,
+  same key_sha256, body_sha256 and result_id_sha256; DB transactions=1,
+  revision=1, idempotency=1; UI moved to the transaction list.
+- Evidence: `docs/evidence/c2a_android_lost_response_gate2.jsonl`.
+- This gate is **PASS for Android UI + QA proxy + Go/DB**.
