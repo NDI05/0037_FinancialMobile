@@ -1,5 +1,6 @@
 package com.pam.recap.domain.repository
 
+import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.result.map
 import com.pam.recap.domain.model.ConsentDecision
@@ -12,9 +13,12 @@ import com.pam.recap.domain.model.ConsentPurpose
  * decision: the device remains the source of truth for the UI (offline-first, NFR-03).
  */
 interface BackendConsentSync {
+    /** True when a v0.4 server is configured. */
+    val isEnabled: Boolean get() = false
+
     /**
-     * Fire-and-forget: records the decision on the server with a bounded retry. Never throws and
-     * never delays the local ledger write.
+     * Fire-and-forget legacy path. The v0.4 gate uses [recordConfirmed], which reports whether the
+     * server ledger acknowledged the decision.
      */
     suspend fun record(
         ownerId: String,
@@ -22,6 +26,15 @@ interface BackendConsentSync {
         decision: ConsentDecision,
         noticeVersion: String,
     )
+
+    suspend fun recordConfirmed(
+        ownerId: String,
+        purpose: ConsentPurpose,
+        decision: ConsentDecision,
+        noticeVersion: String,
+    ): Outcome<Unit> = runCatching {
+        record(ownerId, purpose, decision, noticeVersion)
+    }.fold({ Outcome.Success(Unit) }, { Outcome.Failure(AppError.Network("consent_push_failed")) })
 }
 
 /** FR-33: pushes the aggregate + revision so the server freezes the same input it will analyse. */

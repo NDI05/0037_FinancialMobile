@@ -1,5 +1,6 @@
 package com.pam.recap.domain.usecase
 
+import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.util.IdGenerator
@@ -39,17 +40,26 @@ class RecordConsentUseCase @Inject constructor(
         )
         consents.append(consent)
 
-        // FR-03/FR-34: the backend needs its own copy to gate analysis, but the local ledger is the
-        // source of truth for the UI. A failed push must never change the recorded decision.
-        runCatching {
-            backendConsent.record(ownerId, purpose, decision, noticeVersion)
+        // FR-03/FR-34: v0.4 must not present a local GRANTED as server-confirmed. The local ledger
+        // is appended for recovery, but a failed server acknowledgement is returned to the caller.
+        val serverAck = if (!backendConsent.isEnabled) {
+            // Legacy/offline: keep the old fire-and-forget behavior; no server gate exists.
+            runCatching { backendConsent.record(ownerId, purpose, decision, noticeVersion) }
+            Outcome.Success(Unit)
+        } else {
+            runCatching {
+                backendConsent.recordConfirmed(ownerId, purpose, decision, noticeVersion)
+            }.getOrElse { Outcome.Failure(AppError.Network("consent_push_failed")) }
         }
 
         if (purpose == ConsentPurpose.AI_PROCESSING && decision == ConsentDecision.WITHDRAWN) {
             // FR-04: existing reports become historical instead of staying "available".
             analyses.markAllHistorical(ownerId)
         }
-        return Outcome.Success(consent)
+        return when (serverAck) {
+            is Outcome.Success -> Outcome.Success(consent)
+            is Outcome.Failure -> Outcome.Failure(serverAck.error)
+        }
     }
 }
 

@@ -51,6 +51,33 @@ class BackendSyncClient @Inject constructor(
     // Consent (FR-03/FR-34)
     // ---------------------------------------------------------------------------------------
 
+    override val isEnabled: Boolean
+        get() = config.isEnabled
+
+    override suspend fun recordConfirmed(
+        ownerId: String,
+        purpose: ConsentPurpose,
+        decision: ConsentDecision,
+        noticeVersion: String,
+    ): Outcome<Unit> {
+        if (!config.isEnabled) return Outcome.Success(Unit)
+        val body = json.encodeToString(
+            ConsentBody.serializer(),
+            ConsentBody(purpose = purpose.name, decision = decision.name, noticeVersion = noticeVersion),
+        )
+        val status = requestWithRetry(ownerId, "/v1/consents", body, expectedStatus = 201) { url, token, requestBody ->
+            Request.Builder()
+                .url(url)
+                .post(requestBody)
+                .header("authorization", "Bearer $token")
+                .header("content-type", JSON_MEDIA_TYPE.toString())
+                .header("accept", JSON_MEDIA_TYPE.toString())
+                .build()
+        }
+        return if (status == 201) Outcome.Success(Unit)
+        else Outcome.Failure(AppError.Network("consent_push_failed"))
+    }
+
     override suspend fun record(
         ownerId: String,
         purpose: ConsentPurpose,
@@ -90,9 +117,6 @@ class BackendSyncClient @Inject constructor(
     // ---------------------------------------------------------------------------------------
     // Deletion (FR-47/FR-48)
     // ---------------------------------------------------------------------------------------
-
-    override val isEnabled: Boolean
-        get() = config.isEnabled
 
     override suspend fun request(ownerId: String): Outcome<Int> =
         request(ownerId, password = "", confirmation = "").map { it.slaDays }
