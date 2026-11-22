@@ -1,6 +1,7 @@
 package com.pam.recap.domain.repository
 
 import com.pam.recap.core.result.Outcome
+import com.pam.recap.core.result.map
 import com.pam.recap.domain.model.ConsentDecision
 import com.pam.recap.domain.model.ConsentPurpose
 
@@ -30,6 +31,18 @@ interface BackendSummarySync {
 
 /** FR-47/FR-48: creates the server-side deletion request and returns the acknowledged SLA. */
 interface BackendDeletionSync {
-    /** @return the server's SLA in days, or a failure that the caller ignores. */
+    /** Legacy/no-reauth fallback used by older callers and offline doubles. */
     suspend fun request(ownerId: String): Outcome<Int>
+
+    /**
+     * Server-side deletion requires the account password and literal confirmation. Implementations
+     * that do not support it fall back to [request] so test doubles stay source-compatible.
+     */
+    suspend fun request(
+        ownerId: String,
+        password: String,
+        confirmation: String = "DELETE_WORKSPACE",
+    ): Outcome<BackendDeletionAck> = request(ownerId).map { BackendDeletionAck(it, null) }
 }
+
+data class BackendDeletionAck(val slaDays: Int, val receiptToken: String?)

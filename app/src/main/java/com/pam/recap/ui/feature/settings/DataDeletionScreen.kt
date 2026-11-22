@@ -11,11 +11,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pam.recap.R
@@ -134,10 +137,18 @@ fun DataDeletionScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                    OutlinedTextField(
+                        value = state.serverPassword,
+                        onValueChange = viewModel::onServerPasswordChange,
+                        label = { Text(stringResource(R.string.deletion_password_label)) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     PillButton(
                         text = stringResource(R.string.deletion_confirm),
                         onClick = viewModel::confirmDeletion,
-                        enabled = state.reauthenticated,
+                        enabled = state.reauthenticated && state.serverPassword.isNotBlank(),
                         loading = state.isBusy,
                         modifier = Modifier.fillMaxWidth(),
                     )

@@ -162,6 +162,20 @@ class BackendSessionRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun renew(ownerId: String): Outcome<String> {
+        if (!config.isEnabled) return Outcome.Failure(AppError.Configuration(BACKEND_NOT_CONFIGURED))
+        return withContext(ioDispatcher) {
+            refreshMutex.withLock {
+                val current = readCached()
+                    ?: return@withLock Outcome.Failure(AppError.Unauthorized("backend_no_session"))
+                if (current.ownerId != ownerId) {
+                    return@withLock Outcome.Failure(AppError.Unauthorized("backend_session_other_owner"))
+                }
+                refreshLocked(current)
+            }
+        }
+    }
+
     private fun refreshLocked(current: StoredSession): Outcome<String> {
         val refreshToken = current.refreshToken
             ?: run {

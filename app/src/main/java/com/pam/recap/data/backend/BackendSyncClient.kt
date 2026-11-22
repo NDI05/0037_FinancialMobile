@@ -5,10 +5,12 @@ import com.pam.recap.core.di.IoDispatcher
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.result.SafeLogger
+import com.pam.recap.core.result.map
 import com.pam.recap.domain.model.ConsentDecision
 import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.repository.AnalysisRequest
 import com.pam.recap.domain.repository.BackendConsentSync
+import com.pam.recap.domain.repository.BackendDeletionAck
 import com.pam.recap.domain.repository.BackendDeletionSync
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.domain.repository.BackendSummarySync
@@ -89,28 +91,43 @@ class BackendSyncClient @Inject constructor(
     // Deletion (FR-47/FR-48)
     // ---------------------------------------------------------------------------------------
 
-    override suspend fun request(ownerId: String): Outcome<Int> {
+    override suspend fun request(ownerId: String): Outcome<Int> =
+        request(ownerId, password = "", confirmation = "").map { it.slaDays }
+
+    override suspend fun request(
+        ownerId: String,
+        password: String,
+        confirmation: String,
+    ): Outcome<BackendDeletionAck> {
         if (!config.isEnabled) return Outcome.Failure(AppError.Configuration("backend_not_configured"))
         val endpoint = config.endpoint("/v1/deletion-requests")
             ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
         val token = tokenFor(ownerId) ?: return Outcome.Failure(AppError.Unauthorized("backend_no_session"))
+        val body = json.encodeToString(
+            DeletionCreate.serializer(),
+            DeletionCreate(password = password, confirmation = confirmation),
+        )
         return withContext(ioDispatcher) {
             try {
                 val response = client.newCall(
                     Request.Builder()
                         .url(endpoint)
-                        .post(EMPTY_BODY)
+                        .post(body.toRequestBody(JSON_MEDIA_TYPE))
                         .header("authorization", "Bearer $token")
+                        .header("content-type", JSON_MEDIA_TYPE.toString())
                         .header("accept", JSON_MEDIA_TYPE.toString())
                         .build(),
                 ).execute()
                 response.use {
                     val payload = it.body?.string().orEmpty()
                     if (it.code != 202) {
-                        return@withContext Outcome.Failure(AppError.Network("deletion_request_failed"))
+                        val code = runCatching {
+                            json.decodeFromString(BackendErrorBody.serializer(), payload).code
+                        }.getOrNull()
+                        return@withContext Outcome.Failure(backendError(it.code, code))
                     }
                     val decoded = json.decodeFromString(DeletionResponse.serializer(), payload)
-                    Outcome.Success(decoded.slaDays)
+                    Outcome.Success(BackendDeletionAck(decoded.slaDays, decoded.receiptToken))
                 }
             } catch (error: IOException) {
                 SafeLogger.failure(TAG, "deletion_push_failed")
@@ -205,10 +222,14 @@ class BackendSyncClient @Inject constructor(
     )
 
     @Serializable
+    private data class DeletionCreate(val password: String, val confirmation: String)
+
+    @Serializable
     private data class DeletionResponse(
         val id: String,
         val state: String,
         val slaDays: Int,
+        val receiptToken: String? = null,
     )
 
     private companion object {

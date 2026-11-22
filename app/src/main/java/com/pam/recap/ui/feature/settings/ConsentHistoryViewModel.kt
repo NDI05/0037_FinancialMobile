@@ -60,6 +60,7 @@ data class DataDeletionUiState(
     val step: DeletionStep = DeletionStep.Explanation,
     val isBusy: Boolean = false,
     val reauthenticated: Boolean = false,
+    val serverPassword: String = "",
     val request: DeletionRequest? = null,
     /** SLA the backend acknowledged (contract §4.3); null when the app runs offline. */
     val serverSlaDays: Int? = null,
@@ -110,10 +111,18 @@ class DataDeletionViewModel @Inject constructor(
         }
     }
 
+    fun onServerPasswordChange(value: String) {
+        _state.update { it.copy(serverPassword = value) }
+    }
+
     fun confirmDeletion() {
         if (_state.value.isBusy) return
         if (!_state.value.reauthenticated) {
             _state.update { it.copy(error = com.pam.recap.R.string.error_reauth_required) }
+            return
+        }
+        if (_state.value.serverPassword.isBlank()) {
+            _state.update { it.copy(error = com.pam.recap.R.string.deletion_password_required) }
             return
         }
         _state.update { it.copy(isBusy = true, error = null) }
@@ -128,7 +137,11 @@ class DataDeletionViewModel @Inject constructor(
                 _state.update { it.copy(isBusy = false, error = com.pam.recap.R.string.error_deletion_in_progress) }
                 return@launch
             }
-            val result = requestDeletion(ownerId, Instant.fromEpochMilliseconds(System.currentTimeMillis()))
+            val result = requestDeletion(
+                ownerId,
+                Instant.fromEpochMilliseconds(System.currentTimeMillis()),
+                _state.value.serverPassword,
+            )
             when (result) {
                 is Outcome.Failure -> _state.update {
                     it.copy(isBusy = false, error = com.pam.recap.ui.util.appErrorRes(result.error))

@@ -31,6 +31,13 @@ interface BackendSessionRepository {
      */
     suspend fun token(ownerId: String): Outcome<String>
 
+    /**
+     * Forces one refresh for a request that received 401 despite a locally unexpired access token.
+     * The default keeps test doubles source-compatible; the real repository shares the same
+     * single-flight mutex as [token].
+     */
+    suspend fun renew(ownerId: String): Outcome<String> = token(ownerId)
+
     /** FR-05: server-side invalidation on sign-out; clears the cache even when the call fails. */
     suspend fun revoke()
 

@@ -367,6 +367,8 @@
     <string name="deletion_reauth_required">Verifikasi ulang dulu agar penghapusan tidak bisa dilakukan orang lain yang memegang perangkat Anda.</string>
     <string name="deletion_reauth_done">Verifikasi ulang selesai. Anda bisa melanjutkan penghapusan.</string>
     <string name="deletion_reauth_action">Verifikasi ulang</string>
+    <string name="deletion_password_label">Kata sandi akun untuk verifikasi server</string>
+    <string name="deletion_password_required">Masukkan kata sandi akun untuk verifikasi ulang di server.</string>
     <string name="deletion_confirm">Hapus sekarang</string>
     <string name="deletion_done">Penghapusan selesai. Data lokal sudah dibersihkan dan sesi berakhir.</string>
     <string name="nav_overview">Ringkasan</string>

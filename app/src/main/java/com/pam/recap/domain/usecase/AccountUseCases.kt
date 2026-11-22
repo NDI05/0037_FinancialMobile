@@ -215,6 +215,7 @@ class RequestDeletionUseCase @Inject constructor(
     suspend operator fun invoke(
         ownerId: String,
         reauthenticatedAt: Instant?,
+        serverPassword: String? = null,
     ): Outcome<DeletionResult> {
         val now = clock.now()
         if (reauthenticatedAt == null || now.toEpochMilliseconds() - reauthenticatedAt.toEpochMilliseconds() > REAUTH_WINDOW_MILLIS) {
@@ -235,7 +236,12 @@ class RequestDeletionUseCase @Inject constructor(
 
         // FR-48/contract §4.3: tell the backend so it blocks sync and sweeps its aggregates. The
         // returned SLA is surfaced in the UI; a failure never stops the local deletion.
-        val serverSlaDays = (runCatching { backendDeletion.request(ownerId) }.getOrNull() as? Outcome.Success)?.value
+        val serverSlaDays = if (serverPassword.isNullOrBlank()) {
+            (runCatching { backendDeletion.request(ownerId) }.getOrNull() as? Outcome.Success)?.value
+        } else {
+            (runCatching { backendDeletion.request(ownerId, serverPassword) }.getOrNull()
+                as? Outcome.Success)?.value?.slaDays
+        }
 
         request = request.copy(state = DeletionState.IN_PROGRESS)
         deletion.save(request)
