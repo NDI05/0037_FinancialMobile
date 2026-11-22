@@ -54,6 +54,7 @@ class BackendSessionRepositoryImpl @Inject constructor(
 
     private val refreshMutex = Mutex()
     private val generation = AtomicLong(0)
+    private val commitLock = Any()
 
     override val isEnabled: Boolean get() = config.isEnabled
 
@@ -104,22 +105,17 @@ class BackendSessionRepositoryImpl @Inject constructor(
                         }.getOrNull()
                         if (session == null) {
                             Outcome.Failure(AppError.Network("backend_invalid_response"))
-                        } else if (generation.get() != attemptGeneration) {
-                            // Logout or a newer login won while this response was in flight.
+                        } else if (!commitLogin(attemptGeneration, StoredSession(
+                                ownerId = OwnerIdFactory.ownerIdFor(email.trim()),
+                                serverOwnerId = session.user?.ownerId,
+                                role = session.user?.role,
+                                sessionId = null,
+                                accessToken = session.accessToken,
+                                refreshToken = session.refreshToken,
+                                expiresAtEpochMs = expiresAt(session.accessExpiresAt ?: session.expiresAt),
+                            ))) {
                             Outcome.Failure(AppError.Unauthorized("backend_session_superseded"))
                         } else {
-                            generation.incrementAndGet()
-                            writeCached(
-                                StoredSession(
-                                    ownerId = OwnerIdFactory.ownerIdFor(email.trim()),
-                                    serverOwnerId = session.user?.ownerId,
-                                    role = session.user?.role,
-                                    sessionId = null,
-                                    accessToken = session.accessToken,
-                                    refreshToken = session.refreshToken,
-                                    expiresAtEpochMs = expiresAt(session.accessExpiresAt ?: session.expiresAt),
-                                ),
-                            )
                             Outcome.Success(Unit)
                         }
                     }
@@ -133,6 +129,17 @@ class BackendSessionRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    private fun commitLogin(attemptGeneration: Long, session: StoredSession): Boolean =
+        synchronized(commitLock) {
+            if (generation.get() != attemptGeneration) {
+                false
+            } else {
+                generation.incrementAndGet()
+                writeCached(session)
+                true
+            }
+        }
 
     override suspend fun token(ownerId: String): Outcome<String> {
         if (!config.isEnabled) {
@@ -213,9 +220,7 @@ class BackendSessionRepositoryImpl @Inject constructor(
             return Outcome.Failure(AppError.Network("backend_invalid_response"))
         }
         // A logout/login that happened while the network call was in flight wins.
-        if (generation.get() != expectedGeneration) {
-            return Outcome.Failure(AppError.Unauthorized("backend_session_superseded"))
-        }
+
         if (response.code == 401 || response.code == 403) {
             clear()
             return Outcome.Failure(AppError.Unauthorized("backend_refresh_rejected"))
@@ -233,7 +238,12 @@ class BackendSessionRepositoryImpl @Inject constructor(
             serverOwnerId = session.user?.ownerId ?: current.serverOwnerId,
             role = session.user?.role ?: current.role,
         )
-        writeCached(rotated)
+        synchronized(commitLock) {
+            if (generation.get() != expectedGeneration) {
+                return Outcome.Failure(AppError.Unauthorized("backend_session_superseded"))
+            }
+            writeCached(rotated)
+        }
         return Outcome.Success(rotated.accessToken)
     }
 
@@ -257,8 +267,10 @@ class BackendSessionRepositoryImpl @Inject constructor(
     }
 
     override fun clear() {
-        generation.incrementAndGet()
-        prefs.edit(commit = true) { remove(KEY_SESSION) }
+        synchronized(commitLock) {
+            generation.incrementAndGet()
+            prefs.edit(commit = true) { remove(KEY_SESSION) }
+        }
     }
 
     /**
