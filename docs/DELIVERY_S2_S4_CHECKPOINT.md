@@ -12,6 +12,18 @@ Aturan repo: [`AGENTS.md`](../AGENTS.md). Mandat terkini:
 
 ## Inventaris awal yang dipertahankan
 
+Arahan resume terbaru: [`RESUME_LIVIN_S2_S4.md`](agent-prompts/RESUME_LIVIN_S2_S4.md).
+Pada pemeriksaan PM sebelum commit prompt, HEAD lokal/remote `9571dc3`, worktree bersih.
+Pemeriksaan read-only mailbox menemukan email `Pembayaran Berhasil!` dari sender Livin
+yang sudah di-allowlist; tanggal/jam pada sampel HTML terpisah. Log emulator memuat
+48 skip `malformed_event_time`, progress saved=0/skipped=48 dan terminal COMPLETE.
+Ini observasi parsial dari log/mailbox, bukan PASS impor atau jumlah seluruh mailbox.
+Parser mengharapkan datetime gabungan; import masih menulis Room sementara Overview/
+Transactions mode backend membaca Go. Subject `Transfer dengan BI Fast Berhasil` juga
+ditemukan, namun body/semantik template belum diverifikasi penuh. Patch parser/import
+belum diterapkan. Prioritas SE: fixture sintetis → parser → import Go → UI, disertai
+gate C2A dan seluruh sisa S2–S4. Akun/perangkat nyata tidak dipakai untuk QA destructive.
+
 - C1 Go backend, migrasi 1–7, 42 tes Go (run terakhir), race/vet/build.
 - F1–F4: server deletion failure/receipt, login/refresh generation, rejected-token coalescing,
   receipt log sanitization.
@@ -72,7 +84,9 @@ Tidak ada baris yang diberi PASS tanpa bukti.
 6. S4: lampiran/admin + Room removal.
 7. Visual 360/412/200%, TalkBack/contrast, owner UAT.
 
-External NOT RUN: Turso cloud, backup/restore, Gmail nyata, provider nyata, physical device.
+External NOT RUN: Turso cloud, backup/restore, impor Gmail nyata end-to-end ke Go/UI,
+provider nyata, physical device. Pemeriksaan read-only mailbox dan observasi IMAP/parser
+pada log nyata sudah dilakukan PM; keduanya belum membuktikan acceptance impor.
 
 ## Resume 22 November 2026 — gate C2A aktual
 

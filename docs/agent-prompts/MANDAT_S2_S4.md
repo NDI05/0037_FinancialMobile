@@ -6,6 +6,13 @@ Target kualitas adalah tidak ada defect kritis/tinggi atau blocker yang diketahu
 
 ## Arahan resume PM — checkpoint ceea72d
 
+**Addendum aktif 22 November 2026:** baca [`RESUME_LIVIN_S2_S4.md`](RESUME_LIVIN_S2_S4.md).
+PM menemukan tanggal/jam terpisah pada sampel Livin dan 48 skip `malformed_event_time`
+di log emulator; import masih lokal sementara pembaca finance memakai Go. Prioritas baru:
+regression MIME/parser → import server sampai UI, dengan gate C2A tetap wajib lalu teruskan
+seluruh S2–S4. Addendum membedakan observasi mailbox/log dari acceptance end-to-end dan
+memperbarui checkpoint sesudah `9571dc3`. Tidak ada klaim parser/import sudah diperbaiki.
+
 PM telah memeriksa laporan gabungan dan repo. **Mandat tiga sprint belum tercapai.** R1 saat ini merupakan kandidat theme/presentasi; import/pagination/update/delete/budget/analysis dan hampir seluruh S3/S4 masih terbuka. Laporan ini menjadi checkpoint lanjutan, bukan akhir penugasan.
 
 Lanjutkan dari kondisi aktif tanpa mengulang redesign/audit fondasi. Worker melaporkan refresh 2,53 detik, tetapi before/after satu record dan “revision 0” belum mengikat fresh mutation/key/UI baru. Bedakan revisi record dari `month_revisions`, gunakan baseline per-run dan rekonsiliasi bukti. Lost-create-response masih OPEN pada Android.
