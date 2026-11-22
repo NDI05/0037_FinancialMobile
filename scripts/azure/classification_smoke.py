@@ -14,11 +14,11 @@ import urllib.parse
 import urllib.request
 
 CASES = [
-    {"caseId": "food-bakso", "merchant": "BAKSO UJI", "direction": "DEBIT", "method": "QRIS"},
-    {"caseId": "food-mie", "merchant": "MIE AYAM UJI", "direction": "DEBIT", "method": "QRIS"},
-    {"caseId": "food-coffee", "merchant": "COFFEE UJI", "direction": "DEBIT", "method": "QRIS"},
-    {"caseId": "retail-cosmetics", "merchant": "TOKO KOSMETIK UJI", "direction": "DEBIT", "method": "QRIS"},
-    {"caseId": "unknown", "merchant": "MERCHANT UJI 042", "direction": "DEBIT", "method": "QRIS"},
+    {"caseId": "c0", "merchant": "BAKSO UJI", "direction": "DEBIT", "method": "QRIS"},
+    {"caseId": "c1", "merchant": "MIE AYAM UJI", "direction": "DEBIT", "method": "QRIS"},
+    {"caseId": "c2", "merchant": "COFFEE UJI", "direction": "DEBIT", "method": "QRIS"},
+    {"caseId": "c3", "merchant": "TOKO KOSMETIK UJI", "direction": "DEBIT", "method": "QRIS"},
+    {"caseId": "c4", "merchant": "MERCHANT UJI 042", "direction": "DEBIT", "method": "QRIS"},
 ]
 CATEGORIES = ["income", "food", "housing", "utilities", "transport", "shopping", "health",
               "education", "other_expense", "transfer", "uncategorized"]
@@ -101,8 +101,8 @@ def main():
         print(json.dumps({"status": "PROVIDER_ERROR", "httpStatus": error.code}))
         raise SystemExit(1)
     rows = validate_response(json.loads(payload["choices"][0]["message"]["content"]))
-    expectations = {"food-bakso": "food", "food-mie": "food", "food-coffee": "food", "retail-cosmetics": "shopping", "unknown": "uncategorized"}
-    passed = all(x["categoryCode"] == expectations[x["caseId"]] and (x["caseId"] != "unknown" or x["needsReview"]) for x in rows)
+    expectations = {"c0": "food", "c1": "food", "c2": "food", "c3": "shopping", "c4": "uncategorized"}
+    passed = all(x["categoryCode"] == expectations[x["caseId"]] and (x["caseId"] != "c4" or x["needsReview"]) for x in rows)
     result = {
         "data": "synthetic_only", "httpStatus": status, "provider": "Microsoft Foundry / Azure",
         "model": env.get("AZURE_CLASSIFIER_MODEL", "configured"), "modelVersion": env.get("AZURE_CLASSIFIER_MODEL_VERSION", "configured"),

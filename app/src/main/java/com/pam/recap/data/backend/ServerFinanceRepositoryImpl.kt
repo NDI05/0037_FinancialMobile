@@ -222,8 +222,9 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         createdAt?.let { Instant.parse(it) }
         updatedAt?.let { Instant.parse(it) }
         require(parserConfidence == null || parserConfidence in 0.0..1.0) { "invalid confidence" }
-        require(categoryOrigin == null || categoryOrigin in setOf("IMPORTED", "RULE", "USER")) { "invalid category origin" }
-        require(categoryCode.isNotBlank() || source == "MANUAL") { "missing category" }
+        require(categoryOrigin == null || categoryOrigin in setOf("IMPORTED", "RULE", "USER", "LLM")) { "invalid category origin" }
+        // Empty category is the legitimate UNCATEGORIZED state for imported rows; an unknown
+        // non-empty code is handled by the mapper and must not turn into Other Expense.
     }
 
     private inline fun <T> wireMap(block: () -> T): Outcome<T> = try {
