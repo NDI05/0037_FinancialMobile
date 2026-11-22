@@ -68,6 +68,12 @@ func run() error {
 		api.CategoryClassifier = categoryllm.NewAzure(cfg.CategoryLLM.BaseURL, cfg.CategoryLLM.APIKey,
 			cfg.CategoryLLM.Deployment, cfg.CategoryLLM.Model, cfg.CategoryLLM.Timeout)
 	}
+	// Durable recovery worker: reclaims jobs whose owning request/process died, applies the
+	// bounded transient-retry policy and sweeps orphaned reservations.
+	worker := httpapi.NewCategoryWorker(api)
+	if cfg.CategoryLLM.Enabled {
+		worker.Start()
+	}
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Port),
 		Handler:           api.Handler(),
@@ -92,6 +98,11 @@ func run() error {
 		return err
 	case <-stop:
 		logger.Info("shutdown_requested")
+	}
+	// STOP the worker first so it cannot grab provider slots while HTTP drains; jobs it held are
+	// reclaimed by the next process after their lease expires (recovery path, not data loss).
+	if cfg.CategoryLLM.Enabled {
+		worker.Stop()
 	}
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()

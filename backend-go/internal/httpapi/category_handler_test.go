@@ -12,6 +12,11 @@ type stubCategory struct{ calls int }
 
 func (s *stubCategory) ID() string { return "stub" }
 func (s *stubCategory) Model() string { return "stub-model" }
+func (s *stubCategory) SplitCandidates(candidates []categoryllm.Candidate) [][]categoryllm.Candidate {
+	if len(candidates) == 0 { return nil }
+	return [][]categoryllm.Candidate{candidates}
+}
+func (s *stubCategory) FitsInputBudget(_ []categoryllm.Candidate) bool { return true }
 func (s *stubCategory) Classify(_ context.Context, candidates []categoryllm.Candidate) (categoryllm.Response, error) {
 	s.calls++
 	out := make([]categoryllm.Result, len(candidates))
@@ -24,13 +29,22 @@ func (s *stubCategory) Classify(_ context.Context, candidates []categoryllm.Cand
 }
 
 func newCategoryHarness(t *testing.T, classifier categoryllm.Classifier) *harness {
-	h := newHarnessWithConfig(t, nil, map[string]string{
-		"CATEGORY_LLM_ENABLED": "true",
-		"AZURE_CLASSIFIER_BASE_URL": "https://example.test/openai/v1",
-		"AZURE_CLASSIFIER_DEPLOYMENT": "d", "AZURE_CLASSIFIER_API_KEY": "k",
-		"CATEGORY_LLM_PRICE_PROMPT_PER_1K_USD": "0.00015",
+	return newCategoryHarnessWithEnv(t, classifier, nil)
+}
+
+func newCategoryHarnessWithEnv(t *testing.T, classifier categoryllm.Classifier, extra map[string]string) *harness {
+	env := map[string]string{
+		"CATEGORY_LLM_ENABLED":                    "true",
+		"AZURE_CLASSIFIER_BASE_URL":               "https://example.test/openai/v1",
+		"AZURE_CLASSIFIER_DEPLOYMENT":             "d",
+		"AZURE_CLASSIFIER_API_KEY":                "k",
+		"CATEGORY_LLM_PRICE_PROMPT_PER_1K_USD":    "0.00015",
 		"CATEGORY_LLM_PRICE_COMPLETION_PER_1K_USD": "0.0006",
-	})
+	}
+	for k, v := range extra {
+		env[k] = v
+	}
+	h := newHarnessWithConfig(t, nil, env)
 	h.api.CategoryClassifier = classifier
 	return h
 }

@@ -16,6 +16,23 @@ const (
 	TaxonomyVersion = "builtin-categories/1"
 	MaxCandidates   = 5
 	MaxMerchantRunes = 120
+	// MaxInputTokens is the model input ceiling enforced by a deterministic conservative bound: the
+	// token estimate of the whole request body (system prompt, user payload, strict JSON schema and
+	// request overhead) computed as ceil(UTF-8 bytes / ConservativeBytesPerToken). GPT-OSS uses a
+	// byte-level BPE with byte fallback, and representative measured usage (see the usage ledger)
+	// runs >= 4 bytes per prompt token; the 2-bytes-per-token floor below keeps every estimate on
+	// the hot side. The estimate is NOT a formal proof that real tokens <= 1024 (that would require
+	// the vocabulary), so real prompt_tokens from every provider response are kept as the exact
+	// ledger value; the estimate is only the deterministic pre-flight gate. Requests that would
+	// exceed the cap are rejected before any HTTP call (ErrInputTooLarge) or split
+	// (SplitCandidates); a single overlong candidate becomes NEEDS_REVIEW instead of a provider call.
+	MaxInputTokens = 1024
+	// ConservativeBytesPerToken is the deliberate floor for the byte/token ratio used by the
+	// pre-flight estimate. It is half the ~4 bytes/token observed on measured usage, so estimates
+	// run hot: a request that passes the gate never passes with a badly underestimated prompt.
+	ConservativeBytesPerToken = 2
+	// MaxCompletionTokens caps the model output; provider finish_reason == "length" is ErrTruncated.
+	MaxCompletionTokens = 512
 )
 
 var (
@@ -24,7 +41,13 @@ var (
 	ErrInvalidOutput = errors.New("category_llm_invalid_output")
 	ErrTruncated     = errors.New("category_llm_truncated")
 	ErrInputTooLarge = errors.New("category_llm_input_too_large")
+	// ErrProviderTransient marks retryable transport/provider failures: network errors, timeouts
+	// and HTTP 408/429/5xx. Non-transient classification failures must not be retried.
+	ErrProviderTransient = errors.New("category_provider_transient")
 )
+
+// IsProviderTransient reports whether err is a retryable provider failure.
+func IsProviderTransient(err error) bool { return errors.Is(err, ErrProviderTransient) }
 
 type Candidate struct {
 	Merchant  string   `json:"merchant"`
@@ -52,6 +75,12 @@ type Classifier interface {
 	ID() string
 	Model() string
 	Classify(ctx context.Context, candidates []Candidate) (Response, error)
+	// SplitCandidates partitions candidates into groups that each fit the model input cap
+	// (MaxInputTokens) under the conservative bound. Callers issue one provider call per group.
+	SplitCandidates(candidates []Candidate) [][]Candidate
+	// FitsInputBudget reports whether the whole candidate set fits the model input cap, so callers
+	// can refuse an oversized batch before any provider call or budget reservation.
+	FitsInputBudget(candidates []Candidate) bool
 }
 
 // SanitizeMerchant accepts a business merchant label only. It rejects control characters, URLs,

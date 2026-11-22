@@ -38,11 +38,18 @@ type Server struct {
 	Now      func() time.Time
 	Provider llm.Provider
 	CategoryClassifier categoryllm.Classifier
+	// providerSlots caps concurrent provider calls (inline requests and the recovery worker
+	// together) at 2: provider concurrency must never exceed the configured maximum.
+	providerSlots chan struct{}
 }
+
+// MaxCategoryProviderConcurrency is the enforced ceiling on simultaneous provider calls.
+const MaxCategoryProviderConcurrency = 2
 
 func New(s *store.Store, cfg *config.Config, issuer *auth.Issuer, logger *slog.Logger,
 	provider llm.Provider) *Server {
-	return &Server{Store: s, Config: cfg, Issuer: issuer, Log: logger, Now: time.Now, Provider: provider}
+	return &Server{Store: s, Config: cfg, Issuer: issuer, Log: logger, Now: time.Now, Provider: provider,
+		providerSlots: make(chan struct{}, MaxCategoryProviderConcurrency)}
 }
 
 // Handler builds the route table and middleware chain.
