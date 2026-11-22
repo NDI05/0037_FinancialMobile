@@ -141,3 +141,23 @@ pada log nyata sudah dilakukan PM; keduanya belum membuktikan acceptance impor.
 - Android fresh: **250 tests PASS**, assemble/lint 0 error. Go: 42 PASS (backend
   unchanged on this resume).
 - Pagination/filter, import resume UI, update/delete, S3/S4 tetap belum.
+
+## Resume import acceptance — 22 November 2026
+
+- **Parser strict PASS:** impossible 31 Nov, 29 Feb non-leap, 24:00, missing time and
+  WITA/WIT rejected; leap day, split WIB and NBSP accepted. 7 MIME/parser tests.
+- **C2A lost-response Android gate PASS:** QA proxy `18081` → Go `18080`; attempt 1
+  upstream 201 then `dropped_before_headers`; UI retained form/error; attempt 2 same
+  key/body hash got 200/result hash same; DB stayed transactions=1, month revision=1,
+  idempotency=1. Evidence `docs/evidence/c2a_android_lost_response_gate2.jsonl`.
+- **Server import → DB → UI PARTIAL/PASS for synthetic API path:** one import job/batch
+  with candidate fp `b…`, 2026-11-19T02:15:20Z, amount 175000, imported=1; app
+  restarted and Overview showed **Rp350.000** (manual 175k + imported 175k), coverage
+  **Lengkap**, Transactions showed **2 transaksi**. This is API→Go→DB→UI, not a real
+  Gmail fetch/uploader end-to-end.
+- **Reimport count defect observed:** sending the same batch to the finalized job
+  returned imported=1/duplicates=0 while DB stayed 2 rows. Counts/finalization
+  invariant is not trusted; **OPEN defect**, not PASS.
+- Upload recovery journal/retry code added; not yet exercised end-to-end after a true
+  server upload failure/restart. **PARTIAL**.
+- Fresh Android: **251 PASS**, assemble/lint 0 error/71 warning. Go fresh tests PASS.
