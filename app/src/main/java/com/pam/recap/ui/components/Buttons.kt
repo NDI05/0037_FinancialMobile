@@ -57,6 +57,8 @@ import com.pam.recap.ui.theme.PamSize
 import com.pam.recap.ui.theme.PamSpacing
 import com.pam.recap.ui.theme.TitleS
 import com.pam.recap.ui.theme.TrackInset
+import com.pam.recap.ui.theme.OnPrimary
+import com.pam.recap.ui.theme.Primary
 import com.pam.recap.ui.theme.Violet
 
 /** Visual weight of a [PillButton]. */
@@ -87,12 +89,12 @@ fun PillButton(
     size: androidx.compose.ui.unit.Dp = PamSize.minTouch,
 ) {
     val container: Brush = when (style) {
-        PillButtonStyle.Primary -> PamGradients.brand
+        PillButtonStyle.Primary -> SolidColor(Primary)
         PillButtonStyle.Secondary -> SolidColor(GlassFill)
         PillButtonStyle.Ghost -> SolidColor(Color.Transparent)
     }
     val contentColor = when (style) {
-        PillButtonStyle.Primary -> Ink
+        PillButtonStyle.Primary -> OnPrimary
         PillButtonStyle.Secondary, PillButtonStyle.Ghost -> OnInk
     }
     val border = when (style) {

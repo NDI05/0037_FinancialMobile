@@ -111,7 +111,7 @@ fun <T> PillToggleGroup(
                 .height(pillHeight)
                 .align(Alignment.CenterStart)
                 .clip(RoundedCornerShape(PamRadius.pill))
-                .background(Color.White),
+                .background(com.pam.recap.ui.theme.Primary),
         )
 
         Row(
@@ -140,7 +140,7 @@ fun <T> PillToggleGroup(
                     Text(
                         text = option.label,
                         style = LabelL,
-                        color = if (isSelected) Ink else OnInkMuted,
+                        color = if (isSelected) com.pam.recap.ui.theme.OnPrimary else OnInkMuted,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,

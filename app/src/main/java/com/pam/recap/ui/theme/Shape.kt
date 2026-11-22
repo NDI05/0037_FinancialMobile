@@ -9,21 +9,21 @@ import androidx.compose.ui.unit.dp
  * hero imagery at 24 dp and controls collapse to full pills.
  */
 val PamShapes = Shapes(
-    extraSmall = RoundedCornerShape(10.dp),
-    small = RoundedCornerShape(14.dp),
+    extraSmall = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(16.dp),
     medium = RoundedCornerShape(20.dp),
-    large = RoundedCornerShape(26.dp),
-    extraLarge = RoundedCornerShape(32.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(28.dp),
 )
 
 object PamRadius {
     val xs = 10.dp
     val sm = 14.dp
     val md = 20.dp
-    val lg = 26.dp
-    val xl = 32.dp
-    val hero = 28.dp
-    val sheet = 34.dp
+    val lg = 24.dp
+    val xl = 28.dp
+    val hero = 24.dp
+    val sheet = 28.dp
     val pill = 100.dp
 }
 

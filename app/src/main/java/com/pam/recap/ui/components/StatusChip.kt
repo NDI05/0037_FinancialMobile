@@ -76,102 +76,104 @@ enum class StatusChipKind {
 fun StatusChip(
     kind: StatusChipKind,
     modifier: Modifier = Modifier,
+    onDark: Boolean = false,
 ) {
     val labelRes: Int
     val icon: ImageVector
-    val color: Color
+    val baseColor: Color
     when (kind) {
         StatusChipKind.EmailDerived -> {
             labelRes = R.string.status_email_derived
             icon = Icons.Rounded.MailOutline
-            color = OnInkMuted
+            baseColor = OnInkMuted
         }
 
         StatusChipKind.Complete -> {
             labelRes = R.string.status_complete
             icon = Icons.Rounded.CheckCircle
-            color = IncomeMint
+            baseColor = IncomeMint
         }
 
         StatusChipKind.Partial -> {
             labelRes = R.string.status_partial
             icon = Icons.Rounded.WarningAmber
-            color = WarningAmber
+            baseColor = WarningAmber
         }
 
         StatusChipKind.Empty -> {
             labelRes = R.string.status_empty
             icon = Icons.Rounded.Info
-            color = OnInkMuted
+            baseColor = OnInkMuted
         }
 
         StatusChipKind.Failed -> {
             labelRes = R.string.status_failed
             icon = Icons.Rounded.Error
-            color = DangerRed
+            baseColor = DangerRed
         }
 
         StatusChipKind.Provisional -> {
             labelRes = R.string.status_provisional
             icon = Icons.Rounded.Schedule
-            color = WarningAmber
+            baseColor = WarningAmber
         }
 
         StatusChipKind.Outdated -> {
             labelRes = R.string.status_outdated
             icon = Icons.Rounded.History
-            color = WarningAmber
+            baseColor = WarningAmber
         }
 
         StatusChipKind.Historical -> {
             labelRes = R.string.status_historical
             icon = Icons.Rounded.History
-            color = OnInkMuted
+            baseColor = OnInkMuted
         }
 
         StatusChipKind.Manual -> {
             labelRes = R.string.status_manual
             icon = Icons.Rounded.Visibility
-            color = Violet
+            baseColor = Violet
         }
 
         StatusChipKind.LowConfidence -> {
             labelRes = R.string.status_low_confidence
             icon = Icons.Rounded.WarningAmber
-            color = WarningAmber
+            baseColor = WarningAmber
         }
 
         StatusChipKind.Unavailable -> {
             labelRes = R.string.status_unavailable
             icon = Icons.Rounded.CloudOff
-            color = OnInkMuted
+            baseColor = OnInkMuted
         }
 
         StatusChipKind.Connected -> {
             labelRes = R.string.status_connected
             icon = Icons.Rounded.Link
-            color = IncomeMint
+            baseColor = IncomeMint
         }
 
         StatusChipKind.Granted -> {
             labelRes = R.string.status_granted
             icon = Icons.Rounded.CheckCircle
-            color = IncomeMint
+            baseColor = IncomeMint
         }
 
         StatusChipKind.Declined -> {
             labelRes = R.string.status_declined
             icon = Icons.Rounded.Block
-            color = OnInkMuted
+            baseColor = OnInkMuted
         }
 
         StatusChipKind.Available -> {
             labelRes = R.string.status_available
             icon = Icons.Rounded.CheckCircle
-            color = IncomeMint
+            baseColor = IncomeMint
         }
     }
 
+    val color = if (onDark) Color.White else baseColor
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(PamRadius.pill))

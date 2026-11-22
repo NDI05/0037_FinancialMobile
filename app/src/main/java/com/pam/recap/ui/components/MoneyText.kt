@@ -58,6 +58,7 @@ fun MoneyText(
     tone: MoneyTone = MoneyTone.Neutral,
     style: TextStyle = MoneyXl,
     prefix: String? = null,
+    color: Color? = null,
 ) {
     val formatted = IdrFormatter.format(amount)
     // Money must never be clipped: a truncated amount is a wrong amount. Long values step down
@@ -74,7 +75,7 @@ fun MoneyText(
         Text(
             text = formatted,
             style = fitted.copy(fontFeatureSettings = "tnum"),
-            color = moneyToneColor(tone),
+            color = color ?: moneyToneColor(tone),
             maxLines = 1,
         )
     }
@@ -97,6 +98,7 @@ private fun fittedStyle(style: TextStyle, characters: Int): TextStyle = when {
 fun AmountPill(
     change: PercentChange,
     modifier: Modifier = Modifier,
+    onDark: Boolean = false,
 ) {
     val (text, color) = when (change) {
         is PercentChange.Value -> {
@@ -112,13 +114,14 @@ fun AmountPill(
             stringResource(R.string.percent_not_applicable) to OnInkMuted
     }
 
+    val resolved = if (onDark) androidx.compose.ui.graphics.Color.White else color
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(PamRadius.pill))
-            .background(color.copy(alpha = 0.16f))
+            .background(resolved.copy(alpha = if (onDark) 0.18f else 0.16f))
             .padding(horizontal = PamSpacing.xs, vertical = 2.dp),
     ) {
-        Text(text = text, style = LabelM, color = color)
+        Text(text = text, style = LabelM, color = resolved)
     }
 }
 
