@@ -19,8 +19,17 @@ sudah dibuktikan dari yang masih lokal/Room agar tidak diklaim selesai.
 | DTO | summary/kategori, transaksi + page/cursor, manual create + Idempotency-Key, budget, analysis freshness, deletion receipt |
 | Deletion server | UI meminta password akun + konfirmasi; `RequestDeletionUseCase` mengirim server request dan menerima SLA/receipt |
 
-Tes Android baru: `BackendSessionRepositoryTest` (14) dan `PamApiClientTest` (6).
-Total suite saat dokumen ini ditulis: **235 tes JVM**, 0 gagal.
+Tes Android baru: `BackendSessionRepositoryTest` (16), `PamApiClientTest` (6) dan
+`RequestDeletionUseCaseTest` (3). Total suite saat dokumen ini ditulis: **240 tes JVM**, 0 gagal.
+
+## Perbaikan temuan C2-F1–F4
+
+| Temuan | Perbaikan | Tes |
+|---|---|---|
+| F1 deletion sukses palsu | backend failure → Failure, tanpa local wipe/sign-out; 202 → server id/state + receipt terproteksi sebelum cleanup; `deviceOnly` eksplisit; password PAM menggantikan Gmail reauth | `RequestDeletionUseCaseTest` |
+| F2 late login | generation login dicatat sebelum jaringan; response setelah clear/login baru ditolak | `a late login response cannot resurrect a cleared session` |
+| F3 401 paralel | `renew` menerima rejected token; caller kedua memakai pasangan baru tanpa rotasi tambahan | `two rejections of the same token share one refresh rotation` |
+| F4 receipt log | route/panic log disanitasi; test canary token | `TestReceiptTokenIsNeverWrittenToLogs` |
 
 ## Belum dipindahkan ke server
 
@@ -40,7 +49,8 @@ masih memakai Room; jalur legacy tidak dihapus pada C2 ini.
 
 ## Emulator
 
-Belum ada bukti C2 baru di emulator pada checkpoint ini. Bukti emulator
+Belum ada bukti C2 baru di emulator pada checkpoint ini; F1–F4 sudah diuji JVM/Go.
+Bukti emulator sebelumnya Bukti emulator
 register/login/consent/Ringkasan sebelumnya hanya membuktikan auth/navigation,
 bukan sumber data server. Langkah berikutnya: build
 `-PPAM_BACKEND_BASE_URL=http://10.0.2.2:8080`, seed database Go, lalu buktikan

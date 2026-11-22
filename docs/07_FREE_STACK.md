@@ -44,7 +44,7 @@ batas ini, tetapi angka pemakaian aktual harus dicatat dari dashboard.
 | Pemeriksaan | Status |
 |---|---|
 | Migrasi lokal `file:` + acceptance schema | PASS (lihat `docs/10` §9) |
-| Go `test`/`race`/`vet`/`build` | PASS lokal, 41 tes (C1) |
+| Go `test`/`race`/`vet`/`build` | PASS lokal, 42 tes (C1) |
 | Node reference + interop fixtures | PASS, 124 tes |
 | Koneksi Turso Cloud uji + migrasi + rollback | **NOT RUN** — belum ada kredensial uji |
 | Backup/PITR/restore cloud | **NOT RUN** |

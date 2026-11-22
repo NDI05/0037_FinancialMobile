@@ -105,8 +105,8 @@ Room/SQLCipher dihapus dari jalur aktif, dependensi dan skema varian penilaian p
 | E — pembuktian | Lima CRUDS lewat UI, dua pengguna dan admin, restart/persistensi cloud, backup/restore, demo dan SRS konsolidasi |
 
 Tahap A memiliki implementasi pada `fe3a183`. Laporan worker tahap A mencatat 223 tes Android dan
-111 backend. Setelah paket B + C1 Go: **235 Android**, **124 Node** (termasuk 2 tes interop), dan
-**41 Go**. Impor fixture emulator tahap A: 28 cocok / 25 tersimpan / 3 dilewati, impor kedua 25
+111 backend. Setelah paket B + C1 Go: **240 Android**, **124 Node** (termasuk 2 tes interop), dan
+**42 Go**. Impor fixture emulator tahap A: 28 cocok / 25 tersimpan / 3 dilewati, impor kedua 25
 duplikat. Gmail nyata dan perangkat fisik masih perlu diuji. Bukti cloud v0.4 harus merekam API, database target, dan pembacaan ulang setelah restart aplikasi, dengan kredensial disembunyikan.
 
 ## 8. Skema fisik v0.4 (review draft)
@@ -197,8 +197,8 @@ erDiagram
 | FK lintas owner, fingerprint, amount, JSON | PASS | `schemaV04.test.ts` (11 tes) |
 | Soft delete, reassign kategori, admin terakhir, rotasi refresh, index pagination, account key | PASS | `schemaV04.test.ts` |
 | Backend Node (referensi) | PASS | `npm run typecheck`, `npm run build`, **124 tes lulus, 0 gagal** |
-| Backend Go (target) | PASS lokal | **41 tes**, `go test -race`, `go vet`, `go build ./cmd/api` |
-| Go: migrasi 1–7, upgrade, trigger, scrypt/AES interop | PASS | `backend-go` 41 tes; `go test -race`, `go vet`, `go build` |
+| Backend Go (target) | PASS lokal | **42 tes**, `go test -race`, `go vet`, `go build ./cmd/api` |
+| Go: migrasi 1–7, upgrade, trigger, scrypt/AES interop | PASS | `backend-go` 42 tes; `go test -race`, `go vet`, `go build` |
 | Turso Cloud aktual + engine libSQL | **NOT RUN** | belum ada kredensial database uji; jangan memakai database existing |
 | Backup/PITR/restore cloud | **NOT RUN** | menunggu kredensial/otorisasi |
 | Migrasi pada database berisi data nyata | **NOT RUN** | butuh keputusan pemilik |

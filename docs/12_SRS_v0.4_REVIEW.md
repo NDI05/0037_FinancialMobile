@@ -262,9 +262,9 @@ Yang sudah disetujui hanyalah arah cloud database gratis.
 
 | Pemeriksaan | Status | Sumber |
 |---|---|---|
-| Android JVM | PASS | **235 tes**, 0 gagal; `assembleDebug`; lint 0 error |
+| Android JVM | PASS | **240 tes**, 0 gagal; `assembleDebug`; lint 0 error |
 | Backend Node (referensi) | PASS | `typecheck`, `build`, **124 tes**, 0 gagal (termasuk interop Go) |
-| Backend Go (target) | PASS lokal | **41 tes Go**, `go test -race`, `go vet`, `go build` |
+| Backend Go (target) | PASS lokal | **42 tes Go**, `go test -race`, `go vet`, `go build` |
 | Migrasi libSQL lokal | PASS | `file:` dari kosong, upgrade v0.3, boot kedua |
 | Cloud Turso/engine/libSQL | NOT RUN | kredensial database uji belum tersedia |
 | Gmail nyata / perangkat fisik | NOT RUN | di luar paket B |

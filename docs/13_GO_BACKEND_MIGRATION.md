@@ -115,7 +115,7 @@ cd pam-app/backend
 npm test          # 124 tes termasuk 2 tes interop Node↔Go
 ```
 
-Hasil 22 November 2026 (C1 penutup): **41 tes Go PASS**, `go test -race` PASS, `go vet`/build
+Hasil 22 November 2026 (C1 penutup): **42 tes Go PASS**, `go test -race` PASS, `go vet`/build
 PASS; Node **124 PASS**. Android terhadap Go di emulator API 36 (sebelum C1 lanjutan): register 201
 → login 201 → dua consent 201 → Ringkasan. Endpoint transaksi/import/analisis/anggaran/deletion
 diuji lewat HTTP Go; UI Android untuk fitur itu masih v0.3 sampai C2.
@@ -155,3 +155,14 @@ rotasi atomik, REST client/DTO dan deletion reauth/receipt. Itu belum memindahka
 transaksi/import/summary/budget/analysis dari Room ke server; status rinci ada di
 [`14_C2_INTEGRASI_ANDROID.md`](14_C2_INTEGRASI_ANDROID.md). C2 penuh tetap
 memerlukan emulator→Go dan penghapusan Room pada D.
+
+
+## 10. C2-F1–F4 (22 November 2026)
+
+- F1: server-backed deletion failure is recoverable and never claims completion; a 202
+  persists server id/state and a Keystore-wrapped receipt before local cleanup; password PAM is
+  the reauthentication proof (Gmail not required); local-only cleanup is marked deviceOnly.
+- F2: login captures a generation before the network and refuses a late write after logout or a
+  newer login.
+- F3: forced renewal is bound to the rejected access token; parallel 401s share one rotation.
+- F4: Go request/panic logs use a closed route template and never include receipt tokens.

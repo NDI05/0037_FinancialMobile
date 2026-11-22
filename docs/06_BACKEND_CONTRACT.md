@@ -325,7 +325,8 @@ akses keuangan berikutnya `401`; status hanya dapat dibaca lewat `GET
 Write yang sudah melewati pemeriksaan awal diperiksa ulang di commit dan ditolak bila deletion
 sudah menang.
 
-`POST /v1/internal/sweep` dengan header `x-internal-token` (nilai dari `INTERNAL_SWEEP_TOKEN`).
+Log server memakai template route tertutup (`/v1/deletion-receipts/{token}`), bukan path mentah;
+token receipt tidak pernah menjadi bagian log/error/panic. `POST /v1/internal/sweep` dengan header `x-internal-token` (nilai dari `INTERNAL_SWEEP_TOKEN`).
 Tanpa token konfigurasi → `404`; token salah → `401`. Sweep menghapus data finance/import/ringkasan/
 analisis/attachment metadata/account key, mencabut sesi/refresh, menandai akun `DELETED`, dan
 melindungi admin aktif terakhir.
