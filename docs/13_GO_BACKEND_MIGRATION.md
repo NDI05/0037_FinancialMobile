@@ -166,3 +166,12 @@ memerlukan emulator→Go dan penghapusan Room pada D.
   newer login.
 - F3: forced renewal is bound to the rejected access token; parallel 401s share one rotation.
 - F4: Go request/panic logs use a closed route template and never include receipt tokens.
+
+
+## 11. C2A manual/list/detail/overview
+
+C2A is proven locally: `AddManualEntryUseCase` resolves the server category id
+and calls `POST /v1/transactions` with the persisted pending-action key; the
+transaction list/detail and overview read Go. Edit/delete remain explicitly
+unavailable on the server-backed detail path. Import/budget/analysis and full
+Room removal remain C2B/C2C/D.

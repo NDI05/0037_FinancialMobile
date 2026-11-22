@@ -22,14 +22,14 @@ kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 | Area | Status |
 |---|---|
 | SRS v0.2 → v0.3 change record (CR-001, tanpa GCP) | ✅ selesai |
-| Aplikasi Android — 13 destinasi, **241 test JVM** | ✅ jalan |
+| Aplikasi Android — 13 destinasi, **244 test JVM** | ✅ jalan |
 | Akun PAM (email + password, scrypt) menggantikan Google Sign-In | ✅ selesai |
 | Onboarding: akun baru → Persetujuan, tolak Gmail → jalur manual | ✅ diperbaiki + tes |
 | Gmail lewat **IMAP + App Password** | 🟡 MIME/HTML + fixture impor lulus; **Gmail nyata belum diverifikasi** |
 | Impor Livin → baris transaksi → total bulanan | 🟡 fixture end-to-end lulus; Gmail nyata ⬜ |
 | Backend Node (referensi/rollback) | ✅ **124 test** lulus, termasuk interop Go |
 | **Backend Go (`backend-go/`)** | 🟡 C1 backend lokal PASS: auth/JWT, consent, finance CRUD, import batch, analysis canonical, deletion sweep; **42 test Go**, race/vet/build PASS |
-| Android ↔ Go | 🟡 C2: refresh single-flight, REST client/DTO, deletion reauth; transaksi/import/summary/budget/analysis UI masih Room |
+| Android ↔ Go | 🟡 C2A: manual transaction → list/detail → server summary, refresh, deletion reauth; import/budget/analysis masih Room |
 | **Kontrak v0.4 (SRS, API, data, UI, acceptance)** | ✅ draft review siap disahkan |
 | **Migrasi libSQL `version: 3`** | ✅ teruji lokal `file:`; **cloud NOT RUN** |
 | Implementasi v0.4 (JWT/refresh, CRUD server, admin, lampiran) | 🟡 C1 backend lokal; C2/D belum |

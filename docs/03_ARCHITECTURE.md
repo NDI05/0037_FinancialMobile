@@ -20,7 +20,9 @@ ui (Compose) → domain (use case/repository interface) ← data (remote REST, l
 - API target adalah layanan **Go** (`backend-go/`, Go 1.27.4, `net/http`, `database/sql`, driver
   libSQL remote/lokal). Node `backend/` hanya referensi perilaku dan rollback selama migrasi; lihat
   [`13_GO_BACKEND_MIGRATION.md`](13_GO_BACKEND_MIGRATION.md).
-- Analisis memakai payload aggregate **canonical server**, bukan angka kiriman klien. Idempotensi
+- C2A memakai `ServerFinanceRepository` sebagai port domain: transaksi manual,
+  daftar/detail dan computed summary berasal dari Go saat URL dikonfigurasi;
+  Room hanya jalur legacy/offline. Analisis memakai payload aggregate **canonical server**, bukan angka kiriman klien. Idempotensi
   create/import disimpan atomik; finalisasi analisis memeriksa ulang consent, deletion, sesi dan
   revisi; usage provider dicatat untuk ceiling biaya harian.
 - `data/gmail/` tetap di perangkat (IMAP read-only); `data/ai/` tetap di balik `AnalysisEngine`.

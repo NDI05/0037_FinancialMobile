@@ -20,7 +20,7 @@ sudah dibuktikan dari yang masih lokal/Room agar tidak diklaim selesai.
 | Deletion server | UI meminta password akun + konfirmasi; `RequestDeletionUseCase` mengirim server request dan menerima SLA/receipt |
 
 Tes Android baru: `BackendSessionRepositoryTest` (16), `PamApiClientTest` (6) dan
-`RequestDeletionUseCaseTest` (3). Total suite saat dokumen ini ditulis: **241 tes JVM**, 0 gagal.
+`RequestDeletionUseCaseTest` (3), `DeletionReceiptStoreTest` (1) dan `ServerFinanceRepositoryImplTest` (3). Total suite saat dokumen ini ditulis: **244 tes JVM**, 0 gagal.
 
 ## Perbaikan temuan C2-F1–F4
 
@@ -35,8 +35,8 @@ Tes Android baru: `BackendSessionRepositoryTest` (16), `PamApiClientTest` (6) da
 
 | Fitur v0.4 | Sumber saat ini | Sisa pekerjaan |
 |---|---|---|
-| Transaksi daftar/detail/edit | Room lokal | repository remote + pagination/cursor/konflik revisi di UI |
-| Ringkasan | `ComputeMonthlySummaryUseCase` lokal | computed summary server sebagai sumber utama; Room hanya cache |
+| Transaksi daftar/detail | **Server Go** | edit/delete belum remote; detail memberi status belum tersedia |
+| Ringkasan | **Server Go** | priorMonth/recent dari server; tidak menghitung dari Room |
 | Budget | Room lokal | DTO/limits ID/revision ke server dan konflik |
 | Analisis | engine lokal/remote lama | dependency revision server, freshness STALE/HISTORICAL di UI |
 | Import batch | Room + `BackendSyncClient` summary saja | upload kandidat/job/batch ke Go, resume dan finalisasi server |
@@ -44,19 +44,37 @@ Tes Android baru: `BackendSessionRepositoryTest` (16), `PamApiClientTest` (6) da
 | Lampiran | lokal | tahap D (FR-59) |
 | Admin | belum ada | tahap D (FR-65) |
 
-Karena itu v0.4 belum boleh disebut seluruhnya server-backed. UI fitur di atas
-masih memakai Room; jalur legacy tidak dihapus pada C2 ini.
+C2A kini membuktikan manual create → list → detail → overview summary dari
+server, termasuk restart API/aplikasi, clear app data, dua akun, dan unavailable.
+Import, budget, analysis, edit/delete lanjutan dan admin/lampiran masih tersisa;
+Room tetap untuk fitur yang belum dipindahkan.
 
 ## Emulator
 
-Belum ada bukti C2 baru di emulator pada checkpoint ini; F1–F4 sudah diuji JVM/Go.
-Bukti emulator sebelumnya Bukti emulator
-register/login/consent/Ringkasan sebelumnya hanya membuktikan auth/navigation,
-bukan sumber data server. Langkah berikutnya: build
-`-PPAM_BACKEND_BASE_URL=http://10.0.2.2:8080`, seed database Go, lalu buktikan
-transaksi/import/summary/budget/analysis/deletion lewat UI dan HTTP.
+C2A sudah dijalankan pada emulator dengan database server sintetis. Bukti
+persistence/restart/clear-data/dua akun/unavailable ada di bagian Bukti C2A.
+Import, budget, analysis, edit/delete remote dan admin/lampiran belum menjadi
+bagian bukti UI ini.
 
 ## Batas
 
 Cloud Turso, Gmail nyata, provider nyata, perangkat fisik dan backup/restore
 tetap **NOT RUN**. Tidak ada deployment atau data nyata.
+
+
+## Bukti C2A — 22 November 2026
+
+- Database uji: `file:/tmp/pam-c2a.db`, server Go lokal; emulator memakai
+  `http://10.0.2.2:8080`.
+- Akun A `c2a2@example.test`; akun B `c2b@example.test` (sintetis).
+- Manual: `Rp175.000`, 22 Nov 2026, kategori Makanan, keterangan `C2A`.
+- DB server: satu baris `source=MANUAL`, `amount_minor=17500000`, `revision=0`
+  sebelum transaksi berikutnya.
+- UI: daftar menampilkan `1 transaksi`, detail menampilkan `Sumber: Manual`,
+  `Versi parser: server-v1`; Ringkasan menampilkan `Rp175.000`,
+  coverage `Sebagian`.
+- Restart API dan force-stop/start app: angka tetap.
+- `pm clear` + login A: baris/summary tetap dari server.
+- Login B: summary `Kosong`, transaksi 0; DB hanya berisi owner A.
+- API dimatikan: Ringkasan menampilkan “Tidak dapat terhubung…”, bukan nol/local.
+- 244 tes Android PASS; assemble/lint dijalankan terpisah (lihat laporan).
