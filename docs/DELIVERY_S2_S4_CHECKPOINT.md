@@ -12,6 +12,15 @@ Aturan repo: [`AGENTS.md`](../AGENTS.md). Mandat terkini:
 
 ## Inventaris awal yang dipertahankan
 
+**Review terbaru setelah `0541342`:**
+[`RESUME_0541342_CLOSE_CR003.md`](agent-prompts/RESUME_0541342_CLOSE_CR003.md).
+PM targeted 15 tests PASS (GmailConnectPurge 4/vault 5/signout 2/classifier 4). CR-003 tetap
+PARTIAL: failure/post-connect publication dan A→logout→A generation belum tertutup; reconnect
+Overview sekali mengabaikan outcome; Connect masih memakai consent ledger lokal, bukan bukti
+server acknowledgement. Transport/cache owner guard, category provenance/reclassification dan
+emulator lifecycle/Android uploader Go/UI belum selesai. Temuan race berasal dari source,
+bukan insiden akun asli. Review ini dokumen saja; tidak mengubah APK atau mengulang emulator.
+
 **Review PM terbaru sesudah `c68dc38`:**
 [`RESUME_C68DC38_CR003_ACCEPTANCE.md`](agent-prompts/RESUME_C68DC38_CR003_ACCEPTANCE.md).
 PM targeted 13 tests PASS (vault 5/routing 2/signout 2/classifier 4). Vault per owner dan

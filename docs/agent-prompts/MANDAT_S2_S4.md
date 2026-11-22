@@ -6,6 +6,13 @@ Target kualitas adalah tidak ada defect kritis/tinggi atau blocker yang diketahu
 
 ## Arahan resume PM — checkpoint ceea72d
 
+**Arahan terbaru sesudah `0541342`:**
+[`RESUME_0541342_CLOSE_CR003.md`](RESUME_0541342_CLOSE_CR003.md).
+PM targeted 15 tests PASS; checked save dan successful-validation A→B sudah maju, tetapi failure/
+generation races, reconnect lifecycle/consent confirmation, transport scope, category Go dan
+reclassification belum selesai. SE wajib menjalankan acceptance QA sintetis sendiri, memakai
+update APK yang mempertahankan data. Seluruh mandat S2–S4 tetap berlaku.
+
 **Resume aktif sesudah `c68dc38`:** jalankan
 [`RESUME_C68DC38_CR003_ACCEPTANCE.md`](RESUME_C68DC38_CR003_ACCEPTANCE.md).
 Vault per owner/classifier word matching sudah ada; restore UI masih menuntut App Password
