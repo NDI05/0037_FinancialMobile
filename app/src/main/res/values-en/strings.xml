@@ -345,6 +345,8 @@
     <string name="deletion_reauth_required">Verify it is you first, so deletion cannot be triggered by someone else holding your device.</string>
     <string name="deletion_reauth_done">Re-verification complete. You can continue with the deletion.</string>
     <string name="deletion_reauth_action">Verify again</string>
+    <string name="deletion_password_label">Account password for server verification</string>
+    <string name="deletion_password_required">Enter your account password for server re-verification.</string>
     <string name="deletion_confirm">Delete now</string>
     <string name="deletion_done">Deletion complete. Local data is cleared and the session ended.</string>
     <string name="nav_overview">Overview</string>
