@@ -5,6 +5,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.pam.recap.core.security.HmacKeyProvider
 import com.pam.recap.core.security.KeystoreHmacKeyProvider
+import com.pam.recap.domain.usecase.ImportUploader
+import com.pam.recap.domain.usecase.ServerImportUploader
 import com.pam.recap.data.ai.AiPayloadBuilder
 import com.pam.recap.data.ai.AnalysisCopySource
 import com.pam.recap.data.ai.AndroidAnalysisCopySource
@@ -102,6 +104,9 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindAnalysisCopySource(impl: AndroidAnalysisCopySource): AnalysisCopySource
+
+    @Binds
+    abstract fun bindImportUploader(impl: ServerImportUploader): ImportUploader
 
     companion object {
 

@@ -717,6 +717,9 @@ class ScreenScreenshotsTest {
             importMonth = importMonth,
             retryImport = RetryImportUseCase(importMonth, imports),
             resolveInitialMonth = resolveMonth,
+            serverUploader = com.pam.recap.domain.usecase.ImportUploader { _, _ ->
+                com.pam.recap.core.result.Outcome.Success("screenshot")
+            },
         )
 
         shot("13-import-job") {
@@ -735,6 +738,9 @@ class ScreenScreenshotsTest {
             importMonth = importMonth,
             retryImport = RetryImportUseCase(importMonth, imports),
             resolveInitialMonth = resolveMonth,
+            serverUploader = com.pam.recap.domain.usecase.ImportUploader { _, _ ->
+                com.pam.recap.core.result.Outcome.Success("screenshot")
+            },
         )
 
         shot("13b-import-job-partial") {

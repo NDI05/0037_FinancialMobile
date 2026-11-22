@@ -1,6 +1,7 @@
 package com.pam.recap.domain.usecase
 
 import com.pam.recap.core.result.Outcome
+import com.pam.recap.core.result.SafeLogger
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.data.security.ImportUploadJournal
 import com.pam.recap.domain.model.ImportJob
@@ -11,6 +12,10 @@ import com.pam.recap.domain.repository.ServerImportCandidate
 import com.pam.recap.domain.repository.TransactionRepository
 import javax.inject.Inject
 
+fun interface ImportUploader {
+    suspend fun upload(ownerId: String, job: ImportJob): Outcome<String>
+}
+
 /**
  * Uploads one completed local parse to the Go import job/batch API. Room remains the source for the
  * local import journal; the transaction/summary UI reads Go. Batch keys are deterministic per local
@@ -20,11 +25,19 @@ class ServerImportUploader @Inject constructor(
     private val server: ServerFinanceRepository,
     private val transactions: TransactionRepository,
     private val journal: ImportUploadJournal? = null,
-) {
+) : ImportUploader {
+    override suspend fun upload(
+        ownerId: String,
+        job: ImportJob,
+    ): Outcome<String> {
+        return invoke(ownerId, job)
+    }
+
     suspend operator fun invoke(
         ownerId: String,
         job: ImportJob,
     ): Outcome<String> {
+        SafeLogger.event("ServerImportUploader", "upload_start")
         if (!server.isEnabled) return Outcome.Success(job.id)
         val existing = journal?.read(ownerId)
         val serverJob = if (existing?.localJobId == job.id) {

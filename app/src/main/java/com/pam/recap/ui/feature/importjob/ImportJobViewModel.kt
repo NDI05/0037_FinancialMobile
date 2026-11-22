@@ -14,7 +14,7 @@ import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.ImportMonthUseCase
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
 import com.pam.recap.domain.usecase.RetryImportUseCase
-import com.pam.recap.domain.usecase.ServerImportUploader
+import com.pam.recap.domain.usecase.ImportUploader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,7 +59,7 @@ class ImportJobViewModel @Inject constructor(
     private val importMonth: ImportMonthUseCase,
     private val retryImport: RetryImportUseCase,
     private val resolveInitialMonth: ResolveInitialMonthUseCase,
-    private val serverUploader: ServerImportUploader? = null,
+    private val serverUploader: ImportUploader,
 ) : ViewModel() {
 
     private val month = MutableStateFlow<JakartaMonth?>(null)
@@ -128,7 +128,7 @@ class ImportJobViewModel @Inject constructor(
                     uploadPending.value = false
                     error.value = AppError.NotFound("import_job")
                 } else {
-                    val upload = serverUploader?.invoke(ownerId, job)
+                    val upload = serverUploader.upload(ownerId, job)
                     error.value = (upload as? Outcome.Failure)?.error
                     uploadPending.value = upload is Outcome.Failure
                 }
@@ -146,7 +146,7 @@ class ImportJobViewModel @Inject constructor(
         val result = importMonth(ownerId, selectedMonth)
         error.value = when (result) {
             is Outcome.Failure -> result.error
-            is Outcome.Success -> when (val upload = serverUploader?.invoke(ownerId, result.value)) {
+            is Outcome.Success -> when (val upload = serverUploader.upload(ownerId, result.value)) {
                 is Outcome.Failure -> upload.error
                 else -> null
             }
