@@ -73,3 +73,20 @@ Tidak ada baris yang diberi PASS tanpa bukti.
 7. Visual 360/412/200%, TalkBack/contrast, owner UAT.
 
 External NOT RUN: Turso cloud, backup/restore, Gmail nyata, provider nyata, physical device.
+
+## Resume 22 November 2026 — gate C2A aktual
+
+- Alasan run sebelumnya berhenti: agent menutup turn setelah checkpoint dokumentasi R1
+  meskipun gate C2A dan C2B1 masih terbuka. Tidak ada blocker kredensial eksternal;
+  sisa pekerjaan adalah backlog implementasi yang belum dikerjakan.
+- **Gate refresh <5 detik: PASS aktual.** Emulator → Go `/tmp/pam-gate.db`, DB sebelum
+  satu row. Setelah tap Simpan, UI menampilkan `1 transaksi` dalam **2,53 detik**
+  (polling uiautomator); DB transactions=1, revision=0.
+- **Gate lost-response retry: OPEN / NOT PASS.** Percobaan fault injection lokal
+  (proxy 8081 dan hook sementara response-drop) tidak menghasilkan bukti yang
+  konsisten: pada percobaan terakhir server sudah commit tetapi klien masih
+  menampilkan success/list, sehingga tidak dapat dibedakan lost response dari
+  response normal. Hook/proxy sementara sudah dihapus dan tidak masuk source.
+  Gate ini belum boleh disebut lulus.
+- Setelah gate ini, import job/batch/resume, pagination/filter, update/delete,
+  S3/S4 **belum diimplementasikan** pada resume ini.
