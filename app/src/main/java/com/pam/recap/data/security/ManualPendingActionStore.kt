@@ -25,6 +25,7 @@ class ManualPendingActionStore @Inject constructor(
 
     private val prefs get() = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    @Suppress("UseKtx") // edit(commit=true) KTX returns Unit; durability requires the commit result.
     fun save(ownerId: String, pending: Pending): Boolean {
         val encoded = listOf(
             pending.key, pending.identity, pending.amountText, pending.description,
