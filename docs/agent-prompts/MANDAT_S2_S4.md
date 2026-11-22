@@ -6,6 +6,13 @@ Target kualitas adalah tidak ada defect kritis/tinggi atau blocker yang diketahu
 
 ## Arahan resume PM — checkpoint ceea72d
 
+**Prioritas terbaru setelah `74eab38`:** pemilik memilih Azure for Students dan meminta kategori
+LLM serta revisi SRS. Jalankan [PROMPT_SE_AZURE_CLASSIFICATION.md](PROMPT_SE_AZURE_CLASSIFICATION.md)
+bersama mandat ini. [CR-004](../changes/CR_004_AZURE_LLM_CATEGORIZATION.md) dan SRS v0.5
+menggantikan larangan merchant-to-model secara terbatas untuk dedicated classifier dengan
+purpose baru; allowlist analisis agregat tetap ketat. Azure deployment/synthetic smoke PASS,
+pipeline aplikasi/consent/budgets/benchmark belum. Seluruh backlog S2–S4 tetap berlaku.
+
 **Arahan terbaru sesudah `0541342`:**
 [`RESUME_0541342_CLOSE_CR003.md`](RESUME_0541342_CLOSE_CR003.md).
 PM targeted 15 tests PASS; checked save dan successful-validation A→B sudah maju, tetapi failure/

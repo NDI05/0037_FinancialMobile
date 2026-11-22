@@ -1,0 +1,49 @@
+{
+  "data": "synthetic_only",
+  "httpStatus": 200,
+  "provider": "Microsoft Foundry / Azure",
+  "model": "gpt-oss-120b",
+  "modelVersion": "1",
+  "elapsedSeconds": 2.768,
+  "usage": {
+    "prompt_tokens": 386,
+    "completion_tokens": 243,
+    "total_tokens": 629,
+    "reasoning_tokens": 68,
+    "audio_prompt_tokens": 0
+  },
+  "examples": [
+    {
+      "caseId": "food-bakso",
+      "categoryCode": "food",
+      "needsReview": false,
+      "reasonCode": "INSUFFICIENT_CONTEXT"
+    },
+    {
+      "caseId": "food-mie",
+      "categoryCode": "food",
+      "needsReview": false,
+      "reasonCode": "INSUFFICIENT_CONTEXT"
+    },
+    {
+      "caseId": "food-coffee",
+      "categoryCode": "food",
+      "needsReview": false,
+      "reasonCode": "INSUFFICIENT_CONTEXT"
+    },
+    {
+      "caseId": "retail-cosmetics",
+      "categoryCode": "shopping",
+      "needsReview": false,
+      "reasonCode": "INSUFFICIENT_CONTEXT"
+    },
+    {
+      "caseId": "unknown",
+      "categoryCode": "uncategorized",
+      "needsReview": true,
+      "reasonCode": "INSUFFICIENT_CONTEXT"
+    }
+  ],
+  "syntheticExamplesPass": true,
+  "limits": "Not a held-out accuracy benchmark; not Android-Go-DB-UI or production purpose/consent validation."
+}

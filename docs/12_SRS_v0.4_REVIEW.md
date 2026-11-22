@@ -1,5 +1,13 @@
 # PAM SRS v0.4 — versi review
 
+**Baseline arsip. Target terkini adalah SRS v0.5 Azure LLM:**
+[DOCX](specifications/PAM_SRS_v0.5_Azure_LLM.docx) /
+[PDF](specifications/PAM_SRS_v0.5_Azure_LLM.pdf), dengan
+[CR-004](changes/CR_004_AZURE_LLM_CATEGORIZATION.md). Arah Azure for Students dan klasifikasi
+LLM diminta pemilik pada 22 November 2026. Merchant hanya boleh keluar melalui purpose/schema
+classifier yang baru; aturan analisis agregat FR-35 tetap dibatasi. Kontrak v0.4 di bawah menjadi
+baseline historis bila bertentangan dengan perubahan v0.5 yang dinyatakan secara eksplisit.
+
 Document ID: **PAM-SRS-001**
 Versi: **v0.4 review draft** (21 November 2026)
 Baseline: v0.2 + CR-001 (v0.3, disetujui) + CR-002 (v0.4, **belum disetujui penuh**)

@@ -1,5 +1,29 @@
 # PAM — Architecture
 
+## Perluasan v0.5 — Azure LLM kategori (22 November 2026)
+
+[CR-004](changes/CR_004_AZURE_LLM_CATEGORIZATION.md) dan SRS lengkap v0.5 memperluas target
+dengan classifier typed/purpose-scoped. Cloud deployment dan synthetic smoke telah lulus;
+diagram ini adalah arsitektur aplikasi yang masih harus diimplementasikan dan diuji.
+
+```mermaid
+flowchart LR
+  A[Android: IMAP dan parser lokal] --> B[Go: commit transaksi owner-scoped]
+  B --> C[Job kategori durable]
+  C --> D{AI_CATEGORIZATION berlaku?}
+  D -->|Tidak| E[Rules atau perlu ditinjau]
+  D -->|Ya| F[Merchant allowlist dan budget gate]
+  F --> G[Microsoft Foundry GPT-OSS 120B]
+  G --> H[Schema, semantic, owner dan revision guard]
+  H --> I[Turso: kategori dan provenance]
+  I --> J[Invalidate list, detail, summary dan analysis]
+```
+
+Jalur analisis agregat tetap memakai AI_PROCESSING dan FR-35; merchant tidak ditambahkan ke
+payload tersebut. Key Azure hanya backend. Resource Japan West/GlobalStandard tidak berarti
+semua inference berada di Jepang/Indonesia. USER override dan angka sumber tidak diubah model.
+Rincian private setup dan batas evidence: [AZURE_CLASSIFIER_SETUP.md](AZURE_CLASSIFIER_SETUP.md).
+
 > **Status dokumen (21 Nov 2026).** Bagian 0 adalah target **v0.4** yang sedang direview. Bagian
 > 1–9 di bawah mendokumentasikan implementasi **v0.3** dan dipertahankan sebagai riwayat; jika
 > bertentangan (Room, OAuth, GoogleGmailSource), bagian 0 yang berlaku untuk target. Kontrak HTTP

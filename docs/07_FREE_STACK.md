@@ -8,10 +8,19 @@ Diperbarui 21 November 2026 untuk rancangan v0.4. [Rancangan dan fase](10_MIGRAS
 | API | **Go 1.27.4 + `net/http`** di laptop untuk development dan presentasi |
 | Mobile | Kotlin/Jetpack Compose/Navigation Compose/MVVM |
 | Mailbox | Gmail IMAP read-only melalui App Password dan vault Keystore existing |
-| AI | Ollama lokal melalui backend existing, dengan consent dan validasi proyeksi agregat |
+| AI kategori target v0.5 | Microsoft Foundry/Azure for Students, gpt-oss-120b v1; cloud smoke PASS, pipeline aplikasi belum |
+| AI analisis existing | Adapter agregat terpisah; Ollama/fake tetap tersedia untuk development dan tests |
 | File pengguna | Penyimpanan privat Android dengan metadata di Turso |
 
 Database langganan ditargetkan Rp0 dengan plan Free. Batas layanan dan pemakaian akun harus diperiksa sebelum demo. Atur tetap pada Free serta hindari mengaktifkan overage berbayar. Rancangan menggunakan indeks, pagination, import batch, dan perhitungan berdasarkan revisi untuk mengendalikan pemakaian. [Harga resmi Turso](https://turso.tech/pricing)
+
+**Perubahan 22 November 2026:** pemilik memilih Azure for Students untuk LLM kategori,
+bukan AWS. Kredit Azure terbatas, bukan janji LLM gratis selamanya. Student spending limit On
+dipertahankan; tidak ada Marketplace purchase/paid fallback otomatis. Resource classifier di
+Japan West memakai GlobalStandard yang dapat memproses di luar region resource. Lihat
+[setup/evidence](AZURE_CLASSIFIER_SETUP.md) dan [CR-004](changes/CR_004_AZURE_LLM_CATEGORIZATION.md).
+Env kandidat budget bukan implementasi hard cap; sebelum enable aplikasi, SE wajib menyelesaikan
+purpose consent, minimization, lifecycle, reservation/cost enforcement dan T13 SRS v0.5.
 
 Cloud database menyimpan data bisnis. Proses API masih membutuhkan laptop menyala dan koneksi internet ke Turso. Emulator memakai `http://10.0.2.2:8080` pada debug. HP USB dapat memakai `adb reverse tcp:8080 tcp:8080`. HTTPS diperlukan pada jalur publik dan release sesuai konfigurasi target. Penyedia hosting API 24 jam belum dipilih pada scope rancangan ini.
 

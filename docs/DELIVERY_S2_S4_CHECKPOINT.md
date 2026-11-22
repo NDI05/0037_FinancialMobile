@@ -12,6 +12,17 @@ Aturan repo: [`AGENTS.md`](../AGENTS.md). Mandat terkini:
 
 ## Inventaris awal yang dipertahankan
 
+**Perubahan terbaru setelah `74eab38`:** owner mengoreksi AWS menjadi Azure for Students dan
+meminta kategorisasi LLM. CLI login Student Enabled/spendingLimit On serta region policy
+diverifikasi. Foundry resource/project khusus PAM dan GPT-OSS120B v1 GlobalStandard Japan West
+dibuat; satu request lima contoh sintetis HTTP200/expected PASS. Tidak memakai data asli.
+Config privat 0600, classifier app flag tetap false. Full SRS v0.5 DOCX/PDF berasal dari v0.4;
+CR-003 dikonsolidasikan dan FR-66…71/NFR-29/30/T13 ditambahkan. [Setup](AZURE_CLASSIFIER_SETUP.md),
+[CR-004](changes/CR_004_AZURE_LLM_CATEGORIZATION.md),
+[prompt SE](agent-prompts/PROMPT_SE_AZURE_CLASSIFICATION.md).
+Runtime classifying/consent/cost enforcement/accuracy/Android E2E masih TARGET/NOT RUN.
+Cloud smoke bukan klaim S2–S4 selesai atau akurasi 100%; snapshot lama di bawah tetap historical.
+
 **Review terbaru setelah `0541342`:**
 [`RESUME_0541342_CLOSE_CR003.md`](agent-prompts/RESUME_0541342_CLOSE_CR003.md).
 PM targeted 15 tests PASS (GmailConnectPurge 4/vault 5/signout 2/classifier 4). CR-003 tetap

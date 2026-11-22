@@ -1,5 +1,19 @@
 # PAM — Scope & Requirement Traceability v0.4 (review draft)
 
+**Perluasan target v0.5, 22 November 2026:**
+[CR-004 Azure LLM](changes/CR_004_AZURE_LLM_CATEGORIZATION.md) dan SRS lengkap
+[DOCX](specifications/PAM_SRS_v0.5_Azure_LLM.docx) / [PDF](specifications/PAM_SRS_v0.5_Azure_LLM.pdf).
+Implementasi lama dan target baru dibedakan; Azure smoke bukan full category feature.
+
+| Requirement v0.5 | Implementasi/evidence yang diperlukan | Status |
+|---|---|---|
+| FR-03/04/34, FR-66 | AI_CATEGORIZATION terpisah dari Gmail/aggregate consent | TARGET, belum diimplementasi |
+| FR-23/24/25, FR-68/69 | Minimal merchant schema, LLM provenance, USER/revision guard dan readback UI | TARGET; provider synthetic smoke PASS saja |
+| FR-67/71 | Durable jobs/cache/resume, no-block import dan review state | TARGET |
+| FR-70, NFR-30 | Credit-aware pricing, atomic cost reservations/budgets, timeout/retry | TARGET; Student spending limit On terverifikasi, app budget belum |
+| NFR-19 | Allowlist per purpose; aggregate FR-35 tidak dilebarkan | TARGET perlu regression |
+| NFR-29, T13 | Holdout merchant-disjoint, precision+coverage/F1 dan Android→Go→Azure→DB→UI | NOT RUN; lima contoh sintetis bukan benchmark |
+
 Status: **DRAFT REVIEW** 21 November 2026. Ini adalah interpretasi lead untuk target v0.4,
 menggantikan pemetaan v0.3 yang masih menyebut OAuth/Google Sign-In dan Room sebagai runtime.
 Sumber: SRS v0.2 + CR-001 (v0.3) + CR-002 review ([`11_SRS_CHANGE_v0.4.md`](11_SRS_CHANGE_v0.4.md),

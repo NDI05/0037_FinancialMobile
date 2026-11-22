@@ -1,5 +1,15 @@
 # PAM Backend — API Contract v0.4 (review draft)
 
+**Extension target v0.5:** [CR-004](changes/CR_004_AZURE_LLM_CATEGORIZATION.md) menambah
+purpose `AI_CATEGORIZATION` dan typed classification jobs. Ini bukan endpoint yang sudah ada.
+SE harus merinci request/job/readback/migration sesuai FR-66…71 sebelum mengaktifkan flag.
+Jangan melebarkan payload aggregate `Analyze` atau memakai consent AI lama sebagai izin merchant.
+Provider input target: sanitized business merchant ≤120 chars, verified direction/method,
+built-in category codes dan taxonomy version. Output: categoryCode, needsReview, reasonCode.
+Backend membangun input dari owner record; no raw email/ID, account/card, nominal/tanggal,
+personal counterparty, notes/attributes/custom labels. Category apply memerlukan owner+expected
+revision dan perlindungan USER override. Cloud provider setup: [runbook](AZURE_CLASSIFIER_SETUP.md).
+
 Status: **DRAFT REVIEW**, 21 November 2026. Cloud database gratis disetujui pemilik; sign-off
 paket v0.4 belum tercatat. Kontrak ini adalah target C1/C2, bukan deskripsi kode v0.3 yang sedang
 berjalan. Sumber requirement: [`12_SRS_v0.4_REVIEW.md`](12_SRS_v0.4_REVIEW.md) FR-02/35/52/56–63,

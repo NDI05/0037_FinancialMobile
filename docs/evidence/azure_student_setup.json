@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-22",
+  "subscriptionOffer": "Azure for Students",
+  "subscriptionState": "Enabled",
+  "quotaId": "AzureForStudents_2018-01-01",
+  "spendingLimit": "On",
+  "creditRemainingVerified": false,
+  "creditRemainingUSD": null,
+  "creditExpiryVerified": false,
+  "resourceGroup": "rg-pam-ai-student",
+  "resource": "pam-ai-student-74eab38",
+  "project": "pam-classification",
+  "resourceLocation": "japanwest",
+  "deployment": "pam-category-gptoss120b",
+  "provisioningState": "Succeeded",
+  "model": {
+    "name": "gpt-oss-120b",
+    "version": "1",
+    "format": "OpenAI-OSS"
+  },
+  "sku": {
+    "name": "GlobalStandard",
+    "capacity": 10
+  },
+  "resourceTypes": [
+    "Microsoft.CognitiveServices/accounts",
+    "Microsoft.CognitiveServices/accounts/projects"
+  ],
+  "applicationClassifierEnabled": false,
+  "applicationBudgetEnforcementImplemented": false,
+  "noMarketplacePurchase": true,
+  "noSubscriptionUpgrade": true,
+  "regionPolicyUnchanged": true,
+  "privateConfigMode": "0600",
+  "privateConfigExcludedFromRepository": true,
+  "syntheticSmokeEvidence": "azure_classification_synthetic_smoke.json",
+  "notRun": [
+    "held-out accuracy benchmark",
+    "Android-Go-Azure-DB-UI classifier E2E",
+    "production categorization consent and minimization",
+    "credit billing allocation verification"
+  ]
+}
