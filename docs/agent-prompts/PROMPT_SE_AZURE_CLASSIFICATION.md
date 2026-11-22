@@ -65,6 +65,45 @@ pemilik. Perbarui dependency revision dan refresh list/detail/summary/analysis t
 
 ## 4. Budget dan data processor
 
+### Optimasi hit/token dan pemilihan model ekonomis — penegasan owner
+
+Deployment GPT-OSS120B yang sudah ada adalah baseline setup, bukan bukti model paling murah.
+Bandingkan kandidat yang benar-benar eligible kredit Student, tersedia pada region policy dan
+kuota akun. Pilih biaya per kategori **benar** terendah yang memenuhi target precision/coverage
+dan latency; catat harga resmi aktual, biaya reasoning/output, tanggal harga dan hasil benchmark.
+Model lebih kecil tidak otomatis lebih murah bila membutuhkan banyak retry atau koreksi.
+Jangan provision model partner/Marketplace, mengubah subscription atau menambah paid fallback
+untuk memenuhi perbandingan. Jika hanya satu kandidat eligible, laporkan batas bukti tersebut.
+
+USER correction, mapping terkonfirmasi dan cache valid diperiksa sebelum outbound request.
+Deduplicate merchant/context yang sama dalam satu impor; gabungkan batch kecil yang bounded.
+Cache owner-scoped harus mempertimbangkan direction/method serta versi taxonomy/prompt/policy;
+cache yang ambigu tidak dipakai sebagai fakta. Coalesce request identik yang bersamaan agar
+double tap, reimport dan refresh UI tidak memanggil model ulang. Tidak ada history percakapan,
+email lengkap, nominal/tanggal atau penjelasan panjang pada prompt/output classifier.
+
+Kandidat default development tambahan (harus diterapkan dalam kode, bukan hanya env):
+
+- Maks. 5 merchant unik per request, estimasi input maksimal 1.024 token dan completion maksimal
+  512 token, dengan semantik output/reasoning sesuai model/API yang diuji. Batas yang tidak cukup
+  menghasilkan split/review terkontrol; jangan menaikkan cap diam-diam atau menganggap output
+  terpotong sebagai klasifikasi sah.
+- Maks. 20 outbound attempts per owner/hari dan 100 per instalasi backend/hari, mencakup retry.
+  Batas global classifier USD0.10/hari dan USD2/bulan tetap berlaku lintas owner/model. Hitung
+  periode biaya secara konsisten; kuota akun Azure bukan pengganti batas aplikasi.
+- Semua jalur provider melewati satu gate durable yang atomik: purpose/owner, cache/coalescing,
+  request/token quota dan worst-case cost reservation. Worker paralel/restart tidak boleh
+  mereset counter atau melewati cap. Harga belum diketahui, saldo budget tidak cukup atau
+  status call tidak pasti ditangani fail-closed untuk panggilan baru.
+- Tidak ada infinite retry, polling provider berulang, otomatis pindah ke model lebih mahal,
+  atau request tambahan hanya untuk meminta confidence. Hasil yang ragu masuk NEEDS_REVIEW.
+
+Uji dan lampirkan hit counter: cache/USER override menghasilkan 0 provider calls; merchant
+berulang/coincident job diproses sekali untuk context yang sama; request terakhir dalam budget
+diterima dan request melewati cap ditolak **sebelum HTTP provider**, termasuk dua worker race
+dan restart. UI harus menjelaskan batas tercapai sambil mempertahankan transaksi tersimpan.
+Dashboard/log hanya counts/token/cost/model/status, tanpa prompt atau merchant privat.
+
 Default pilot kandidat: concurrency≤2, timeout20s, satu retry, USD0.10/hari dan USD2/bulan.
 Implementasikan atomic worst-case cost reservation, token/output caps, actual usage reconciliation
 dan konservatif untuk unknown outcome. Verify current price per model/SKU; harga tidak terverifikasi
