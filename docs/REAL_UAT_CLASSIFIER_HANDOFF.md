@@ -37,3 +37,25 @@ No secret, key, token, merchant or transaction identity is stored here.
   on a fresh run; that is not reused as PASS. The adapter contract is the path tested above.
 - Not run: Android UI → backend → Azure, 20 labeled merchant benchmark, restart/lease recovery,
   actual token/cost reconciliation, real-user UAT.
+
+## Update after review defects — 22 November 2026
+
+- Root cause of smoke/adapter divergence: named case IDs in smoke vs index in adapter,
+  Bearer vs Azure `api-key`, loose json_object schema, and undetected truncation. Adapter now uses
+  stable `c0..c4`, strict schema, `api-key`, reasoning-low, `finish_reason=length` rejection and
+  input-token estimation before HTTP.
+- Fresh synthetic Azure smoke: **PASS**, HTTP 200, 5 cases, elapsed 4.019s,
+  usage 380 prompt / 289 completion / 121 reasoning tokens. Evidence:
+  `docs/evidence/azure_classification_synthetic_smoke_latest.json`.
+- Backend local E2E: BAKSO UJI transaction → category job `CLASSIFIED` → server readback
+  `categoryCode=food`, `categoryOrigin=LLM`, rule/prompt/model provenance. Cache hit and USER
+  override made no additional provider call. One earlier provider-timeout call was settled
+  conservatively; combined recorded cost in the local test DB: **USD0,0009216** (not an Azure
+  invoice).
+- Added global monthly reservation, reservation IDs settled against original buckets, measured
+  vs estimated/unknown usage, per-owner/installation attempts, direction-aware category allowlist,
+  `OTHER` method unless QRIS is verifiable, get-or-create/atomic job claim, LLM provenance columns
+  and deletion cleanup.
+- Android list can read LLM origin and shows `Makanan`; full Android-triggered Azure E2E, durable
+  worker recovery, coalescing, stale-lease recovery, and benchmark remain open. The two-hour
+  window did not complete a clean Android tap→provider→UI run after the final mapper fix.

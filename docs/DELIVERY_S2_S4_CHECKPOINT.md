@@ -263,3 +263,13 @@ failure/restart is still not exercised.
   fixture→Azure→DB→UI path exists yet. `CATEGORY_LLM_ENABLED` remains false; no cloud data was sent.
 - Fresh Go tests for changed packages PASS; Android full suite/lint was run before this Azure
   backend slice; no Android runtime import was re-run after it.
+
+## Azure runtime closure attempt — 22 November 2026
+
+- Fixed stable caseId/api-key/strict schema/truncation; synthetic Azure smoke now PASS with
+  measured usage.
+- Added global monthly budget, reservation IDs, measured/estimated/unknown ledger, LLM provenance,
+  direction allowlists, get-or-create/claim jobs and deletion cleanup.
+- Backend local Azure E2E PASS for one synthetic BAKSO transaction; Android list reads LLM origin.
+- NOT PASS: Android tap→Azure→UI clean run, durable worker/lease recovery, coalescing, retry,
+  stale revision/409 tests, owner B isolation tests, benchmark. S2 remains PARTIAL.
