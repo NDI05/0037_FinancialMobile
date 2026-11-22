@@ -1,5 +1,18 @@
 # Delivery S2–S4 — living checkpoint
 
+## Perencanaan tambahan disetujui — 23 November 2026
+
+Pemilik menyetujui sinkronisasi otomatis target 30 menit, pemeriksaan foreground,
+antrean kategori target 2 jam/batch maksimal 5 merchant unik, serta ikon status top bar
+yang membuka panel terpisah untuk data transaksi/kategori/perlu perhatian.
+[Rencana, dependency dan acceptance](plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md) dan
+[CR-005 DRAF revisi SRS](changes/CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md) tersedia.
+Status scope baru **PLANNED / NOT RUN**; dimasukkan sebagai perluasan S2 sesudah gate
+classifier aktif, dengan uji perangkat/background/resource pada S5. Tidak menimpa WIP SE
+atau mengklaim scheduler sudah aktif. **SRS v0.5 DOCX/PDF tetap tidak diubah**;
+revisi resmi nanti atas instruksi pemilik. Snapshot implementation lama di bawah tetap
+historis dan perlu dibaca bersama laporan/source SE terbaru.
+
 Status: **IN PROGRESS / belum selesai**, 22 November 2026.
 Branch `feat/c2-android`, HEAD dicatat pada commit checkpoint ini. **Klarifikasi pemilik,
 22 November 2026:** push R1 sebelumnya diotorisasi, dan setiap commit selanjutnya harus

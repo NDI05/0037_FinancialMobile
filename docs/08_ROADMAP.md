@@ -1,5 +1,13 @@
 # PAM — Roadmap Pasca-Keputusan (tanpa GCP, database cloud)
 
+> **Rencana aktif tambahan — 23 November 2026:** pemilik menyetujui auto-sync IMAP target
+> 30 menit, batch kategorisasi target 2 jam, dan indikator status top bar/panel.
+> Lihat [rencana delivery](plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md) dan
+> [CR-005 DRAF SRS](changes/CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md).
+> Background sync yang disebut deferred di roadmap v0.3 di bawah kini masuk perencanaan;
+> isi v0.3 lainnya adalah baseline historis, bukan gambaran stack/runtime terbaru.
+> Implementasi baru PLANNED; **SRS resmi tidak direvisi sekarang** sesuai instruksi pemilik.
+
 Status: **disetujui owner**, 20 November 2026.
 Perubahan ini menggeser arsitektur dari OAuth Google ke IMAP, dan menambah database cloud
 untuk sisi server. Alasan, konsekuensi dan persetujuan tercatat di

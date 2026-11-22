@@ -1,5 +1,15 @@
 # Mandat tunggal SE — tuntaskan sisa Sprint 2, Sprint 3 dan Sprint 4 PAM
 
+> **Perencanaan tambahan pemilik, 23 November 2026:** baca
+> [auto-sync/batch/status plan](../plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md) dan
+> [CR-005 DRAF SRS](../changes/CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md).
+> Scope baru masuk perencanaan perluasan S2 setelah gate classifier aktif; acceptance
+> background/perangkat/visual mengikuti rencana. Jangan menyela WIP classifier untuk
+> mengaktifkan scheduler dari penambahan dokumen ini. Tidak ada instruksi merevisi
+> SRS resmi sekarang; seluruh DOCX/PDF SRS v0.5 tetap dipertahankan sampai pemilik
+> meminta konsolidasi. Background sync deferred pada dokumen lama bukan status rencana
+> terbaru, tetapi PLANNED juga bukan bukti implemented/PASS.
+
 Pemilik meminta percepatan delivery. Kamu mendapat **satu penugasan untuk tiga sprint berurutan**, mencakup seluruh pekerjaan yang tersisa pada Sprint 2 dan seluruh Sprint 3–4. Lanjutkan melewati checkpoint internal sampai acceptance gabungan terpenuhi. Checkpoint dan commit menjadi alat menjaga correctness, bukan alasan mengakhiri penugasan setelah satu patch atau satu irisan kecil.
 
 Target kualitas adalah tidak ada defect kritis/tinggi atau blocker yang diketahui dan belum diperbaiki pada scope yang diverifikasi. Klaim bebas kesalahan mutlak tidak dapat dibuktikan. Setiap kegagalan yang ditemukan harus diperbaiki, diuji ulang secara relevan, dan dicatat; jangan mengubah assertion/baseline, menonaktifkan lint atau menyebut NOT RUN sebagai PASS untuk mengejar status selesai.
