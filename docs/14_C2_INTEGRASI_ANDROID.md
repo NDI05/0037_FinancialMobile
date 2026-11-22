@@ -20,7 +20,7 @@ sudah dibuktikan dari yang masih lokal/Room agar tidak diklaim selesai.
 | Deletion server | UI meminta password akun + konfirmasi; `RequestDeletionUseCase` mengirim server request dan menerima SLA/receipt |
 
 Tes Android baru: `BackendSessionRepositoryTest` (16), `PamApiClientTest` (6) dan
-`RequestDeletionUseCaseTest` (3), `DeletionReceiptStoreTest` (1) dan `ServerFinanceRepositoryImplTest` (3). Total suite saat dokumen ini ditulis: **244 tes JVM**, 0 gagal.
+`RequestDeletionUseCaseTest` (3), `DeletionReceiptStoreTest` (1) dan `ServerFinanceRepositoryImplTest` (3). Total suite saat dokumen ini ditulis: **248 tes JVM**, 0 gagal.
 
 ## Perbaikan temuan C2-F1–F4
 
@@ -46,8 +46,10 @@ Tes Android baru: `BackendSessionRepositoryTest` (16), `PamApiClientTest` (6) da
 
 C2A kini membuktikan manual create → list → detail → overview summary dari
 server, termasuk restart API/aplikasi, clear app data, dua akun, dan unavailable.
-Import, budget, analysis, edit/delete lanjutan dan admin/lampiran masih tersisa;
-Room tetap untuk fitur yang belum dipindahkan.
+Gate A menambahkan pemetaan custom/provenance, strict wire failure, refresh bus
+owner+month, detail error propagation, dan pending-action durability. Import,
+pagination, budget, analysis, edit/delete lanjutan dan admin/lampiran masih
+tersisa; Room tetap untuk fitur yang belum dipindahkan.
 
 ## Emulator
 
@@ -77,4 +79,26 @@ tetap **NOT RUN**. Tidak ada deployment atau data nyata.
 - `pm clear` + login A: baris/summary tetap dari server.
 - Login B: summary `Kosong`, transaksi 0; DB hanya berisi owner A.
 - API dimatikan: Ringkasan menampilkan “Tidak dapat terhubung…”, bukan nol/local.
-- 244 tes Android PASS; assemble/lint dijalankan terpisah (lihat laporan).
+- 248 tes Android PASS; assemble/lint dijalankan terpisah (lihat laporan).
+
+
+## Gate A C2A (22 November 2026)
+
+- A1: custom category total tidak lagi dibuang; `serverCode/serverLabel` dipertahankan
+  dan label custom dirender. Provenance/parser/confidence/origin/note/refund/fingerprint
+  dipetakan dari DTO; MANUAL tidak menampilkan parser palsu.
+- A2: tanggal/enum/amount/currency/revision invalid menghasilkan `Outcome.Failure`
+  parsing, bukan epoch/DEBIT/MANUAL rekaan.
+- A3: `FinanceRefreshBus` menginvalidasi list/overview berdasarkan owner+bulan setelah
+  acknowledgement; detail meneruskan error; overview tidak mengklaim comparison bila
+  prior-month gagal.
+- A4: `ManualPendingActionStore.save` mengembalikan hasil, memakai field Base64
+  delimiter-safe, dan ViewModel tidak POST bila key gagal disimpan. Store test mencakup
+  unicode/delimiter, restart-read, dan wrap failure.
+
+## C2B1 — status
+
+Consent: v0.4 `RecordConsentUseCase` memakai `recordConfirmed`; local GRANTED tidak
+lagi dianggap bukti server. Offline/legacy tetap di belakang `isEnabled=false`.
+Import job/batch/resume, fingerprint key dari server, dan pagination/filter server
+belum diimplementasikan. C2B1 belum selesai.

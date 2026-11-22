@@ -444,6 +444,8 @@ Rotasi kunci hanya dengan migrasi re-fingerprint; kunci dihapus saat akun dihapu
 ## 13. Consent, analisis, deletion (reuse)
 
 - `POST /v1/consents` tetap append-only; `WITHDRAWN` AI memblokir analisis berikutnya.
+  Android v0.4 hanya menganggap consent sah setelah server mengakui `201`; local
+  ledger tetap disimpan untuk recovery dan dapat menunjukkan pending/error.
 - `POST /v1/analyses` tetap memakai allowlist `AiAggregatePayload`; backend memeriksa consent,
   owner, revisi, dan payload sebelum provider. Tidak ada transaksi/merchant di payload.
 - `POST /v1/deletion-requests { "password": "...", "confirmation": "DELETE_WORKSPACE" }` memblokir impor/analisis selama `PENDING`; worker menghapus data

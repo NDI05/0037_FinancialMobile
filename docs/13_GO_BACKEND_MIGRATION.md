@@ -175,3 +175,10 @@ and calls `POST /v1/transactions` with the persisted pending-action key; the
 transaction list/detail and overview read Go. Edit/delete remain explicitly
 unavailable on the server-backed detail path. Import/budget/analysis and full
 Room removal remain C2B/C2C/D.
+
+
+## 12. C2A gate and C2B1 status
+
+Gate A mapping/strict/refresh/pending-action fixes are committed. Consent v0.4 now
+requires server acknowledgement. Import job/batch/resume and server pagination are
+not implemented; C2B1 remains partial.
