@@ -160,6 +160,7 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         val category = Category.fromCode(categoryCode) ?: Category.OTHER_EXPENSE
         val origin = categoryOrigin?.let { CategoryOrigin.valueOf(it) } ?: CategoryOrigin.IMPORTED
         val confidence = parserConfidence?.toFloat()
+        val categoryConfidenceValue = categoryConfidence?.toFloat()
         return Transaction(
             id = id,
             ownerId = ownerId,
@@ -178,7 +179,7 @@ class ServerFinanceRepositoryImpl @Inject constructor(
             parserConfidence = confidence ?: 0f,
             category = category,
             categoryOrigin = origin,
-            categoryConfidence = confidence,
+            categoryConfidence = categoryConfidenceValue,
             categoryUpdatedAt = null,
             isInternalTransfer = isInternalTransfer,
             linkedRefundOf = linkedRefundOf,

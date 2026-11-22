@@ -130,12 +130,18 @@ class ConnectGmailUseCase @Inject constructor(
 ) {
 
     suspend operator fun invoke(ownerId: String): Outcome<GmailConnection> {
+        if (sessions.current()?.ownerId != ownerId) {
+            return Outcome.Failure(AppError.Conflict("owner_changed"))
+        }
         val consent = consents.latest(ownerId, ConsentPurpose.GMAIL_READ)
         if (consent?.isGranted != true) {
             return Outcome.Failure(AppError.Validation(AppErrorRules.CONSENT_REQUIRED))
         }
 
         val authorization = gmailSource.authorize()
+        if (sessions.current()?.ownerId != ownerId) {
+            return Outcome.Failure(AppError.Conflict("owner_changed"))
+        }
         val now = clock.now()
         if (authorization is Outcome.Failure) {
             val state = when (authorization.error) {
@@ -153,6 +159,9 @@ class ConnectGmailUseCase @Inject constructor(
             return Outcome.Failure(authorization.error)
         }
 
+        if (sessions.current()?.ownerId != ownerId) {
+            return Outcome.Failure(AppError.Conflict("owner_changed"))
+        }
         val label = mailboxLabelProvider.mailboxLabel()
         val connection = (connections.get(ownerId) ?: GmailConnection.disconnected(ownerId, now)).copy(
             state = GmailConnectionState.CONNECTED,

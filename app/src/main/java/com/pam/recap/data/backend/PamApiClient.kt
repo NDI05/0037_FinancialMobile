@@ -299,6 +299,7 @@ data class RemoteTransaction(
     val attributes: JsonObject? = null,
     val parserVersion: String? = null,
     val parserConfidence: Double? = null,
+    val categoryConfidence: Double? = null,
     val categoryOrigin: String? = null,
     val linkedRefundOf: String? = null,
     val fingerprint: String? = null,

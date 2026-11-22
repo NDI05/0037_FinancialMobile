@@ -66,6 +66,7 @@ class GmailConnectPurgeTest {
         validator: FakeCredentialValidator,
         demoData: FakeDemoDataMaintenance,
         accounts: FakeAccountRepository = FakeAccountRepository(),
+        vault: FakeAppPasswordVault = FakeAppPasswordVault(),
     ): GmailConnectViewModel {
         val gmail = FixtureGmailSource(LivinTemplateRegistry())
         return GmailConnectViewModel(
@@ -73,7 +74,7 @@ class GmailConnectPurgeTest {
             connections = connections,
             consents = consents,
             validator = validator,
-            vault = FakeAppPasswordVault(),
+            vault = vault,
             demoData = demoData,
             connectGmail = ConnectGmailUseCase(gmail, gmail, consents, connections, sessions, clock),
             disconnectGmail = DisconnectGmailUseCase(
@@ -107,6 +108,39 @@ class GmailConnectPurgeTest {
         val settled = viewModel.state.first { !it.isBusy }
         assertEquals(null, settled.error)
         assertEquals(listOf(ownerId), demoData.purgedOwners)
+    }
+
+    @Test
+    fun `validation completing after an account switch writes nothing to either owner`() = runTest {
+        val sessions = FakeSessionRepository(session())
+        val vault = FakeAppPasswordVault()
+        val gate = kotlinx.coroutines.CompletableDeferred<Outcome<Unit>>()
+        val validator = object : com.pam.recap.domain.repository.GmailCredentialValidator {
+            override suspend fun validate(email: String, appPassword: String) = gate.await()
+        }
+        val connections = FakeGmailConnectionRepository()
+        val gmail = FixtureGmailSource(LivinTemplateRegistry())
+        val vm = GmailConnectViewModel(
+            sessions = sessions,
+            connections = connections,
+            consents = grantedConsent(),
+            validator = validator,
+            vault = vault,
+            demoData = FakeDemoDataMaintenance(),
+            connectGmail = ConnectGmailUseCase(gmail, gmail, grantedConsent(), connections, sessions, clock),
+            disconnectGmail = DisconnectGmailUseCase(gmail, connections, sessions, vault, clock),
+            accounts = FakeAccountRepository(),
+        )
+        vm.state.first { it.consentGranted }
+        vm.setEmail("a@example.test")
+        vm.setAppPassword("abcdefghijklmnop")
+        vm.connect()
+        sessions.signIn(session().copy(ownerId = "u_other", displayName = "Other"))
+        gate.complete(Outcome.Success(Unit))
+        val settled = vm.state.first { !it.isBusy }
+        assertEquals(emptyList<Any>(), vault.saved)
+        assertEquals(null, settled.error)
+        assertEquals(null, connections.get("u_other"))
     }
 
     @Test

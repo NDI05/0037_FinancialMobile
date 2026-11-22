@@ -16,6 +16,7 @@ import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.repository.TransactionRepository
 import com.pam.recap.domain.usecase.ComputeMonthlySummaryUseCase
+import com.pam.recap.domain.usecase.ReconnectGmailUseCase
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -61,6 +62,7 @@ class OverviewViewModel @Inject constructor(
     private val computeSummary: ComputeMonthlySummaryUseCase,
     private val resolveInitialMonth: ResolveInitialMonthUseCase,
     private val server: ServerFinanceRepository? = null,
+    private val reconnectGmail: ReconnectGmailUseCase? = null,
 ) : ViewModel() {
 
     private val month = MutableStateFlow<JakartaMonth?>(null)
@@ -79,6 +81,7 @@ class OverviewViewModel @Inject constructor(
             val ownerId = sessions.current()?.ownerId
             if (ownerId != null) {
                 month.value = resolveInitialMonth(ownerId)
+                reconnectGmail?.let { runCatching { it(ownerId) } }
             }
         }
     }

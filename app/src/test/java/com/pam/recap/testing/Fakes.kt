@@ -495,10 +495,11 @@ class FakeAppPasswordVault(
         if (initial != null) put(initialOwnerId, initial)
     }
 
-    override suspend fun save(ownerId: String, email: String, appPassword: String) {
+    override suspend fun save(ownerId: String, email: String, appPassword: String): Boolean {
         val credential = GmailCredential(email = email, appPassword = appPassword)
         saved += credential
         credentials[ownerId] = credential
+        return true
     }
 
     override suspend fun read(ownerId: String): GmailCredential? = credentials[ownerId]

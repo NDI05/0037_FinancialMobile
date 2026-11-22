@@ -134,12 +134,27 @@ class GmailConnectViewModel @Inject constructor(
                 }
 
                 is Outcome.Success -> {
-                    vault.save(requireNotNull(sessions.current()).ownerId, email, appPassword)
+                    // The owner captured before validation must still be the active owner.
+                    if (sessions.current()?.ownerId != ownerId) {
+                        actions.update { it.copy(isBusy = false, appPassword = "") }
+                        return@launch
+                    }
+                    if (!vault.save(ownerId, email, appPassword)) {
+                        actions.update {
+                            it.copy(isBusy = false, error = AppError.Storage("credential_not_saved"))
+                        }
+                        return@launch
+                    }
+                    if (sessions.current()?.ownerId != ownerId) {
+                        // Never connect or publish a late result into the new account.
+                        actions.update { it.copy(isBusy = false, appPassword = "") }
+                        return@launch
+                    }
                     val result = connectGmail(ownerId)
                     if (result is Outcome.Failure) {
                         // A credential the provider refused must not stay on the device.
                         if (result.error is AppError.PermissionRequired) {
-                            sessions.current()?.ownerId?.let { vault.clear(it) }
+                            vault.clear(ownerId)
                         }
                         actions.update { it.copy(isBusy = false, error = result.error) }
                     } else {
@@ -175,6 +190,23 @@ class GmailConnectViewModel @Inject constructor(
                     runCatching { demoData.purge(ownerId) }
                     actions.update { it.copy(isBusy = false, error = null) }
                 }
+            }
+        }
+    }
+
+    /** Reconnect using the owner's stored credential; never accepts a password. */
+    fun connectStored() {
+        val ownerId = state.value.ownerId ?: return
+        if (actions.value.isBusy) return
+        actions.update { it.copy(isBusy = true, error = null) }
+        viewModelScope.launch {
+            if (sessions.current()?.ownerId != ownerId) {
+                actions.update { it.copy(isBusy = false) }
+                return@launch
+            }
+            when (val result = connectGmail(ownerId)) {
+                is Outcome.Failure -> actions.update { it.copy(isBusy = false, error = result.error) }
+                is Outcome.Success -> actions.update { it.copy(isBusy = false, error = null) }
             }
         }
     }

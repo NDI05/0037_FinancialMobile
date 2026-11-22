@@ -14,7 +14,8 @@ import com.pam.recap.domain.model.GmailCredential
  */
 interface AppPasswordVault {
 
-    suspend fun save(ownerId: String, email: String, appPassword: String)
+    /** @return true only after a checked, durable write. */
+    suspend fun save(ownerId: String, email: String, appPassword: String): Boolean
 
     suspend fun read(ownerId: String): GmailCredential?
 

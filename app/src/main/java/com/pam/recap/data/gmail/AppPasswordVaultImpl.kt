@@ -28,8 +28,8 @@ class AppPasswordVaultImpl @Inject constructor(
     private val prefs: SharedPreferences
         get() = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    override suspend fun save(ownerId: String, email: String, appPassword: String) {
-        if (ownerId.isBlank()) return
+    override suspend fun save(ownerId: String, email: String, appPassword: String): Boolean {
+        if (ownerId.isBlank()) return false
         val payload = json.encodeToString(
             StoredCredential.serializer(),
             StoredCredential(email = email.trim(), appPassword = appPassword.trim()),
@@ -37,10 +37,11 @@ class AppPasswordVaultImpl @Inject constructor(
         val wrapped = runCatching { secretStore.wrap(payload.encodeToByteArray()) }
             .getOrElse {
                 SafeLogger.failure(TAG, "credential_wrap_failed")
-                return
+                return false
             }
-        prefs.edit(commit = true) { putString(key(ownerId), wrapped) }
-        SafeLogger.event(TAG, "credential_stored")
+        val committed = prefs.edit().putString(key(ownerId), wrapped).commit()
+        if (committed) SafeLogger.event(TAG, "credential_stored") else SafeLogger.failure(TAG, "credential_commit_failed")
+        return committed
     }
 
     override suspend fun read(ownerId: String): GmailCredential? {
