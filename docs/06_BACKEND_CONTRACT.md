@@ -306,9 +306,24 @@ dikirim ke model AI.
 kandidat yang diterima; UI tidak boleh mengarang coverage. `COMPLETE` ditolak bila belum ada
 halaman, bila `imported+duplicates+skipped != matched`, atau bila `matched=0` (harus `EMPTY`).
 Batch key yang sama mengembalikan counts tersimpan bahkan setelah job difinalisasi; hash berbeda →
-`409 idempotency_conflict`.
+`409 idempotency_conflict`. Retry finalisasi dengan state akhir yang sama mengembalikan job yang
+sudah ada (pemulihan respons hilang). Respons batch memuat `monthId`, `inputRevision`, counts dan
+`jobState`.
+
+Setiap kandidat `PARSED` harus berada di bulan `eventAt` yang sama dengan job menurut
+Asia/Jakarta (batas UTC 17.00). Kandidat di luar bulan menolak **seluruh** batch sebelum record,
+counter, idempotency atau revision ditulis. Fingerprint unik per owner: kandidat dari job bulan lain
+dengan fingerprint sama dihitung `duplicates`, bukan baris baru.
 
 ### 7.4 Sweep internal
+
+Deletion memerlukan password reauthentication (sekali pakai, tidak disimpan) dan konfirmasi literal
+`DELETE_WORKSPACE`; body kosong/konfirmasi salah → `400`, password salah → `403`, admin aktif
+terakhir → `409 last_admin`. Request yang dibuat segera mencabut seluruh sesi/refresh, sehingga
+akses keuangan berikutnya `401`; status hanya dapat dibaca lewat `GET
+/v1/deletion-receipts/{receiptToken}` yang mengembalikan state/timestamp tanpa data keuangan.
+Write yang sudah melewati pemeriksaan awal diperiksa ulang di commit dan ditolak bila deletion
+sudah menang.
 
 `POST /v1/internal/sweep` dengan header `x-internal-token` (nilai dari `INTERNAL_SWEEP_TOKEN`).
 Tanpa token konfigurasi → `404`; token salah → `401`. Sweep menghapus data finance/import/ringkasan/
@@ -329,16 +344,25 @@ Tidak ada upload ringkasan dari klien pada v0.4. Hasil boleh di-cache dengan kun
 `coverage` = `COMPLETE|PARTIAL|EMPTY|FAILED` dari import job terakhir + jumlah baris; `EMPTY` tidak
 pernah berarti "tidak ada pengeluaran".
 
-### 8.1 Analisis canonical
+### 8.1 Analisis canonical dan freshness
 
 Payload dari klien divalidasi sebagai envelope bertipe (unknown key, category code non-allowlist,
 `transactionCount` hilang, dan nominal di luar batas ditolak), tetapi **angka yang dikirim klien
 tidak dipakai**. Server membangun payload dari transaksi/kategori/anggaran aktif dan membandingkan
 `inputRevision` dengan revisi bulan server; revisi basi → `409 revision_conflict` sebelum provider
 dipanggil. Output provider divalidasi terhadap skema, metric key, `Rp` major→minor, angka minor
-ambigu, instruksi, saran, dan jumlah observasi; maksimum satu regenerasi. Finalisasi memeriksa
-ulang sesi, consent terbaru, deletion, dan revisi dalam satu transaksi. Withdrawal menandai report
-lama `HISTORICAL`; cache memakai consent+snapshot hash.
+ambigu, instruksi, saran, dan jumlah observasi; maksimum satu regenerasi.
+
+Snapshot menyimpan dependency hash yang mencakup revisi bulan target, priorMonth, state kategori,
+budget plan/limits, dan import coverage. Finalisasi menghitung ulang token itu dalam transaksi
+write; perubahan salah satu dependensi → `409`. Cache juga mensyaratkan token yang sama.
+Withdrawal menandai report lama `HISTORICAL`.
+
+Respons analisis (POST/GET/replay) memuat `monthId`, `inputRevision`, `currentRevision`,
+`createdAt`, `status` (`AVAILABLE|HISTORICAL`) dan **`freshness`** (`CURRENT|STALE|HISTORICAL`).
+`STALE` berarti laporan disimpan sebagai provenance tetapi dependensi server sudah berubah dan UI
+tidak boleh menyebutnya terkini. Replay idempotency lama mengembalikan provenance dengan freshness
+yang dihitung ulang, bukan otomatis `AVAILABLE/CURRENT`.
 
 ---
 
@@ -421,7 +445,7 @@ Rotasi kunci hanya dengan migrasi re-fingerprint; kunci dihapus saat akun dihapu
 - `POST /v1/consents` tetap append-only; `WITHDRAWN` AI memblokir analisis berikutnya.
 - `POST /v1/analyses` tetap memakai allowlist `AiAggregatePayload`; backend memeriksa consent,
   owner, revisi, dan payload sebelum provider. Tidak ada transaksi/merchant di payload.
-- `POST /v1/deletion-requests` memblokir impor/analisis selama `PENDING`; worker menghapus data
+- `POST /v1/deletion-requests { "password": "...", "confirmation": "DELETE_WORKSPACE" }` memblokir impor/analisis selama `PENDING`; worker menghapus data
   aktif dan metadata lampiran; backup kedaluwarsa ≤30 hari.
 
 ---
@@ -439,6 +463,13 @@ Rotasi kunci hanya dengan migrasi re-fingerprint; kunci dihapus saat akun dihapu
 | Amount | ≤1.000.000.000.000.000 minor |
 | Lampiran | 10 MB, 10/transaksi |
 | Analisis | rate + daily ceiling existing (FR-50) |
+
+Reservasi biaya provider memeriksa biaya terpakai + reservasi outstanding + biaya panggilan
+berikut. `LLM_MAX_INPUT_TOKENS` dan `LLM_MAX_OUTPUT_TOKENS` menjadi batas biaya per panggilan yang
+dapat ditegakkan adapter; ini **soft ceiling** terhadap tagihan provider sebenarnya, bukan hard cap
+global. Ceiling yang lebih kecil dari satu panggilan menolak sebelum provider. Usage provider
+dicatat dengan context background terbatas; bila pencatatan gagal, respons error dan reservasi
+konservatif tetap ada.
 
 Konfigurasi wajib produksi: `DATA_ENCRYPTION_KEY` base64 32 byte yang bukan key development;
 `JWT_SECRET`/`REFRESH_PEPPER` ≥32 byte bukan nilai development; `REGISTRATION_INVITE_CODE` bukan

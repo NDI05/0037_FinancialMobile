@@ -28,7 +28,7 @@ kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 | Gmail lewat **IMAP + App Password** | 🟡 MIME/HTML + fixture impor lulus; **Gmail nyata belum diverifikasi** |
 | Impor Livin → baris transaksi → total bulanan | 🟡 fixture end-to-end lulus; Gmail nyata ⬜ |
 | Backend Node (referensi/rollback) | ✅ **124 test** lulus, termasuk interop Go |
-| **Backend Go (`backend-go/`)** | 🟡 C1 backend lokal PASS: auth/JWT, consent, finance CRUD, import batch, analysis canonical, deletion sweep; **31 test Go**, race/vet/build PASS |
+| **Backend Go (`backend-go/`)** | 🟡 C1 backend lokal PASS: auth/JWT, consent, finance CRUD, import batch, analysis canonical, deletion sweep; **40 test Go**, race/vet/build PASS |
 | Android ↔ Go | 🟡 register/login/consent/Ringkasan di emulator API 36; transaksi/import/analysis masih HTTP-only |
 | **Kontrak v0.4 (SRS, API, data, UI, acceptance)** | ✅ draft review siap disahkan |
 | **Migrasi libSQL `version: 3`** | ✅ teruji lokal `file:`; **cloud NOT RUN** |
@@ -41,12 +41,12 @@ kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 **Selesai pada C1 lokal.** Temuan review ditutup: konfigurasi produksi menolak encryption key
 development; create manual idempoten dengan key/hash/result atomik; analisis memakai payload
 canonical server, validator FR-37, guard consent/deletion/revisi saat finalisasi; usage/biaya
-tercatat dan ceiling harian; import batch idempoten; deletion sweep + revoke sesi. **31 tes Go**
+tercatat dan ceiling harian; import batch idempoten; deletion sweep + revoke sesi. **40 tes Go**
 lulus. **Selesai pada paket B + slice Go.** Kontrak v0.4 dikonsolidasikan: SRS review, API v0.4
 (JWT/refresh, transaksi/kategori CRUDS, impor batch, ringkasan server, anggaran, lampiran, admin),
 DDL/migrasi `version: 3` yang additive, ERD, perubahan UI, T01–T11 dan 25 pemeriksaan CRUDS.
 Backend Go berjalan dengan `net/http`, `database/sql`, driver libSQL; password/AES-GCM dibuktikan
-dua arah dengan fixture Node; migrasi 1–5 dan constraint diuji lokal. Android di emulator API 36
+dua arah dengan fixture Node; migrasi 1–7 dan constraint diuji lokal. Android di emulator API 36
 berhasil register → login → consent → Ringkasan terhadap Go.
 
 **Selesai pada paket A (dipertahankan).** Gate onboarding, tombol **Lanjut tanpa menghubungkan
@@ -241,7 +241,7 @@ the LLM call with output validation, quotas, and deletion.
 ```bash
 cd backend-go
 ../scripts/go.sh run ./cmd/api       # http://127.0.0.1:8080 — fake LLM, local libSQL file
-../scripts/go.sh test ./...          # 31 Go tests, including Node interop fixtures
+../scripts/go.sh test ./...          # 40 Go tests, including Node interop fixtures
 ../scripts/go.sh test -race ./...
 
 # Node reference/rollback only (separate database, never both runners on one file)

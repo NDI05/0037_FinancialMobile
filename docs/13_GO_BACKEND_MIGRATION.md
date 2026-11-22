@@ -1,6 +1,6 @@
 # Migrasi backend PAM ke Go — status dan matriks parity
 
-Status: **C1 backend lokal PASS** (lanjutan review), 21 November 2026. Cloud/emulator/Gmail
+Status: **C1 backend lokal PASS** (penutupan review R1–R5), 22 November 2026. Cloud/emulator/Gmail
 tetap NOT RUN; C2 Android belum dikerjakan.
 Keputusan pemilik: **backend PAM diganti ke Go** (21 November 2026). Turso Cloud Free/libSQL tetap
 target database. Android tetap Kotlin/Compose/Navigation Compose/MVVM/Hilt.
@@ -43,7 +43,7 @@ deliberate v0.4 contract change.
 | `POST /v1/accounts` | PASS | **PASS** | invite constant-time, scrypt, duplicate 409, role USER |
 | `POST /v1/sessions` | opaque token | **CHANGED** | JWT access ≤15 mnt + opaque refresh; legacy `expiresAt`/`displayName` retained |
 | `POST /v1/transactions` | 201 each retry | **PASS** | `Idempotency-Key` + hash + result row atomically; same key/different body 409; parallel one winner; replay after delete returns tombstone |
-| `POST /v1/import-jobs`, batch, finalize | lokal/Room | **PASS** | owner/consent/deletion, ≤100 candidates, atomic batch, batch-key replay, duplicate fingerprint, month revision, coverage |
+| `POST /v1/import-jobs`, batch, finalize | lokal/Room | **PASS** | owner/consent/deletion, ≤100 candidates, event-month boundary, atomic batch, batch-key/finalize retry, duplicate fingerprint, month revision, coverage, `inputRevision` |
 | `POST /v1/sessions/refresh` | — | **PASS** | rotation atomik, replay cabut keluarga, concurrent claim |
 | `DELETE /v1/sessions` | PASS | **PASS** | revoke sesi + refresh family |
 | `GET /v1/me` | PASS | **PASS** | profil/role/consent; activity null (belum ada agregasi) |
@@ -52,15 +52,15 @@ deliberate v0.4 contract change.
 | Transaksi CRUD | lokal/Room | **PASS** | owner-scoped, soft delete, revision, cursor, search pasca-dekripsi |
 | Kategori CRUD + reassign | lokal/Room | **PASS** | 11 built-in, field dinamis, reassign atomik |
 | Budget plan/limits | PASS | **PASS** | integer minor, gap, revision, hard delete |
-| `POST /v1/analyses` | PASS | **PASS (C1)** | typed client schema + canonical server payload, stale revision 409, typed/metric/rupiah/instruction validator, one regeneration, consent/deletion/session/revision guard at finalization, cache by consent+snapshot, usage billed |
+| `POST /v1/analyses` | PASS | **PASS (C1)** | typed client schema + canonical server payload, stale revision 409, validator, one regeneration, dependency hash for target/prior/category/budget/coverage, atomic finalization, cache by consent/snapshot/dependency, freshness metadata |
 | `GET /v1/analyses/{month}` | PASS | **PASS** | latest sealed |
-| `POST/GET /v1/deletion-requests` | PASS | **PASS** | create/get, write blocking, sweep removes finance/import/summary/analysis/keys, revokes sessions, protects last admin |
+| `POST/GET /v1/deletion-requests` | PASS | **PASS** | password reauth + literal confirmation, immediate session revoke, last-admin precheck, receipt status after auth loss, commit-time write guard, sweep removes data/keys |
 | `POST /v1/internal/sweep` | PASS | **PASS** | token-gated internal sweep |
 | `POST /v1/import-jobs` + batch | — | **PASS** | lihat baris import di atas |
 | Admin users/invitations | — | **NOT PORTED** | target D; DDL + guard sudah ada |
 | `POST /v1/internal/sweep` | PASS | **PASS** | token-gated; last-admin guard |
 | Rate limit login | PASS | **PASS** | 5/15 menit; address class; no existence oracle |
-| Analysis quota | PASS | **PASS** | hour/day reservation + global daily USD ceiling; reserved-to-actual cost reconciliation; unknown usage counted conservatively |
+| Analysis quota | PASS | **PASS** | hour/day reservation + global daily USD ceiling; used+outstanding+next check; max input/output reservation; accounting failure explicit; max-call cost is a soft provider ceiling |
 | Owner isolation | PASS | **PASS** | cross-owner GET/list/reassign diuji |
 | Cache & idempotency | PASS | **PASS** | cache revision/provider/model; idempotency hash |
 | Concurrency | PASS | **PASS** | refresh claim, quota transaction; `go test -race` |
@@ -115,7 +115,7 @@ cd pam-app/backend
 npm test          # 124 tes termasuk 2 tes interop Node↔Go
 ```
 
-Hasil 21 November 2026 (C1 lanjutan): **31 tes Go PASS**, `go test -race` PASS, `go vet`/build
+Hasil 22 November 2026 (C1 penutup): **40 tes Go PASS**, `go test -race` PASS, `go vet`/build
 PASS; Node **124 PASS**. Android terhadap Go di emulator API 36 (sebelum C1 lanjutan): register 201
 → login 201 → dua consent 201 → Ringkasan. Endpoint transaksi/import/analisis/anggaran/deletion
 diuji lewat HTTP Go; UI Android untuk fitur itu masih v0.3 sampai C2.
@@ -130,6 +130,11 @@ diuji lewat HTTP Go; UI Android untuk fitur itu masih v0.3 sampai C2.
 | D. nominal salah 100× / payload bebas | validator Rp→minor, bare-minor ambiguity, metric keys, empty arrays, suggestions; client schema strict + safe category codes; provider menerima payload canonical server | `TestValidatorRupiahUsesMajorUnits`, `TestValidatorRejectsEmptyAndUnsafeOutput`, `TestClientPayloadRejectsCanaryAndMissingNestedCount`, `TestAnalysisUsesCanonicalServerPayloadAndStaleRevisionFails` |
 | E. usage 0 / ceiling | reservation provider per call, reconcile actual vs reserved, unknown usage counted, daily USD ceiling | `TestProviderUsageIsRecordedForEveryCall`, `TestDailyCostCeilingStopsMoreProviderCalls`, `TestInvalidAnalysisIsBilledButNotStored`, `TestAnalysisRegeneratesAtMostOnce` |
 | F. concurrent refresh test weak | exactly one 200 and one 401 asserted | `TestRefreshRotationReplayAndConcurrentUse` |
+| C1-R1 month/revision | event month checked before commit, batch revision returned, finalize retry | `TestImportRejectsEventOutsideJobMonthAtomically`, `TestImportDuplicateFingerprintAcrossMonthsAndFinalizeRetry` |
+| C1-R2 dependencies | target/prior/category/budget/coverage token recomputed atomically | `TestAnalysisRaceWithConsentAndDeletion` (7 actions) |
+| C1-R3 freshness | GET/replay metadata + CURRENT/STALE/HISTORICAL | `TestAnalysisFreshnessOnReadReplayAndDependencies` |
+| C1-R4 reservation | used+outstanding+next, no reservation over ceiling, accounting context | `TestProviderReservationChecksUsedPlusNext`, `TestProviderReservationConcurrentBudget`, `TestReservationRejectsCeilingBelowOneCallBeforeProvider` |
+| C1-R5 deletion | reauth/confirmation, session revoke, receipt, last admin | `TestDeletionRequiresReauthConfirmationAndRevokesSessions`, `TestDeletionSweepRemovesFinanceAndRevokesSessions`, `TestLastAdminCannotBeSwept` |
 
 ## 8. Risiko/pekerjaan tersisa
 
