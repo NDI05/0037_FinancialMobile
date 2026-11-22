@@ -333,12 +333,24 @@ func (s *Store) UpdateTransaction(ctx context.Context, ownerID, id string, patch
 		return Transaction{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	// A user edit that changes the category supersedes any classifier output: provenance switches
+	// to USER and every classifier-derived attribute (origin, confidence, reason, rule and taxonomy
+	// versions) is cleared so no stale "LLM" provenance survives the override.
+	categoryChanged := patch.CategoryID != nil
 	result, err := tx.ExecContext(ctx, `UPDATE transactions SET category_id = ?,
-		category_origin = 'USER', sensitive_ciphertext = ?, sensitive_iv = ?, sensitive_tag = ?,
+		category_origin = 'USER',
+		classifier_origin = CASE WHEN ? THEN '' ELSE classifier_origin END,
+		category_confidence = CASE WHEN ? THEN NULL ELSE category_confidence END,
+		category_reason = CASE WHEN ? THEN NULL ELSE category_reason END,
+		category_rule_version = CASE WHEN ? THEN NULL ELSE category_rule_version END,
+		category_taxonomy_version = CASE WHEN ? THEN NULL ELSE category_taxonomy_version END,
+		sensitive_ciphertext = ?, sensitive_iv = ?, sensitive_tag = ?,
 		key_version = ?, is_internal_transfer = ?, linked_refund_of = ?,
 		revision = revision + 1, updated_at = ?
 		WHERE owner_id = ? AND id = ? AND revision = ? AND deleted_at IS NULL`,
-		nullableString(categoryID), sealed.Ciphertext, sealed.IV, sealed.Tag, s.KeyVersion,
+		nullableString(categoryID), boolInt(categoryChanged), boolInt(categoryChanged),
+		boolInt(categoryChanged), boolInt(categoryChanged), boolInt(categoryChanged),
+		sealed.Ciphertext, sealed.IV, sealed.Tag, s.KeyVersion,
 		boolInt(internal), nullableString(linked), nowString(now), ownerID, id, patch.Revision)
 	if err != nil {
 		return Transaction{}, err

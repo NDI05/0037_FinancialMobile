@@ -139,6 +139,8 @@ func sanitizedRoute(path string) string {
 			return "/v1/import-jobs/{id}/batches"
 		}
 		return "/v1/import-jobs/{id}"
+	case strings.HasPrefix(path, "/v1/category-jobs/"):
+		return "/v1/category-jobs/{id}"
 	case strings.HasPrefix(path, "/v1/analyses/"):
 		return "/v1/analyses/{monthId}"
 	case strings.HasPrefix(path, "/v1/budget-plans/"):
@@ -153,7 +155,7 @@ func sanitizedRoute(path string) string {
 	switch path {
 	case "/v1/accounts", "/v1/sessions", "/v1/sessions/refresh", "/v1/consents",
 		"/v1/me", "/v1/me/fingerprint-key", "/v1/transactions", "/v1/categories",
-		"/v1/import-jobs", "/v1/analyses", "/v1/deletion-requests":
+		"/v1/import-jobs", "/v1/category-jobs", "/v1/analyses", "/v1/deletion-requests":
 		return path
 	}
 	return "{unknown}"

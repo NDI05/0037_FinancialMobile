@@ -61,9 +61,12 @@ data class Transaction(
 
     val isPosted: Boolean get() = status == ParseStatus.POSTED
 
-    /** FR-24: low-confidence rows stay reviewable instead of being silently trusted. */
+    /** FR-24: low-confidence rows stay reviewable instead of being silently trusted. A USER
+     *  override is a human decision and never carries a "review" chip, even when the server
+     *  reports no classifier confidence for the row (LLM results have no confidence field). */
     val isLowConfidence: Boolean
-        get() = (categoryConfidence ?: parserConfidence) < LOW_CONFIDENCE_THRESHOLD
+        get() = categoryOrigin != CategoryOrigin.USER &&
+            (categoryConfidence ?: parserConfidence) < LOW_CONFIDENCE_THRESHOLD
 
     /** Whether the row contributes to IDR totals (BR-02/BR-04). */
     val countsTowardsTotals: Boolean get() = isPosted && isIdr

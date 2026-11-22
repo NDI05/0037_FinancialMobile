@@ -394,3 +394,94 @@ func TestCategoryOwnerIsolation(t *testing.T) {
 		t.Fatalf("owner A cache miss: code=%q review=%v", code, review)
 	}
 }
+func TestUpdateTransactionClearsClassifierProvenance(t *testing.T) {
+	// A user category edit (USER override) must fully replace classifier provenance: classifier
+	// origin, confidence, reason, rule and taxonomy versions are cleared so no stale "LLM"
+	// label survives the override (found during real UAT: PATCH kept origin=LLM after the edit).
+	s, _ := openCategoryStore(t)
+	ctx := context.Background()
+	owner, txID, catID := regOwnerSetup(t, s, "override@example.test")
+
+	before, err := s.GetTransaction(ctx, owner, txID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	applied, err := s.ApplyLLMCategory(ctx, owner, txID, before.Revision, catID, "food",
+		"azure-openai-compatible", "gpt-oss-120b", "category-prompt/1", "builtin-categories/1",
+		"merchant_food", 0.97, regNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if applied.ClassifierOrigin != "LLM" || applied.CategoryReason == "" {
+		t.Fatalf("precondition: origin=%q reason=%q", applied.ClassifierOrigin, applied.CategoryReason)
+	}
+
+	otherID, err := s.CategoryIDForCode(ctx, owner, "transport")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	edited, err := s.UpdateTransaction(ctx, owner, txID, TransactionPatch{
+		CategoryID: &otherID, Revision: applied.Revision,
+	}, regNow.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if edited.CategoryID != otherID {
+		t.Fatalf("category_id=%q want %q", edited.CategoryID, otherID)
+	}
+	if edited.CategoryOrigin != "USER" {
+		t.Fatalf("origin=%q want USER", edited.CategoryOrigin)
+	}
+	if edited.ClassifierOrigin != "" {
+		t.Fatalf("classifier_origin=%q want empty", edited.ClassifierOrigin)
+	}
+	if edited.CategoryReason != "" || edited.CategoryRuleVersion != "" || edited.CategoryTaxonomyVersion != "" {
+		t.Fatalf("stale provenance: reason=%q rule=%q tax=%q", edited.CategoryReason,
+			edited.CategoryRuleVersion, edited.CategoryTaxonomyVersion)
+	}
+	if edited.CategoryConfidence != 0 {
+		t.Fatalf("confidence=%v want 0", edited.CategoryConfidence)
+	}
+	if edited.Revision != applied.Revision+1 {
+		t.Fatalf("revision=%d want %d", edited.Revision, applied.Revision+1)
+	}
+
+	// The LLM must refuse to re-touch a USER override.
+	if _, err := s.ApplyLLMCategory(ctx, owner, txID, edited.Revision, catID, "food",
+		"azure-openai-compatible", "gpt-oss-120b", "category-prompt/1", "builtin-categories/1",
+		"merchant_food", 0.97, regNow.Add(2*time.Minute)); err != ErrRevisionConflict {
+		t.Fatalf("re-apply over USER override: err=%v", err)
+	}
+
+	// A note-only edit must NOT wipe classifier provenance that is still current.
+	tx2, err := s.CreateTransaction(ctx, owner, TransactionInput{
+		Direction: "DEBIT", Source: "EMAIL", AmountMinor: 22000, Currency: "IDR",
+		EventAt: regNow, Fingerprint: strings.Repeat("c", 32), ParserVersion: "livin-v1",
+		ParserConfidence: 0.9, CategoryOrigin: "IMPORTED",
+		Description: "QRIS", MerchantLabel: "KOPI UJI",
+	}, regNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	applied2, err := s.ApplyLLMCategory(ctx, owner, tx2.ID, tx2.Revision, catID, "food",
+		"azure-openai-compatible", "gpt-oss-120b", "category-prompt/1", "builtin-categories/1",
+		"merchant_food", 0.97, regNow.Add(2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if applied2.ClassifierOrigin != "LLM" {
+		t.Fatalf("reapply origin=%q want LLM", applied2.ClassifierOrigin)
+	}
+	note := "catatan"
+	noted, err := s.UpdateTransaction(ctx, owner, tx2.ID, TransactionPatch{
+		Note: &note, Revision: applied2.Revision,
+	}, regNow.Add(3*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if noted.ClassifierOrigin != "LLM" || noted.CategoryReason != "merchant_food" {
+		t.Fatalf("note-only edit cleared provenance: origin=%q reason=%q",
+			noted.ClassifierOrigin, noted.CategoryReason)
+	}
+}

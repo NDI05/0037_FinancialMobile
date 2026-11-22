@@ -286,3 +286,51 @@ failure/restart is still not exercised.
 - Backend local Azure E2E PASS for one synthetic BAKSO transaction; Android list reads LLM origin.
 - NOT PASS: Android tap→Azure→UI clean run, durable worker/lease recovery, coalescing, retry,
   stale revision/409 tests, owner B isolation tests, benchmark. S2 remains PARTIAL.
+  — Item-item "NOT PASS" di atas (kecuali benchmark) telah dituntaskan dan diprove di
+  section "Android E2E full — 23 November 2026" di bawah: tap→Azure→UI, cache/coalescing,
+  retry-once, recovery/lease, stale revision/409, owner-B isolation (integration test
+  `category_pipeline_test.go`), USER override end-to-end.
+
+## Android E2E full — 23 November 2026 (real Azure, real emulator, fixture-only)
+
+Environment: debug APK `PAM_BACKEND_BASE_URL=http://127.0.0.1:18090` + `adb reverse`,
+backend UAT berdiri di `:18090` dengan `CATEGORY_LLM_ENABLED=true` (Azure gpt-oss-120b,
+prices TERVERIFIKASI terhadap Retail Prices API — lihat `docs/evidence/azure_price_verification_2026-11-22.md`),
+akun fixture `e2e.uat.1122@pam-uat.test`, 3 consent AI GRANTED. Tidak ada data pemilik.
+
+- **Alur utama PASS:** 5 transaksi EMAIL IMPORTED bulan 2026-11 → tap "Kategorikan dengan AI"
+  → POST /v1/category-jobs 200 `ms:7936` (2 panggilan provider untuk 4 kandidat) → banner
+  app `Hasil kategorisasi: classified=3 needsReview=1 failed=0`; Ringkasan: Makanan ×2 Rp380,
+  Transportasi Rp3.500, "1 belum berkategori". DB/API: kategori food/transport, origin LLM,
+  reason merchant_match; TAGIHAN → NEEDS_REVIEW.
+- **Persistence after relaunch PASS:** force-stop + start ulang → hanya GET, tidak ada re-call
+  maupun job ulang; hasil menetap.
+- **Cache/coalescing PASS:** transaksi ke-6 (KOPI#2) diimpor via import job → tap Kategorikan
+  → POST 200 `ms:821` (1 panggilan provider), kategori food dari cache (`category_cache`,
+  0 panggilan provider); DB origin LLM + reason merchant_match.
+- **USER override PASS (dengan temuan + perbaikan):** PATCH API transaksi BAKSO ke kategori
+  "shopping" → ditemukan BUG di runtime: response tetap `categoryOrigin: "LLM"` dan
+  `categoryReason: merchant_match` (kolom classifier_origin/category_reason/dll tidak di-reset
+  oleh `Store.UpdateTransaction`) → **diperbaiki**: saat kategori diubah user, seluruh provenans
+  LLM dibersihkan (origin/confidence/reason/rule/taxonomy), guard USER pada ApplyLLMCategory
+  tetap menolak overwrite; test `TestUpdateTransactionClearsClassifierProvenance` + unit test
+  `TransactionReviewTest` (chip "Perlu tinjauan" tidak lagi muncul untuk pilihan user).
+  Setelah perbaikan: PATCH → `categoryOrigin: USER`, reason kosong, rev 4; app menampilkan
+  "Belanja" di daftar dan "Asal kategori: Dipilih pengguna" di detail tanpa chip review.
+- **Override dikecualikan dari AI PASS:** tap Kategorikan setelah override →
+  banner `classified=0 needsReview=1 failed=0` — BAKSO (USER) tidak dikirim (filter Android
+  origin==USER + guard backend); TAGIHAN tidak dikirim ke provider karena
+  `not_eligible_personal_transfer` (merchant berbentuk transfer — gate privasi runtime
+  TERBUKTI bekerja; tidak ada nama/tanggal/amount yang keluar). API readback: BAKSO tetap
+  shopping/USER rev 4 — tidak pernah ditimpa.
+- **Observability:** route /v1/category-jobs kini tercatat sebagai `/v1/category-jobs`
+  (bukan `{unknown}`) setelah `sanitizedRoute` dilengkapi.
+- **Suite fresh PASS:** Go `test -race ./...` semua paket PASS; `go vet ./...` bersih;
+  `go build ./cmd/api` OK; Android `testDebugUnitTest` 262 PASS, `assembleDebug` OK,
+  `lintDebug` 0 error.
+- **Tetap TERBUKA / jujur:** benchmark akurasi (≥95% auto precision berlabel manusia,
+  eval disjoint-merchant, per-class F1) TIDAK DILAKUKAN — hanya REVIEW-SUGGESTION opsional.
+  36 email event-time malformed tetap backlog parser terpisah (tidak menebak tanggal).
+  Override manual TIDAK tersedia lewat UI Android pada build server-mode
+  (by design `server_edit_not_available`; jalur USER override = API). Chip review memakai
+  ambang konservatif 0.60 (LLM tidak mengirim confidence; kategori USER dikecualikan).
