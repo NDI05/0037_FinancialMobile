@@ -205,3 +205,22 @@ failure/restart is still not exercised.
   confidence/rule version/reason; Go hardcodes IMPORTED origin and has no reclassification endpoint.
   Old UNCATEGORIZED rows and USER overrides are **not yet proven**. This remains open.
 - Fresh Android: **257 PASS**, assemble/lint 0 error/71 warning. Go not changed.
+
+## CR-003 race/reconnect resume — 22 November 2026
+
+- **Account-switch race guard PASS unit:** credential validation uses the owner captured at action
+  start; late success after switching A→B is ignored (no vault save, connection row, label or error
+  on B). Vault save returns checked `commit()` success; ConnectGmailUseCase rechecks owner before and
+  after authorize.
+- **Reconnect path implemented, PARTIAL:** `ReconnectGmailUseCase` is invoked from Overview after
+  login/restart when the owner has a stored credential; it reuses the credential, checks server
+  consent and revalidates IMAP without an App Password prompt. Explicit disconnect clears the vault
+  so it never reconnects. No new auto-import/background sync.
+- **Still NOT RUN:** emulator A link→logout→login A→restart, A→B→A labels/credentials, deferred
+  queued IMAP search/fetch after switch, and UI button text/state for a stored-credential reconnect.
+  `GmailConnectScreen` still shows the credential form for non-CONNECTED; auto reconnect happens
+  before the user needs it.
+- **Category:** parser/category confidence are now separate in read mapping; Go still does not emit
+  categoryConfidence and has no reclassification endpoint, so old-row/USER-override acceptance is
+  **NOT DONE**.
+- Fresh Android: **258 PASS**, assemble/lint 0 error/71 warning.
