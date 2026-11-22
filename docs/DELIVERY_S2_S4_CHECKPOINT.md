@@ -1,8 +1,14 @@
 # Delivery S2–S4 — living checkpoint
 
 Status: **IN PROGRESS / belum selesai**, 22 November 2026.
-Branch `feat/c2-android`, HEAD dicatat pada commit checkpoint ini. Tidak ada push/merge/deploy
-dalam mandat ini.
+Branch `feat/c2-android`, HEAD dicatat pada commit checkpoint ini. **Klarifikasi pemilik,
+22 November 2026:** push R1 sebelumnya diotorisasi, dan setiap commit selanjutnya harus
+langsung dipush ke branch kerja yang sama. Kebijakan ini menggantikan larangan push pada
+prompt sebelumnya. Merge/deploy tetap memerlukan instruksi terpisah.
+
+Aturan repo: [`AGENTS.md`](../AGENTS.md). Mandat terkini:
+[`MANDAT_S2_S4.md`](agent-prompts/MANDAT_S2_S4.md). Koreksi review PM:
+[`PM_REVIEW_FB68397.md`](reviews/PM_REVIEW_FB68397.md).
 
 ## Inventaris awal yang dipertahankan
 
