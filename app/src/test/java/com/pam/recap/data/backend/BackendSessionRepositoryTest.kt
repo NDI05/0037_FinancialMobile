@@ -12,6 +12,8 @@ import com.pam.recap.core.security.WrappedSecretStore
 import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.util.PamJson
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -91,19 +93,81 @@ class BackendSessionRepositoryTest {
     }
 
     @Test
-    fun `an expired token is dropped and reported as unauthorized`() = runTest {
+    fun `an expired token without a refresh token is dropped`() = runTest {
         server.enqueue(sessionResponse("token-1", expiresInMinutes = 60))
         val repository = repository()
         repository.login(EMAIL, "correct-horse-battery")
 
-        // Two hours later the cached token is useless: the user must sign in again rather than the
-        // app storing a password to refresh it silently.
         nowMillis += 120 * 60_000
         val expired = repository.token(OWNER)
 
         assertTrue(expired is Outcome.Failure)
         assertEquals(ErrorKind.UNAUTHORIZED, (expired as Outcome.Failure).error.kind)
         assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `refresh rotates the access and refresh token once`() = runTest {
+        server.enqueue(sessionResponse("token-1", expiresInMinutes = 1, refreshToken = "refresh-1"))
+        val repository = repository()
+        repository.login(EMAIL, "correct-horse-battery")
+        server.takeRequest()
+
+        nowMillis += 2 * 60_000
+        server.enqueue(refreshResponse("token-2", "refresh-2"))
+        val refreshed = repository.token(OWNER) as Outcome.Success
+        assertEquals("token-2", refreshed.value)
+        val request = server.takeRequest()
+        assertEquals("/v1/sessions/refresh", request.path)
+        assertTrue(request.body.readUtf8().contains("refresh-1"))
+
+        // The rotated access token is valid and the old refresh token is not replayed.
+        val again = repository.token(OWNER) as Outcome.Success
+        assertEquals("token-2", again.value)
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun `parallel expired callers share one refresh`() = runTest {
+        server.enqueue(sessionResponse("token-1", expiresInMinutes = 1, refreshToken = "refresh-1"))
+        val repository = repository()
+        repository.login(EMAIL, "correct-horse-battery")
+        server.takeRequest()
+        nowMillis += 2 * 60_000
+        server.enqueue(refreshResponse("token-2", "refresh-2"))
+
+        val results = listOf(
+            async { repository.token(OWNER) },
+            async { repository.token(OWNER) },
+        ).awaitAll()
+        assertTrue(results.all { it is Outcome.Success && it.value == "token-2" })
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun `a rejected refresh clears the session and is not retried`() = runTest {
+        server.enqueue(sessionResponse("token-1", expiresInMinutes = 1, refreshToken = "refresh-1"))
+        val repository = repository()
+        repository.login(EMAIL, "correct-horse-battery")
+        server.takeRequest()
+        nowMillis += 2 * 60_000
+        server.enqueue(jsonResponse(401, "refresh_invalid"))
+
+        assertTrue(repository.token(OWNER) is Outcome.Failure)
+        assertTrue(repository.token(OWNER) is Outcome.Failure)
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun `a restarted repository can refresh from wrapped storage`() = runTest {
+        server.enqueue(sessionResponse("token-1", expiresInMinutes = 1, refreshToken = "refresh-1"))
+        repository().login(EMAIL, "correct-horse-battery")
+        nowMillis += 2 * 60_000
+        server.enqueue(refreshResponse("token-2", "refresh-2"))
+
+        val restarted = repository()
+        val result = restarted.token(OWNER) as Outcome.Success
+        assertEquals("token-2", result.value)
     }
 
     @Test
@@ -230,12 +294,28 @@ class BackendSessionRepositoryTest {
         ioDispatcher = UnconfinedTestDispatcher(),
     )
 
-    private fun sessionResponse(token: String, expiresInMinutes: Long = 60): MockResponse {
+    private fun sessionResponse(
+        token: String,
+        expiresInMinutes: Long = 60,
+        refreshToken: String? = null,
+    ): MockResponse {
         val expiresAt = Instant.fromEpochMilliseconds(nowMillis + expiresInMinutes * 60_000)
+        val refresh = refreshToken?.let { ""","refreshToken":"$it"""" } ?: ""
         return MockResponse()
             .setResponseCode(201)
             .setHeader("content-type", "application/json")
-            .setBody("""{"accessToken":"$token","expiresAt":"$expiresAt","displayName":"Andhika"}""")
+            .setBody(
+                """{"accessToken":"$token","expiresAt":"$expiresAt","displayName":"Andhika",""" +
+                    """"user":{"ownerId":"$OWNER","email":"$EMAIL","role":"USER"}$refresh}""",
+            )
+    }
+
+    private fun refreshResponse(token: String, refreshToken: String, expiresInMinutes: Long = 60): MockResponse {
+        val expiresAt = Instant.fromEpochMilliseconds(nowMillis + expiresInMinutes * 60_000)
+        return MockResponse()
+            .setResponseCode(200)
+            .setHeader("content-type", "application/json")
+            .setBody("""{"accessToken":"$token","expiresAt":"$expiresAt","refreshToken":"$refreshToken"}""")
     }
 
     private fun jsonResponse(code: Int, errorCode: String) = MockResponse()
