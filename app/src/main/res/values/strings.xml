@@ -450,4 +450,7 @@
     <string name="settings_demo_none">Tidak ada data demo tersisa.</string>
     <string name="detail_actions_unavailable">Ubah kategori/catatan dan hapus transaksi tersedia setelah sinkronisasi edit server (C2B2).</string>
     <string name="manual_saved_hint">Setelah tersimpan, transaksi ini masuk ke ringkasan bulan %1$s.</string>
+    <string name="consent_category_title">Kategorisasi merchant dengan Azure</string>
+    <string name="consent_category_body">Nama merchant usaha yang tersanitasi (maksimal 120 karakter), arah, metode, dan kode kategori dikirim ke Microsoft Azure (GlobalStandard) untuk saran kategori. Tidak ada nominal, tanggal, isi email, catatan, ID pesan, atau data pribadi. GlobalStandard dapat memproses di luar Japan West; ini bukan jaminan lokasi Indonesia atau zero-retention. Menolak tidak menghalangi impor/ringkasan.</string>
+    <string name="settings_consent_category">Kategorisasi merchant Azure</string>
 </resources>

@@ -88,6 +88,12 @@ fun ConsentScreen(
                 checked = state.aiGranted == true,
                 onCheckedChange = viewModel::decideAi,
             )
+            ConsentSwitchRow(
+                title = stringResource(R.string.consent_category_title),
+                body = stringResource(R.string.consent_category_body),
+                checked = state.categoryGranted == true,
+                onCheckedChange = viewModel::decideCategory,
+            )
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Text(

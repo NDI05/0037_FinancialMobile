@@ -21,6 +21,7 @@ import javax.inject.Inject
 data class ConsentUiState(
     val gmailGranted: Boolean? = null,
     val aiGranted: Boolean? = null,
+    val categoryGranted: Boolean? = null,
     val isSaving: Boolean = false,
     val error: AppError? = null,
     val finished: Boolean = false,
@@ -48,6 +49,10 @@ class ConsentViewModel @Inject constructor(
 
     fun decideAi(granted: Boolean) {
         _state.update { it.copy(aiGranted = granted, error = null) }
+    }
+
+    fun decideCategory(granted: Boolean) {
+        _state.update { it.copy(categoryGranted = granted, error = null) }
     }
 
     /**
@@ -88,6 +93,14 @@ class ConsentViewModel @Inject constructor(
                 purpose = ConsentPurpose.AI_PROCESSING,
                 noticeVersion = NoticeVersion.CURRENT,
                 decision = if (aiGranted) ConsentDecision.GRANTED else ConsentDecision.DECLINED,
+            )
+            // Category cloud consent is independent; untouched means declined, never implied.
+            recordConsent(
+                ownerId = ownerId,
+                purpose = ConsentPurpose.AI_CATEGORIZATION,
+                noticeVersion = NoticeVersion.CURRENT,
+                decision = if (current.categoryGranted == true) ConsentDecision.GRANTED
+                else ConsentDecision.DECLINED,
             )
             _state.update { it.copy(isSaving = false, finished = true) }
         }

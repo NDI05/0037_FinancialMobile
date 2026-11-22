@@ -428,4 +428,7 @@
     <string name="settings_demo_none">No demo data left.</string>
     <string name="detail_actions_unavailable">Category/note editing and deletion are available after server edit sync (C2B2).</string>
     <string name="manual_saved_hint">Once saved, this transaction is included in the %1$s summary.</string>
+    <string name="consent_category_title">Merchant categorization with Azure</string>
+    <string name="consent_category_body">A sanitized business merchant name (max 120 characters), direction, method and category codes are sent to Microsoft Azure (GlobalStandard) for a category suggestion. No amount, date, email body, note, message ID or personal data is sent. GlobalStandard may process outside Japan West; this is not a guarantee of Indonesia-only processing or zero retention. Declining does not block import or summaries.</string>
+    <string name="settings_consent_category">Azure merchant categorization</string>
 </resources>

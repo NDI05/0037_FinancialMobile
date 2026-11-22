@@ -115,6 +115,7 @@ private fun ConsentRow(entry: Consent) {
 private fun purposeRes(purpose: ConsentPurpose): Int = when (purpose) {
     ConsentPurpose.GMAIL_READ -> R.string.settings_consent_gmail
     ConsentPurpose.AI_PROCESSING -> R.string.settings_consent_ai
+    ConsentPurpose.AI_CATEGORIZATION -> R.string.settings_consent_category
 }
 
 private fun decisionChip(decision: ConsentDecision): StatusChipKind = when (decision) {

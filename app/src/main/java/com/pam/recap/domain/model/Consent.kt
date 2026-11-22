@@ -6,6 +6,7 @@ import kotlin.time.Instant
 enum class ConsentPurpose {
     GMAIL_READ,
     AI_PROCESSING,
+    AI_CATEGORIZATION,
 }
 
 /** FR-03/FR-04: an explicit decision, including withdrawal, with its own timestamp. */
@@ -17,7 +18,7 @@ enum class ConsentDecision {
 
 /** Notice versions currently offered by the consent screen (FR-03). */
 object NoticeVersion {
-    const val CURRENT: String = "notice-v1"
+    const val CURRENT: String = "notice-v2"
 }
 
 /**

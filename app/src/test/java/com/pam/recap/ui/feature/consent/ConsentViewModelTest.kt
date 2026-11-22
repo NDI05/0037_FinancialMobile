@@ -116,15 +116,16 @@ class ConsentViewModelTest {
     }
 
     @Test
-    fun `granting both switches records two independent grants`() = runTest {
+    fun `granting all switches records independent grants`() = runTest {
         val viewModel = viewModel()
 
         viewModel.decideGmail(true)
         viewModel.decideAi(true)
+        viewModel.decideCategory(true)
         viewModel.submit()
 
         val ledger = consents.observeLedger(session.ownerId).first()
         assertTrue(ledger.all { it.decision == ConsentDecision.GRANTED })
-        assertEquals(2, ledger.map { it.purpose }.toSet().size)
+        assertEquals(3, ledger.map { it.purpose }.toSet().size)
     }
 }
