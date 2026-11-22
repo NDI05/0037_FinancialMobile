@@ -336,7 +336,12 @@ func transactionJSON(t store.Transaction) map[string]any {
 		"categoryKind": t.CategoryKind, "direction": t.Direction, "source": t.Source,
 		"amountMinor": t.AmountMinor, "currency": t.Currency, "eventAt": t.EventAt,
 		"monthId": t.MonthID, "fingerprint": t.Fingerprint, "parserVersion": t.ParserVersion,
-		"parserConfidence": t.ParserConfidence, "categoryOrigin": t.CategoryOrigin,
+		"parserConfidence": t.ParserConfidence, "categoryOrigin": func() string {
+			if t.ClassifierOrigin != "" { return t.ClassifierOrigin }
+			return t.CategoryOrigin
+		}(), "categoryConfidence": t.CategoryConfidence,
+		"categoryRuleVersion": t.CategoryRuleVersion, "categoryReason": t.CategoryReason,
+		"categoryTaxonomyVersion": t.CategoryTaxonomyVersion,
 		"description": t.Sensitive.Description, "merchantLabel": t.Sensitive.MerchantLabel,
 		"note": t.Sensitive.Note, "attributes": t.Sensitive.Attributes,
 		"isInternalTransfer": t.IsInternalTransfer, "linkedRefundOf": nullString(t.LinkedRefundOf),

@@ -20,9 +20,9 @@ func TestAzureStrictOutputAndSanitization(t *testing.T) {
 	}))
 	defer server.Close()
 	azure := NewAzure(server.URL, "test-key", "deployment", "gpt-oss-120b", time.Second)
-	results, err := azure.Classify(context.Background(), []Candidate{{Merchant: "BAKSO UJI", Direction: "DEBIT", Method: "QRIS", Categories: []string{"food", "uncategorized"}}})
-	if err != nil || len(results) != 1 || results[0].CategoryCode != "food" {
-		t.Fatalf("unexpected %v %v", results, err)
+	response, err := azure.Classify(context.Background(), []Candidate{{Merchant: "BAKSO UJI", Direction: "DEBIT", Method: "QRIS", Categories: []string{"food", "uncategorized"}}})
+	if err != nil || len(response.Results) != 1 || response.Results[0].CategoryCode != "food" {
+		t.Fatalf("unexpected %v %v", response, err)
 	}
 }
 

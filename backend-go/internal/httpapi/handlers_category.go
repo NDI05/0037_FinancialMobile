@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/pam/recap/backend-go/internal/categoryllm"
 	"github.com/pam/recap/backend-go/internal/store"
@@ -46,6 +45,7 @@ type preparedCategory struct {
 	tx store.Transaction
 	job store.CategoryJob
 	merchant string
+	method string
 	candidate categoryllm.Candidate
 }
 
@@ -78,6 +78,15 @@ func (s *Server) createCategoryJobs(w http.ResponseWriter, r *http.Request) {
 		}
 		job, err := s.Store.CreateCategoryJob(r.Context(), info.OwnerID, id, tx.Revision, s.Now())
 		if err != nil { s.databaseOrInternal(w, r, err); return }
+		if job.State != "PENDING" {
+			jobs = append(jobs, job); continue
+		}
+		claimed, err := s.Store.ClaimCategoryJob(r.Context(), info.OwnerID, job.ID, s.Now())
+		if err != nil { s.databaseOrInternal(w, r, err); return }
+		if !claimed {
+			job, _ = s.Store.GetCategoryJob(r.Context(), info.OwnerID, job.ID)
+			jobs = append(jobs, job); continue
+		}
 		if tx.CategoryOrigin == "USER" || (tx.CategoryCode != "" && tx.CategoryCode != "uncategorized") {
 			_ = s.Store.FinishCategoryJob(r.Context(), info.OwnerID, job.ID, "NEEDS_REVIEW", "", "not_eligible", "", "", "", "", "", 0, s.Now())
 			job, _ = s.Store.GetCategoryJob(r.Context(), info.OwnerID, job.ID)
@@ -89,17 +98,22 @@ func (s *Server) createCategoryJobs(w http.ResponseWriter, r *http.Request) {
 			job, _ = s.Store.GetCategoryJob(r.Context(), info.OwnerID, job.ID)
 			jobs = append(jobs, job); continue
 		}
-		prepared = append(prepared, preparedCategory{tx: tx, job: job, merchant: merchant,
-			candidate: categoryllm.Candidate{Merchant: merchant, Direction: tx.Direction, Method: "QRIS",
-				Categories: []string{"housing","utilities","transport","food","health","education","shopping","other_expense","transfer","uncategorized"}}})
+		method := "OTHER"
+		if strings.Contains(strings.ToUpper(tx.Sensitive.Description), "QRIS") { method = "QRIS" }
+		allowed := []string{"uncategorized"}
+		if tx.Direction == "CREDIT" { allowed = append(allowed, "income", "transfer") } else {
+			allowed = append(allowed, "housing","utilities","transport","food","health","education","shopping","other_expense","transfer")
+		}
+		prepared = append(prepared, preparedCategory{tx: tx, job: job, merchant: merchant, method: method,
+			candidate: categoryllm.Candidate{Merchant: merchant, Direction: tx.Direction, Method: method, Categories: allowed}})
 	}
 
 	classifier := s.CategoryClassifier
 	var call []categoryllm.Candidate
 	var callPrepared []preparedCategory
 	for _, p := range prepared {
-		key := store.CacheKey(p.merchant, p.tx.Direction, "QRIS")
-		code, review, reason, err := s.Store.CategoryCacheGet(r.Context(), info.OwnerID, key, p.tx.Direction, "QRIS",
+		key := store.CacheKey(p.merchant, p.tx.Direction, p.method)
+		code, review, reason, err := s.Store.CategoryCacheGet(r.Context(), info.OwnerID, key, p.tx.Direction, p.method,
 			categoryllm.TaxonomyVersion, classifier.Model(), categoryllm.PromptVersion)
 		if err == nil && code != "" {
 			if appErr := s.applyCategoryResult(r.Context(), info.OwnerID, p, code, review, reason); appErr != nil {
@@ -113,7 +127,7 @@ func (s *Server) createCategoryJobs(w http.ResponseWriter, r *http.Request) {
 
 	if len(call) > 0 {
 		reserve := (1024*s.Config.CategoryLLM.PromptPer1K + 512*s.Config.CategoryLLM.CompletionPer1K) / 1000
-		ok, err := s.Store.ReserveCategoryCall(r.Context(), info.OwnerID, s.Config.CategoryLLM.OwnerAttemptsDay,
+		reservationID, ok, err := s.Store.ReserveCategoryCall(r.Context(), info.OwnerID, s.Config.CategoryLLM.OwnerAttemptsDay,
 			s.Config.CategoryLLM.InstallAttemptsDay, s.Config.CategoryLLM.DailyCeilingUSD,
 			s.Config.CategoryLLM.MonthlyCeilingUSD, reserve, s.Now())
 		if err != nil { s.databaseOrInternal(w, r, err); return }
@@ -125,25 +139,32 @@ func (s *Server) createCategoryJobs(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusTooManyRequests, map[string]any{"error": "budget_exhausted", "jobs": categoryJobsJSON(jobs)})
 			return
 		}
-		results, providerErr := classifier.Classify(r.Context(), call)
-		_ = s.Store.SettleCategoryCall(r.Context(), info.OwnerID, reserve, reserve, s.Now())
+		response, providerErr := classifier.Classify(r.Context(), call)
+		if response.UsageKnown {
+			actual := (float64(response.PromptTokens)*s.Config.CategoryLLM.PromptPer1K +
+				float64(response.CompletionTokens)*s.Config.CategoryLLM.CompletionPer1K) / 1000
+			_ = s.Store.SettleCategoryReservation(r.Context(), info.OwnerID, reservationID, actual, actual, true, s.Now())
+		} else {
+			_ = s.Store.SettleCategoryReservation(r.Context(), info.OwnerID, reservationID, reserve, reserve, false, s.Now())
+		}
 		if providerErr != nil {
 			code := "provider_failed"
 			if errors.Is(providerErr, categoryllm.ErrTruncated) { code = "provider_truncated" }
+			if errors.Is(providerErr, categoryllm.ErrInputTooLarge) { code = "input_too_large" }
 			for _, p := range callPrepared {
 				_ = s.Store.FinishCategoryJob(r.Context(), info.OwnerID, p.job.ID, "FAILED", "", "", code, classifier.ID(), classifier.Model(), categoryllm.PromptVersion, categoryllm.TaxonomyVersion, 0, s.Now())
 				job, _ := s.Store.GetCategoryJob(r.Context(), info.OwnerID, p.job.ID); jobs = append(jobs, job)
 			}
 			writeJSON(w, http.StatusBadGateway, map[string]any{"error": code, "jobs": categoryJobsJSON(jobs)}); return
 		}
-		for _, result := range results {
+		for _, result := range response.Results {
 			idx := result.CaseID
 			if len(idx) < 2 { continue }
 			n := int(idx[1]-'0')
 			if n < 0 || n >= len(callPrepared) { continue }
 			p := callPrepared[n]
-			key := store.CacheKey(p.merchant, p.tx.Direction, "QRIS")
-			_ = s.Store.CategoryCachePut(r.Context(), info.OwnerID, key, p.tx.Direction, "QRIS",
+			key := store.CacheKey(p.merchant, p.tx.Direction, p.method)
+			_ = s.Store.CategoryCachePut(r.Context(), info.OwnerID, key, p.tx.Direction, p.method,
 				categoryllm.TaxonomyVersion, classifier.Model(), categoryllm.PromptVersion,
 				result.CategoryCode, result.ReasonCode, result.NeedsReview, s.Now())
 			_ = s.applyCategoryResult(r.Context(), info.OwnerID, p, result.CategoryCode, result.NeedsReview, result.ReasonCode)
@@ -168,15 +189,21 @@ func (s *Server) applyCategoryResult(ctx context.Context, ownerID string, p prep
 	if review || code == "uncategorized" {
 		return s.Store.FinishCategoryJob(ctx, ownerID, p.job.ID, "NEEDS_REVIEW", "uncategorized", reason, "", s.CategoryClassifier.ID(), s.CategoryClassifier.Model(), categoryllm.PromptVersion, categoryllm.TaxonomyVersion, 0, s.Now())
 	}
+	allowed := false
+	for _, candidate := range p.candidate.Categories { if candidate == code { allowed = true; break } }
+	if !allowed {
+		return s.Store.FinishCategoryJob(ctx, ownerID, p.job.ID, "NEEDS_REVIEW", "uncategorized", "category_not_in_direction_allowlist", "", s.CategoryClassifier.ID(), s.CategoryClassifier.Model(), categoryllm.PromptVersion, categoryllm.TaxonomyVersion, 0, s.Now())
+	}
 	categoryID, err := s.Store.CategoryIDForCode(ctx, ownerID, code)
 	if err != nil {
 		return s.Store.FinishCategoryJob(ctx, ownerID, p.job.ID, "NEEDS_REVIEW", "uncategorized", "unknown_category", "", s.CategoryClassifier.ID(), s.CategoryClassifier.Model(), categoryllm.PromptVersion, categoryllm.TaxonomyVersion, 0, s.Now())
 	}
-	if _, err := s.Store.ApplyLLMCategory(ctx, ownerID, p.tx.ID, p.tx.Revision, categoryID, code, s.Now()); err != nil {
+	if _, err := s.Store.ApplyLLMCategory(ctx, ownerID, p.tx.ID, p.tx.Revision, categoryID, code,
+		s.CategoryClassifier.ID(), s.CategoryClassifier.Model(), categoryllm.PromptVersion,
+		categoryllm.TaxonomyVersion, reason, 0, s.Now()); err != nil {
 		return s.Store.FinishCategoryJob(ctx, ownerID, p.job.ID, "FAILED", code, reason, "stale_or_user_override", s.CategoryClassifier.ID(), s.CategoryClassifier.Model(), categoryllm.PromptVersion, categoryllm.TaxonomyVersion, 0, s.Now())
 	}
 	return s.Store.FinishCategoryJob(ctx, ownerID, p.job.ID, "CLASSIFIED", code, reason, "", s.CategoryClassifier.ID(), s.CategoryClassifier.Model(), categoryllm.PromptVersion, categoryllm.TaxonomyVersion, 0, s.Now())
 }
 
 var _ = strings.TrimSpace
-var _ = time.Second

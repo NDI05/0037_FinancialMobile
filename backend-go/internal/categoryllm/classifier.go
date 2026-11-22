@@ -23,6 +23,7 @@ var (
 	ErrInvalidInput  = errors.New("category_llm_invalid_input")
 	ErrInvalidOutput = errors.New("category_llm_invalid_output")
 	ErrTruncated     = errors.New("category_llm_truncated")
+	ErrInputTooLarge = errors.New("category_llm_input_too_large")
 )
 
 type Candidate struct {
@@ -39,10 +40,18 @@ type Result struct {
 	ReasonCode   string `json:"reasonCode"`
 }
 
+type Response struct {
+	Results          []Result
+	PromptTokens     int64
+	CompletionTokens int64
+	ReasoningTokens  int64
+	UsageKnown       bool
+}
+
 type Classifier interface {
 	ID() string
 	Model() string
-	Classify(ctx context.Context, candidates []Candidate) ([]Result, error)
+	Classify(ctx context.Context, candidates []Candidate) (Response, error)
 }
 
 // SanitizeMerchant accepts a business merchant label only. It rejects control characters, URLs,

@@ -65,7 +65,8 @@ func (s *Store) sweepOwner(ctx context.Context, ownerID string, now time.Time) e
 	tables := []string{
 		"attachments", "budget_limits", "budget_plans", "transactions", "categories",
 		"month_revisions", "import_skipped", "import_batches", "import_jobs",
-		"summaries", "analyses", "account_keys", "http_idempotency",
+		"summaries", "analyses", "category_jobs", "category_cache",
+		"category_reservations", "account_keys", "http_idempotency",
 	}
 	for _, table := range tables {
 		result, err := tx.ExecContext(ctx, `DELETE FROM `+table+` WHERE owner_id = ?`, ownerID)

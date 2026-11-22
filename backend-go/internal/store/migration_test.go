@@ -26,7 +26,7 @@ func TestMigrateTwiceAndLegacyRows(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM schema_migrations`).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 9 {
+	if count != 10 {
 		t.Fatalf("migrations = %d", count)
 	}
 	// The last-active-admin trigger must exist on the local engine.

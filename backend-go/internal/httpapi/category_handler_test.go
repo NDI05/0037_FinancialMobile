@@ -12,7 +12,7 @@ type stubCategory struct{ calls int }
 
 func (s *stubCategory) ID() string { return "stub" }
 func (s *stubCategory) Model() string { return "stub-model" }
-func (s *stubCategory) Classify(_ context.Context, candidates []categoryllm.Candidate) ([]categoryllm.Result, error) {
+func (s *stubCategory) Classify(_ context.Context, candidates []categoryllm.Candidate) (categoryllm.Response, error) {
 	s.calls++
 	out := make([]categoryllm.Result, len(candidates))
 	for i, c := range candidates {
@@ -20,7 +20,7 @@ func (s *stubCategory) Classify(_ context.Context, candidates []categoryllm.Cand
 		if c.Merchant == "BAKSO UJI" { code, review = "food", false }
 		out[i] = categoryllm.Result{CaseID: "c" + string(rune('0'+i)), CategoryCode: code, NeedsReview: review, ReasonCode: "stub"}
 	}
-	return out, nil
+	return categoryllm.Response{Results: out, PromptTokens: 10, CompletionTokens: 10, UsageKnown: true}, nil
 }
 
 func newCategoryHarness(t *testing.T, classifier categoryllm.Classifier) *harness {

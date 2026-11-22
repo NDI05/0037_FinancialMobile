@@ -39,6 +39,11 @@ type Transaction struct {
 	ParserVersion      string
 	ParserConfidence   float64
 	CategoryOrigin     string
+	ClassifierOrigin   string
+	CategoryConfidence float64
+	CategoryRuleVersion string
+	CategoryReason     string
+	CategoryTaxonomyVersion string
 	Sensitive          TransactionSensitive
 	IsInternalTransfer bool
 	LinkedRefundOf     string
@@ -186,7 +191,9 @@ func (s *Store) ListTransactions(ctx context.Context, ownerID, monthID, category
 	sqlText := `SELECT t.id, t.owner_id, COALESCE(t.category_id, ''), COALESCE(c.code, ''),
 		COALESCE(c.kind, 'UNCATEGORIZED'), t.direction, t.source, t.amount_minor, t.currency,
 		t.event_at_ms, t.month_id, t.fingerprint, COALESCE(t.parser_version, ''),
-		COALESCE(t.parser_confidence, 0), t.category_origin, t.sensitive_ciphertext,
+		COALESCE(t.parser_confidence, 0), t.category_origin, COALESCE(t.classifier_origin,''),
+		COALESCE(t.category_confidence,0), COALESCE(t.category_rule_version,''),
+		COALESCE(t.category_reason,''), COALESCE(t.category_taxonomy_version,''), t.sensitive_ciphertext,
 		t.sensitive_iv, t.sensitive_tag, t.key_version, t.is_internal_transfer,
 		COALESCE(t.linked_refund_of, ''), t.revision, t.created_at, t.updated_at
 		FROM transactions t LEFT JOIN categories c
@@ -262,7 +269,9 @@ func (s *Store) GetTransaction(ctx context.Context, ownerID, id string) (Transac
 		COALESCE(c.code, ''), COALESCE(c.kind, 'UNCATEGORIZED'), t.direction, t.source,
 		t.amount_minor, t.currency, t.event_at_ms, t.month_id, t.fingerprint,
 		COALESCE(t.parser_version, ''), COALESCE(t.parser_confidence, 0), t.category_origin,
-		t.sensitive_ciphertext, t.sensitive_iv, t.sensitive_tag, t.key_version,
+		COALESCE(t.classifier_origin,''), COALESCE(t.category_confidence,0),
+		COALESCE(t.category_rule_version,''), COALESCE(t.category_reason,''),
+		COALESCE(t.category_taxonomy_version,''), t.sensitive_ciphertext, t.sensitive_iv, t.sensitive_tag, t.key_version,
 		t.is_internal_transfer, COALESCE(t.linked_refund_of, ''), t.revision,
 		t.created_at, t.updated_at
 		FROM transactions t LEFT JOIN categories c
@@ -402,7 +411,8 @@ func bumpMonthRevision(ctx context.Context, tx *sql.Tx, ownerID, monthID string,
 func scanTransaction(ctx context.Context, scanner rowScanner, s *Store, ownerID string) (Transaction, error) {
 	var t Transaction
 	var categoryID, categoryCode, categoryKind, parserVersion, linked string
-	var confidence float64
+	var classifierOrigin, ruleVersion, categoryReason, taxonomyVersion string
+	var confidence, categoryConfidence float64
 	var ciphertext, iv, tag []byte
 	var keyVersion int
 	var internal int
@@ -410,7 +420,8 @@ func scanTransaction(ctx context.Context, scanner rowScanner, s *Store, ownerID 
 	var created, updated string
 	if err := scanner.Scan(&t.ID, &t.OwnerID, &categoryID, &categoryCode, &categoryKind,
 		&t.Direction, &t.Source, &t.AmountMinor, &t.Currency, &eventAtMs, &t.MonthID,
-		&t.Fingerprint, &parserVersion, &confidence, &t.CategoryOrigin, &ciphertext, &iv, &tag,
+		&t.Fingerprint, &parserVersion, &confidence, &t.CategoryOrigin, &classifierOrigin,
+		&categoryConfidence, &ruleVersion, &categoryReason, &taxonomyVersion, &ciphertext, &iv, &tag,
 		&keyVersion, &internal, &linked, &t.Revision, &created, &updated); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Transaction{}, ErrNotFound
@@ -419,6 +430,8 @@ func scanTransaction(ctx context.Context, scanner rowScanner, s *Store, ownerID 
 	}
 	t.CategoryID, t.CategoryCode, t.CategoryKind = categoryID, categoryCode, categoryKind
 	t.ParserVersion, t.ParserConfidence, t.LinkedRefundOf = parserVersion, confidence, linked
+	t.ClassifierOrigin, t.CategoryConfidence = classifierOrigin, categoryConfidence
+	t.CategoryRuleVersion, t.CategoryReason, t.CategoryTaxonomyVersion = ruleVersion, categoryReason, taxonomyVersion
 	t.IsInternalTransfer = internal == 1
 	t.EventAt = time.UnixMilli(eventAtMs).UTC()
 	t.CreatedAt, t.UpdatedAt = parseTime(created), parseTime(updated)
@@ -473,7 +486,9 @@ const transactionSelect = `SELECT t.id, t.owner_id, COALESCE(t.category_id, ''),
 	COALESCE(c.code, ''), COALESCE(c.kind, 'UNCATEGORIZED'), t.direction, t.source,
 	t.amount_minor, t.currency, t.event_at_ms, t.month_id, t.fingerprint,
 	COALESCE(t.parser_version, ''), COALESCE(t.parser_confidence, 0), t.category_origin,
-	t.sensitive_ciphertext, t.sensitive_iv, t.sensitive_tag, t.key_version,
+	COALESCE(t.classifier_origin,''), COALESCE(t.category_confidence,0),
+	COALESCE(t.category_rule_version,''), COALESCE(t.category_reason,''),
+	COALESCE(t.category_taxonomy_version,''), t.sensitive_ciphertext, t.sensitive_iv, t.sensitive_tag, t.key_version,
 	t.is_internal_transfer, COALESCE(t.linked_refund_of, ''), t.revision,
 	t.created_at, t.updated_at, COALESCE(t.deleted_at, '')
 	FROM transactions t LEFT JOIN categories c
@@ -482,7 +497,8 @@ const transactionSelect = `SELECT t.id, t.owner_id, COALESCE(t.category_id, ''),
 func scanTransactionWithDeleted(ctx context.Context, scanner rowScanner, s *Store, ownerID string) (Transaction, error) {
 	var t Transaction
 	var categoryID, categoryCode, categoryKind, parserVersion, linked, deleted string
-	var confidence float64
+	var classifierOrigin, ruleVersion, categoryReason, taxonomyVersion string
+	var confidence, categoryConfidence float64
 	var ciphertext, iv, tag []byte
 	var keyVersion int
 	var internal int
@@ -490,7 +506,8 @@ func scanTransactionWithDeleted(ctx context.Context, scanner rowScanner, s *Stor
 	var created, updated string
 	if err := scanner.Scan(&t.ID, &t.OwnerID, &categoryID, &categoryCode, &categoryKind,
 		&t.Direction, &t.Source, &t.AmountMinor, &t.Currency, &eventAtMs, &t.MonthID,
-		&t.Fingerprint, &parserVersion, &confidence, &t.CategoryOrigin, &ciphertext, &iv, &tag,
+		&t.Fingerprint, &parserVersion, &confidence, &t.CategoryOrigin, &classifierOrigin,
+		&categoryConfidence, &ruleVersion, &categoryReason, &taxonomyVersion, &ciphertext, &iv, &tag,
 		&keyVersion, &internal, &linked, &t.Revision, &created, &updated, &deleted); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Transaction{}, ErrNotFound
@@ -499,6 +516,8 @@ func scanTransactionWithDeleted(ctx context.Context, scanner rowScanner, s *Stor
 	}
 	t.CategoryID, t.CategoryCode, t.CategoryKind = categoryID, categoryCode, categoryKind
 	t.ParserVersion, t.ParserConfidence, t.LinkedRefundOf = parserVersion, confidence, linked
+	t.ClassifierOrigin, t.CategoryConfidence = classifierOrigin, categoryConfidence
+	t.CategoryRuleVersion, t.CategoryReason, t.CategoryTaxonomyVersion = ruleVersion, categoryReason, taxonomyVersion
 	t.IsInternalTransfer = internal == 1
 	t.EventAt = time.UnixMilli(eventAtMs).UTC()
 	t.CreatedAt, t.UpdatedAt = parseTime(created), parseTime(updated)
