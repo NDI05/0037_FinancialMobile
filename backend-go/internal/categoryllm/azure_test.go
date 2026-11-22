@@ -12,11 +12,11 @@ import (
 
 func TestAzureStrictOutputAndSanitization(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "Bearer test-key" {
+		if r.Header.Get("api-key") != "test-key" {
 			t.Fatal("missing auth")
 		}
 		if strings.Contains(r.URL.Path, "merchant") { t.Fatal("merchant in URL") }
-		fmt.Fprint(w, `{"choices":[{"message":{"content":"{\"results\":[{\"index\":0,\"categoryCode\":\"food\",\"needsReview\":false,\"reasonCode\":\"merchant_food\"}]}"}}]}`)
+		fmt.Fprint(w, `{"choices":[{"message":{"content":"{\"results\":[{\"caseId\":\"c0\",\"categoryCode\":\"food\",\"needsReview\":false,\"reasonCode\":\"merchant_food\"}]}"}}]}`)
 	}))
 	defer server.Close()
 	azure := NewAzure(server.URL, "test-key", "deployment", "gpt-oss-120b", time.Second)
@@ -28,10 +28,10 @@ func TestAzureStrictOutputAndSanitization(t *testing.T) {
 
 func TestAzureRejectsWrongSchemaAndExtraFields(t *testing.T) {
 	for _, content := range []string{
-		`{"results":[{"index":0,"categoryCode":"invented","needsReview":false,"reasonCode":"x"}]}`,
-		`{"results":[{"index":0,"categoryCode":"food","needsReview":false,"reasonCode":"x","amountMinor":1}]}`,
-		`{"results":[{"index":1,"categoryCode":"food","needsReview":false,"reasonCode":"x"}]}`,
-		`{"results":[{"index":0,"categoryCode":"food","needsReview":true,"reasonCode":"x"}]}`,
+		`{"results":[{"caseId":"c0","categoryCode":"invented","needsReview":false,"reasonCode":"x"}]}`,
+		`{"results":[{"caseId":"c0","categoryCode":"food","needsReview":false,"reasonCode":"x","amountMinor":1}]}`,
+		`{"results":[{"caseId":"c1","categoryCode":"food","needsReview":false,"reasonCode":"x"}]}`,
+		`{"results":[{"caseId":"c0","categoryCode":"food","needsReview":true,"reasonCode":"x"}]}`,
 	} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, `{"choices":[{"message":{"content":%q}}]}`, content)

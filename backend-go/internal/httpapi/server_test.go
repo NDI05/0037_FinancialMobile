@@ -28,6 +28,7 @@ type harness struct {
 	t      *testing.T
 	server *httptest.Server
 	store  *store.Store
+	api    *Server
 }
 
 func newHarness(t *testing.T) *harness {
@@ -64,7 +65,7 @@ func newHarnessWithConfig(t *testing.T, provider llm.Provider, extraEnv map[stri
 	api := New(s, cfg, issuer, testLogger(), provider)
 	server := httptest.NewServer(api.Handler())
 	t.Cleanup(func() { server.Close(); s.Close() })
-	return &harness{t: t, server: server, store: s}
+	return &harness{t: t, server: server, store: s, api: api}
 }
 
 func (h *harness) request(method, path, token string, body any) (int, map[string]any) {

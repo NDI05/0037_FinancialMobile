@@ -5,6 +5,7 @@ package categoryllm
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -21,6 +22,7 @@ var (
 	ErrDisabled      = errors.New("category_llm_disabled")
 	ErrInvalidInput  = errors.New("category_llm_invalid_input")
 	ErrInvalidOutput = errors.New("category_llm_invalid_output")
+	ErrTruncated     = errors.New("category_llm_truncated")
 )
 
 type Candidate struct {
@@ -31,7 +33,7 @@ type Candidate struct {
 }
 
 type Result struct {
-	Index        int    `json:"index"`
+	CaseID       string `json:"caseId"`
 	CategoryCode string `json:"categoryCode"`
 	NeedsReview  bool   `json:"needsReview"`
 	ReasonCode   string `json:"reasonCode"`
@@ -123,29 +125,23 @@ func allowedCode(code string) bool {
 }
 
 func ValidateResults(results []Result, candidates []Candidate) error {
-	if len(results) != len(candidates) {
-		return ErrInvalidOutput
-	}
+	if len(results) != len(candidates) { return ErrInvalidOutput }
 	seen := make([]bool, len(candidates))
 	for _, r := range results {
-		if r.Index < 0 || r.Index >= len(candidates) || seen[r.Index] {
-			return ErrInvalidOutput
-		}
-		seen[r.Index] = true
-		if !allowedCode(r.CategoryCode) {
-			return ErrInvalidOutput
-		}
-		if len(r.ReasonCode) > 40 || strings.ContainsAny(r.ReasonCode, "\r\n") {
-			return ErrInvalidOutput
-		}
-		if r.NeedsReview && r.CategoryCode != "uncategorized" {
-			return ErrInvalidOutput
-		}
+		idx := caseIDIndex(r.CaseID)
+		if idx < 0 || idx >= len(candidates) || seen[idx] { return ErrInvalidOutput }
+		seen[idx] = true
+		if !allowedCode(r.CategoryCode) { return ErrInvalidOutput }
+		if len(r.ReasonCode) > 40 || strings.ContainsAny(r.ReasonCode, "\r\n") { return ErrInvalidOutput }
+		if r.NeedsReview && r.CategoryCode != "uncategorized" { return ErrInvalidOutput }
 	}
-	for _, ok := range seen {
-		if !ok {
-			return ErrInvalidOutput
-		}
-	}
+	for _, ok := range seen { if !ok { return ErrInvalidOutput } }
 	return nil
+}
+
+func caseID(i int) string { return "c" + strconv.Itoa(i) }
+func caseIDIndex(id string) int {
+	if len(id) < 2 || id[0] != 'c' { return -1 }
+	n, err := strconv.Atoi(id[1:]); if err != nil { return -1 }
+	return n
 }

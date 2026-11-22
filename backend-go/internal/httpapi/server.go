@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pam/recap/backend-go/internal/auth"
+	"github.com/pam/recap/backend-go/internal/categoryllm"
 	"github.com/pam/recap/backend-go/internal/config"
 	"github.com/pam/recap/backend-go/internal/llm"
 	"github.com/pam/recap/backend-go/internal/store"
@@ -36,6 +37,7 @@ type Server struct {
 	Log      *slog.Logger
 	Now      func() time.Time
 	Provider llm.Provider
+	CategoryClassifier categoryllm.Classifier
 }
 
 func New(s *store.Store, cfg *config.Config, issuer *auth.Issuer, logger *slog.Logger,
@@ -75,6 +77,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /v1/import-jobs/{id}", s.authed(s.getImportJob))
 	mux.Handle("POST /v1/import-jobs/{id}/batches", s.authed(s.importBatch))
 	mux.Handle("PATCH /v1/import-jobs/{id}", s.authed(s.finalizeImportJob))
+	mux.Handle("POST /v1/category-jobs", s.authed(s.createCategoryJobs))
+	mux.Handle("GET /v1/category-jobs/{id}", s.authed(s.getCategoryJob))
 	mux.Handle("POST /v1/analyses", s.authed(s.createAnalysis))
 	mux.Handle("GET /v1/analyses/{monthID}", s.authed(s.getAnalysis))
 	mux.Handle("POST /v1/deletion-requests", s.authed(s.createDeletion))
@@ -88,7 +92,7 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		correlation := store.NewID("req")
 		w.Header().Set("X-Correlation-Id", correlation)
-		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 		defer cancel()
 		started := time.Now()
 		sw := &statusWriter{ResponseWriter: w}

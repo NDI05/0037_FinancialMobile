@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/pam/recap/backend-go/internal/auth"
+	"github.com/pam/recap/backend-go/internal/categoryllm"
 	"github.com/pam/recap/backend-go/internal/config"
 	"github.com/pam/recap/backend-go/internal/httpapi"
 	"github.com/pam/recap/backend-go/internal/llm"
@@ -63,12 +64,16 @@ func run() error {
 			cfg.LLM.MaxTokens, cfg.LLM.Timeout)
 	}
 	api := httpapi.New(storeLayer, cfg, issuer, logger, provider)
+	if cfg.CategoryLLM.Enabled {
+		api.CategoryClassifier = categoryllm.NewAzure(cfg.CategoryLLM.BaseURL, cfg.CategoryLLM.APIKey,
+			cfg.CategoryLLM.Deployment, cfg.CategoryLLM.Model, cfg.CategoryLLM.Timeout)
+	}
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Port),
 		Handler:           api.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      30 * time.Second,
+		WriteTimeout:      35 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
 
