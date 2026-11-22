@@ -31,3 +31,15 @@ No secret, URL, token, Gmail address, merchant, email body or raw credential is 
 - A link→logout→login A→restart / A→B→A lifecycle in the REAL-UAT APK.
 - Real Ollama analysis output/latency.
 - CR-003 category provenance/reclassification and S2–S4 remaining scope.
+
+## Gmail link failure diagnosis — 22 November 2026
+
+Owner's first Gmail link attempt returned “Periksa Koneksi Anda”. Backend was healthy;
+Android log showed `imap_validation_failed code=NETWORK`. The emulator had no DNS resolver
+(`net.dns1` empty), so `imap.gmail.com` could not resolve even though host TCP and the App
+Password were valid. The AVD was restarted with `-dns-server 8.8.8.8,1.1.1.1`.
+
+Verified after restart: emulator resolves/connects `imap.gmail.com:993`; private host IMAP
+login with the owner-provided App Password succeeded. The app is left on **Kotak masuk →
+Hubungkan Gmail** for the owner to submit the App Password in the UI. The main Google password
+is not accepted/required by PAM and is not stored.
