@@ -24,6 +24,8 @@ enum class LivinField {
 data class LivinFieldLabels(
     val amount: List<String> = listOf("nominal", "jumlah"),
     val eventTime: List<String> = listOf("tanggal", "waktu transaksi"),
+    /** Separate time cell used by the observed bill template: "Waktu Transaksi". */
+    val time: List<String> = listOf("waktu transaksi", "waktu", "jam transaksi", "jam"),
     val direction: List<String> = listOf("jenis transaksi"),
     val recipient: List<String> = listOf("merchant", "penerima", "nama merchant"),
     val acquirer: List<String> = listOf("acquirer", "penyelenggara"),

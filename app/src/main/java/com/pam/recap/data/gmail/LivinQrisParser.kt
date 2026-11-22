@@ -8,7 +8,9 @@ import com.pam.recap.domain.model.ParseStatus
 import com.pam.recap.domain.model.RedactionReason
 import com.pam.recap.domain.repository.LivinNotificationParser
 import com.pam.recap.domain.repository.RawMessage
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -97,6 +99,10 @@ class LivinQrisParser(
         val eventRaw = firstValue(fields, template.labels.eventTime)
             ?: return ParseResult.Unresolved(RedactionReason.MISSING_EVENT_TIME)
         val eventAt = parseEventTime(eventRaw)
+            ?: parseSeparateDateTime(
+                dateRaw = firstValue(fields, listOf("tanggal")),
+                timeRaw = firstValue(fields, template.labels.time),
+            )
             ?: return ParseResult.Unresolved(RedactionReason.MALFORMED_EVENT_TIME)
 
         if (LivinField.DIRECTION in template.requiredFields) {
@@ -151,6 +157,7 @@ class LivinQrisParser(
         val allowed: Set<String> = buildSet {
             addAll(labels.amount)
             addAll(labels.eventTime)
+            addAll(labels.time)
             addAll(labels.direction)
             addAll(labels.recipient)
             addAll(labels.acquirer)
@@ -272,6 +279,26 @@ class LivinQrisParser(
         return Money.ofMajor(major, cents)
     }
 
+    private fun parseSeparateDateTime(dateRaw: String?, timeRaw: String?): Instant? {
+        if (dateRaw.isNullOrBlank() || timeRaw.isNullOrBlank()) return null
+        val normalized = timeRaw.uppercase()
+        if (!normalized.contains("WIB")) return null
+        if (normalized.contains("WITA") || normalized.contains("WIT")) return null
+        val cleanedTime = normalized
+            .replace("WAKTU INDONESIA BARAT", "")
+            .replace("WIB", "")
+            .trim()
+        val date = DATE_FORMATS.firstNotNullOfOrNull { formatter ->
+            runCatching { LocalDate.parse(dateRaw.trim(), formatter) }.getOrNull()
+        } ?: return null
+        val time = TIME_FORMATS.firstNotNullOfOrNull { formatter ->
+            runCatching { LocalTime.parse(cleanedTime, formatter) }.getOrNull()
+        } ?: return null
+        return Instant.fromEpochMilliseconds(
+            LocalDateTime.of(date, time).atZone(jakarta).toInstant().toEpochMilli(),
+        )
+    }
+
     /**
      * Parses the observed date formats into an instant in Asia/Jakarta (BR-01). Returns null for
      * anything unrecognized so the row becomes `MALFORMED_EVENT_TIME`, never a guessed time.
@@ -310,6 +337,18 @@ class LivinQrisParser(
             listOf(Locale.forLanguageTag("id-ID"), Locale.ENGLISH).map { locale ->
                 DateTimeFormatter.ofPattern(pattern, locale)
             }
+        }
+
+        val DATE_PATTERNS: List<String> = listOf(
+            "dd MMM uuuu", "dd MMMM uuuu", "dd/MM/uuuu", "uuuu-MM-dd",
+        )
+        val DATE_FORMATS: List<DateTimeFormatter> = DATE_PATTERNS.flatMap { pattern ->
+            listOf(Locale.forLanguageTag("id-ID"), Locale.ENGLISH).map { locale ->
+                DateTimeFormatter.ofPattern(pattern, locale)
+            }
+        }
+        val TIME_FORMATS: List<DateTimeFormatter> = listOf("HH:mm:ss", "HH:mm").map {
+            DateTimeFormatter.ofPattern(it, Locale.ENGLISH)
         }
     }
 }

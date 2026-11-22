@@ -104,6 +104,32 @@ class LivinMimeImportTest {
         """.trimIndent(),
     )
 
+    private fun livinSplitDateTimeMime(): MimeMessage = mime(
+        """
+        Content-Type: text/html; charset=UTF-8
+
+        <html><body>
+        <p>Pembayaran Berhasil!</p>
+        <table>
+        <tr><td>Nominal Pembayaran</td><td>Rp175.000</td></tr>
+        <tr><td>Tanggal Transaksi</td><td>19 Nov 2026</td></tr>
+        <tr><td>Waktu Transaksi</td><td>09:15:20 WIB</td></tr>
+        <tr><td>Merchant</td><td>Indomaret</td></tr>
+        </table>
+        </body></html>
+        """.trimIndent(),
+    )
+
+    @Test
+    fun `separate date and time cells produce the Jakarta instant`() = runTest {
+        val raw = extract(livinSplitDateTimeMime())
+        assertTrue(raw.textParts.single().contains("Tanggal Transaksi"))
+        assertTrue(raw.textParts.single().contains("09:15:20 WIB"))
+        val result = parser.parse(raw)
+        assertTrue("parser should accept split date/time: $result", result is ParseResult.Parsed)
+        assertEquals(Instant.parse("2026-11-19T02:15:20Z"), (result as ParseResult.Parsed).eventAt)
+    }
+
     private fun extract(message: MimeMessage): RawMessage =
         message.extractIncoming("12345:42", session).raw
 
