@@ -57,7 +57,7 @@ class ServerFinanceRepositoryImpl @Inject constructor(
             note = draft.note,
         ),
     )) {
-        is Outcome.Success -> Outcome.Success(result.value.toDomain(ownerId))
+        is Outcome.Success -> wireMap { result.value.toDomain(ownerId) }
         is Outcome.Failure -> result
     }
 
@@ -69,35 +69,36 @@ class ServerFinanceRepositoryImpl @Inject constructor(
     ): Outcome<ServerTransactionPage> = when (val result = api.listTransactions(
         ownerId, month.id(), limit, cursor,
     )) {
-        is Outcome.Success -> Outcome.Success(
-            ServerTransactionPage(result.value.items.map { it.toDomain(ownerId) }, result.value.nextCursor),
-        )
+        is Outcome.Success -> wireMap {
+            ServerTransactionPage(result.value.items.map { it.toDomain(ownerId) }, result.value.nextCursor)
+        }
         is Outcome.Failure -> result
     }
 
     override suspend fun get(ownerId: String, transactionId: String): Outcome<Transaction> =
         when (val result = api.getTransaction(ownerId, transactionId)) {
-            is Outcome.Success -> Outcome.Success(result.value.toDomain(ownerId))
+            is Outcome.Success -> wireMap { result.value.toDomain(ownerId) }
             is Outcome.Failure -> result
         }
 
     override suspend fun summary(ownerId: String, month: JakartaMonth): Outcome<MonthlySummary> =
         when (val result = api.summary(ownerId, month.id())) {
-            is Outcome.Success -> Outcome.Success(result.value.toDomain(ownerId, month))
+            is Outcome.Success -> wireMap { result.value.toDomain(ownerId, month) }
             is Outcome.Failure -> result
         }
 
-    private fun RemoteTransaction.toDomain(ownerId: String): Transaction {
-        val event = runCatching { Instant.parse(eventAt) }
-            .getOrElse { Instant.fromEpochMilliseconds(0) }
-        val created = createdAt?.let { runCatching { Instant.parse(it) }.getOrNull() } ?: event
-        val updated = updatedAt?.let { runCatching { Instant.parse(it) }.getOrNull() } ?: created
+    private fun RemoteTransaction.toDomainUnchecked(ownerId: String): Transaction {
+        val event = Instant.parse(eventAt)
+        val created = createdAt?.let { Instant.parse(it) } ?: event
+        val updated = updatedAt?.let { Instant.parse(it) } ?: created
         val category = Category.fromCode(categoryCode) ?: Category.OTHER_EXPENSE
+        val origin = categoryOrigin?.let { CategoryOrigin.valueOf(it) } ?: CategoryOrigin.IMPORTED
+        val confidence = parserConfidence?.toFloat()
         return Transaction(
             id = id,
             ownerId = ownerId,
-            direction = if (direction == "CREDIT") Direction.CREDIT else Direction.DEBIT,
-            source = if (source == "EMAIL") TransactionSource.EMAIL else TransactionSource.MANUAL,
+            direction = Direction.valueOf(direction),
+            source = TransactionSource.valueOf(source),
             amount = Money(amountMinor),
             currency = currency,
             eventAt = event,
@@ -106,27 +107,58 @@ class ServerFinanceRepositoryImpl @Inject constructor(
             merchantLabel = merchantLabel,
             acquirer = null,
             status = ParseStatus.POSTED,
-            fingerprint = "",
-            parserVersion = "server-v1",
-            parserConfidence = 1f,
+            fingerprint = fingerprint.orEmpty(),
+            parserVersion = parserVersion.orEmpty(),
+            parserConfidence = confidence ?: 0f,
             category = category,
-            categoryOrigin = if (categoryCode.isBlank()) CategoryOrigin.IMPORTED else CategoryOrigin.USER,
-            categoryConfidence = null,
+            categoryOrigin = origin,
+            categoryConfidence = confidence,
             categoryUpdatedAt = null,
             isInternalTransfer = isInternalTransfer,
-            linkedRefundOf = null,
-            note = null,
+            linkedRefundOf = linkedRefundOf,
+            note = note,
             importJobId = null,
             revision = revision,
             createdAt = created,
             updatedAt = updated,
             serverCategoryId = categoryId,
+            serverCategoryLabel = null,
         )
     }
 
+    private fun RemoteTransaction.toDomain(ownerId: String): Transaction {
+        validateWire()
+        return toDomainUnchecked(ownerId)
+    }
+
+    private fun RemoteTransaction.validateWire() {
+        require(id.isNotBlank()) { "transaction id is missing" }
+        require(amountMinor > 0 && amountMinor <= 1_000_000_000_000_000) { "invalid amount" }
+        require(currency == "IDR") { "unsupported currency" }
+        require(revision >= 0) { "invalid revision" }
+        require(direction == "CREDIT" || direction == "DEBIT") { "invalid direction" }
+        require(source == "EMAIL" || source == "MANUAL") { "invalid source" }
+        Instant.parse(eventAt)
+        createdAt?.let { Instant.parse(it) }
+        updatedAt?.let { Instant.parse(it) }
+        require(parserConfidence == null || parserConfidence in 0.0..1.0) { "invalid confidence" }
+        require(categoryOrigin == null || categoryOrigin in setOf("IMPORTED", "RULE", "USER")) { "invalid category origin" }
+        require(categoryCode.isNotBlank() || source == "MANUAL") { "missing category" }
+    }
+
+    private inline fun <T> wireMap(block: () -> T): Outcome<T> = try {
+        Outcome.Success(block())
+    } catch (error: Exception) {
+        Outcome.Failure(AppError.Parsing("backend_invalid_response"))
+    }
+
     private fun RemoteSummary.toDomain(ownerId: String, month: JakartaMonth): MonthlySummary {
-        val coverage = runCatching { CoverageStatus.valueOf(coverage.uppercase()) }
-            .getOrElse { CoverageStatus.PARTIAL }
+        require(monthId == month.id()) { "summary month mismatch" }
+        require(inputRevision >= 0) { "invalid revision" }
+        require(transactionCount >= 0) { "invalid count" }
+        require(grossInflowMinor >= 0 && grossOutflowMinor >= 0 &&
+            classifiedIncomeMinor >= 0 && classifiedExpenseMinor >= 0) { "invalid summary amount" }
+        val coverage = CoverageStatus.valueOf(coverage.uppercase())
         return MonthlySummary(
             id = "server:${ownerId}:${month.id()}:$inputRevision",
             ownerId = ownerId,
@@ -137,10 +169,16 @@ class ServerFinanceRepositoryImpl @Inject constructor(
             netCashFlow = Money(netMinor),
             classifiedIncome = Money(classifiedIncomeMinor),
             classifiedExpense = Money(classifiedExpenseMinor),
-            categoryTotals = categoryTotals.mapNotNull { total ->
-                Category.fromCode(total.categoryCode)?.let {
-                    CategoryTotal(it, Money(total.amountMinor), total.count)
-                }
+            categoryTotals = categoryTotals.map { total ->
+                val mapped = Category.fromCode(total.categoryCode) ?: Category.OTHER_EXPENSE
+                CategoryTotal(
+                    category = mapped,
+                    amount = Money(total.amountMinor),
+                    transactionCount = total.count,
+                    serverCode = total.categoryCode,
+                    serverLabel = total.label,
+                    serverKind = mapped.kind.name,
+                )
             },
             uncategorizedCount = uncategorizedCount,
             manualEntryCount = manualEntryCount,

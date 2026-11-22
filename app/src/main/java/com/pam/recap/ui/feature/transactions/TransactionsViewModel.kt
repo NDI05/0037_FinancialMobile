@@ -8,6 +8,7 @@ import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionFilter
 import com.pam.recap.domain.repository.SessionRepository
+import com.pam.recap.domain.repository.FinanceRefreshBus
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.TransactionRepository
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
@@ -69,8 +71,17 @@ class TransactionsViewModel @Inject constructor(
         savedStateHandle.get<String>("categoryCode")?.let(Category::fromCode),
     )
     private val query = MutableStateFlow("")
+    private val refreshTick = MutableStateFlow(0L)
 
     init {
+        viewModelScope.launch {
+            FinanceRefreshBus.events.collect { event ->
+                val owner = sessions.current()?.ownerId
+                if (owner == event.ownerId && month.value?.id() == event.monthId) {
+                    refreshTick.update { it + 1 }
+                }
+            }
+        }
         val requestedMonth = savedStateHandle.get<String>("monthId")?.let(JakartaMonth::parse)
         viewModelScope.launch {
             val ownerId = sessions.current()?.ownerId
@@ -80,7 +91,9 @@ class TransactionsViewModel @Inject constructor(
 
     val state: StateFlow<TransactionsUiState> = combine(
         sessions.observe().filterNotNull(),
-        combine(month.filterNotNull(), selectedDay, category, query) { selectedMonth, day, cat, text ->
+        combine(
+            month.filterNotNull(), selectedDay, category, query, refreshTick,
+        ) { selectedMonth, day, cat, text, _ ->
             Filters(selectedMonth, day, cat, text)
         },
     ) { session, filters -> session.ownerId to filters }

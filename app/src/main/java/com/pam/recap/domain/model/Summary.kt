@@ -18,6 +18,10 @@ data class CategoryTotal(
     val category: Category,
     val amount: Money,
     val transactionCount: Int,
+    /** Server identity/label for custom categories that have no built-in enum. */
+    val serverCode: String? = null,
+    val serverLabel: String? = null,
+    val serverKind: String? = null,
 )
 
 /**

@@ -25,13 +25,15 @@ class ManualPendingActionStore @Inject constructor(
 
     private val prefs get() = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun save(ownerId: String, pending: Pending) {
+    fun save(ownerId: String, pending: Pending): Boolean {
         val encoded = listOf(
             pending.key, pending.identity, pending.amountText, pending.description,
             pending.dateIso, pending.direction, pending.categoryCode,
-        ).joinToString("\u001f")
-        val wrapped = runCatching { wrappedSecrets.wrap(encoded.encodeToByteArray()) }.getOrNull() ?: return
-        prefs.edit(commit = true) { putString(key(ownerId), wrapped) }
+        ).joinToString("\u001f") { java.util.Base64.getUrlEncoder().encodeToString(it.encodeToByteArray()) }
+        val wrapped = runCatching { wrappedSecrets.wrap(encoded.encodeToByteArray()) }.getOrNull()
+            ?: return false
+        val editor = prefs.edit().putString(key(ownerId), wrapped)
+        return editor.commit()
     }
 
     fun read(ownerId: String): Pending? {
@@ -39,7 +41,10 @@ class ManualPendingActionStore @Inject constructor(
         val decoded = runCatching { wrappedSecrets.unwrap(wrapped).decodeToString() }.getOrNull() ?: return null
         val parts = decoded.split("\u001f")
         if (parts.size != 7) return null
-        return Pending(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6])
+        return runCatching {
+            val values = parts.map { String(java.util.Base64.getUrlDecoder().decode(it)) }
+            Pending(values[0], values[1], values[2], values[3], values[4], values[5], values[6])
+        }.getOrNull()
     }
 
     fun clear(ownerId: String) {

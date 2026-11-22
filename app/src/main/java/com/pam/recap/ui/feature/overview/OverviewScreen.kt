@@ -447,8 +447,9 @@ private fun CompositionCard(summary: MonthlySummary) {
                 progress = share,
                 label = stringResource(
                     R.string.overview_composition_label,
-                    top?.let { stringResource(categoryLabelRes(it.category)) }
-                        ?: stringResource(R.string.category_uncategorized),
+                    top?.let { total ->
+                        total.serverLabel ?: stringResource(categoryLabelRes(total.category))
+                    } ?: stringResource(R.string.category_uncategorized),
                     sharePercentText(share),
                 ),
                 size = 112.dp,
@@ -579,7 +580,7 @@ private fun CategoryRow(total: CategoryTotal, share: Float, onClick: () -> Unit)
         CategoryGlyph(category = total.category, size = 36.dp)
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(categoryLabelRes(total.category)),
+                text = total.serverLabel ?: stringResource(categoryLabelRes(total.category)),
                 style = TitleL,
                 color = OnInk,
                 maxLines = 1,

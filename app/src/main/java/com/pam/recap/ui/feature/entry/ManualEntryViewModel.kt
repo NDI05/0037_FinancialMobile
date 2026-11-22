@@ -13,6 +13,7 @@ import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.data.security.ManualPendingActionStore
+import com.pam.recap.domain.repository.FinanceRefreshBus
 import com.pam.recap.domain.usecase.AddManualEntryUseCase
 import com.pam.recap.ui.util.MoneyInput
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -131,8 +132,8 @@ class ManualEntryViewModel @Inject constructor(
             val key = if (existing?.identity == identity) {
                 existing.key
             } else {
-                java.util.UUID.randomUUID().toString().also { fresh ->
-                    pendingActions?.save(
+                val fresh = java.util.UUID.randomUUID().toString()
+                if (pendingActions != null && !pendingActions.save(
                         ownerId,
                         ManualPendingActionStore.Pending(
                             key = fresh, identity = identity, amountText = current.amountText,
@@ -140,7 +141,13 @@ class ManualEntryViewModel @Inject constructor(
                             direction = current.direction.name, categoryCode = current.category.code,
                         ),
                     )
+                ) {
+                    _state.update {
+                        it.copy(isSaving = false, error = AppError.Storage("pending_action_not_saved"))
+                    }
+                    return@launch
                 }
+                fresh
             }
             when (
                 val result = addManualEntry(
@@ -156,6 +163,7 @@ class ManualEntryViewModel @Inject constructor(
                 is Outcome.Failure -> _state.update { it.copy(isSaving = false, error = result.error) }
                 is Outcome.Success -> {
                     pendingActions?.clear(ownerId)
+                    FinanceRefreshBus.notify(ownerId, JakartaMonth.of(eventAt).id())
                     _state.update { it.copy(isSaving = false, saved = true) }
                 }
             }

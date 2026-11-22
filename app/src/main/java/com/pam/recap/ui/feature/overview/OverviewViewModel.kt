@@ -11,6 +11,7 @@ import com.pam.recap.domain.model.MonthlySummary
 import com.pam.recap.domain.model.SummaryComparison
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.repository.GmailConnectionRepository
+import com.pam.recap.domain.repository.FinanceRefreshBus
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.repository.TransactionRepository
@@ -63,8 +64,17 @@ class OverviewViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val month = MutableStateFlow<JakartaMonth?>(null)
+    private val refreshTick = MutableStateFlow(0L)
 
     init {
+        viewModelScope.launch {
+            FinanceRefreshBus.events.collect { event ->
+                val owner = sessions.current()?.ownerId
+                if (owner == event.ownerId && month.value?.id() == event.monthId) {
+                    refreshTick.update { it + 1 }
+                }
+            }
+        }
         viewModelScope.launch {
             val ownerId = sessions.current()?.ownerId
             if (ownerId != null) {
@@ -76,7 +86,8 @@ class OverviewViewModel @Inject constructor(
     val state: StateFlow<OverviewUiState> = combine(
         sessions.observe().filterNotNull(),
         month.filterNotNull(),
-    ) { session, selectedMonth -> session.ownerId to selectedMonth }
+        refreshTick,
+    ) { session, selectedMonth, _ -> session.ownerId to selectedMonth }
         .flatMapLatest { (ownerId, selectedMonth) ->
             if (server?.isEnabled == true) {
                 combine(
@@ -96,18 +107,21 @@ class OverviewViewModel @Inject constructor(
                         emit(
                             OverviewUiState(
                                 isLoading = false, month = selectedMonth, summary = summary,
-                                comparison = SummaryComparison(
-                                    summary = summary,
-                                    previousMonth = prior,
-                                    incomeChange = PercentChange.of(
-                                        summary.classifiedIncome, prior?.classifiedIncome,
-                                    ),
-                                    expenseChange = PercentChange.of(
-                                        summary.classifiedExpense, prior?.classifiedExpense,
-                                    ),
-                                    netChange = PercentChange.of(summary.netCashFlow, prior?.netCashFlow),
-                                ),
+                                comparison = prior?.let {
+                                    SummaryComparison(
+                                        summary = summary,
+                                        previousMonth = it,
+                                        incomeChange = PercentChange.of(
+                                            summary.classifiedIncome, it.classifiedIncome,
+                                        ),
+                                        expenseChange = PercentChange.of(
+                                            summary.classifiedExpense, it.classifiedExpense,
+                                        ),
+                                        netChange = PercentChange.of(summary.netCashFlow, it.netCashFlow),
+                                    )
+                                },
                                 recent = recent,
+                                error = if (rows is Outcome.Failure) rows.error else null,
                             ),
                         )
                     },

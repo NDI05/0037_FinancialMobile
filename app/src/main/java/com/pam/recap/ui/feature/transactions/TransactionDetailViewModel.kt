@@ -75,13 +75,19 @@ class TransactionDetailViewModel @Inject constructor(
     ) { session, _, currentAction -> session.ownerId to currentAction }
         .flatMapLatest { (ownerId, currentAction) ->
             flow {
+                var loadError: AppError? = null
                 val transaction = if (server?.isEnabled == true) {
                     when (val result = server.get(ownerId, transactionId)) {
                         is Outcome.Success -> result.value
-                        is Outcome.Failure -> null
+                        is Outcome.Failure -> {
+                            loadError = result.error
+                            null
+                        }
                     }
                 } else {
-                    transactions.get(ownerId, transactionId)
+                    transactions.get(ownerId, transactionId).also {
+                        if (it == null) loadError = AppError.NotFound("transaction_$transactionId")
+                    }
                 }
                 val candidates = if (transaction != null && transaction.direction == com.pam.recap.domain.model.Direction.CREDIT) {
                     if (server?.isEnabled == true) {
@@ -102,7 +108,7 @@ class TransactionDetailViewModel @Inject constructor(
                         refundCandidates = candidates,
                         noteDraft = transaction?.note.orEmpty(),
                         isBusy = currentAction.isBusy,
-                        error = currentAction.error,
+                        error = currentAction.error ?: loadError,
                         savedAt = currentAction.savedAt,
                     ),
                 )

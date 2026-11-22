@@ -93,6 +93,38 @@ class ServerFinanceRepositoryImplTest {
         assertTrue(req.body.readUtf8().contains("\"categoryId\":\"cat_food\""))
     }
 
+    @Test
+    fun `custom category total and provenance are preserved`() = runTest {
+        server.enqueue(json(SUMMARY.replace("\"food\"", "\"custom_coffee\"").replace("\"Makan\"", "\"Kopi khusus\"")))
+        server.enqueue(json(TRANSACTION.replace("\"source\":\"MANUAL\"", "\"source\":\"EMAIL\"")
+            .replace("\"categoryOrigin\":\"USER\"", "\"categoryOrigin\":\"IMPORTED\"")
+            .dropLast(1) + ",\"parserVersion\":\"livin-bill/v2\",\"parserConfidence\":0.62,"
+            + "\"note\":\"Synthetic note\",\"linkedRefundOf\":\"tx_original\"}"))
+        val summary = (repo.summary("u_1", requireNotNull(JakartaMonth.parse("2026-11"))) as Outcome.Success).value
+        assertEquals(1, summary.categoryTotals.size)
+        assertEquals("custom_coffee", summary.categoryTotals.single().serverCode)
+        assertEquals("Kopi khusus", summary.categoryTotals.single().serverLabel)
+        val tx = (repo.get("u_1", "tx_1") as Outcome.Success).value
+        assertEquals("livin-bill/v2", tx.parserVersion)
+        assertEquals(0.62f, tx.parserConfidence)
+        assertEquals(com.pam.recap.domain.model.CategoryOrigin.IMPORTED, tx.categoryOrigin)
+        assertEquals("Synthetic note", tx.note)
+        assertEquals("tx_original", tx.linkedRefundOf)
+    }
+
+    @Test
+    fun `invalid wire values are protocol failures, not fabricated transactions`() = runTest {
+        for (body in listOf(
+            TRANSACTION.replace("2026-11-19T04:10:00Z", "not-a-time"),
+            TRANSACTION.replace("\"direction\":\"DEBIT\"", "\"direction\":\"UNKNOWN\""),
+            TRANSACTION.replace("\"source\":\"MANUAL\"", "\"source\":\"UNKNOWN\""),
+            TRANSACTION.replace("17500000", "0"),
+        )) {
+            server.enqueue(json(body))
+            assertTrue(repo.get("u_1", "tx_1") is Outcome.Failure)
+        }
+    }
+
     private fun json(body: String, code: Int = 200) = MockResponse()
         .setResponseCode(code)
         .setHeader("content-type", "application/json")
