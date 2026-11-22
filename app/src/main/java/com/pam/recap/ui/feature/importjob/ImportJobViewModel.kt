@@ -36,8 +36,9 @@ data class ImportJobUiState(
     val skippedByReason: List<Pair<RedactionReason, Int>> = emptyList(),
     val isRunning: Boolean = false,
     val error: AppError? = null,
+    val uploadPending: Boolean = false,
 ) {
-    val canRetry: Boolean get() = job?.isRetryable == true
+    val canRetry: Boolean get() = uploadPending || job?.isRetryable == true
 
     val needsReconnect: Boolean get() = job?.state == ImportState.PERMISSION_REQUIRED
 }
@@ -64,6 +65,7 @@ class ImportJobViewModel @Inject constructor(
     private val month = MutableStateFlow<JakartaMonth?>(null)
     private val action = MutableStateFlow(false)
     private val error = MutableStateFlow<AppError?>(null)
+    private val uploadPending = MutableStateFlow(false)
     private val requestedMonth = savedStateHandle.get<String>("monthId")?.let(JakartaMonth::parse)
 
     init {
@@ -99,7 +101,8 @@ class ImportJobViewModel @Inject constructor(
                 },
                 action,
                 error,
-            ) { (job, counts), running, errorState ->
+                uploadPending,
+            ) { (job, counts), running, errorState, pending ->
                 ImportJobUiState(
                     isLoading = false,
                     month = selectedMonth,
@@ -107,6 +110,7 @@ class ImportJobViewModel @Inject constructor(
                     skippedByReason = counts,
                     isRunning = running,
                     error = errorState,
+                    uploadPending = pending,
                 )
             }
         }
@@ -118,8 +122,20 @@ class ImportJobViewModel @Inject constructor(
             val selectedMonth = month.value ?: return@launch
             action.value = true
             error.value = null
-            val result = retryImport(ownerId, selectedMonth)
-            error.value = (result as? Outcome.Failure)?.error
+            if (uploadPending.value) {
+                val job = imports.latestForMonth(ownerId, selectedMonth)
+                if (job == null) {
+                    uploadPending.value = false
+                    error.value = AppError.NotFound("import_job")
+                } else {
+                    val upload = serverUploader?.invoke(ownerId, job)
+                    error.value = (upload as? Outcome.Failure)?.error
+                    uploadPending.value = upload is Outcome.Failure
+                }
+            } else {
+                val result = retryImport(ownerId, selectedMonth)
+                error.value = (result as? Outcome.Failure)?.error
+            }
             action.value = false
         }
     }
@@ -135,6 +151,7 @@ class ImportJobViewModel @Inject constructor(
                 else -> null
             }
         }
+        uploadPending.value = result is Outcome.Success && error.value != null
         action.value = false
     }
 }

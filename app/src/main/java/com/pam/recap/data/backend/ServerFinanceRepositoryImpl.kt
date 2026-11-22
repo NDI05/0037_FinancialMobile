@@ -144,7 +144,7 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         jobId: String,
         state: String,
         errorCode: String?,
-    ): Outcome<ServerImportJob> = when (val result = api.finalizeImportJob(ownerId, jobId, state)) {
+    ): Outcome<ServerImportJob> = when (val result = api.finalizeImportJob(ownerId, jobId, state, errorCode)) {
         is Outcome.Success -> Outcome.Success(result.value.toDomain())
         is Outcome.Failure -> result
     }

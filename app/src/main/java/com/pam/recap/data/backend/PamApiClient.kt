@@ -110,9 +110,11 @@ class PamApiClient @Inject constructor(
             RemoteImportCounts.serializer())
     }
 
-    suspend fun finalizeImportJob(ownerId: String, jobId: String, state: String):
+    suspend fun finalizeImportJob(ownerId: String, jobId: String, state: String, errorCode: String? = null):
         Outcome<RemoteImportJob> {
-        val body = json.encodeToString(RemoteImportFinalize.serializer(), RemoteImportFinalize(state))
+        val body = json.encodeToString(
+            RemoteImportFinalize.serializer(), RemoteImportFinalize(state, errorCode),
+        )
         return send(ownerId, "PATCH", "/v1/import-jobs/$jobId", body, null, RemoteImportJob.serializer())
     }
 
