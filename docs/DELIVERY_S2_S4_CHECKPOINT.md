@@ -161,3 +161,12 @@ pada log nyata sudah dilakukan PM; keduanya belum membuktikan acceptance impor.
 - Upload recovery journal/retry code added; not yet exercised end-to-end after a true
   server upload failure/restart. **PARTIAL**.
 - Fresh Android: **251 PASS**, assemble/lint 0 error/71 warning. Go fresh tests PASS.
+
+### Correction — reimport evidence
+
+The earlier `imported=1/duplicates=0` observation was a **replay of the same
+batch key** on a finished job, not a reimport. A true reimport uses a new job
+and returns `imported=0, duplicates=1`, while the DB remains 2 transactions.
+The batch replay result is correct idempotency behavior; the counts invariant is
+PASS for this synthetic API path. Upload recovery after a true Android upload
+failure/restart is still not exercised.
