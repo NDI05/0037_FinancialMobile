@@ -88,6 +88,34 @@ class PamApiClient @Inject constructor(
     suspend fun latestAnalysis(ownerId: String, monthId: String): Outcome<RemoteAnalysis> =
         get(ownerId, "/v1/analyses/$monthId", RemoteAnalysis.serializer())
 
+    suspend fun createImportJob(
+        ownerId: String,
+        monthId: String,
+        templateVersion: String,
+    ): Outcome<RemoteImportJob> {
+        val body = json.encodeToString(
+            RemoteImportJobCreate.serializer(),
+            RemoteImportJobCreate(monthId, templateVersion),
+        )
+        return send(ownerId, "POST", "/v1/import-jobs", body, null, RemoteImportJob.serializer())
+    }
+
+    suspend fun importBatch(
+        ownerId: String,
+        jobId: String,
+        body: RemoteImportBatch,
+    ): Outcome<RemoteImportCounts> {
+        val encoded = json.encodeToString(RemoteImportBatch.serializer(), body)
+        return send(ownerId, "POST", "/v1/import-jobs/$jobId/batches", encoded, null,
+            RemoteImportCounts.serializer())
+    }
+
+    suspend fun finalizeImportJob(ownerId: String, jobId: String, state: String):
+        Outcome<RemoteImportJob> {
+        val body = json.encodeToString(RemoteImportFinalize.serializer(), RemoteImportFinalize(state))
+        return send(ownerId, "PATCH", "/v1/import-jobs/$jobId", body, null, RemoteImportJob.serializer())
+    }
+
     suspend fun requestDeletion(
         ownerId: String,
         password: String,
@@ -340,6 +368,60 @@ data class RemoteSuggestion(
     val metricKeys: List<String> = emptyList(),
     val categoryCode: String? = null,
     val suggestedAmountMinor: Long? = null,
+)
+
+@Serializable
+data class RemoteImportJobCreate(val monthId: String, val templateVersion: String)
+
+@Serializable
+data class RemoteImportCandidate(
+    val fingerprint: String,
+    val status: String,
+    val reason: String? = null,
+    val direction: String? = null,
+    val amountMinor: Long? = null,
+    val eventAt: String? = null,
+    val categoryId: String? = null,
+    val parserVersion: String? = null,
+    val confidence: Double? = null,
+    val description: String? = null,
+    val merchantLabel: String? = null,
+)
+
+@Serializable
+data class RemoteImportBatch(
+    val batchKey: String,
+    val pageOrdinal: Int,
+    val candidates: List<RemoteImportCandidate>,
+)
+
+@Serializable
+data class RemoteImportFinalize(val state: String, val errorCode: String? = null)
+
+@Serializable
+data class RemoteImportJob(
+    val id: String,
+    val monthId: String,
+    val state: String,
+    val matched: Int = 0,
+    val imported: Int = 0,
+    val duplicates: Int = 0,
+    val skipped: Int = 0,
+    val unresolved: Int = 0,
+    val errorCode: String? = null,
+)
+
+@Serializable
+data class RemoteImportCounts(
+    val batchKey: String = "",
+    val monthId: String = "",
+    val inputRevision: Int = 0,
+    val matched: Int = 0,
+    val imported: Int = 0,
+    val duplicates: Int = 0,
+    val skipped: Int = 0,
+    val unresolved: Int = 0,
+    val jobState: String = "",
 )
 
 @Serializable

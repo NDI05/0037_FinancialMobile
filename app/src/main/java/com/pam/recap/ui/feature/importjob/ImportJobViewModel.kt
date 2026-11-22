@@ -14,6 +14,7 @@ import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.ImportMonthUseCase
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
 import com.pam.recap.domain.usecase.RetryImportUseCase
+import com.pam.recap.domain.usecase.ServerImportUploader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,6 +58,7 @@ class ImportJobViewModel @Inject constructor(
     private val importMonth: ImportMonthUseCase,
     private val retryImport: RetryImportUseCase,
     private val resolveInitialMonth: ResolveInitialMonthUseCase,
+    private val serverUploader: ServerImportUploader? = null,
 ) : ViewModel() {
 
     private val month = MutableStateFlow<JakartaMonth?>(null)
@@ -126,7 +128,13 @@ class ImportJobViewModel @Inject constructor(
         action.value = true
         error.value = null
         val result = importMonth(ownerId, selectedMonth)
-        error.value = (result as? Outcome.Failure)?.error
+        error.value = when (result) {
+            is Outcome.Failure -> result.error
+            is Outcome.Success -> when (val upload = serverUploader?.invoke(ownerId, result.value)) {
+                is Outcome.Failure -> upload.error
+                else -> null
+            }
+        }
         action.value = false
     }
 }

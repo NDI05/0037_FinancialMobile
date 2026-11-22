@@ -15,6 +15,9 @@ import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.ManualTransactionDraft
 import com.pam.recap.domain.repository.ServerCategory
+import com.pam.recap.domain.repository.ServerImportCandidate
+import com.pam.recap.domain.repository.ServerImportCounts
+import com.pam.recap.domain.repository.ServerImportJob
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.ServerTransactionPage
 import kotlinx.serialization.Serializable
@@ -86,6 +89,69 @@ class ServerFinanceRepositoryImpl @Inject constructor(
             is Outcome.Success -> wireMap { result.value.toDomain(ownerId, month) }
             is Outcome.Failure -> result
         }
+
+    override suspend fun createImportJob(
+        ownerId: String,
+        month: JakartaMonth,
+        templateVersion: String,
+    ): Outcome<ServerImportJob> = when (val result = api.createImportJob(ownerId, month.id(), templateVersion)) {
+        is Outcome.Success -> Outcome.Success(result.value.toDomain())
+        is Outcome.Failure -> result
+    }
+
+    override suspend fun importBatch(
+        ownerId: String,
+        jobId: String,
+        batchKey: String,
+        pageOrdinal: Int,
+        candidates: List<ServerImportCandidate>,
+    ): Outcome<ServerImportCounts> {
+        val body = RemoteImportBatch(
+            batchKey = batchKey,
+            pageOrdinal = pageOrdinal,
+            candidates = candidates.map { candidate ->
+                RemoteImportCandidate(
+                    fingerprint = candidate.fingerprint,
+                    status = candidate.status,
+                    reason = candidate.reason,
+                    direction = candidate.direction,
+                    amountMinor = candidate.amountMinor,
+                    eventAt = candidate.eventAtEpochMilliseconds?.let {
+                        Instant.fromEpochMilliseconds(it).toString()
+                    },
+                    categoryId = candidate.categoryId,
+                    parserVersion = candidate.parserVersion,
+                    confidence = candidate.confidence,
+                    description = candidate.description,
+                    merchantLabel = candidate.merchantLabel,
+                )
+            },
+        )
+        return when (val result = api.importBatch(ownerId, jobId, body)) {
+            is Outcome.Success -> Outcome.Success(
+                ServerImportCounts(
+                    result.value.matched, result.value.imported, result.value.duplicates,
+                    result.value.skipped, result.value.unresolved,
+                    result.value.inputRevision, result.value.jobState,
+                ),
+            )
+            is Outcome.Failure -> result
+        }
+    }
+
+    override suspend fun finalizeImportJob(
+        ownerId: String,
+        jobId: String,
+        state: String,
+        errorCode: String?,
+    ): Outcome<ServerImportJob> = when (val result = api.finalizeImportJob(ownerId, jobId, state)) {
+        is Outcome.Success -> Outcome.Success(result.value.toDomain())
+        is Outcome.Failure -> result
+    }
+
+    private fun RemoteImportJob.toDomain() = ServerImportJob(
+        id, monthId, state, matched, imported, duplicates, skipped, unresolved,
+    )
 
     private fun RemoteTransaction.toDomainUnchecked(ownerId: String): Transaction {
         val event = Instant.parse(eventAt)
