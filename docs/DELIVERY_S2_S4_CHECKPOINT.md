@@ -244,3 +244,22 @@ failure/restart is still not exercised.
   categoryConfidence and has no reclassification endpoint, so old-row/USER-override acceptance is
   **NOT DONE**.
 - Fresh Android: **258 PASS**, assemble/lint 0 error/71 warning.
+
+## Azure classifier slice — 22 November 2026
+
+- **Typed boundary PASS unit:** separate `categoryllm` package sanitizes merchant
+  (max 120 chars, rejects email/URL/control/account-like digits), allows only verified direction,
+  method and built-in category codes, batches max 5, strict schema output and semantic
+  compatibility. Injection/unknown/duplicate/invalid-output tests PASS.
+- **Config fail-closed PASS unit:** enabling requires Azure endpoint/key/deployment and verified
+  prompt/completion prices; daily/monthly/attempt caps are parsed but **not enforced**.
+- **Consent PASS unit/UI:** independent `AI_CATEGORIZATION` purpose, notice v2 explicitly names
+  Microsoft Azure/GlobalStandard and its non-Indonesia/non-zero-retention limits; untouched means
+  DECLINED. Consent history supports the third purpose.
+- **Cloud smoke FAIL on this fresh run:** official `classification_smoke.py` got an HTTP 200
+  response whose content failed `missing_or_duplicate_case`; the historical PM smoke PASS is not
+  reused. The Go adapter against Azure returned no usable result in the subsequent synthetic probe
+  (network EOF/invalid output). No runtime endpoint/job/apply, budget reservation or Android
+  fixture→Azure→DB→UI path exists yet. `CATEGORY_LLM_ENABLED` remains false; no cloud data was sent.
+- Fresh Go tests for changed packages PASS; Android full suite/lint was run before this Azure
+  backend slice; no Android runtime import was re-run after it.
