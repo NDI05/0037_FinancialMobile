@@ -548,3 +548,19 @@ DDL dan acceptance lokal ada di [`10_MIGRASI_PEDOMAN.md`](10_MIGRASI_PEDOMAN.md)
 - Retensi: data aktif dihapus pada deletion request; backup kedaluwarsa ≤30 hari; file lampiran
   lokal dihapus klien dan tidak ada di backup server. PITR Free 24 jam adalah bantuan, bukan
   pengganti export harian.
+
+## Category classification jobs (CR-004)
+
+- `POST /v1/category-jobs` body `{"transactionIds":["…"]}`; max 5 per request.
+- Requires server-confirmed `AI_CATEGORIZATION=GRANTED`; owner comes from the session.
+- Considers only rows that are not USER-corrected and are uncategorized; returns durable job rows
+  with `state` `PENDING|RUNNING|CLASSIFIED|NEEDS_REVIEW|FAILED|CANCELLED` plus reason/error code.
+- Uses owner-scoped cache keyed by hashed merchant/direction/method/taxonomy/model/prompt; cache
+  hits apply without a provider call. Unknown/unsafe/ambiguous results are NEEDS_REVIEW and never
+  invent a category. Apply is revision-checked and refuses USER overrides.
+- `GET /v1/category-jobs/{id}` returns one owner-scoped job.
+- Output identifiers are stable `caseId`, not list indexes; model output is strict-schema validated.
+- Budget gate: owner 20/day, installation 100/day, global USD0.10/day, USD2/month, 5 merchants,
+  1024 input/512 completion tokens, one retry/20s target. Current implementation reserves
+  worst-case cost and records attempts; it does not yet implement retry/lease recovery or actual
+  token reconciliation.
