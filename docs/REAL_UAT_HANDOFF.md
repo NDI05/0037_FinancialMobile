@@ -43,3 +43,22 @@ Verified after restart: emulator resolves/connects `imap.gmail.com:993`; private
 login with the owner-provided App Password succeeded. The app is left on **Kotak masuk →
 Hubungkan Gmail** for the owner to submit the App Password in the UI. The main Google password
 is not accepted/required by PAM and is not stored.
+
+## REAL-UAT import/lifecycle evidence — 22 November 2026
+
+- Owner linked Gmail from the UI; connection card showed `andhikap877@gmail.com` / Terhubung.
+  Credential/password are not recorded here.
+- Import run: matched 83, locally saved 47, skipped 36 (`malformed event time`), complete.
+  The Android uploader then called Go: `POST /v1/import-jobs` 201, categories 200,
+  `POST /v1/import-jobs/{id}/batches` 200, `PATCH /v1/import-jobs/{id}` 200.
+- Go readback: 47 transactions in November 2026; Overview showed **Rp2.702.584**, coverage
+  **Lengkap**; Transactions showed **47 transaksi** without restarting.
+- Logout → login same PAM owner restored Gmail **Terhubung** with no App Password entry.
+  Force-stop/restart also restored Gmail **Terhubung** and the existing summary.
+- Remaining defect: 36 matched but skipped emails still report malformed event time; parser
+  coverage for those Livin templates is not PASS. The 47 accepted rows were bill-payment
+  templates and read back as `uncategorized`; no real FOOD merchant row was observed in this
+  run, so real category FOOD acceptance remains NOT PROVEN. Classifier synthetic tests remain
+  separate.
+- This is REAL-UAT evidence for the accepted rows, not a claim that all Livin templates parse
+  or that AI analysis ran.
