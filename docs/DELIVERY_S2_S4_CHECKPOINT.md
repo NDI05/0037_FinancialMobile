@@ -180,3 +180,19 @@ and returns `imported=0, duplicates=1`, while the DB remains 2 transactions.
 The batch replay result is correct idempotency behavior; the counts invariant is
 PASS for this synthetic API path. Upload recovery after a true Android upload
 failure/restart is still not exercised.
+
+## CR-003 resume — Gmail persistence and merchant categories
+
+- **Owner-scoped Gmail vault PARTIAL/PASS unit:** v2 keys are `ownerId`-scoped; legacy global v1
+  is ignored. Ordinary sign-out now closes transport, marks connection DISCONNECTED, and preserves
+  credential/metadata; explicit disconnect/withdrawal/deletion clears only that owner. A/B isolation
+  and logout-preserves-credential tests pass. Emulator A link→logout→login A→restart and A→B→A are
+  **NOT RUN**; connection auto-revalidation after login is not yet implemented.
+- **Merchant classifier PASS unit:** Unicode/case/punctuation/whitespace normalization with whole
+  token/phrase matching; `BAKSO UJI`, `MIE AYAM UJI`, `COFFEE UJI`, `KOPI UJI` → FOOD;
+  `TOKO KOSMETIK UJI`, `CHAIR STORE UJI`, `KOPIAH UJI` → UNCATEGORIZED. Existing transfer/other
+  rules preserve order. No real merchant data used.
+- **Category Go round-trip PARTIAL:** uploader still sends categoryId but not separate category
+  confidence/rule version/reason; Go hardcodes IMPORTED origin and has no reclassification endpoint.
+  Old UNCATEGORIZED rows and USER overrides are **not yet proven**. This remains open.
+- Fresh Android: **257 PASS**, assemble/lint 0 error/71 warning. Go not changed.

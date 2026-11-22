@@ -1,7 +1,7 @@
 # CR-003 — tautan Gmail bertahan saat logout dan kategorisasi merchant
 
-Tanggal keputusan: 22 November 2026. Status: **arah perilaku disetujui langsung pemilik;
-implementasi dan acceptance belum selesai**. Tidak menyatakan sign-off seluruh paket SRS v0.4.
+Tanggal keputusan: 22 November 2026. Status: **implementasi owner-scoped dan classifier sudah ada; acceptance emulator/round-trip
+Go belum selesai**. Tidak menyatakan sign-off seluruh paket SRS v0.4.
 
 Pemilik melaporkan dua masalah pada APK: login ulang PAM meminta penautan Gmail lagi, dan
 pengeluaran Livin belum mempunyai kategori yang sesuai. Pemilik menyatakan logout seharusnya
