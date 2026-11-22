@@ -197,7 +197,7 @@ erDiagram
 | FK lintas owner, fingerprint, amount, JSON | PASS | `schemaV04.test.ts` (11 tes) |
 | Soft delete, reassign kategori, admin terakhir, rotasi refresh, index pagination, account key | PASS | `schemaV04.test.ts` |
 | Backend Node (referensi) | PASS | `npm run typecheck`, `npm run build`, **124 tes lulus, 0 gagal** |
-| Backend Go (target) | PASS lokal | **40 tes**, `go test -race`, `go vet`, `go build ./cmd/api` |
+| Backend Go (target) | PASS lokal | **41 tes**, `go test -race`, `go vet`, `go build ./cmd/api` |
 | Go: migrasi 1–7, upgrade, trigger, scrypt/AES interop | PASS | `backend-go` 41 tes; `go test -race`, `go vet`, `go build` |
 | Turso Cloud aktual + engine libSQL | **NOT RUN** | belum ada kredensial database uji; jangan memakai database existing |
 | Backup/PITR/restore cloud | **NOT RUN** | menunggu kredensial/otorisasi |
