@@ -402,11 +402,18 @@ regresi yang mengunci perilakunya.
 - Regresi unit: `ServerFinanceRepositoryImplTest` (PATCH mengirim `categoryId`+`revision`,
   409 → `AppError.Conflict`), `TransactionReviewTest` (LLM = saran, bukan keyakinan rendah).
 
-### Gate yang dijalankan ulang
-- Go: `test -race ./...` (semua paket), `go vet ./...`, `go build ./...` — lihat hasil di
-  laporan akhir.
-- Android: `testDebugUnitTest`, `assembleDebug`, `lintDebug` (0 error; 4 terjemahan `en`
-  yang hilang ditambahkan).
+### Gate yang dijalankan ulang (23 November 2026)
+- Go: `test -race -count=1 ./...` → auth, categoryllm, config, crypto, finance, httpapi,
+  store semua `ok`, exit 0, nol `DATA RACE`; `go vet ./...` bersih; `go build ./...` OK;
+  `test ./internal/httpapi ./internal/store` PASS.
+- Android: `testDebugUnitTest` PASS, `assembleDebug` OK, `lintDebug` BUILD SUCCESSFUL
+  (4 error `MissingTranslation` untuk string baru diperbaiki dengan terjemahan `values-en`).
+- **Migrasi 012 di DB UAT nyata:** binary baru dijalankan ulang di :18090 terhadap Turso
+  UAT; server start bersih (kolom `lease_token`, `mapping_version`, `lease_until_unix`
+  terpasang), 5 transaksi UAT utuh, dan `POST /v1/category-jobs` (jalur tulis job ber-lease)
+  merespons 200 di 146 ms tanpa error worker.
+- Catatan build: Gradle native file-watcher (FSEvents) menggantung build di host ini sebelum
+  satu task pun jalan; `org.gradle.vfs.watch=false` ditambahkan agar build deterministik.
 - **Masih TERBUKA:** benchmark akurasi berlabel manusia (gate terpisah, tidak diklaim),
   36 email event-time malformed, S2 tetap PARTIAL. Auto-sync 30 menit / batch kategori 2 jam /
   indikator top-bar BELUM diimplementasikan (rencana di `docs/plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md`).
