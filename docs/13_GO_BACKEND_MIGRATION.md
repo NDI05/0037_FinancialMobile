@@ -115,7 +115,7 @@ cd pam-app/backend
 npm test          # 124 tes termasuk 2 tes interop Node↔Go
 ```
 
-Hasil 22 November 2026 (C1 penutup): **40 tes Go PASS**, `go test -race` PASS, `go vet`/build
+Hasil 22 November 2026 (C1 penutup): **41 tes Go PASS**, `go test -race` PASS, `go vet`/build
 PASS; Node **124 PASS**. Android terhadap Go di emulator API 36 (sebelum C1 lanjutan): register 201
 → login 201 → dua consent 201 → Ringkasan. Endpoint transaksi/import/analisis/anggaran/deletion
 diuji lewat HTTP Go; UI Android untuk fitur itu masih v0.3 sampai C2.
