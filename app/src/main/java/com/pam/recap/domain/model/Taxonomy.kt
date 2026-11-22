@@ -17,6 +17,7 @@ enum class CategoryOrigin {
     IMPORTED,
     RULE,
     USER,
+    LLM,
 }
 
 /** Coarse classification used by BR-02 so transfers never pollute income/expense totals. */

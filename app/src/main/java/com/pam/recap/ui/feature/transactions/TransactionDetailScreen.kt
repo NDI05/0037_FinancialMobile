@@ -327,6 +327,7 @@ fun TransactionDetailScreen(
 private fun originLabelRes(transaction: Transaction): Int = when {
     transaction.isManual -> R.string.status_manual
     transaction.categoryOrigin == com.pam.recap.domain.model.CategoryOrigin.USER -> R.string.origin_user
+    transaction.categoryOrigin == com.pam.recap.domain.model.CategoryOrigin.LLM -> R.string.origin_llm
     else -> R.string.origin_rule
 }
 

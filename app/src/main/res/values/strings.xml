@@ -456,4 +456,5 @@
     <string name="transactions_classify_ai">Kategorikan dengan AI</string>
     <string name="transactions_classify_none">Tidak ada transaksi uncategorized yang bisa diproses.</string>
     <string name="transactions_classify_result">Hasil kategorisasi: %1$s</string>
+    <string name="origin_llm">Saran Azure AI</string>
 </resources>

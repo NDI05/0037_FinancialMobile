@@ -169,7 +169,8 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         val event = Instant.parse(eventAt)
         val created = createdAt?.let { Instant.parse(it) } ?: event
         val updated = updatedAt?.let { Instant.parse(it) } ?: created
-        val category = Category.fromCode(categoryCode) ?: Category.OTHER_EXPENSE
+        val category = Category.fromCode(categoryCode)
+            ?: if (categoryCode.isBlank()) Category.UNCATEGORIZED else Category.UNCATEGORIZED
         val origin = categoryOrigin?.let { CategoryOrigin.valueOf(it) } ?: CategoryOrigin.IMPORTED
         val confidence = parserConfidence?.toFloat()
         val categoryConfidenceValue = categoryConfidence?.toFloat()
