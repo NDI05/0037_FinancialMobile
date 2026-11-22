@@ -102,3 +102,11 @@ Consent: v0.4 `RecordConsentUseCase` memakai `recordConfirmed`; local GRANTED ti
 lagi dianggap bukti server. Offline/legacy tetap di belakang `isEnabled=false`.
 Import job/batch/resume, fingerprint key dari server, dan pagination/filter server
 belum diimplementasikan. C2B1 belum selesai.
+
+
+## R1 visual candidate
+
+Empat layar B01–B04 memakai token PAM Warm R1/Manrope. Detail capability notice
+dan manual sticky CTA diterapkan. Lihat [`15_DESIGN_R1_HANDOFF.md`](15_DESIGN_R1_HANDOFF.md).
+Dua verifikasi emulator gate C2A (refresh <5 detik dan retry respons hilang)
+masih terbuka; C2B1 import/pagination belum selesai.

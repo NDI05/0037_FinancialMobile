@@ -29,7 +29,7 @@ kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 | Impor Livin → baris transaksi → total bulanan | 🟡 fixture end-to-end lulus; Gmail nyata ⬜ |
 | Backend Node (referensi/rollback) | ✅ **124 test** lulus, termasuk interop Go |
 | **Backend Go (`backend-go/`)** | 🟡 C1 backend lokal PASS: auth/JWT, consent, finance CRUD, import batch, analysis canonical, deletion sweep; **42 test Go**, race/vet/build PASS |
-| Android ↔ Go | 🟡 C2A: manual transaction → list/detail → server summary, refresh, deletion reauth; import/budget/analysis masih Room |
+| Android ↔ Go | 🟡 C2A + kandidat visual R1 empat layar; import/pagination/budget/analysis masih tersisa |
 | **Kontrak v0.4 (SRS, API, data, UI, acceptance)** | ✅ draft review siap disahkan |
 | **Migrasi libSQL `version: 3`** | ✅ teruji lokal `file:`; **cloud NOT RUN** |
 | Implementasi v0.4 (JWT/refresh, CRUD server, admin, lampiran) | 🟡 C1 backend lokal; C2/D belum |
@@ -53,7 +53,7 @@ berhasil register → login → consent → Ringkasan terhadap Go.
 Gmail** (hanya Gmail yang dipaksa `DECLINED`; pilihan AI yang sudah dibuat dipertahankan), batas sel
 HTML MIME, propagasi jumlah lampiran, dan fixture impor end-to-end.
 
-**Belum selesai.** C2 baru mencakup session refresh, REST client/DTO, dan deletion reauth; UI
+**Belum selesai.** R1 visual empat layar kandidat lokal sudah diterapkan di atas C2A; C2B1 import/pagination belum. C2 baru mencakup session refresh, REST client/DTO, dan deletion reauth; UI
 transaksi/import/summary/budget/analysis masih Room. Admin/lampiran (FR-65/FR-59) tetap tahap D.
 Lihat [`14_C2_INTEGRASI_ANDROID.md`](docs/14_C2_INTEGRASI_ANDROID.md). Cloud/engine, Gmail
 nyata, perangkat fisik, dan provider nyata tetap NOT RUN. Impor Gmail nyata belum diuji ulang.

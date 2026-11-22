@@ -20,6 +20,8 @@ ui (Compose) → domain (use case/repository interface) ← data (remote REST, l
 - API target adalah layanan **Go** (`backend-go/`, Go 1.27.4, `net/http`, `database/sql`, driver
   libSQL remote/lokal). Node `backend/` hanya referensi perilaku dan rollback selama migrasi; lihat
   [`13_GO_BACKEND_MIGRATION.md`](13_GO_BACKEND_MIGRATION.md).
+- R1 memakai token Manrope/light warm di `ui/theme`; empat layar B01–B04 menjadi kandidat
+  visual lokal. Handoff ada di [`15_DESIGN_R1_HANDOFF.md`](15_DESIGN_R1_HANDOFF.md).
 - C2A memakai `ServerFinanceRepository` sebagai port domain: transaksi manual,
   daftar/detail dan computed summary berasal dari Go saat URL dikonfigurasi;
   Room hanya jalur legacy/offline. Analisis memakai payload aggregate **canonical server**, bukan angka kiriman klien. Idempotensi
