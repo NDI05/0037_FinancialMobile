@@ -77,6 +77,8 @@ class ServerImportUploaderTest {
             Outcome.Failure(com.pam.recap.core.result.AppError.NotFound("unused"))
         override suspend fun summary(ownerId: String, month: JakartaMonth) =
             Outcome.Failure(com.pam.recap.core.result.AppError.Configuration("unused"))
+        override suspend fun classifyTransactions(ownerId: String, transactionIds: List<String>) =
+            Outcome.Success(emptyList<com.pam.recap.domain.repository.ServerCategoryJob>())
         override suspend fun createImportJob(ownerId: String, month: JakartaMonth, templateVersion: String) =
             Outcome.Success(ServerImportJob("server-job", month.id(), "CREATED"))
         override suspend fun importBatch(

@@ -17,6 +17,7 @@ import com.pam.recap.domain.repository.ManualTransactionDraft
 import com.pam.recap.domain.repository.ServerCategory
 import com.pam.recap.domain.repository.ServerImportCandidate
 import com.pam.recap.domain.repository.ServerImportCounts
+import com.pam.recap.domain.repository.ServerCategoryJob
 import com.pam.recap.domain.repository.ServerImportJob
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.ServerTransactionPage
@@ -89,6 +90,17 @@ class ServerFinanceRepositoryImpl @Inject constructor(
             is Outcome.Success -> wireMap { result.value.toDomain(ownerId, month) }
             is Outcome.Failure -> result
         }
+
+    override suspend fun classifyTransactions(
+        ownerId: String,
+        transactionIds: List<String>,
+    ): Outcome<List<ServerCategoryJob>> = when (val result = api.createCategoryJobs(ownerId, transactionIds)) {
+        is Outcome.Success -> Outcome.Success(result.value.jobs.map {
+            ServerCategoryJob(it.id, it.transactionId, it.state, it.categoryCode,
+                it.reasonCode, it.errorCode, it.provider, it.model)
+        })
+        is Outcome.Failure -> result
+    }
 
     override suspend fun createImportJob(
         ownerId: String,

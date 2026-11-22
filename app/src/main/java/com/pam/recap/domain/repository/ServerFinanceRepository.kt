@@ -68,6 +68,17 @@ data class ServerImportCounts(
     val jobState: String,
 )
 
+data class ServerCategoryJob(
+    val id: String,
+    val transactionId: String,
+    val state: String,
+    val categoryCode: String? = null,
+    val reasonCode: String? = null,
+    val errorCode: String? = null,
+    val provider: String? = null,
+    val model: String? = null,
+)
+
 interface ServerFinanceRepository {
     val isEnabled: Boolean
 
@@ -89,6 +100,11 @@ interface ServerFinanceRepository {
     suspend fun get(ownerId: String, transactionId: String): Outcome<Transaction>
 
     suspend fun summary(ownerId: String, month: JakartaMonth): Outcome<MonthlySummary>
+
+    suspend fun classifyTransactions(
+        ownerId: String,
+        transactionIds: List<String>,
+    ): Outcome<List<ServerCategoryJob>>
 
     suspend fun createImportJob(
         ownerId: String,

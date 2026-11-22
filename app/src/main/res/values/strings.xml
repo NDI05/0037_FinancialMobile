@@ -453,4 +453,7 @@
     <string name="consent_category_title">Kategorisasi merchant dengan Azure</string>
     <string name="consent_category_body">Nama merchant usaha yang tersanitasi (maksimal 120 karakter), arah, metode, dan kode kategori dikirim ke Microsoft Azure (GlobalStandard) untuk saran kategori. Tidak ada nominal, tanggal, isi email, catatan, ID pesan, atau data pribadi. GlobalStandard dapat memproses di luar Japan West; ini bukan jaminan lokasi Indonesia atau zero-retention. Menolak tidak menghalangi impor/ringkasan.</string>
     <string name="settings_consent_category">Kategorisasi merchant Azure</string>
+    <string name="transactions_classify_ai">Kategorikan dengan AI</string>
+    <string name="transactions_classify_none">Tidak ada transaksi uncategorized yang bisa diproses.</string>
+    <string name="transactions_classify_result">Hasil kategorisasi: %1$s</string>
 </resources>

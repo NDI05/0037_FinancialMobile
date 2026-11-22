@@ -33,6 +33,9 @@ import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassTopBar
 import com.pam.recap.ui.components.LoadingShimmer
 import com.pam.recap.ui.components.NoticeBanner
+import com.pam.recap.ui.components.PillButton
+import com.pam.recap.ui.components.MoneyTone
+import com.pam.recap.ui.components.PillButtonStyle
 import com.pam.recap.ui.components.MonthSelector
 import com.pam.recap.ui.components.MonthStrip
 import com.pam.recap.ui.components.PamScaffold
@@ -125,6 +128,31 @@ fun TransactionsScreen(
                 onSelect = viewModel::selectCategory,
                 modifier = Modifier.padding(top = PamSpacing.xs),
             )
+
+            PillButton(
+                text = stringResource(R.string.transactions_classify_ai),
+                onClick = viewModel::classifyUncategorized,
+                style = PillButtonStyle.Secondary,
+                loading = state.isClassifying,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = PamSpacing.xs),
+            )
+            state.classificationStatus?.let { status ->
+                NoticeBanner(
+                    text = when (status) {
+                        "no_eligible_transactions" -> stringResource(R.string.transactions_classify_none)
+                        else -> stringResource(R.string.transactions_classify_result, status)
+                    },
+                    tone = if (state.classificationError != null) MoneyTone.Expense else MoneyTone.Neutral,
+                )
+            }
+            state.classificationError?.let { error ->
+                NoticeBanner(
+                    text = stringResource(com.pam.recap.ui.util.appErrorRes(error)),
+                    tone = MoneyTone.Expense,
+                )
+            }
 
             Row(
                 modifier = Modifier

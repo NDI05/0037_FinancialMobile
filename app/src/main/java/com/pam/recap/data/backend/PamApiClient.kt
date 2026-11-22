@@ -118,6 +118,12 @@ class PamApiClient @Inject constructor(
         return send(ownerId, "PATCH", "/v1/import-jobs/$jobId", body, null, RemoteImportJob.serializer())
     }
 
+    suspend fun createCategoryJobs(ownerId: String, transactionIds: List<String>):
+        Outcome<RemoteCategoryJobs> {
+        val body = json.encodeToString(RemoteCategoryJobsRequest.serializer(), RemoteCategoryJobsRequest(transactionIds))
+        return send(ownerId, "POST", "/v1/category-jobs", body, null, RemoteCategoryJobs.serializer())
+    }
+
     suspend fun requestDeletion(
         ownerId: String,
         password: String,
@@ -426,6 +432,28 @@ data class RemoteImportCounts(
     val unresolved: Int = 0,
     val jobState: String = "",
 )
+
+@Serializable
+data class RemoteCategoryJobsRequest(val transactionIds: List<String>)
+
+@Serializable
+data class RemoteCategoryJob(
+    val id: String,
+    val transactionId: String,
+    val expectedRevision: Int = 0,
+    val state: String,
+    val categoryCode: String? = null,
+    val confidence: Double? = null,
+    val provider: String? = null,
+    val model: String? = null,
+    val promptVersion: String? = null,
+    val taxonomyVersion: String? = null,
+    val reasonCode: String? = null,
+    val errorCode: String? = null,
+)
+
+@Serializable
+data class RemoteCategoryJobs(val jobs: List<RemoteCategoryJob> = emptyList())
 
 @Serializable
 data class RemoteDeletionCreate(val password: String, val confirmation: String)

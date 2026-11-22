@@ -3,6 +3,8 @@ package com.pam.recap.ui.feature.transactions
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pam.recap.core.result.AppError
+import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Transaction
@@ -43,6 +45,9 @@ data class TransactionsUiState(
     val monthTransactionCount: Int = 0,
     val days: List<DayStripCell> = emptyList(),
     val error: com.pam.recap.core.result.AppError? = null,
+    val isClassifying: Boolean = false,
+    val classificationStatus: String? = null,
+    val classificationError: AppError? = null,
 ) {
     /** FR-20: "no data for the month" and "nothing matches the filter" are different states. */
     val isEmptyMonth: Boolean get() = !isLoading && monthTransactionCount == 0
@@ -72,6 +77,7 @@ class TransactionsViewModel @Inject constructor(
     )
     private val query = MutableStateFlow("")
     private val refreshTick = MutableStateFlow(0L)
+    private val classification = MutableStateFlow(ClassificationState())
 
     init {
         viewModelScope.launch {
@@ -96,26 +102,76 @@ class TransactionsViewModel @Inject constructor(
         ) { selectedMonth, day, cat, text, _ ->
             Filters(selectedMonth, day, cat, text)
         },
-    ) { session, filters -> session.ownerId to filters }
-        .flatMapLatest { (ownerId, filters) ->
+        classification,
+    ) { session, filters, classifier -> Triple(session.ownerId, filters, classifier) }
+        .flatMapLatest { (ownerId, filters, classifier) ->
             if (server?.isEnabled == true) {
                 kotlinx.coroutines.flow.flow {
-                    emit(TransactionsUiState(isLoading = true, month = filters.month))
+                    emit(TransactionsUiState(isLoading = true, month = filters.month,
+                        isClassifying = classifier.isRunning, classificationStatus = classifier.status,
+                        classificationError = classifier.error))
                     when (val page = server.listMonth(ownerId, filters.month)) {
-                        is com.pam.recap.core.result.Outcome.Success -> emit(filters.reduce(page.value.items))
+                        is com.pam.recap.core.result.Outcome.Success -> emit(
+                            filters.reduce(page.value.items).copy(
+                                isClassifying = classifier.isRunning,
+                                classificationStatus = classifier.status,
+                                classificationError = classifier.error,
+                            ),
+                        )
                         is com.pam.recap.core.result.Outcome.Failure -> emit(
                             TransactionsUiState(
                                 isLoading = false, month = filters.month, error = page.error,
+                                isClassifying = classifier.isRunning,
+                                classificationStatus = classifier.status,
+                                classificationError = classifier.error,
                             ),
                         )
                     }
                 }
             } else {
                 transactions.observeMonth(ownerId, filters.month, TransactionFilter(month = filters.month))
-                    .map { all -> filters.reduce(all) }
+                    .map { all -> filters.reduce(all).copy(
+                        isClassifying = classifier.isRunning,
+                        classificationStatus = classifier.status,
+                        classificationError = classifier.error,
+                    ) }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TransactionsUiState())
+
+    /** Requests Azure for at most five visible, eligible uncategorized rows. */
+    fun classifyUncategorized() {
+        if (classification.value.isRunning || server?.isEnabled != true) return
+        viewModelScope.launch {
+            val owner = sessions.current()?.ownerId ?: return@launch
+            val ids = state.value.items
+                .filter { it.category == Category.UNCATEGORIZED && it.categoryOrigin != com.pam.recap.domain.model.CategoryOrigin.USER }
+                .map { it.id }
+                .distinct()
+                .take(5)
+            if (ids.isEmpty()) {
+                classification.value = ClassificationState(status = "no_eligible_transactions")
+                return@launch
+            }
+            classification.value = ClassificationState(isRunning = true)
+            classification.value = when (val result = server.classifyTransactions(owner, ids)) {
+                is Outcome.Failure -> ClassificationState(error = result.error)
+                is Outcome.Success -> {
+                    refreshTick.update { it + 1 }
+                    val needsReview = result.value.count { it.state == "NEEDS_REVIEW" }
+                    val failed = result.value.count { it.state == "FAILED" }
+                    val classified = result.value.count { it.state == "CLASSIFIED" }
+                    ClassificationState(status = "classified=$classified needsReview=$needsReview failed=$failed")
+                }
+            }
+        }
+    }
+
+    private data class ClassificationState(
+        val isRunning: Boolean = false,
+        val status: String? = null,
+        val error: AppError? = null,
+    )
 
     fun previousMonth() = month.updateValue { it?.previous() }
 
