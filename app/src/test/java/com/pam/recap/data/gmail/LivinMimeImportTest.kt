@@ -1,5 +1,7 @@
 package com.pam.recap.data.gmail
 
+import com.pam.recap.data.seed.LivinFixtures
+
 import com.pam.recap.core.money.Money
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.security.FingerprintFactory
@@ -128,6 +130,46 @@ class LivinMimeImportTest {
         val result = parser.parse(raw)
         assertTrue("parser should accept split date/time: $result", result is ParseResult.Parsed)
         assertEquals(Instant.parse("2026-11-19T02:15:20Z"), (result as ParseResult.Parsed).eventAt)
+    }
+
+    private fun splitRaw(date: String, time: String): RawMessage = RawMessage(
+        messageId = "strict-date-time",
+        sender = LivinFixtures.SENDER,
+        subject = "Pembayaran Berhasil!",
+        internalDate = null,
+        textParts = listOf(
+            """
+            Pembayaran Berhasil!
+            Nominal: Rp175.000
+            Tanggal Transaksi
+            $date
+            Waktu Transaksi
+            $time
+            Merchant: Indomaret
+            """.trimIndent(),
+        ),
+    )
+
+    @Test
+    fun `strict split date and time reject impossible or ambiguous values`() {
+        val invalid = listOf(
+            "31 Nov 2026" to "09:15:20 WIB",
+            "29 Feb 2023" to "09:15:20 WIB",
+            "19 Nov 2026" to "24:00 WIB",
+            "19 Nov 2026" to "09:15:20 WITA",
+            "19 Nov 2026" to "09:15:20",
+            "19 Nov 2026" to "",
+        )
+        for ((date, time) in invalid) {
+            val result = parser.parse(splitRaw(date, time))
+            assertTrue("accepted invalid $date/$time", result is ParseResult.Unresolved)
+        }
+        val leap = parser.parse(splitRaw("29 Feb 2024", "09:15:20 WIB"))
+        assertTrue("leap day rejected", leap is ParseResult.Parsed)
+        assertEquals(Instant.parse("2024-02-29T02:15:20Z"), (leap as ParseResult.Parsed).eventAt)
+        val nbsp = parser.parse(splitRaw("19\u00A0Nov\u00A02026", "09:15:20\u00A0WIB"))
+        assertTrue("NBSP rejected", nbsp is ParseResult.Parsed)
+        assertEquals(Instant.parse("2026-11-19T02:15:20Z"), (nbsp as ParseResult.Parsed).eventAt)
     }
 
     private fun extract(message: MimeMessage): RawMessage =

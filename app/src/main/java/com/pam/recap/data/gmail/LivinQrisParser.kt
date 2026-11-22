@@ -13,6 +13,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.ResolverStyle
 import java.util.Locale
 import kotlin.time.Instant
 
@@ -281,15 +282,16 @@ class LivinQrisParser(
 
     private fun parseSeparateDateTime(dateRaw: String?, timeRaw: String?): Instant? {
         if (dateRaw.isNullOrBlank() || timeRaw.isNullOrBlank()) return null
-        val normalized = timeRaw.uppercase()
+        val normalized = timeRaw.replace('\u00A0', ' ').uppercase()
         if (!normalized.contains("WIB")) return null
         if (normalized.contains("WITA") || normalized.contains("WIT")) return null
         val cleanedTime = normalized
             .replace("WAKTU INDONESIA BARAT", "")
             .replace("WIB", "")
             .trim()
+        val normalizedDate = dateRaw.replace('\u00A0', ' ').trim()
         val date = DATE_FORMATS.firstNotNullOfOrNull { formatter ->
-            runCatching { LocalDate.parse(dateRaw.trim(), formatter) }.getOrNull()
+            runCatching { LocalDate.parse(normalizedDate, formatter) }.getOrNull()
         } ?: return null
         val time = TIME_FORMATS.firstNotNullOfOrNull { formatter ->
             runCatching { LocalTime.parse(cleanedTime, formatter) }.getOrNull()
@@ -304,7 +306,7 @@ class LivinQrisParser(
      * anything unrecognized so the row becomes `MALFORMED_EVENT_TIME`, never a guessed time.
      */
     internal fun parseEventTime(raw: String): Instant? {
-        val value = raw.trim()
+        val value = raw.replace('\u00A0', ' ').trim()
             .replace("WIB", "", ignoreCase = true)
             .replace("Waktu Indonesia Barat", "", ignoreCase = true)
             .trim()
@@ -335,7 +337,7 @@ class LivinQrisParser(
 
         val DATE_TIME_FORMATS: List<DateTimeFormatter> = DATE_TIME_PATTERNS.flatMap { pattern ->
             listOf(Locale.forLanguageTag("id-ID"), Locale.ENGLISH).map { locale ->
-                DateTimeFormatter.ofPattern(pattern, locale)
+                DateTimeFormatter.ofPattern(pattern, locale).withResolverStyle(ResolverStyle.STRICT)
             }
         }
 
@@ -344,11 +346,11 @@ class LivinQrisParser(
         )
         val DATE_FORMATS: List<DateTimeFormatter> = DATE_PATTERNS.flatMap { pattern ->
             listOf(Locale.forLanguageTag("id-ID"), Locale.ENGLISH).map { locale ->
-                DateTimeFormatter.ofPattern(pattern, locale)
+                DateTimeFormatter.ofPattern(pattern, locale).withResolverStyle(ResolverStyle.STRICT)
             }
         }
         val TIME_FORMATS: List<DateTimeFormatter> = listOf("HH:mm:ss", "HH:mm").map {
-            DateTimeFormatter.ofPattern(it, Locale.ENGLISH)
+            DateTimeFormatter.ofPattern(it, Locale.ENGLISH).withResolverStyle(ResolverStyle.STRICT)
         }
     }
 }
