@@ -124,7 +124,11 @@ export async function migrate(client: Client, options: MigrateOptions = {}): Pro
         await transaction.rollback();
         continue;
       }
-      for (const statement of splitStatements(migration.sql)) {
+      const statements = [
+        ...splitStatements(migration.sql),
+        ...(migration.extraStatements ?? []),
+      ];
+      for (const statement of statements) {
         track?.(statement);
         await transaction.execute(statement);
       }

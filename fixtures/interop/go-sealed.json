@@ -1,0 +1,14 @@
+{
+  "ciphertextB64": "9VATcl3hGS+X6z6I8xxKpp4dzu0l29Ot4I+S2jmbaH5EdOQ3t7516XcLrqXqKXtVT2nbO3zRATSkhMpHD9QgTbnL+KVEO5Ln/ReTermjEF/BwAItROCJNxnHnkU=",
+  "ivB64": "QoLBJgrQFdbCh2xz",
+  "keyVersion": 1,
+  "ownerId": "u_34343446dfa5ad3d9d440ac847c20c2e",
+  "purpose": "summary",
+  "tagB64": "W97JDWo1Ha93kOwGLXQEAA==",
+  "value": {
+    "grossInflowMinor": 500000000,
+    "marker": "go-sealed",
+    "monthId": "2026-02",
+    "netMinor": 390000000
+  }
+}

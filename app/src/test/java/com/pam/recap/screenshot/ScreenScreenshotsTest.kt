@@ -645,6 +645,7 @@ class ScreenScreenshotsTest {
                 noopVault,
                 clock,
             ),
+            accounts = FakeAccountRepository(isBackendEnabled = true),
         )
 
         shot("11-gmail-connect") {
@@ -677,6 +678,7 @@ class ScreenScreenshotsTest {
             demoData = demoData,
             connectGmail = ConnectGmailUseCase(gmail, gmail, consents, connections, sessions, clock),
             disconnectGmail = DisconnectGmailUseCase(gmail, connections, sessions, noopVault, clock),
+            accounts = FakeAccountRepository(isBackendEnabled = true),
         )
 
         shot("11b-gmail-credentials") {

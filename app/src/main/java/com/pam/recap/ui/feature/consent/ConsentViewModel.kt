@@ -50,6 +50,18 @@ class ConsentViewModel @Inject constructor(
         _state.update { it.copy(aiGranted = granted, error = null) }
     }
 
+    /**
+     * FR-03: an explicit "no Gmail" path. An untouched switch is not a decision, so a user who
+     * wants the manual flow had to toggle the switch off to record one. This records a DECLINED
+     * Gmail decision and finishes in one tap; the recap stays usable and Gmail can be granted
+     * later from Settings. An AI choice the user already made is preserved: only Gmail is forced.
+     */
+    fun continueWithoutGmail() {
+        if (_state.value.isSaving) return
+        _state.update { it.copy(gmailGranted = false, error = null) }
+        submit()
+    }
+
     fun submit() {
         val current = _state.value
         val gmail = current.gmailGranted ?: return

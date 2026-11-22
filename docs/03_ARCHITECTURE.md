@@ -1,5 +1,97 @@
 # PAM — Architecture
 
+> **Status dokumen (21 Nov 2026).** Bagian 0 adalah target **v0.4** yang sedang direview. Bagian
+> 1–9 di bawah mendokumentasikan implementasi **v0.3** dan dipertahankan sebagai riwayat; jika
+> bertentangan (Room, OAuth, GoogleGmailSource), bagian 0 yang berlaku untuk target. Kontrak HTTP
+> ada di [`06_BACKEND_CONTRACT.md`](06_BACKEND_CONTRACT.md); skema ada di
+> [`10_MIGRASI_PEDOMAN.md`](10_MIGRASI_PEDOMAN.md).
+
+## 0. Target v0.4 — arsitektur dan perubahan UI
+
+### 0.1 Batas lapisan
+
+```
+ui (Compose) → domain (use case/repository interface) ← data (remote REST, local files, IMAP, AI)
+```
+
+- `domain` tetap murni Kotlin: tidak ada OkHttp, Room, Android, atau serialisasi transport.
+- `data/remote/` berisi implementasi REST + DTO; `data/local/` hanya untuk Keystore/DataStore dan
+  file privat, **bukan** database transaksi. Room/SQLCipher dihapus dari varian penilaian pada D.
+- API target adalah layanan **Go** (`backend-go/`, Go 1.27.4, `net/http`, `database/sql`, driver
+  libSQL remote/lokal). Node `backend/` hanya referensi perilaku dan rollback selama migrasi; lihat
+  [`13_GO_BACKEND_MIGRATION.md`](13_GO_BACKEND_MIGRATION.md).
+- Analisis memakai payload aggregate **canonical server**, bukan angka kiriman klien. Idempotensi
+  create/import disimpan atomik; finalisasi analisis memeriksa ulang consent, deletion, sesi dan
+  revisi; usage provider dicatat untuk ceiling biaya harian.
+- `data/gmail/` tetap di perangkat (IMAP read-only); `data/ai/` tetap di balik `AnalysisEngine`.
+- Repository interface di `domain/repository/` dipertahankan; implementasi berganti dari Room ke
+  REST. Use case tetap memiliki aturan (validasi, owner, revisi), bukan ViewModel.
+
+### 0.2 Alur data
+
+```mermaid
+flowchart LR
+  Compose --> VM[ViewModel]
+  VM --> UC[Use case]
+  UC --> Repo[Repository interface]
+  Repo --> Remote[Remote repository + OkHttp]
+  Remote --> API[Go net/http + JWT]
+  API --> DB[(Turso libSQL)]
+  UC --> IMAP[IMAP di perangkat]
+  UC --> Files[File privat per owner]
+  UC --> AI[AnalysisEngine / backend agregat]
+```
+
+### 0.3 Perubahan UI
+
+| Layar | Perubahan v0.4 |
+|---|---|
+| Welcome/Account | Tanpa Google Sign-In; register/login backend, role dari respons |
+| Consent | Tetap dua izin terpisah; teks menyebut transaksi disimpan di server PAM |
+| Gmail connect | App Password + state; demo mailbox hanya mode offline berlabel |
+| Overview | Memuat ringkasan server; state loading/empty/partial/error/unavailable; `EMAIL-DERIVED` |
+| Transactions | List/filter/search REST, cursor; badge manual/import; soft delete |
+| Transaction detail | Editor kategori/catatan/atribut; daftar lampiran + status file lokal |
+| Manual entry | Simpan ke REST dengan idempotency key; retry aman |
+| Import job | Job/batch server; matched/imported/duplicate/skipped/unresolved + reason |
+| Budget plan | Rencana + limits + editor atribut; gap dihitung server |
+| **Admin users** (baru) | List/cari, invite/create, ubah role/status, soft delete, audit |
+| **Admin user detail** (baru) | Detail akun, last-admin guard, revoke sesi |
+| Settings | Sesi/refresh, consent, mailbox, retensi, deletion; tanpa token di UI |
+
+### 0.4 Editor field dinamis
+
+Empat entitas memakai editor key–value terbatas (maks. 10 pasangan, key ≤40 char, value ≤200 char,
+total ≤2 KB JSON): transaksi, kategori, rencana anggaran, metadata lampiran. Nilai disimpan sebagai
+JSON tersegel di server; UI menampilkan, mengedit, dan membaca ulang setelah restart. Kategori
+bawaan tidak dapat dihapus; kategori pengguna yang masih dipakai harus di-reassign atau ditolak.
+
+### 0.5 Lampiran lokal
+
+1. Android document picker (`OpenDocument`) → validasi MIME/ukuran.
+2. Salin ke `filesDir/attachments/<ownerId>/<localFileId>` (privat, tanpa backup cloud).
+3. `POST /v1/attachments` metadata; bila gagal → hapus salinan atau retry queue.
+4. Buka ulang dari path privat; perangkat lain menampilkan metadata `fileAvailable=false`.
+5. Hapus: server tombstone dulu, lalu hapus file; bila hapus file gagal, retry queue.
+6. Hapus transaksi: metadata ikut tombstone; file dibersihkan klien.
+
+### 0.6 State auth dan sinkronisasi
+
+- `AuthState`: `Restoring → Authenticated(access,expiry) → Refreshing → Authenticated |
+  SessionExpired`. Satu refresh single-flight; request paralel menunggu hasil yang sama.
+- Request API: 401 → satu refresh → ulang request sekali; bila masih 401 → `SessionExpired`.
+- 503 `database_unavailable`: tampilkan unavailable + tombol coba lagi; form dipertahankan.
+- Perubahan data menaikkan `month_revisions`; layar ringkasan/analisis mendeteksi `inputRevision`.
+
+### 0.7 Pengujian arsitektur
+
+- Unit: use case + DTO mapping + calculator; tanpa jaringan.
+- Remote: MockWebServer untuk 401/refresh, 409 revision, 503, cursor.
+- UI: Compose test untuk loading/empty/error, editor dinamis, admin guard, aksesibilitas.
+- E2E: emulator + backend lokal + database `file:` terisolasi; cloud test terpisah **NOT RUN**
+  sampai kredensial uji tersedia.
+
+
 Single Gradle module (`:app`), Hilt DI, MVVM + unidirectional state, Repository/Port boundary.
 Package root `com.pam.recap`.
 

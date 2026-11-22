@@ -5,6 +5,7 @@ import java.util.Properties
 import javax.mail.Session
 import javax.mail.internet.MimeMessage
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -107,6 +108,29 @@ class ImapMimeTest {
         assertEquals(1, body.attachmentCount)
     }
 
+    @Test
+    fun `a table with a label cell and a value cell keeps them on separate lines`() {
+        val body = extractMimeBody(
+            parse(
+                """
+                Subject: Pembayaran Berhasil!
+                Content-Type: text/html; charset=UTF-8
+
+                <html><body><table>
+                <tr><td>Nominal Pembayaran</td><td>Rp175.000</td></tr>
+                <tr><td>Tanggal Transaksi</td><td>19 Februari 2026 11:10:00</td></tr>
+                <tr><td>Merchant</td><td>Indomaret</td></tr>
+                </table></body></html>
+                """,
+            ),
+        )
+
+        // Regression: collapsing `</td>` to a space produced "Nominal Pembayaran Rp175.000".
+        assertTrue(body.text.lines().any { it.trim() == "Nominal Pembayaran" })
+        assertTrue(body.text.lines().any { it.trim() == "Rp175.000" })
+        assertTrue(body.text.lines().any { it.trim() == "Indomaret" })
+    }
+
     /**
      * The device shape: Gmail hands the root part back as an untyped `application/octet-stream`
      * whose bytes are a MIME entity. Without recovery this was `parts=1 plain=0 html=0 chars=0` and
@@ -173,6 +197,26 @@ class ImapMimeTest {
         // A body without a filename is not an attachment; it is simply not text.
         assertEquals(0, body.attachmentCount)
         assertEquals(1, body.kindCounts["binary_skipped"])
+    }
+
+    @Test
+    fun `an unknown-size message that exceeds the bound is rejected while writing`() {
+        // The provider can report size = -1; the old check then wrote the whole body before
+        // checking the byte count. The bounded stream must stop at the limit.
+        var written = 0
+        val oversized = object : MimeMessage(session) {
+            override fun getSize(): Int = -1
+            override fun writeTo(out: java.io.OutputStream) {
+                val chunk = ByteArray(8 * 1024)
+                repeat((1024 * 1024 / chunk.size) + 2) {
+                    out.write(chunk)
+                    written += chunk.size
+                }
+            }
+        }
+
+        assertNull(oversized.reparseRaw(session))
+        assertTrue("wrote $written bytes past the bound", written <= 1024 * 1024)
     }
 
     @Test

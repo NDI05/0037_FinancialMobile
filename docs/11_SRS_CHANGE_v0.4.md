@@ -1,136 +1,122 @@
-# SRS Change Record — v0.3 → v0.4
+# SRS Change Record v0.3 ke v0.4
 
-Document ID: PAM-SRS-001
-Change ID: **CR-002**
-Tanggal: 20 November 2026
-Alasan: project harus memenuhi `PEDOMAN PROJECT AKHIR PAM 2026`. Pedoman §B.9 menyatakan project
-wajib **selaras dengan SRS**, jadi SRS yang menyesuaikan — bukan sebaliknya.
-Status: **draf, menunggu persetujuan owner**.
-Rancangan teknis: [`10_MIGRASI_PEDOMAN.md`](10_MIGRASI_PEDOMAN.md).
+PAM-SRS-001 · CR-002 · diperbarui 21 November 2026.
 
----
+**Status** — rancangan arsitektur dan kebutuhan. Arahan cloud database gratis dari pemilik telah
+diterima. Lead memilih Turso Cloud Free/libSQL berdasarkan integrasi existing. Pemilik menyetujui
+**pergantian backend ke Go** pada 21 November 2026; implementasi target ada di `backend-go/`.
+Sign-off keseluruhan v0.4 masih terbuka, termasuk lokasi transaksi, offline, retensi dan cutover data
+nyata. [Rancangan teknis](10_MIGRASI_PEDOMAN.md)
 
-## 1. Ringkasan
+## 1. Alasan perubahan
 
-| Jenis | Jumlah |
+Pedoman mengizinkan cloud database menurut klarifikasi pemilik. D.8 tetap melarang Room. Target v0.4 memperluas backend Turso existing agar menyimpan entitas aplikasi, menambah JWT/refresh, hak akses, lima fitur CRUDS dan file lokal. V0.3 beserta CR-001 tetap menjadi baseline implementasi sampai cutover tervalidasi.
+
+## 2. Requirement yang direvisi
+
+| ID / bagian | Target v0.4 |
 |---|---|
-| Requirement **dicabut** | 3 (FR-35, NFR-22, NFR-16 sebagian) |
-| Requirement **diubah** | 4 (FR-02, DR-02, DR-05, §4.3) |
-| Requirement **baru** | 6 (FR-57…FR-62) |
-| Perubahan sifat produk | **transaksi berpindah dari perangkat ke server** |
+| FR-02 | Otorisasi berdasarkan pemilik untuk setiap query/read/write, list, search, import, attachment metadata, anggaran, dan deletion. Admin mengelola akun sesuai haknya. |
+| FR-11–FR-15 | Matriks template mencakup format Livin yang dibuktikan lewat MIME/HTML. Pembayaran tagihan didukung hanya pada registry dan aturan validasi yang teruji. |
+| FR-35 | Tetap berlaku untuk pengiriman ke penyedia AI. Hanya proyeksi agregat yang diizinkan dapat diteruskan, setelah consent. Merchant, catatan, label kategori bebas dan atribut dinamis dikecualikan. |
+| FR-52 | Mode akademik v0.4 menggunakan sesi backend dan database cloud. Pemuatan setelah restart serta CRUD membutuhkan koneksi backend/database. Mode fixture diberi label untuk pengujian. |
+| FR-56 | Turso Cloud/libSQL menyimpan transaksi, kategori, rencana/batas anggaran, metadata lampiran, import jobs dan data backend existing. Token database dan kunci enkripsi tetap di backend. |
+| DR-02/DR-05 | Hasil parsing yang tervalidasi disimpan server-side dengan owner, fingerprint dan revisi. Email mentah, kredensial mailbox, ID pesan asli dan lampiran email tidak dipersistenkan di backend. |
+| DR-04 | Revisi ringkasan, analisis, dan rencana mengacu pada dataset transaksi server yang konsisten. |
+| NFR-06/07 | Uji performa daftar/ringkasan memakai data cloud dan dataset yang ditentukan. Target angka serta batas jaringan dikunci sebelum performance test. Calculator deterministik tetap diuji tersendiri. |
+| NFR-15/16 | Retensi mencakup transaksi cloud, atribut, attachment metadata, dan backup. Pertahankan AES-GCM payload existing dan perluas perlindungan field sensitif sesuai kontrak pencarian. Vault IMAP, refresh token, serta file privat mendapat perlindungan perangkat. |
+| NFR-19 | Allowlist payload AI berlaku di backend sebelum pemanggilan model, termasuk terhadap data kategori buatan pengguna. |
+| NFR-21 | Impor idempoten dan commit atomik server, tidak kehilangan override saat retry, dengan fingerprint stabil per akun. |
+| NFR-22 | Target availability backend tetap dievaluasi. Saat Gmail/AI gagal, data keuangan tetap terbaca jika backend/database dapat diakses. Gangguan backend/database menampilkan unavailable. |
+| NFR-23 | Backup terenkripsi harian dan restore drill cloud, beserta prosedur pengembalian kunci dan pencabutan sesi. PITR Free 24 jam membantu pemulihan. |
+| §1.4, §2, §4.3, Appendix B/C | Perbarui scope, aliran data, kontrak REST, diagram, notice privasi, isu dan acceptance sesuai batas data baru. |
 
----
+FR-35 dan NFR-22 dipertahankan dengan cakupan yang dijelaskan di atas. Rancangan sebelumnya mencampur penyimpanan backend PAM dengan payload penyedia model dan menghapus sebagian target availability secara tidak sengaja. Penyebutan FR-56 sebagai definisi payload AI diganti rujukan FR-35/NFR-19 dan skema payload.
 
-## 2. Perubahan paling besar: lokasi data transaksi
-
-| | v0.3 | v0.4 |
-|---|---|---|
-| Baris transaksi | **di perangkat** (Room + SQLCipher) | **di MySQL, di server** |
-| Alasannya | privasi: tidak keluar perangkat | pedoman D.8: **Room dilarang**, database minimal MySQL |
-| Akses | lokal, offline | REST + JWT |
-
-### Requirement yang dicabut
-
-**FR-35 — DICABUT.** Bunyinya: *"The backend shall send only the required monthly totals… It shall
-exclude email bodies, subjects, sender addresses, message IDs, OAuth tokens, account/card
-identifiers, customer names and **transaction-level merchant descriptions**."*
-
-Penghapusan berlaku untuk bagian **transaction-level merchant descriptions**. Bagian lain
-**tetap berlaku** dan dipindahkan ke FR-60:
-- email body, subject, sender, message ID, token, PAN, nama nasabah **tetap tidak boleh** dikirim
-  ke penyedia LLM;
-- yang berubah hanya siapa yang menyimpan baris transaksi (server PAM, bukan LLM).
-
-**NFR-22 — DICABUT.** *"The dashboard shall remain readable from encrypted local data during
-provider failures."* Tidak mungkin dipertahankan tanpa database lokal. Diganti NFR-27.
-
-**NFR-16 — DIUBAH.** Tidak lagi mengatur database lokal (sudah tidak ada), tetapi tetap mengatur:
-kredensial IMAP (Keystore), token refresh (Keystore), file lampiran, dan `FLAG_SECURE`.
-
----
-
-## 3. Requirement baru
+## 3. Requirement baru yang diajukan
 
 | ID | Requirement |
 |---|---|
-| **FR-57** | The system shall issue a short-lived **JWT access token** (≤15 minutes, containing subject and role) and an opaque **refresh token**, rotate the refresh token on every use, and revoke the previous one. Reuse of a revoked refresh token shall revoke the user's whole session chain. |
-| **FR-58** | The system shall support at least two roles, `USER` and `ADMIN`. Authorisation shall be enforced on the server for every route, not only hidden in the UI; a role mismatch shall answer `403`. |
-| **FR-59** | The system shall let a user attach a local file to a transaction: store the file in app-private storage, record its metadata server-side, display it, rename it, and delete it. File bytes shall never be uploaded. |
-| **FR-60** | Transaction rows shall be stored server-side, owner-scoped, and reachable through REST create, read, update, delete and search. The backend shall not forward them to the LLM provider; only the aggregate projection defined in FR-56 may leave the backend. |
-| **FR-61** | Four or more related entities shall be persisted and displayed, each supporting user-defined dynamic fields (transaction `metadata`, category `attributes`). |
-| **FR-62** | The client shall refresh an expired access token transparently at most once per request and, on refresh failure, require the user to sign in again rather than losing unsaved work silently. |
+| FR-57 | Backend menerbitkan JWT access maksimum 15 menit dan opaque refresh token, melakukan rotasi atomik, memeriksa replay, serta mencabut keluarga sesi sesuai kontrak. |
+| FR-58 | Peran USER dan ADMIN ditegakkan di UI dan server. Register biasa menghasilkan USER. Provisioning admin terkontrol dan admin mengelola akun melalui akses terbatas. |
+| FR-59 | Pengguna dapat memilih, menyimpan, membaca ulang, mengganti nama/atribut, mencari, dan menghapus file privat yang terkait transaksi. Server menyimpan metadata dan referensi lokal abstrak. |
+| FR-60 | Transaksi disimpan pada Turso server-side melalui REST CRUDS, terikat owner. Setiap perubahan memelihara revisi dependennya. Data mentah transaksi tidak diteruskan ke model, mengikuti FR-35/NFR-19. |
+| FR-61 | Minimal empat entitas terkait ditampilkan dan tersimpan. Kategori, transaksi, rencana anggaran dan metadata lampiran masing-masing menyediakan field dinamis yang tervalidasi dan dapat diisi serta dibaca ulang melalui UI. |
+| FR-62 | Klien mengoordinasikan refresh serentak dan melakukan retry paling banyak sekali per request. Refresh gagal membawa pengguna ke pemulihan sesi sambil mempertahankan isian yang belum dikirim jika memungkinkan. |
+| FR-63 | Aplikasi menyediakan lima fitur CRUDS lengkap melalui Compose untuk transaksi, kategori, anggaran, lampiran, dan pengguna admin. Search, create/invite admin dan delete wajib bisa didemokan. |
 
----
+## 4. Acceptance dan status
 
-## 4. Requirement yang diubah
+T01 menguji register/login/JWT/refresh/logout, T02 owner dan peran, T04 impor retry/idempotensi server, T05 total/revisi, T07 CRUDS anggaran, T08 privasi/retensi/restore, T09 alur Compose dan gangguan jaringan. T11 menguji 25 aksi CRUDS, empat entitas dengan relasi dan field dinamis, serta file dibaca kembali setelah restart. T10 memeriksa kesesuaian SRS konsolidasi, APK, backend dan engine cloud aktual.
 
-| ID | Perubahan |
+| Keputusan | Status |
 |---|---|
-| **FR-02** | Tidak berubah maknanya (setiap akses di-scope pemilik), tetapi kini mencakup **semua baris transaksi** di MySQL, bukan hanya agregat. Isolasi antar-pengguna diuji untuk transaksi, kategori, lampiran, dan anggaran. |
-| **DR-02** | Baris transaksi **disimpan di server**, tetap tanpa email body, header lengkap, PAN, terminal ID, atau lampiran. Fingerprint tetap opaque. |
-| **DR-05** | Diganti: minimalisasi kini berlaku pada **email**, bukan pada transaksi. Email tetap diproses di perangkat dan tidak disimpan; transaksi disimpan di server milik pengguna. |
-| **§4.3** | "imported transaction rows shall remain on-device" **dihapus**, diganti pernyataan bahwa baris transaksi disimpan di MySQL dengan scoping pemilik. |
+| Cloud database gratis, MySQL sebagai minimum | Ditegaskan pemilik pada 21 November 2026 |
+| Turso Free/libSQL | Pilihan desain lead untuk melanjutkan backend existing |
+| Transaksi server-side, offline, dua peran, lampiran, CRUDS | Rancangan v0.4 yang harus tercermin pada sign-off sebelum aktivasi/cutover |
+| Reset/migrasi data nyata, deployment, biaya berbayar | Belum ada otorisasi dari arahan rancangan ini |
+| Tahap A | Worker menyelesaikan pada fe3a183. Gmail nyata masih perlu pengujian |
 
----
+Dokumen SRS lengkap v0.2 belum dikonsolidasikan menjadi v0.4. Paket B menyiapkan versi review
+beserta perubahan requirement dan acceptance; lihat §5. Tanggal/sign-off historis dipertahankan
+sesuai fakta.
 
-## 5. Pernyataan privasi yang harus berubah
+## 5. Konsolidasi paket B (review draft)
 
-Ini bagian yang paling perlu kejujuran. Klaim berikut **tidak boleh** dipertahankan lagi:
-
-| Klaim lama | Kenyataan v0.4 |
-|---|---|
-| "Raw email and transaction rows stay on the device" | email tetap di perangkat; **transaksi tidak lagi** |
-| "The dashboard shall remain readable offline" | tidak lagi; dashboard butuh jaringan |
-| "The backend never receives merchant descriptions" | backend **menyimpan** deskripsi transaksi milik pengguna |
-
-**Yang tetap berlaku:**
-- Email mentah, subjek, pengirim, isi lampiran email **tidak** disimpan di mana pun.
-- Kredensial IMAP dan token refresh hanya di perangkat, dibungkus Keystore.
-- Penyedia LLM tetap **hanya** menerima agregat bulanan (FR-60).
-- Berkas lampiran pengguna tidak pernah diunggah.
-
----
-
-## 6. Pembaruan acceptance
-
-| Suite | Perubahan |
-|---|---|
-| **T01** Identity | JWT + refresh, rotasi, deteksi token dipakai ulang |
-| **T02** Authorization | pengujian peran: `USER` ditolak `403` pada route admin, bukan hanya disembunyikan |
-| **T04** Import integrity | impor kini menulis ke server; idempotensi dan duplikasi diuji lewat API |
-| **T05** Summary correctness | tetap; sumber data berubah ke MySQL |
-| **T08** Privacy | transaksi di server: uji scoping pemilik, uji isi database tidak memuat email mentah |
-| **T11 (baru)** | CRUDS penuh untuk 5 fitur; file storage tersimpan, terbaca, terhapus; field dinamis tersimpan dan tampil |
-
----
-
-## 7. Open issues baru
-
-| ID | Isu | Owner | Gate |
-|---|---|---|---|
-| **OI-18** | Data transaksi kini di server: perlu enkripsi at-rest MySQL dan kebijakan retensi yang sesuai | owner + backend lead | G2 |
-| **OI-19** | Mode offline hilang; demo membutuhkan jaringan dan database hidup | owner | G2 |
-| **OI-20** | Pemilihan MySQL vs Cloud Database (Turso) untuk penilaian; rekomendasi MySQL | owner | G1 |
-| **OI-21** | Riwayat push: pedoman memberi 0 pada "sekali push jadi"; perlu pola push rutin mulai sekarang | owner | G4 |
-
----
-
-## 8. Dampak traceability
-
-- Requirement yang dicabut ditandai `SUPERSEDED BY v0.4` di matriks §6.3, tidak dihapus dari
-  riwayat.
-- `docs/01_SCOPE_TRACEABILITY.md` perlu direvisi pada baris FR-35, NFR-16, NFR-22, DR-02, DR-05.
-- `docs/03_ARCHITECTURE.md` (sudah usang sejak CR-001) digantikan sepenuhnya oleh
-  `docs/10_MIGRASI_PEDOMAN.md` untuk arsitektur target.
-
----
-
-## 9. Sign-off
-
-| Peran | Nama | Keputusan |
+| Artefak | Isi | Status |
 |---|---|---|
-| Owner | Andhika Pratama | **menunggu** |
-| Lead Developer | — | menunggu persetujuan sebelum Fase 1 |
+| [`12_SRS_v0.4_REVIEW.md`](12_SRS_v0.4_REVIEW.md) | SRS review v0.4: scope, data location, role, FR-57–63, ERD, privasi, cutover, riwayat | draft review |
+| [`06_BACKEND_CONTRACT.md`](06_BACKEND_CONTRACT.md) | kontrak HTTP v0.4: JWT/refresh, transaksi/kategori, impor batch, ringkasan, anggaran, lampiran, admin, error, atomisitas | draft review |
+| [`10_MIGRASI_PEDOMAN.md`](10_MIGRASI_PEDOMAN.md) §8–9 | DDL kandidat `version: 3`, acceptance lokal, cloud NOT RUN, cutover/rollback | migrasi lokal PASS |
+| [`01_SCOPE_TRACEABILITY.md`](01_SCOPE_TRACEABILITY.md) | traceability FR/NFR/DR, T01–T11, 25 pemeriksaan CRUDS, rubrik D.1–D.10 | draft review |
+| [`03_ARCHITECTURE.md`](03_ARCHITECTURE.md) §0 | target arsitektur remote, perubahan UI, lampiran lokal, state auth | draft review |
 
-SRS dinaikkan ke **v0.4 draft**. CR-002 baru menjadi baseline setelah owner menyetujui empat
-keputusan di `10_MIGRASI_PEDOMAN.md` §13.
+### 5.1 Klarifikasi requirement baru
+
+- **FR-57**: access JWT ≤15 menit, refresh 30 hari; refresh dirotasi atomik dan replay mencabut
+  keluarga sesi; sesi direferensikan oleh `sid` dan dapat dicabut seketika.
+- **FR-58**: register publik selalu `USER`; `ADMIN` hanya provisioning terkontrol/undangan; admin
+  aktif terakhir tidak dapat diturunkan/dihapus; perubahan role/status mencabut sesi.
+- **FR-59**: server hanya menyimpan metadata lampiran (nama, MIME, ukuran, atribut, referensi lokal
+  abstrak, `deviceRef`); file tetap di perangkat dan tidak disediakan untuk diunduh.
+- **FR-60**: transaksi server-side; field sensitif (merchant, catatan, deskripsi, atribut) disegel
+  AES-GCM; ringkasan dihitung server dari baris aktif dan `month_revisions`.
+- **FR-61**: empat entitas dengan editor atribut key–value: transaksi, kategori, anggaran,
+  metadata lampiran; batas 10 pasangan/2 KB per entitas.
+- **FR-62**: satu refresh single-flight; retry request ≤1; kegagalan refresh → pemulihan sesi,
+  bukan retry buta.
+- **FR-63**: lima CRUDS (transaksi, kategori, anggaran, lampiran, admin); 25 pemeriksaan demo ada
+  di `01_SCOPE_TRACEABILITY.md` §7.
+
+### 5.2 Yang belum berubah
+
+FR-35 dan NFR-19 tetap menjadi batas payload AI (bukan FR-56). FR-56 adalah lokasi penyimpanan
+server. NFR-22 tetap menuntut data terbaca saat Gmail/AI gagal dan state unavailable saat
+backend/database gagal. BR-01…BR-06 tidak berubah. Email mentah dan kredensial IMAP tetap lokal.
+
+## 6. Riwayat revisi CR-002
+
+| Tanggal | Revisi | Status |
+|---|---|---|
+| 20 Nov 2026 | Draf awal: MySQL, transaksi server-side, lampiran, role | draf |
+| 21 Nov 2026 | Pemilik mengarahkan cloud database gratis; lead memilih Turso Free/libSQL; MySQL menjadi baseline minimum | arah cloud disetujui |
+| 21 Nov 2026 | Paket A selesai (`fe3a183`): gate/consent/MIME/import fixture | 223 Android, 111 backend |
+| 21 Nov 2026 | Paket B: konsolidasi SRS, kontrak API, DDL `version: 3`, acceptance lokal, ERD/UI/test plan | **review draft** |
+| 21 Nov 2026 | Pemilik menyetujui backend **Go**; irisan register/login/consent/summary, JWT/refresh, CRUD inti dan interop Node↔Go | slicer berjalan, C2/D belum |
+
+## 7. Sign-off paket v0.4
+
+| Butir | Pemilik | Status |
+|---|---|---|
+| Arah cloud database gratis | Owner | disetujui 21 Nov 2026 |
+| Turso Free/libSQL sebagai target | Lead | dipilih, menunggu sign-off paket |
+| Pergantian backend ke Go | Owner | **disetujui 21 Nov 2026** |
+| Transaksi server-side | Owner | **belum sign-off** |
+| Offline terbatas + kebutuhan internet | Owner | **belum sign-off** |
+| Dua peran USER/ADMIN + provisioning | Owner | **belum sign-off** |
+| Lampiran lokal + metadata server | Owner | **belum sign-off** |
+| Cutover/hapus data nyata | Owner | **belum diotorisasi** |
+| Cloud acceptance (database uji) | Lead/backend | **NOT RUN** — tanpa kredensial |
+
+Paket C1 tidak dimulai pada data pengguna sebelum butir di atas dicatat. Pekerjaan lokal pada
+database sintetis boleh berlanjut.

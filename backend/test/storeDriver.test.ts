@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import { createClient } from '@libsql/client';
 import { loadConfig } from '../src/config.js';
 import { localFilePath, splitStatements } from '../src/store/db.js';
+import { migrations } from '../src/store/migrations.js';
 import { createHarness, tempDatabasePath } from './helpers.js';
 
 /**
@@ -45,7 +46,7 @@ test('a file URL maps to a local path and boots a real database', async () => {
       );
       assert.deepEqual(
         applied.rows.map((row) => Number(row.version)),
-        [1, 2],
+        migrations.map((migration) => migration.version),
         'migrations are tracked in schema_migrations, not user_version',
       );
     } finally {

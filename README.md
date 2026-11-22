@@ -17,43 +17,101 @@ it maps every requirement ID to where it is implemented.
 Bagian ini diperbarui setiap kali ada kemajuan. Kalau ragu apakah masih akurat, `git log` adalah
 kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 
-**Terakhir diperbarui:** 20 November 2026 · commit `8d1640d` + rancangan migrasi
+**Terakhir diperbarui:** 21 November 2026 · branch `feat/go-backend` (paket B + slice Go)
 
 | Area | Status |
 |---|---|
 | SRS v0.2 → v0.3 change record (CR-001, tanpa GCP) | ✅ selesai |
-| Aplikasi Android — 13 destinasi, 203 test JVM | ✅ jalan |
+| Aplikasi Android — 13 destinasi, **225 test JVM** | ✅ jalan |
 | Akun PAM (email + password, scrypt) menggantikan Google Sign-In | ✅ selesai |
-| Gmail lewat **IMAP + App Password** (tanpa Google Cloud) | 🟡 tersambung; impor belum menyimpan |
-| Backend Node + **Turso** (database cloud), 111 test | ✅ jalan |
+| Onboarding: akun baru → Persetujuan, tolak Gmail → jalur manual | ✅ diperbaiki + tes |
+| Gmail lewat **IMAP + App Password** | 🟡 MIME/HTML + fixture impor lulus; **Gmail nyata belum diverifikasi** |
+| Impor Livin → baris transaksi → total bulanan | 🟡 fixture end-to-end lulus; Gmail nyata ⬜ |
+| Backend Node (referensi/rollback) | ✅ **124 test** lulus, termasuk interop Go |
+| **Backend Go (`backend-go/`)** | 🟡 C1 backend lokal PASS: auth/JWT, consent, finance CRUD, import batch, analysis canonical, deletion sweep; **40 test Go**, race/vet/build PASS |
+| Android ↔ Go | 🟡 register/login/consent/Ringkasan di emulator API 36; transaksi/import/analysis masih HTTP-only |
+| **Kontrak v0.4 (SRS, API, data, UI, acceptance)** | ✅ draft review siap disahkan |
+| **Migrasi libSQL `version: 3`** | ✅ teruji lokal `file:`; **cloud NOT RUN** |
+| Implementasi v0.4 (JWT/refresh, CRUD server, admin, lampiran) | 🟡 C1 backend lokal; C2/D belum |
 | LLM **Ollama lokal** (gratis, offline) | ✅ jalan |
 | Fase 5 — backup harian + deploy | ⬜ belum |
 | Fase 6 — APK release bertanda tangan | ⬜ belum |
-| **Kepatuhan Pedoman Project Akhir 2026** | 🟡 dianalisis, rancangan selesai, belum dieksekusi |
+| **Kepatuhan Pedoman Project Akhir 2026** | 🟡 kontrak v0.4 siap, implementasi belum |
 
-**Sedang dikerjakan.** Parser menolak isi email Livin asli dengan `missing_amount`: pada email
-nyata labelnya ditulis `Nominal` **tanpa titik dua** (`nom_start=1 nom_colon=0`), sedangkan
-ekstraktor mencari `Nominal:`. Isi email sendiri sudah terbaca (765 karakter), jadi yang tersisa
-adalah format label — bukan lagi soal MIME.
+**Selesai pada C1 lokal.** Temuan review ditutup: konfigurasi produksi menolak encryption key
+development; create manual idempoten dengan key/hash/result atomik; analisis memakai payload
+canonical server, validator FR-37, guard consent/deletion/revisi saat finalisasi; usage/biaya
+tercatat dan ceiling harian; import batch idempoten; deletion sweep + revoke sesi. **40 tes Go**
+lulus. **Selesai pada paket B + slice Go.** Kontrak v0.4 dikonsolidasikan: SRS review, API v0.4
+(JWT/refresh, transaksi/kategori CRUDS, impor batch, ringkasan server, anggaran, lampiran, admin),
+DDL/migrasi `version: 3` yang additive, ERD, perubahan UI, T01–T11 dan 25 pemeriksaan CRUDS.
+Backend Go berjalan dengan `net/http`, `database/sql`, driver libSQL; password/AES-GCM dibuktikan
+dua arah dengan fixture Node; migrasi 1–7 dan constraint diuji lokal. Android di emulator API 36
+berhasil register → login → consent → Ringkasan terhadap Go.
 
-**Bukti terakhir di perangkat:** IMAP terkoneksi, 20 notifikasi Livin ditemukan, 0 tersimpan.
+**Selesai pada paket A (dipertahankan).** Gate onboarding, tombol **Lanjut tanpa menghubungkan
+Gmail** (hanya Gmail yang dipaksa `DECLINED`; pilihan AI yang sudah dibuat dipertahankan), batas sel
+HTML MIME, propagasi jumlah lampiran, dan fixture impor end-to-end.
+
+**Belum selesai.** Admin/lampiran (FR-65/FR-59) dan C2 (Compose → repository remote) belum
+dikerjakan; UI transaksi/kategori/anggaran masih v0.3 dan Room belum dihapus. Cloud/engine, Gmail
+nyata, perangkat fisik, dan provider nyata tetap NOT RUN. Impor Gmail nyata belum diuji ulang.
+Kredensial database **uji** Turso belum tersedia, jadi cloud acceptance dan restore drill **NOT
+RUN**. Klaim performa Go belum dibuat tanpa benchmark.
+
+**Bukti emulator API 36 (paket A, 21 November 2026):** profil lokal baru → Persetujuan tanpa
+interaksi tambahan; tolak Gmail → Ringkasan; impor kotak masuk demo **28 cocok / 25 tersimpan / 3
+dilewati**; total Februari berubah `Rp0` → `Rp3.896.150`; impor ulang **0 tersimpan / 25 duplikat**;
+Back dan sign-out tidak memulihkan layar terlindungi.
+
+### Kontrak v0.4 (paket B)
+
+| Dokumen | Isi |
+|---|---|
+| [`12_SRS_v0.4_REVIEW.md`](docs/12_SRS_v0.4_REVIEW.md) | SRS review: scope, lokasi data, peran, FR-57–63, ERD, privasi, cutover, riwayat |
+| [`06_BACKEND_CONTRACT.md`](docs/06_BACKEND_CONTRACT.md) | endpoint, request/response/error, JWT/refresh, atomisitas, pencarian, lampiran, admin |
+| [`10_MIGRASI_PEDOMAN.md`](docs/10_MIGRASI_PEDOMAN.md) | DDL kandidat `version: 3`, acceptance lokal, cloud NOT RUN, rollback |
+| [`01_SCOPE_TRACEABILITY.md`](docs/01_SCOPE_TRACEABILITY.md) | traceability, T01–T11, 25 CRUDS, rubrik D.1–D.10 |
+| [`03_ARCHITECTURE.md`](docs/03_ARCHITECTURE.md) | target remote Go, perubahan UI, editor field dinamis, lampiran lokal |
+| [`13_GO_BACKEND_MIGRATION.md`](docs/13_GO_BACKEND_MIGRATION.md) | toolchain, struktur Go, matriks parity, interop, auth transition, rollback |
+| [`11_SRS_CHANGE_v0.4.md`](docs/11_SRS_CHANGE_v0.4.md) | CR-002, riwayat revisi, status sign-off |
+
+**Sudah disetujui:** cloud database gratis dan **pergantian backend ke Go** (21 November 2026).
+Implementasi Go dimulai; Node tetap rollback sampai parity diterima.
+
+**Siap disahkan (belum disetujui):** transaksi/kategori/anggaran/metadata lampiran di Turso/libSQL;
+mode offline terbatas dan kebutuhan internet; dua peran `USER`/`ADMIN` dengan admin terakhir
+dilindungi; lampiran lokal + metadata server; cutover bertahap dan rollback dengan rekonsiliasi.
+
+**Keputusan tersisa sebelum aktivasi data pengguna** (satu blok):
+
+1. Sign-off paket v0.4 dan urutan cutover Go (Node tetap rollback sampai parity diterima).
+2. Hosting API demo/24 jam + URL HTTPS (sekarang laptop).
+3. Retensi data server setelah akun dihapus (usulan: 30 hari backup, data aktif segera).
+4. Apakah rencana anggaran boleh dihapus hard (usulan) dan apakah admin boleh mengubah email.
+5. Kredensial database Turso **uji** terpisah + konfirmasi engine `libsql://`.
 
 ### Kepatuhan pedoman
 
-Pedoman mata kuliah (`PEDOMAN PROJECT AKHIR PAM 2026`) menetapkan syarat yang **bertentangan**
-dengan SRS v0.3, dan pedoman yang menentukan nilai. Enam butir belum terpenuhi:
+**Pembaruan rancangan 21 November 2026.** Pemilik menetapkan cloud database gratis sebagai arah project. Lead memilih **Turso Cloud Free/libSQL** yang sudah dipakai backend. Rancangan terbaru mengganti usulan MySQL di dokumen sebelumnya. Target berikutnya meliputi JWT/refresh, peran, CRUDS, file lokal dan penghapusan Room dari varian penilaian. Kode saat ini masih v0.3. [Rancangan cloud](docs/10_MIGRASI_PEDOMAN.md) · [CR-002](docs/11_SRS_CHANGE_v0.4.md)
+
+Pedoman mata kuliah (`PEDOMAN PROJECT AKHIR PAM 2026`) menetapkan syarat yang menentukan nilai.
+Kontrak v0.4 sudah menutup desainnya; implementasi belum:
 
 | Butir | Syarat | Kondisi |
 |---|---|---|
-| D.8 | Database minimal MySQL; **Room dilarang** | ❌ masih Room + SQLCipher |
-| D.1 | Access token **JWT** + **refresh token** | ❌ token opaque |
-| D.2 | **Role-based UI**, minimal 1 peran | ❌ belum ada |
-| D.9 | **Simpan & baca file lokal** | ❌ belum ada |
-| D.6 | **5 fitur CRUDS penuh** | ⚠️ Delete belum ada |
-| C.1 | Progress **mingguan** di README + push rutin | 🟡 dimulai hari ini |
+| D.1 | Access token **JWT** + **refresh token** | 🟡 kontrak + migrasi; C1 |
+| D.2 | **Role-based UI**, minimal 1 peran | 🟡 USER/ADMIN dirancang; C1/D |
+| D.3 | Navigasi Compose, alur awal benar | ✅ transisi akun baru dan back stack diperbaiki + tes |
+| D.5 | 4 entitas + field dinamis | 🟡 kontrak; D |
+| D.6 | **5 fitur CRUDS penuh** | 🟡 25 pemeriksaan didefinisikan; C2/D |
+| D.8 | Database minimal MySQL; **Room dilarang** | 🟡 Turso/libSQL + migrasi lokal; Room keluar pada D |
+| D.9 | **Simpan & baca file lokal** | 🟡 lifecycle lampiran dirancang; D |
+| C.1 | Progress **mingguan** di README + push rutin | 🟡 progress dicatat per paket |
 
 Rancangan migrasi: [`docs/10_MIGRASI_PEDOMAN.md`](docs/10_MIGRASI_PEDOMAN.md) ·
-Perubahan SRS: [`docs/11_SRS_CHANGE_v0.4.md`](docs/11_SRS_CHANGE_v0.4.md)
+Perubahan SRS: [`docs/11_SRS_CHANGE_v0.4.md`](docs/11_SRS_CHANGE_v0.4.md) ·
+SRS review: [`docs/12_SRS_v0.4_REVIEW.md`](docs/12_SRS_v0.4_REVIEW.md)
 
 ---
 
@@ -174,16 +232,20 @@ allow-listed aggregate projection only (FR-35).
 
 ## Backend
 
-`backend/` is a Node 24 + TypeScript service (Express 5, `node:sqlite`, zero native deps) that
-owns everything the device must not: account authentication (scrypt), revocable sessions, consent
-enforcement, aggregate storage, the LLM call with output validation, quotas, and deletion.
+`backend-go/` is the target Go 1.27.4 service (`net/http`, `database/sql`, libSQL driver). The
+existing `backend/` Node service remains the behavioural reference and rollback path during the
+migration. The service owns everything the device must not: account authentication (scrypt),
+revocable JWT sessions + rotated refresh tokens, consent enforcement, account-scoped finance data,
+the LLM call with output validation, quotas, and deletion.
 
 ```bash
-cd backend
-npm install
-npm start                     # http://127.0.0.1:8080 — fake LLM, local SQLite, no config needed
-bash scripts/smoke.sh         # 13-step happy path against the running server
-npm test                      # 83 contract tests
+cd backend-go
+../scripts/go.sh run ./cmd/api       # http://127.0.0.1:8080 — fake LLM, local libSQL file
+../scripts/go.sh test ./...          # 40 Go tests, including Node interop fixtures
+../scripts/go.sh test -race ./...
+
+# Node reference/rollback only (separate database, never both runners on one file)
+cd ../backend && npm install && npm test
 ```
 
 Then build the app pointed at it:
@@ -216,7 +278,9 @@ backend. No Google Cloud project is involved anywhere.
 
 The decisions that removed Google Cloud from the architecture (IMAP, local accounts, hybrid
 storage, Turso) are recorded in [`docs/08_ROADMAP.md`](docs/08_ROADMAP.md) and
-[`docs/09_SRS_CHANGE_v0.3.md`](docs/09_SRS_CHANGE_v0.3.md).
+[`docs/09_SRS_CHANGE_v0.3.md`](docs/09_SRS_CHANGE_v0.3.md). The v0.4 target moves transaction rows
+from Room to Turso over REST; until the C1/C2 cutover, the app still runs the v0.3 local storage.
+See [`docs/12_SRS_v0.4_REVIEW.md`](docs/12_SRS_v0.4_REVIEW.md).
 
 ## Cost
 
@@ -235,7 +299,7 @@ Single Gradle module, Hilt, MVVM with unidirectional state. The dependency rule 
 com.pam.recap
 ├── core/      money (exact minor units) · time (Asia/Jakarta months) · result · security
 ├── domain/    models · repository interfaces · ports (GmailSource, AnalysisEngine) · use cases
-├── data/      Room+SQLCipher · DataStore · Gmail sources · analysis engines · seeds
+├── data/      Room (v0.3, keluar pada D) · remote REST (target) · DataStore · Gmail · AI · seeds
 └── ui/        theme tokens · design-system components · navigation · feature screens
 ```
 
@@ -263,6 +327,11 @@ Key decisions, each traceable to a requirement:
 
 ```bash
 ./scripts/build.sh :app:testDebugUnitTest
+cd backend && npm test                 # Node reference + interop fixtures
+cd backend-go
+../scripts/go.sh test ./...            # Go target
+../scripts/go.sh test -race ./...      # concurrency
+../scripts/go.sh vet ./... && ../scripts/go.sh build ./cmd/api
 ```
 
 The suite is the specification, not decoration. Highlights:
@@ -271,7 +340,16 @@ The suite is the specification, not decoration. Highlights:
 |---|---|
 | `CashFlowCalculatorTest` | The SRS B5 worked example, transfer exclusion, refund netting, non-IDR exclusion, zero-base percentage |
 | `LivinQrisParserTest` | Supported fixture, failed payment rejected, missing amount never zero, attachment-only and unknown template excluded, injected instructions ignored |
-| `ImportMonthUseCaseTest` | Pagination, retry, duplicate suppression, month boundaries |
+| `LivinMimeImportTest` | Untyped MIME → HTML table (no colon, value in the next cell) → parsed row → monthly total; re-import dedupe; owner separation; malformed amount, failed payment and attachment-only add nothing |
+| `ImapMimeTest` | Plain/HTML/attachment shapes, untyped root recovery, table-cell boundary |
+| `ImportMonthUseCaseTest` | Pagination, retry (partial and complete), duplicate suppression, timeout, month boundaries |
+| `GateRoutingTest` | New profile → Consent, saved decision → Overview, ended session never keeps a protected screen, Consent re-openable |
+| `ConsentViewModelTest` | Untouched switch is not a decision; explicit decline records Gmail DECLINED and preserves an already-chosen AI grant |
+| `ImapMimeTest` (bound) | An unknown-size message stops at the MIME byte bound instead of buffering first |
+| `schemaV04.test.ts` (backend) | v0.4 DDL: cross-owner FK, per-owner fingerprint, amount/JSON checks, soft delete, category reassign, last admin, refresh rotation, index pagination |
+| `goInterop.test.ts` (Node) + Go interop tests | Node verifies Go scrypt/AES fixture and Go verifies Node fixtures, with owner AAD binding |
+| Go `httpapi` tests | register/login/refresh/replay/concurrency, consent, transaction CRUD, cross-owner isolation, budget/reassign, analysis allowlist/cache/deletion |
+| Go `finance` test | SRS B5 worked example and unlinked credit rules |
 | `FingerprintFactoryTest` | Determinism, per-user scoping, field sensitivity |
 | `AiPayloadBuilderTest` | Forbidden-field scan: no body, subject, sender, id, token, PAN or merchant |
 | `AnalysisValidatorTest`, `RequestAnalysisUseCaseTest` | Invented totals rejected, one regeneration max, no call without consent, mid-run withdrawal discarded |
@@ -280,10 +358,25 @@ The suite is the specification, not decoration. Highlights:
 | `PlanningGapTest` | Income 5.000.000 − savings 1.000.000 − limits 4.500.000 ⇒ shortfall 500.000 |
 | `DemoDatasetTest` | The demo numbers above |
 
+### Real Gmail check (owner-run)
+
+Fixture evidence does not prove a live mailbox. To close that gap on a **demo account**, run this
+and report only sanitized results:
+
+1. Build and install the debug APK, sign in, and grant Gmail consent.
+2. Settings → *Kelola kotak masuk* → enter the demo Gmail address and its 16-character App
+   Password → *Hubungkan kotak masuk*. (Never paste the password into a prompt, issue or commit.)
+3. Open the month that has Livin notifications and press *Impor sekarang*.
+4. Send back only: app commit, job state, and the four counters (`matched`, `saved`, `skipped`,
+   `unresolved`), plus the skip **reason codes** shown on the result screen.
+5. If it still fails, `adb logcat -d | grep -E "ImportMonth|ImapGmail"` contains integer-only
+   diagnostics (`chars`, `plain`, `html`, `nom_start`, `nom_colon`, `next_len`). Send those numbers
+   only — never the email body, sender address, message id, or any amount.
+
 ### Design review harness
 
-A device emulator cannot run in this sandbox, so screens are rendered on the JVM with
-Roborazzi + Robolectric native graphics:
+Screens are also rendered on the JVM with Roborazzi + Robolectric native graphics, so layout can
+be reviewed without a device:
 
 ```bash
 ./scripts/build.sh :app:recordRoborazziDebug --tests "com.pam.recap.screenshot.ScreenScreenshotsTest"
@@ -312,9 +405,10 @@ These come from the SRS's own open-issues list (Appendix C) and are recorded rat
 
 - **OI-13** The IMAP App Password also permits sending mail and never expires on its own. It is
   stored Keystore-wrapped, never leaves the device, and is cleared on sign-out.
-- **Parser coverage** Only the notification layouts exercised by fixtures are understood. A real
-  `Pembayaran Berhasil!` body is currently rejected (`missing_amount`, label without a colon) —
-  the open blocker in Progress above.
+- **Parser coverage** Only the notification layouts exercised by fixtures are understood. The
+  measured table layout (label without a colon, value in the next cell) is now covered and the
+  import path is proven with anonymized MIME fixtures, but a live Gmail run is still required
+  before claiming real-mailbox success.
 - **OI-02 / OI-06** The Livin sender and subject allow-list reflects one manually reviewed QRIS
   payment notification. MIME/HTML variants and language changes are not exhaustively covered.
 - **OI-03** Incoming-transfer templates are unverified, so income is manual-entry only (A4).

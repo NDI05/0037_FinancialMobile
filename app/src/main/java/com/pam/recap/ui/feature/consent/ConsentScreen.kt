@@ -25,6 +25,7 @@ import com.pam.recap.ui.components.GlassTopBar
 import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
 import com.pam.recap.ui.components.PillButton
+import com.pam.recap.ui.components.PillButtonStyle
 import com.pam.recap.ui.theme.BodyM
 import com.pam.recap.ui.theme.DisplayM
 import com.pam.recap.ui.theme.OnInk
@@ -123,6 +124,19 @@ fun ConsentScreen(
                 enabled = state.canContinue,
                 loading = state.isSaving,
                 modifier = Modifier.fillMaxWidth(),
+            )
+            // FR-03: an explicit decline, because an untouched switch is not a recorded decision.
+            PillButton(
+                text = stringResource(R.string.consent_decline_gmail),
+                onClick = viewModel::continueWithoutGmail,
+                style = PillButtonStyle.Secondary,
+                enabled = !state.isSaving,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = stringResource(R.string.consent_decline_gmail_body),
+                style = BodyM,
+                color = OnInkMuted,
             )
             Text(
                 text = stringResource(R.string.consent_footer),

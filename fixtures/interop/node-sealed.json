@@ -1,0 +1,14 @@
+{
+  "ownerId": "u_34343446dfa5ad3d9d440ac847c20c2e",
+  "keyVersion": 1,
+  "purpose": "summary",
+  "value": {
+    "grossInflowMinor": 500000000,
+    "netMinor": 390000000,
+    "monthId": "2026-02",
+    "marker": "node-sealed"
+  },
+  "ciphertextB64": "I1JbRlWODwBa2rBDVlDlv3JA3bD1p2My4U+8YjbA2Xcj47QCYMXyZabGtoAXeX07+6XYQ4WkizF1gecUobWLWW2e0l7sUcaiCtlDxiJHxVjmpwcvpDj4A2IOY4NqRA==",
+  "ivB64": "VcE8E3wheNs8zweM",
+  "tagB64": "nzAZd831Gb66zj5+FWa+iQ=="
+}

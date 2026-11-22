@@ -249,6 +249,22 @@ fun GmailConnectScreen(
                     loading = state.isBusy,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                if (state.demoMailboxAvailable) {
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    PillButton(
+                        text = stringResource(R.string.gmail_demo_mailbox),
+                        onClick = viewModel::connectDemoMailbox,
+                        style = PillButtonStyle.Secondary,
+                        enabled = state.consentGranted,
+                        loading = state.isBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        text = stringResource(R.string.gmail_demo_mailbox_body),
+                        style = BodyM,
+                        color = OnInkMuted,
+                    )
+                }
             }
         }
     }

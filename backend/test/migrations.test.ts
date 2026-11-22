@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createClient } from '@libsql/client';
-import { openDatabase, migrate } from '../src/store/db.js';
+import { openDatabase, migrate, splitStatements, SCHEMA_MIGRATIONS_DDL } from '../src/store/db.js';
 import { migrations } from '../src/store/migrations.js';
 import { tempDatabasePath } from './helpers.js';
 
@@ -25,28 +25,47 @@ test('migrations are tracked in schema_migrations and a second boot is a no-op',
   const first = await openDatabase({ url: `file:${databasePath}`, authToken: '' });
   first.close();
 
-  assert.deepEqual(await appliedVersions(databasePath), [1, 2]);
+  const expected = migrations.map((migration) => migration.version);
+  assert.deepEqual(await appliedVersions(databasePath), expected);
 
   // Second boot: nothing is re-applied and no row is duplicated.
   const second = await openDatabase({ url: `file:${databasePath}`, authToken: '' });
   second.close();
-  assert.deepEqual(await appliedVersions(databasePath), [1, 2]);
+  assert.deepEqual(await appliedVersions(databasePath), expected);
 
   const raw = createClient({ url: `file:${databasePath}` });
   try {
     const count = await raw.execute('SELECT COUNT(*) AS total FROM schema_migrations');
-    assert.equal(Number(count.rows[0]?.total), 2);
+    assert.equal(Number(count.rows[0]?.total), expected.length);
   } finally {
     raw.close();
   }
 });
 
-test('a database created by the old PRAGMA scheme is adopted without re-running DDL', async () => {
-  const databasePath = tempDatabasePath();
-  const created = await openDatabase({ url: `file:${databasePath}`, authToken: '' });
-  created.close();
+/** Builds a genuine v0.3 database (migrations 1–2 only) without touching the v3 DDL. */
+async function createV03Database(databasePath: string): Promise<void> {
+  const client = createClient({ url: `file:${databasePath}` });
+  try {
+    await client.execute(SCHEMA_MIGRATIONS_DDL);
+    for (const migration of migrations.filter((entry) => entry.version <= 2)) {
+      for (const statement of splitStatements(migration.sql)) {
+        await client.execute(statement);
+      }
+      await client.execute({
+        sql: 'INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)',
+        args: [migration.version, '2026-01-01T00:00:00.000Z'],
+      });
+    }
+  } finally {
+    client.close();
+  }
+}
 
-  // Turn it into an old-format database: data in place, no schema_migrations, user_version = 2.
+test('a v0.3 database keeps its rows when the v0.4 schema is applied', async () => {
+  const databasePath = tempDatabasePath();
+  await createV03Database(databasePath);
+
+  // Legacy account written by v0.3 (before role/status existed).
   const legacy = createClient({ url: `file:${databasePath}` });
   try {
     await legacy.execute({
@@ -54,25 +73,24 @@ test('a database created by the old PRAGMA scheme is adopted without re-running 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       args: ['u_legacy', 'legacy@example.test', 'Legacy', Buffer.from([1, 2]), Buffer.from([3, 4]), 'scrypt:x', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'],
     });
-    await legacy.execute('DROP TABLE schema_migrations');
-    await legacy.execute('PRAGMA user_version = 2');
   } finally {
     legacy.close();
   }
 
-  // Boot on the old format: it must record 1..2 and leave the rows alone.
+  // Boot applies only the new migration; the legacy row survives and gets the USER default.
   const upgraded = await openDatabase({ url: `file:${databasePath}`, authToken: '' });
   upgraded.close();
 
-  assert.deepEqual(await appliedVersions(databasePath), [1, 2]);
+  assert.deepEqual(await appliedVersions(databasePath), migrations.map((migration) => migration.version));
 
   const raw = createClient({ url: `file:${databasePath}` });
   try {
-    const user = await raw.execute('SELECT email FROM users WHERE owner_id = ?', ['u_legacy']);
+    const user = await raw.execute('SELECT email, role, status FROM users WHERE owner_id = ?', ['u_legacy']);
     assert.equal(user.rows[0]?.email, 'legacy@example.test', 'no data loss');
-    // Tables were not recreated: the adopt path re-ran nothing.
-    const tables = await raw.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'schema_migrations'");
-    assert.equal(tables.rows.length, 1);
+    assert.equal(user.rows[0]?.role, 'USER');
+    assert.equal(user.rows[0]?.status, 'ACTIVE');
+    const v4 = await raw.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'transactions'");
+    assert.equal(v4.rows.length, 1, 'v0.4 schema applied');
   } finally {
     raw.close();
   }

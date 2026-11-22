@@ -10,7 +10,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-LOG="$ROOT/backend/.dev-server.log"
+BACKEND_KIND="${PAM_BACKEND:-go}"
+if [[ "$BACKEND_KIND" == "node" ]]; then
+  LOG="$ROOT/backend/.dev-server.log"
+else
+  LOG="$ROOT/backend-go/.dev-server.log"
+fi
 
 if [[ "${1:-}" == "--logs" || "${1:-}" == "-l" ]]; then
   if [[ ! -f "$LOG" ]]; then
@@ -51,8 +56,12 @@ if [[ "${PAM_SKIP_BACKEND:-0}" == "1" ]]; then
 elif curl -fsS --max-time 2 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
   echo "  sudah hidup di port $PORT"
 else
-  echo "  menyalakan backend…"
-  ( cd "$ROOT/backend" && nohup npm start >"$LOG" 2>&1 & )
+  echo "  menyalakan backend ($BACKEND_KIND)…"
+  if [[ "$BACKEND_KIND" == "node" ]]; then
+    ( cd "$ROOT/backend" && nohup npm start >"$LOG" 2>&1 & )
+  else
+    ( cd "$ROOT/backend-go" && APP_ENV=development PORT="$PORT" nohup "$ROOT/scripts/go.sh" run ./cmd/api >"$LOG" 2>&1 & )
+  fi
   for _ in $(seq 1 30); do
     sleep 1
     if curl -fsS --max-time 2 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then break; fi
@@ -60,7 +69,7 @@ else
   if curl -fsS --max-time 2 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
     echo "  hidup (log: backend/.dev-server.log — lihat dengan: ./scripts/dev.sh --logs)"
   else
-    echo "  GAGAL menyala — lihat backend/.dev-server.log" >&2
+    echo "  GAGAL menyala — lihat $LOG" >&2
     exit 1
   fi
 fi
@@ -76,7 +85,7 @@ fi
 
 echo
 echo "Lihat log backend : ./scripts/dev.sh --logs"
-echo "Hentikan backend  : pkill -f 'tsx src/server.ts'"
+echo "Hentikan backend  : pkill -f 'go-build.*/exe/api'  (atau pkill -f 'tsx src/server.ts' untuk Node)"
 echo
 echo "Siap. Jalankan aplikasi dari Android Studio atau:"
 echo "  $ADB shell am start -n com.pam.recap.debug/com.pam.recap.MainActivity"

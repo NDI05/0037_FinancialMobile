@@ -259,6 +259,38 @@ class ImportMonthUseCaseTest {
         assertTrue(transactions.all().all { month.contains(it.eventAt) })
     }
 
+    @Test
+    fun `retrying a partial import completes it without duplicating page one`() = runTest {
+        connect()
+        source.setScenario(FixtureScenario.PARTIAL_FAILURE)
+        val first = (useCase("u_demo", month) as com.pam.recap.core.result.Outcome.Success).value
+        assertEquals(ImportState.PARTIAL, first.state)
+        assertTrue(first.importedCount > 0)
+
+        source.setScenario(FixtureScenario.NORMAL)
+        val retry = RetryImportUseCase(useCase, imports)("u_demo", month)
+            .let { (it as com.pam.recap.core.result.Outcome.Success).value }
+
+        assertEquals(ImportState.COMPLETE, retry.state)
+        // Page one is seen again but deduped by fingerprint; only the missing rows are inserted.
+        assertTrue("expected dedupe of page one, was ${retry.duplicateCount}", retry.duplicateCount >= first.importedCount)
+        assertEquals(first.importedCount + retry.importedCount, transactionCount())
+    }
+
+    @Test
+    fun `retrying a complete import returns the stored job and inserts nothing`() = runTest {
+        connect()
+        val complete = (useCase("u_demo", month) as com.pam.recap.core.result.Outcome.Success).value
+        assertEquals(ImportState.COMPLETE, complete.state)
+        val before = transactionCount()
+
+        val retry = RetryImportUseCase(useCase, imports)("u_demo", month)
+            .let { (it as com.pam.recap.core.result.Outcome.Success).value }
+
+        assertEquals(complete.id, retry.id)
+        assertEquals(before, transactionCount())
+    }
+
     private fun transactionCount(): Int = transactions.all().size
 
     // ---------------------------------------------------------------------------------------

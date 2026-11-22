@@ -68,27 +68,7 @@ fun PamNavHost(modifier: Modifier = Modifier) {
     val destination = backStackEntry?.destination
 
     LaunchedEffect(gate, destination) {
-        when (gate) {
-            GateState.Loading -> Unit
-
-            GateState.NeedsSignIn -> when {
-                // The account screen is reachable before a profile exists: that is its purpose.
-                destination == null -> navController.replaceWith(PamDestination.Welcome)
-                destination.isAccount() -> Unit
-                destination.isConsent() -> navController.replaceWith(PamDestination.Welcome)
-                else -> Unit
-            }
-
-            is GateState.NeedsConsent -> if (
-                destination == null || destination.isWelcome() || destination.isOverview()
-            ) {
-                navController.replaceWith(PamDestination.Consent)
-            }
-
-            is GateState.Ready -> if (destination == null || destination.isGateScreen()) {
-                navController.replaceWith(PamDestination.Overview())
-            }
-        }
+        gateRedirect(gate, destination)?.let(navController::replaceWith)
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -271,10 +251,51 @@ private fun bottomItems(destination: NavDestination?): List<BottomNavItem> = lis
     ),
 )
 
+/**
+ * The single gate decision: given the resolved gate and the destination currently on top, where
+ * (if anywhere) the graph must move. Keeping it pure makes the "new profile stuck on Account" bug
+ * testable without a Hilt graph (D.3).
+ *
+ * The rules are a closed set, not a list of exceptions per screen: a session without a recorded
+ * Gmail decision may only be on Consent, and no session may only be on Welcome or Account. That is
+ * why a screen added later is gated automatically instead of leaking through.
+ */
+internal fun gateRedirect(gate: GateState, destination: NavDestination?): PamDestination? = when (gate) {
+    GateState.Loading -> null
+
+    GateState.NeedsSignIn -> when {
+        destination == null -> PamDestination.Welcome
+        // The account screen is reachable before a profile exists: that is its purpose.
+        destination.isAccount() -> null
+        destination.isWelcome() -> null
+        // Any other page is protected. This also covers a sign-out or session expiry that happens
+        // while a protected screen is on top, so Back can never restore it.
+        else -> PamDestination.Welcome
+    }
+
+    is GateState.NeedsConsent ->
+        // A session exists but the Gmail decision does not: Consent is the only allowed page, so a
+        // profile created on Account moves immediately instead of waiting for a Back press.
+        if (destination == null || !destination.isConsent()) {
+            PamDestination.Consent
+        } else {
+            null
+        }
+
+    is GateState.Ready ->
+        // Sign-in/registration is done: leave the entry screens. Consent is deliberately NOT
+        // included — with a saved decision it is still a reachable editor (grant/withdraw Gmail),
+        // and bouncing it to Overview would make "change it later in Settings" impossible.
+        if (destination == null || destination.isWelcome() || destination.isAccount()) {
+            PamDestination.Overview()
+        } else {
+            null
+        }
+}
+
 private fun NavDestination?.isTopLevel(): Boolean =
     isOverview() || isTransactions() || isAnalysis() || isSettings()
 
-private fun NavDestination?.isGateScreen(): Boolean = isWelcome() || isConsent() || isAccount()
 
 private fun NavDestination?.isAccount(): Boolean = this?.hasRoute<PamDestination.Account>() == true
 
@@ -291,7 +312,7 @@ private fun NavDestination?.isAnalysis(): Boolean = this?.hasRoute<PamDestinatio
 
 private fun NavDestination?.isSettings(): Boolean = this?.hasRoute<PamDestination.Settings>() == true
 
-private fun NavHostController.replaceWith(destination: PamDestination) {
+internal fun NavHostController.replaceWith(destination: PamDestination) {
     navigate(destination) {
         popUpTo(0) { inclusive = true }
         launchSingleTop = true
