@@ -109,4 +109,5 @@ belum diimplementasikan. C2B1 belum selesai.
 Empat layar B01–B04 memakai token PAM Warm R1/Manrope. Detail capability notice
 dan manual sticky CTA diterapkan. Lihat [`15_DESIGN_R1_HANDOFF.md`](15_DESIGN_R1_HANDOFF.md).
 Dua verifikasi emulator gate C2A (refresh <5 detik dan retry respons hilang)
-masih terbuka; C2B1 import/pagination belum selesai.
+masih terbuka; C2B1 import/pagination, S3 CRUDS dan S4 belum selesai.
+Lihat `DELIVERY_S2_S4_CHECKPOINT.md`.

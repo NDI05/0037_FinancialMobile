@@ -29,7 +29,7 @@ kebenarannya. Sisa README ini memakai bahasa Inggris sebagai dokumentasi teknis.
 | Impor Livin → baris transaksi → total bulanan | 🟡 fixture end-to-end lulus; Gmail nyata ⬜ |
 | Backend Node (referensi/rollback) | ✅ **124 test** lulus, termasuk interop Go |
 | **Backend Go (`backend-go/`)** | 🟡 C1 backend lokal PASS: auth/JWT, consent, finance CRUD, import batch, analysis canonical, deletion sweep; **42 test Go**, race/vet/build PASS |
-| Android ↔ Go | 🟡 C2A + kandidat visual R1 empat layar; import/pagination/budget/analysis masih tersisa |
+| Android ↔ Go | 🟡 C2A + kandidat visual R1; C2B1 import/pagination, S3 CRUDS dan S4 belum |
 | **Kontrak v0.4 (SRS, API, data, UI, acceptance)** | ✅ draft review siap disahkan |
 | **Migrasi libSQL `version: 3`** | ✅ teruji lokal `file:`; **cloud NOT RUN** |
 | Implementasi v0.4 (JWT/refresh, CRUD server, admin, lampiran) | 🟡 C1 backend lokal; C2/D belum |
