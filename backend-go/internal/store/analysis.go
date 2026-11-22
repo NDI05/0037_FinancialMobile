@@ -41,17 +41,19 @@ type AnalysisRecord struct {
 	Status            string
 	RegenerationCount int
 	CreatedAt         time.Time
+	DependencyHash    string
 }
 
 func (s *Store) FindAnalysisByCache(ctx context.Context, ownerID, monthID string, revision int,
-	promptVersion, provider, model, snapshotHash, consentID string) (AnalysisRecord, error) {
+	promptVersion, provider, model, snapshotHash, consentID, dependencyHash string) (AnalysisRecord, error) {
 	row := s.DB.QueryRowContext(ctx, `SELECT id, month_id, input_revision, provider, model,
-		prompt_version, ciphertext, iv, tag, key_version, status, regeneration_count, created_at
+		prompt_version, ciphertext, iv, tag, key_version, status, regeneration_count, created_at,
+		dependency_hash
 		FROM analyses WHERE owner_id = ? AND month_id = ? AND input_revision = ?
 		  AND prompt_version = ? AND provider = ? AND model = ?
-		  AND snapshot_hash = ? AND consent_id = ? AND status = 'AVAILABLE'
+		  AND snapshot_hash = ? AND consent_id = ? AND dependency_hash = ? AND status = 'AVAILABLE'
 		ORDER BY created_at DESC LIMIT 1`, ownerID, monthID, revision, promptVersion, provider, model,
-		snapshotHash, consentID)
+		snapshotHash, consentID, dependencyHash)
 	record, _, err := s.scanAnalysis(ctx, row, ownerID, false)
 	return record, err
 }
@@ -59,13 +61,14 @@ func (s *Store) FindAnalysisByCache(ctx context.Context, ownerID, monthID string
 func (s *Store) FindAnalysisByIdempotency(ctx context.Context, ownerID, key string) (AnalysisRecord, string, error) {
 	row := s.DB.QueryRowContext(ctx, `SELECT id, month_id, input_revision, provider, model,
 		prompt_version, ciphertext, iv, tag, key_version, status, regeneration_count, created_at,
-		request_hash FROM analyses WHERE owner_id = ? AND idempotency_key = ?`, ownerID, key)
+		dependency_hash, request_hash FROM analyses WHERE owner_id = ? AND idempotency_key = ?`, ownerID, key)
 	return s.scanAnalysis(ctx, row, ownerID, true)
 }
 
 func (s *Store) LatestAnalysis(ctx context.Context, ownerID, monthID string) (AnalysisRecord, error) {
 	row := s.DB.QueryRowContext(ctx, `SELECT id, month_id, input_revision, provider, model,
-		prompt_version, ciphertext, iv, tag, key_version, status, regeneration_count, created_at
+		prompt_version, ciphertext, iv, tag, key_version, status, regeneration_count, created_at,
+		dependency_hash
 		FROM analyses WHERE owner_id = ? AND month_id = ? ORDER BY created_at DESC LIMIT 1`,
 		ownerID, monthID)
 	record, _, err := s.scanAnalysis(ctx, row, ownerID, false)
@@ -78,6 +81,7 @@ type AnalysisFinalizeInput struct {
 	MonthID           string
 	InputRevision     int
 	SnapshotHash      string
+	DependencyHash    string
 	ConsentID         string
 	Provider          string
 	Model             string
@@ -136,16 +140,11 @@ func (s *Store) InsertAnalysisGuarded(ctx context.Context, input AnalysisFinaliz
 	if pending > 0 {
 		return AnalysisRecord{}, ErrDeletionInProgress
 	}
-	var revision int
-	if err := tx.QueryRowContext(ctx, `SELECT revision FROM month_revisions
-		WHERE owner_id = ? AND month_id = ?`, input.OwnerID, input.MonthID).Scan(&revision); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			revision = 0
-		} else {
-			return AnalysisRecord{}, err
-		}
+	dependencies, err := dependenciesFor(ctx, tx, input.OwnerID, input.MonthID)
+	if err != nil {
+		return AnalysisRecord{}, err
 	}
-	if revision != input.InputRevision {
+	if dependencies.TargetRevision != input.InputRevision || dependencies.Hash != input.DependencyHash {
 		return AnalysisRecord{}, ErrRevisionConflict
 	}
 	// A concurrent request with the same idempotency key may have inserted first.
@@ -158,7 +157,7 @@ func (s *Store) InsertAnalysisGuarded(ctx context.Context, input AnalysisFinaliz
 		}
 		record, _, err := s.scanAnalysis(ctx, tx.QueryRowContext(ctx, `SELECT id, month_id,
 			input_revision, provider, model, prompt_version, ciphertext, iv, tag, key_version,
-			status, regeneration_count, created_at FROM analyses WHERE id = ?`, existingID), input.OwnerID, false)
+			status, regeneration_count, created_at, dependency_hash FROM analyses WHERE id = ?`, existingID), input.OwnerID, false)
 		if err != nil {
 			return AnalysisRecord{}, err
 		}
@@ -176,13 +175,13 @@ func (s *Store) InsertAnalysisGuarded(ctx context.Context, input AnalysisFinaliz
 		(id, owner_id, month_id, summary_id, input_revision, consent_id, provider, model,
 		 prompt_version, ciphertext, iv, tag, key_version, status, validation_issues,
 		 regeneration_count, prompt_tokens, completion_tokens, idempotency_key, request_hash,
-		 snapshot_hash, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'AVAILABLE', '[]', ?, ?, ?, ?, ?, ?, ?)`,
+		 snapshot_hash, dependency_hash, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'AVAILABLE', '[]', ?, ?, ?, ?, ?, ?, ?, ?)`,
 		id, input.OwnerID, input.MonthID, "server:"+input.MonthID, input.InputRevision,
 		input.ConsentID, input.Provider, input.Model, input.PromptVersion, sealed.Ciphertext,
 		sealed.IV, sealed.Tag, s.KeyVersion, input.RegenerationCount,
 		nullableInt64(input.Response.PromptTokens), nullableInt64(input.Response.CompletionTokens),
-		input.IdempotencyKey, input.RequestHash, input.SnapshotHash, nowString(input.Now))
+		input.IdempotencyKey, input.RequestHash, input.SnapshotHash, input.DependencyHash, nowString(input.Now))
 	if err != nil {
 		if isUnique(err.Error()) {
 			// Another writer committed the same idempotency key after our pre-check.
@@ -200,7 +199,7 @@ func (s *Store) InsertAnalysisGuarded(ctx context.Context, input AnalysisFinaliz
 	}
 	record, _, err := s.scanAnalysis(ctx, tx.QueryRowContext(ctx, `SELECT id, month_id,
 		input_revision, provider, model, prompt_version, ciphertext, iv, tag, key_version,
-		status, regeneration_count, created_at FROM analyses WHERE id = ?`, id), input.OwnerID, false)
+		status, regeneration_count, created_at, dependency_hash FROM analyses WHERE id = ?`, id), input.OwnerID, false)
 	if err != nil {
 		return AnalysisRecord{}, err
 	}
@@ -225,7 +224,7 @@ func (s *Store) scanAnalysis(ctx context.Context, row *sql.Row, ownerID string,
 	var created, hash string
 	dest := []any{&record.ID, &record.MonthID, &record.InputRevision, &record.Provider,
 		&record.Model, &record.PromptVersion, &ciphertext, &iv, &tag, &keyVersion,
-		&record.Status, &record.RegenerationCount, &created}
+		&record.Status, &record.RegenerationCount, &created, &record.DependencyHash}
 	if withHash {
 		dest = append(dest, &hash)
 	}

@@ -135,6 +135,9 @@ func (s *Store) CreateTransaction(ctx context.Context, ownerID string, input Tra
 		return Transaction{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if err := ensureNoDeletionTx(ctx, tx, ownerID); err != nil {
+		return Transaction{}, err
+	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO transactions
 		(id, owner_id, category_id, direction, source, amount_minor, currency, event_at_ms,
 		 month_id, fingerprint, parser_version, parser_confidence, category_origin,

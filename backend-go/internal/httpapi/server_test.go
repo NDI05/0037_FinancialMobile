@@ -419,22 +419,23 @@ func TestAnalysisConsentAllowlistCacheAndDeletion(t *testing.T) {
 	}
 
 	// A pending deletion blocks new analyses.
-	if status, _ := h.request("POST", "/v1/deletion-requests", token, nil); status != 202 {
+	if status, _ := h.request("POST", "/v1/deletion-requests", token, map[string]any{
+		"password": testPassword, "confirmation": "DELETE_WORKSPACE",
+	}); status != 202 {
 		t.Fatalf("deletion create status %d", status)
 	}
 	status, body = h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
 		"monthId": "2026-11", "inputRevision": 2, "payload": payload,
 	}, map[string]string{"Idempotency-Key": "analysis-5"})
-	if status != 409 || body["code"] != "deletion_in_progress" {
+	if status != 401 && (status != 409 || body["code"] != "deletion_in_progress") {
 		t.Fatalf("deletion gate: %d %#v", status, body)
 	}
 	// A transaction write is blocked too, so the sweep cannot race a new row.
-	food := h.category(token, "food")
 	status, body = h.request("POST", "/v1/transactions", token, map[string]any{
 		"direction": "DEBIT", "amountMinor": 1_000, "eventAt": "2026-11-19T04:10:00Z",
-		"categoryId": food,
+		"categoryId": foodForAnalysis,
 	})
-	if status != 409 || body["code"] != "deletion_in_progress" {
+	if status != 401 && (status != 409 || body["code"] != "deletion_in_progress") {
 		t.Fatalf("deletion write gate: %d %#v", status, body)
 	}
 }
@@ -574,7 +575,7 @@ func (p *blockingProvider) Analyze(ctx context.Context, payload map[string]any) 
 }
 
 func TestAnalysisRaceWithConsentAndDeletion(t *testing.T) {
-	for _, action := range []string{"withdraw", "delete", "mutate"} {
+	for _, action := range []string{"withdraw", "delete", "mutate", "prior", "budget", "category", "coverage"} {
 		t.Run(action, func(t *testing.T) {
 			provider := &blockingProvider{entered: make(chan struct{}), release: make(chan struct{})}
 			h := newHarnessWithProvider(t, provider)
@@ -612,7 +613,9 @@ func TestAnalysisRaceWithConsentAndDeletion(t *testing.T) {
 					t.Fatalf("withdraw: %d", status)
 				}
 			case "delete":
-				if status, _ := h.request("POST", "/v1/deletion-requests", token, nil); status != 202 {
+				if status, _ := h.request("POST", "/v1/deletion-requests", token, map[string]any{
+					"password": testPassword, "confirmation": "DELETE_WORKSPACE",
+				}); status != 202 {
 					t.Fatalf("deletion: %d", status)
 				}
 			case "mutate":
@@ -622,11 +625,41 @@ func TestAnalysisRaceWithConsentAndDeletion(t *testing.T) {
 				}); status != 201 {
 					t.Fatalf("mutation: %d", status)
 				}
+			case "prior":
+				if status, _ := h.request("POST", "/v1/transactions", token, map[string]any{
+					"direction": "DEBIT", "amountMinor": 3_500, "currency": "IDR",
+					"eventAt": "2026-10-20T04:10:00Z", "categoryId": food,
+				}); status != 201 {
+					t.Fatalf("prior mutation: %d", status)
+				}
+			case "budget":
+				if status, _ := h.request("PUT", "/v1/budget-plans/2026-11", token, map[string]any{
+					"expectedIncomeMinor": 1_000_000, "plannedSavingsMinor": 100_000,
+					"limits": []any{}, "revision": 0,
+				}); status != 200 {
+					t.Fatalf("budget mutation: %d", status)
+				}
+			case "category":
+				if status, _ := h.request("PATCH", "/v1/categories/"+food, token, map[string]any{
+					"label": "Makanan baru", "revision": 0,
+				}); status != 200 {
+					t.Fatalf("category mutation: %d", status)
+				}
+			case "coverage":
+				if status, _ := h.request("POST", "/v1/import-jobs", token, map[string]any{
+					"monthId": "2026-11", "templateVersion": "livin-v1",
+				}); status != 201 {
+					t.Fatalf("coverage mutation: %d", status)
+				}
 			}
 			close(provider.release)
 			select {
 			case status := <-result:
-				if status != 409 {
+				if action == "delete" {
+					if status != 401 && status != 409 {
+						t.Fatalf("in-flight analysis after deletion = %d, want 401/409", status)
+					}
+				} else if status != 409 {
 					t.Fatalf("in-flight analysis after %s = %d, want 409", action, status)
 				}
 			case <-time.After(5 * time.Second):
@@ -879,14 +912,21 @@ func TestDeletionSweepRemovesFinanceAndRevokesSessions(t *testing.T) {
 		"direction": "DEBIT", "amountMinor": 1_000, "currency": "IDR",
 		"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
 	})
-	if status, _ := h.request("POST", "/v1/deletion-requests", token, nil); status != 202 {
-		t.Fatalf("deletion request: %d", status)
+	status, deletion := h.request("POST", "/v1/deletion-requests", token, map[string]any{
+		"password": testPassword, "confirmation": "DELETE_WORKSPACE",
+	})
+	if status != 202 {
+		t.Fatalf("deletion request: %d %#v", status, deletion)
+	}
+	receipt, _ := deletion["receiptToken"].(string)
+	if receipt == "" {
+		t.Fatal("deletion response has no receipt token")
 	}
 	if status, _ := h.request("POST", "/v1/transactions", token, map[string]any{
 		"direction": "DEBIT", "amountMinor": 2_000, "currency": "IDR",
 		"eventAt": "2026-11-20T04:10:00Z", "categoryId": food,
-	}); status != 409 {
-		t.Fatalf("write during deletion: %d", status)
+	}); status != 401 {
+		t.Fatalf("write during deletion (session must be revoked): %d", status)
 	}
 	completed, err := h.store.SweepDeletions(context.Background(), time.Now())
 	if err != nil || completed != 1 {
@@ -899,10 +939,10 @@ func TestDeletionSweepRemovesFinanceAndRevokesSessions(t *testing.T) {
 	if transactions != 0 || categories != 0 || analyses != 0 {
 		t.Fatalf("finance rows remain: tx=%d cat=%d analyses=%d", transactions, categories, analyses)
 	}
-	var status string
-	_ = h.store.DB.QueryRow(`SELECT status FROM users WHERE email = ?`, "sweep@example.test").Scan(&status)
-	if status != "DELETED" {
-		t.Fatalf("account status = %s", status)
+	var accountStatus string
+	_ = h.store.DB.QueryRow(`SELECT status FROM users WHERE email = ?`, "sweep@example.test").Scan(&accountStatus)
+	if accountStatus != "DELETED" {
+		t.Fatalf("account status = %s", accountStatus)
 	}
 	if code, _ := h.request("POST", "/v1/sessions/refresh", "", map[string]any{"refreshToken": refresh}); code != 401 {
 		t.Fatalf("refresh after sweep: %d", code)
@@ -915,6 +955,13 @@ func TestDeletionSweepRemovesFinanceAndRevokesSessions(t *testing.T) {
 	}); code != 403 {
 		t.Fatalf("login after deletion: %d", code)
 	}
+	statusCode, receiptState := h.request("GET", "/v1/deletion-receipts/"+receipt, "", nil)
+	if statusCode != 200 || receiptState["state"] != "COMPLETED" || receiptState["completedAt"] == nil {
+		t.Fatalf("deletion receipt after sweep: %d %#v", statusCode, receiptState)
+	}
+	if code, _ := h.request("GET", "/v1/deletion-receipts/not-a-receipt", "", nil); code != 404 {
+		t.Fatalf("invalid receipt: %d", code)
+	}
 }
 
 func TestDailyCostCeilingStopsMoreProviderCalls(t *testing.T) {
@@ -924,7 +971,7 @@ func TestDailyCostCeilingStopsMoreProviderCalls(t *testing.T) {
 		Limitations:   []string{"Data sintetis."},
 	}}
 	h := newHarnessWithConfig(t, provider, map[string]string{
-		"DAILY_AI_CEILING_USD": "0.0005", "UNKNOWN_AI_CALL_COST_USD": "0.001",
+		"DAILY_AI_CEILING_USD": "0.002", "UNKNOWN_AI_CALL_COST_USD": "0.001",
 	})
 	h.register("ceiling@example.test")
 	token, _ := h.login("ceiling@example.test")
@@ -953,6 +1000,43 @@ func TestDailyCostCeilingStopsMoreProviderCalls(t *testing.T) {
 	}, map[string]string{"Idempotency-Key": "ceiling-2"})
 	if status != 429 || body["code"] != "daily_ceiling_reached" {
 		t.Fatalf("daily ceiling: %d %#v", status, body)
+	}
+}
+
+func TestReservationRejectsCeilingBelowOneCallBeforeProvider(t *testing.T) {
+	provider := &usageProvider{response: store.AnalysisResponse{
+		PromptVersion: "analysis-v1",
+		Observations:  []store.Observation{{Text: "Agregat.", MetricKeys: []string{"summary.grossOutflow"}}},
+		Limitations:   []string{"Data sintetis."},
+	}}
+	h := newHarnessWithConfig(t, provider, map[string]string{
+		"DAILY_AI_CEILING_USD": "0.0005", "UNKNOWN_AI_CALL_COST_USD": "0.001",
+	})
+	h.register("ceiling-low@example.test")
+	token, _ := h.login("ceiling-low@example.test")
+	food := h.category(token, "food")
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 1_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+	})
+	status, body := h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 1, "payload": sampleAnalysisPayload("2026-11"),
+	}, map[string]string{"Idempotency-Key": "ceiling-low-1"})
+	if status != 429 || body["code"] != "daily_ceiling_reached" {
+		t.Fatalf("low ceiling: %d %#v", status, body)
+	}
+	if provider.calls != 0 {
+		t.Fatalf("provider was called despite insufficient budget: %d", provider.calls)
+	}
+	var cost float64
+	_ = h.store.DB.QueryRow(`SELECT COALESCE(SUM(cost_usd),0) FROM usage_counters WHERE scope='*'`).Scan(&cost)
+	if cost != 0 {
+		t.Fatalf("reservation was written despite rejection: %f", cost)
 	}
 }
 
@@ -1082,16 +1166,16 @@ func TestLastAdminCannotBeSwept(t *testing.T) {
 	}
 	// Role changed in the database: the old JWT is stale by design. Issue an ADMIN token.
 	token, _ = h.login("last-admin@example.test")
-	if status, _ := h.request("POST", "/v1/deletion-requests", token, nil); status != 202 {
-		t.Fatalf("deletion request: %d", status)
+	status, deletion := h.request("POST", "/v1/deletion-requests", token, map[string]any{
+		"password": testPassword, "confirmation": "DELETE_WORKSPACE",
+	})
+	if status != 409 || deletion["code"] != "last_admin" {
+		t.Fatalf("last admin deletion request: %d %#v", status, deletion)
 	}
-	if _, err := h.store.SweepDeletions(context.Background(), time.Now()); err == nil {
-		t.Fatal("last active admin workspace was swept")
-	}
-	var status string
-	_ = h.store.DB.QueryRow(`SELECT status FROM users WHERE email = ?`, "last-admin@example.test").Scan(&status)
-	if status != "ACTIVE" {
-		t.Fatalf("admin status changed to %s", status)
+	var accountStatus string
+	_ = h.store.DB.QueryRow(`SELECT status FROM users WHERE email = ?`, "last-admin@example.test").Scan(&accountStatus)
+	if accountStatus != "ACTIVE" {
+		t.Fatalf("admin status changed to %s", accountStatus)
 	}
 }
 
@@ -1263,4 +1347,114 @@ func TestImportDuplicateFingerprintAcrossMonthsAndFinalizeRetry(t *testing.T) {
 		t.Fatalf("finalize retry: %d %#v", status, retry)
 	}
 	_ = octJob
+}
+
+func TestAnalysisFreshnessOnReadReplayAndDependencies(t *testing.T) {
+	provider := &captureProvider{}
+	h := newHarnessWithProvider(t, provider)
+	h.register("freshness@example.test")
+	token, _ := h.login("freshness@example.test")
+	food := h.category(token, "food")
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 1_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+	})
+	body := map[string]any{"monthId": "2026-11", "inputRevision": 1,
+		"payload": sampleAnalysisPayload("2026-11")}
+	status, _ := h.requestWithHeaders("POST", "/v1/analyses", token, body,
+		map[string]string{"Idempotency-Key": "fresh-1"})
+	if status != 200 {
+		t.Fatalf("analysis: %d", status)
+	}
+	_, current := h.request("GET", "/v1/analyses/2026-11", token, nil)
+	if current["freshness"] != "CURRENT" || current["inputRevision"].(float64) != 1 ||
+		current["currentRevision"].(float64) != 1 || current["monthId"] != "2026-11" ||
+		current["createdAt"] == nil {
+		t.Fatalf("current metadata: %#v", current)
+	}
+
+	mutations := []struct {
+		name string
+		run  func()
+	}{
+		{"transaction", func() {
+			h.request("POST", "/v1/transactions", token, map[string]any{
+				"direction": "DEBIT", "amountMinor": 2_000, "currency": "IDR",
+				"eventAt": "2026-11-20T04:10:00Z", "categoryId": food})
+		}},
+		{"prior month", func() {
+			h.request("POST", "/v1/transactions", token, map[string]any{
+				"direction": "DEBIT", "amountMinor": 3_000, "currency": "IDR",
+				"eventAt": "2026-10-20T04:10:00Z", "categoryId": food})
+		}},
+		{"budget", func() {
+			h.request("PUT", "/v1/budget-plans/2026-11", token, map[string]any{
+				"expectedIncomeMinor": 1_000_000, "plannedSavingsMinor": 0,
+				"limits": []any{}, "revision": 0})
+		}},
+		{"category", func() {
+			h.request("PATCH", "/v1/categories/"+food, token, map[string]any{
+				"label": "Makanan berubah", "revision": 0})
+		}},
+	}
+	for _, mutation := range mutations {
+		mutation.run()
+		_, report := h.request("GET", "/v1/analyses/2026-11", token, nil)
+		if report["status"] != "AVAILABLE" || report["freshness"] != "STALE" {
+			t.Fatalf("%s did not make the report stale: %#v", mutation.name, report)
+		}
+		if report["inputRevision"].(float64) != 1 || report["currentRevision"].(float64) < 2 {
+			t.Fatalf("%s revision metadata: %#v", mutation.name, report)
+		}
+	}
+	// Replaying an old idempotency key may return provenance, but must not claim CURRENT.
+	callsBefore := provider.calls
+	status, replay := h.requestWithHeaders("POST", "/v1/analyses", token, body,
+		map[string]string{"Idempotency-Key": "fresh-1"})
+	if status != 200 || replay["freshness"] != "STALE" {
+		t.Fatalf("stale replay: %d %#v", status, replay)
+	}
+	if provider.calls != callsBefore {
+		t.Fatal("stale replay called the provider")
+	}
+}
+
+func TestDeletionRequiresReauthConfirmationAndRevokesSessions(t *testing.T) {
+	h := newHarness(t)
+	h.register("reauth@example.test")
+	token, refresh := h.login("reauth@example.test")
+	if status, _ := h.request("POST", "/v1/deletion-requests", token, nil); status != 400 {
+		t.Fatalf("empty deletion body: %d", status)
+	}
+	if status, _ := h.request("POST", "/v1/deletion-requests", token, map[string]any{
+		"password": testPassword, "confirmation": "yes",
+	}); status != 400 {
+		t.Fatalf("weak confirmation: %d", status)
+	}
+	if status, _ := h.request("POST", "/v1/deletion-requests", token, map[string]any{
+		"password": "wrong-password", "confirmation": "DELETE_WORKSPACE",
+	}); status != 403 {
+		t.Fatalf("wrong password: %d", status)
+	}
+	status, deletion := h.request("POST", "/v1/deletion-requests", token, map[string]any{
+		"password": testPassword, "confirmation": "DELETE_WORKSPACE",
+	})
+	if status != 202 || deletion["receiptToken"] == nil {
+		t.Fatalf("reauth deletion: %d %#v", status, deletion)
+	}
+	receipt := deletion["receiptToken"].(string)
+	if code, _ := h.request("GET", "/v1/transactions", token, nil); code != 401 {
+		t.Fatalf("financial read after deletion request: %d", code)
+	}
+	if code, _ := h.request("POST", "/v1/sessions/refresh", "", map[string]any{"refreshToken": refresh}); code != 401 {
+		t.Fatalf("refresh after deletion request: %d", code)
+	}
+	if code, body := h.request("GET", "/v1/deletion-receipts/"+receipt, "", nil); code != 200 || body["state"] != "PENDING" {
+		t.Fatalf("receipt while pending: %d %#v", code, body)
+	}
 }

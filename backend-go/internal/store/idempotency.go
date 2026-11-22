@@ -88,6 +88,9 @@ func (s *Store) tryCreateIdempotent(ctx context.Context, ownerID, key, requestHa
 		return TransactionCreateResult{}, false, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if err := ensureNoDeletionTx(ctx, tx, ownerID); err != nil {
+		return TransactionCreateResult{}, false, err
+	}
 
 	var existingID, existingHash string
 	err = tx.QueryRowContext(ctx, `SELECT result_id, request_hash FROM http_idempotency

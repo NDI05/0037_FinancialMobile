@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pam/recap/backend-go/internal/auth"
 	"github.com/pam/recap/backend-go/internal/store"
 )
 
@@ -522,15 +523,74 @@ func (s *Server) mapWriteError(w http.ResponseWriter, r *http.Request, err error
 
 // --- deletion -------------------------------------------------------------------------------
 
+type deletionCreateRequest struct {
+	Password     string `json:"password"`
+	Confirmation string `json:"confirmation"`
+}
+
 func (s *Server) createDeletion(w http.ResponseWriter, r *http.Request) {
+	var body deletionCreateRequest
+	if !decodeJSON(w, r, &body) {
+		return
+	}
+	if body.Confirmation != "DELETE_WORKSPACE" {
+		writeError(w, http.StatusBadRequest, "confirmation_required",
+			"Explicit confirmation DELETE_WORKSPACE is required", correlationOf(r))
+		return
+	}
+	if body.Password == "" {
+		writeError(w, http.StatusBadRequest, "reauth_required", "Password reauthentication is required", correlationOf(r))
+		return
+	}
 	info, _ := authFrom(r)
-	record, err := s.Store.CreateOrGetDeletion(r.Context(), info.OwnerID, s.Now())
+	user, err := s.Store.GetUser(r.Context(), info.OwnerID)
 	if err != nil {
+		s.databaseOrInternal(w, r, err)
+		return
+	}
+	account, err := s.Store.FindAccountByEmail(r.Context(), user.Email)
+	if err != nil {
+		s.databaseOrInternal(w, r, err)
+		return
+	}
+	ok, err := auth.VerifyPassword(body.Password, account.Salt, account.PasswordHash, account.KDF)
+	if err != nil || !ok {
+		writeError(w, http.StatusForbidden, "reauth_failed", "Password reauthentication failed", correlationOf(r))
+		return
+	}
+	receipt := store.NewID("receipt") + store.NewID("receipt")
+	receiptHash := sha256.Sum256([]byte(receipt))
+	record, err := s.Store.CreateOrGetDeletion(r.Context(), info.OwnerID,
+		hex.EncodeToString(receiptHash[:]), s.Now())
+	if err != nil {
+		if errors.Is(err, store.ErrLastAdmin) {
+			writeError(w, http.StatusConflict, "last_admin", "The last active admin cannot delete the workspace", correlationOf(r))
+			return
+		}
 		s.databaseOrInternal(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"id": record.ID, "state": record.State, "slaDays": record.SLADays,
+		"receiptToken": receipt,
+		"notice":       "Financial data is blocked immediately and removed within 7 days; backups follow the disclosed retention window.",
+	})
+}
+
+func (s *Server) getDeletionReceipt(w http.ResponseWriter, r *http.Request) {
+	record, err := s.Store.GetDeletionByReceipt(r.Context(), r.PathValue("token"))
+	if err != nil {
+		if errors.Is(err, store.ErrReceiptNotFound) {
+			writeError(w, http.StatusNotFound, "not_found", "Deletion receipt not found", correlationOf(r))
+			return
+		}
+		s.databaseOrInternal(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id": record.ID, "state": record.State, "slaDays": record.SLADays,
+		"requestedAt": record.RequestedAt, "completedAt": record.CompletedAt,
+		"aggregatesDeleted": record.AggregatesDeleted,
 	})
 }
 

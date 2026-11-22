@@ -130,6 +130,9 @@ func (s *Store) ImportBatch(ctx context.Context, ownerID, jobID, batchKey, reque
 		return ImportBatchCounts{}, false, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if err := ensureNoDeletionTx(ctx, tx, ownerID); err != nil {
+		return ImportBatchCounts{}, false, err
+	}
 	var monthID, state string
 	if err := tx.QueryRowContext(ctx, `SELECT month_id, state FROM import_jobs
 		WHERE owner_id = ? AND id = ?`, ownerID, jobID).Scan(&monthID, &state); err != nil {
@@ -260,6 +263,9 @@ func (s *Store) FinalizeImportJob(ctx context.Context, ownerID, jobID, finalStat
 		return ImportJob{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if err := ensureNoDeletionTx(ctx, tx, ownerID); err != nil {
+		return ImportJob{}, err
+	}
 	var state string
 	var pages, matched, imported, duplicates, skipped int
 	if err := tx.QueryRowContext(ctx, `SELECT state, pages_processed, matched_count, imported_count,

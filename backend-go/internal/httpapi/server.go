@@ -80,6 +80,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /v1/analyses/{monthID}", s.authed(s.getAnalysis))
 	mux.Handle("POST /v1/deletion-requests", s.authed(s.createDeletion))
 	mux.Handle("GET /v1/deletion-requests/{id}", s.authed(s.getDeletion))
+	mux.HandleFunc("GET /v1/deletion-receipts/{token}", s.getDeletionReceipt)
 	mux.HandleFunc("POST /v1/internal/sweep", s.internalSweep)
 	return s.middleware(mux)
 }

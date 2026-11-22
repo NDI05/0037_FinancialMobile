@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -57,13 +58,14 @@ type JWT struct {
 }
 
 type LLM struct {
-	Provider     string
-	BaseURL      string
-	APIKey       string
-	Model        string
-	MaxTokens    int
-	Timeout      time.Duration
-	FakeScenario string
+	Provider       string
+	BaseURL        string
+	APIKey         string
+	Model          string
+	MaxTokens      int
+	MaxInputTokens int
+	Timeout        time.Duration
+	FakeScenario   string
 }
 
 type Limits struct {
@@ -73,6 +75,7 @@ type Limits struct {
 	PromptPer1K     float64
 	CompletionPer1K float64
 	UnknownCallUSD  float64
+	MaxCallCostUSD  float64
 }
 
 // Load parses env. It returns an error for invalid values and production-unsafe secrets.
@@ -96,13 +99,14 @@ func Load(env map[string]string) (*Config, error) {
 		},
 		KeyVersion: intValue(env, "DATA_KEY_VERSION", DefaultDataKeyVersion),
 		LLM: LLM{
-			Provider:     get(env, "LLM_PROVIDER", "fake"),
-			BaseURL:      get(env, "LLM_BASE_URL", "https://api.openai.com/v1"),
-			APIKey:       get(env, "LLM_API_KEY", ""),
-			Model:        get(env, "LLM_MODEL", "gpt-4o-mini"),
-			MaxTokens:    intValue(env, "LLM_MAX_OUTPUT_TOKENS", 800),
-			Timeout:      time.Duration(intValue(env, "LLM_TIMEOUT_MS", 45000)) * time.Millisecond,
-			FakeScenario: get(env, "FAKE_LLM_SCENARIO", "valid"),
+			Provider:       get(env, "LLM_PROVIDER", "fake"),
+			BaseURL:        get(env, "LLM_BASE_URL", "https://api.openai.com/v1"),
+			APIKey:         get(env, "LLM_API_KEY", ""),
+			Model:          get(env, "LLM_MODEL", "gpt-4o-mini"),
+			MaxTokens:      intValue(env, "LLM_MAX_OUTPUT_TOKENS", 800),
+			MaxInputTokens: intValue(env, "LLM_MAX_INPUT_TOKENS", 4000),
+			Timeout:        time.Duration(intValue(env, "LLM_TIMEOUT_MS", 45000)) * time.Millisecond,
+			FakeScenario:   get(env, "FAKE_LLM_SCENARIO", "valid"),
 		},
 		Limits: Limits{
 			AnalysesPerHour: intValue(env, "RATE_LIMIT_ANALYSES_PER_HOUR", 10),
@@ -196,6 +200,28 @@ func Load(env map[string]string) (*Config, error) {
 	}
 	if cfg.LLM.Provider != "fake" && cfg.LLM.Provider != "openai" {
 		return nil, fmt.Errorf("LLM_PROVIDER must be fake|openai")
+	}
+	if cfg.LLM.MaxTokens < 1 || cfg.LLM.MaxTokens > 100_000 {
+		return nil, fmt.Errorf("LLM_MAX_OUTPUT_TOKENS must be 1..100000")
+	}
+	if cfg.LLM.MaxInputTokens < 1 || cfg.LLM.MaxInputTokens > 1_000_000 {
+		return nil, fmt.Errorf("LLM_MAX_INPUT_TOKENS must be 1..1000000")
+	}
+	cfg.Limits.MaxCallCostUSD = float64(cfg.LLM.MaxInputTokens)/1000*cfg.Limits.PromptPer1K +
+		float64(cfg.LLM.MaxTokens)/1000*cfg.Limits.CompletionPer1K
+	for name, value := range map[string]float64{
+		"DAILY_AI_CEILING_USD":        cfg.Limits.DailyCeilingUSD,
+		"UNKNOWN_AI_CALL_COST_USD":    cfg.Limits.UnknownCallUSD,
+		"PRICE_PROMPT_PER_1K_USD":     cfg.Limits.PromptPer1K,
+		"PRICE_COMPLETION_PER_1K_USD": cfg.Limits.CompletionPer1K,
+	} {
+		if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 {
+			return nil, fmt.Errorf("%s must be a finite non-negative number", name)
+		}
+	}
+	if cfg.Limits.DailyCeilingUSD <= 0 || cfg.Limits.UnknownCallUSD <= 0 ||
+		cfg.Limits.MaxCallCostUSD <= 0 {
+		return nil, fmt.Errorf("AI cost limits and prices must be positive")
 	}
 	return cfg, nil
 }

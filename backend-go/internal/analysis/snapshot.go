@@ -60,9 +60,40 @@ type Payload struct {
 }
 
 type Snapshot struct {
-	Payload  Payload
-	Hash     string
-	Revision int
+	Payload        Payload
+	Hash           string
+	Revision       int
+	DependencyHash string
+	Dependencies   store.SnapshotDependencies
+}
+
+var ErrSnapshotUnstable = errors.New("snapshot dependencies changed while reading")
+
+// BuildConsistent brackets the payload read with the same dependency token on both sides. A writer
+// that commits between those reads changes the token and the read is retried, so a payload cannot
+// be labelled consistent from a mix of pre- and post-commit state without holding a transaction
+// open during the provider call.
+func BuildConsistent(ctx context.Context, s *store.Store, ownerID, monthID string) (Snapshot, error) {
+	for attempt := 0; attempt < 3; attempt++ {
+		before, err := s.SnapshotDependencies(ctx, ownerID, monthID)
+		if err != nil {
+			return Snapshot{}, err
+		}
+		snapshot, err := Build(ctx, s, ownerID, monthID)
+		if err != nil {
+			return Snapshot{}, err
+		}
+		after, err := s.SnapshotDependencies(ctx, ownerID, monthID)
+		if err != nil {
+			return Snapshot{}, err
+		}
+		if before.Hash == after.Hash {
+			snapshot.DependencyHash = after.Hash
+			snapshot.Dependencies = after
+			return snapshot, nil
+		}
+	}
+	return Snapshot{}, ErrSnapshotUnstable
 }
 
 // Build reads the owner's active transactions, categories and budget and produces the only payload

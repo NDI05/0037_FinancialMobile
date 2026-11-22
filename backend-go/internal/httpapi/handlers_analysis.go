@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/pam/recap/backend-go/internal/analysis"
 	"github.com/pam/recap/backend-go/internal/store"
@@ -56,8 +58,33 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "consent_required", "AI consent has not been granted", correlationOf(r))
 		return
 	}
-	snapshot, err := analysis.Build(r.Context(), s.Store, info.OwnerID, body.MonthID)
+	requestHash := hashAnalysisRequest(body.MonthID, body.InputRevision, body.Payload)
+	existing, existingHash, err := s.Store.FindAnalysisByIdempotency(r.Context(), info.OwnerID, idempotencyKey)
+	if err == nil {
+		if existingHash != requestHash {
+			writeError(w, http.StatusConflict, "idempotency_conflict", "This Idempotency-Key was already used with a different body", correlationOf(r))
+			return
+		}
+		if current, cErr := s.Store.LatestConsent(r.Context(), info.OwnerID, "AI_PROCESSING"); cErr != nil ||
+			current.ID != consent.ID || current.Decision != "GRANTED" {
+			writeError(w, http.StatusConflict, "consent_required", "AI consent changed while the analysis was running", correlationOf(r))
+			return
+		}
+		dependencyHash, currentRevision, depErr := s.Store.DependencyHash(r.Context(), info.OwnerID, body.MonthID)
+		if depErr != nil {
+			s.databaseOrInternal(w, r, depErr)
+			return
+		}
+		// A replay may return provenance after a mutation, but the freshness field marks it STALE.
+		writeJSON(w, http.StatusOK, analysisJSON(existing, dependencyHash, currentRevision))
+		return
+	}
+	snapshot, err := analysis.BuildConsistent(r.Context(), s.Store, info.OwnerID, body.MonthID)
 	if err != nil {
+		if errors.Is(err, analysis.ErrSnapshotUnstable) {
+			writeError(w, http.StatusConflict, "snapshot_unstable", "The monthly data changed while the snapshot was read", correlationOf(r))
+			return
+		}
 		s.databaseOrInternal(w, r, err)
 		return
 	}
@@ -66,31 +93,16 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("inputRevision is stale; server revision is %d", snapshot.Revision), correlationOf(r))
 		return
 	}
-	requestHash := hashAnalysisRequest(body.MonthID, body.InputRevision, snapshot.Hash, body.Payload)
-	existing, existingHash, err := s.Store.FindAnalysisByIdempotency(r.Context(), info.OwnerID, idempotencyKey)
-	if err == nil {
-		if existingHash != requestHash {
-			writeError(w, http.StatusConflict, "idempotency_conflict", "This Idempotency-Key was already used with a different body", correlationOf(r))
-			return
-		}
-		// A replay after withdrawal/deletion must not be published as a fresh AVAILABLE report.
-		if current, cErr := s.Store.LatestConsent(r.Context(), info.OwnerID, "AI_PROCESSING"); cErr != nil ||
-			current.ID != consent.ID || current.Decision != "GRANTED" {
-			writeError(w, http.StatusConflict, "consent_required", "AI consent changed while the analysis was running", correlationOf(r))
-			return
-		}
-		writeJSON(w, http.StatusOK, analysisJSON(existing))
-		return
-	}
 	provider := s.Provider
 	if provider == nil {
 		writeError(w, http.StatusBadGateway, "provider_unavailable", "No analysis provider is configured", correlationOf(r))
 		return
 	}
 	cached, err := s.Store.FindAnalysisByCache(r.Context(), info.OwnerID, body.MonthID,
-		snapshot.Revision, analysis.PromptVersion, provider.ID(), provider.Model(), snapshot.Hash, consent.ID)
+		snapshot.Revision, analysis.PromptVersion, provider.ID(), provider.Model(), snapshot.Hash,
+		consent.ID, snapshot.DependencyHash)
 	if err == nil {
-		writeJSON(w, http.StatusOK, analysisJSON(cached))
+		writeJSON(w, http.StatusOK, analysisJSON(cached, snapshot.DependencyHash, snapshot.Revision))
 		return
 	}
 	reason, err := s.Store.TryReserveAnalysis(r.Context(), info.OwnerID,
@@ -109,7 +121,7 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 	regenerations := 0
 	for attempt := 0; attempt < 2; attempt++ {
 		allowed, err := s.Store.ReserveProviderCost(r.Context(), s.Config.Limits.DailyCeilingUSD,
-			s.Config.Limits.UnknownCallUSD, s.Now())
+			s.Config.Limits.MaxCallCostUSD, s.Now())
 		if err != nil {
 			s.databaseOrInternal(w, r, err)
 			return
@@ -119,7 +131,11 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		response, providerErr = provider.Analyze(r.Context(), payloadMap)
-		s.recordProviderUsage(r, info.OwnerID, response)
+		if usageErr := s.recordProviderUsage(info.OwnerID, response); usageErr != nil {
+			writeError(w, http.StatusInternalServerError, "usage_accounting_failed",
+				"Provider usage could not be recorded; the reservation remains", correlationOf(r))
+			return
+		}
 		if providerErr != nil {
 			break
 		}
@@ -141,7 +157,8 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 	}
 	record, err := s.Store.InsertAnalysisGuarded(r.Context(), store.AnalysisFinalizeInput{
 		OwnerID: info.OwnerID, SessionID: info.SessionID, MonthID: body.MonthID,
-		InputRevision: snapshot.Revision, SnapshotHash: snapshot.Hash, ConsentID: consent.ID,
+		InputRevision: snapshot.Revision, SnapshotHash: snapshot.Hash,
+		DependencyHash: snapshot.DependencyHash, ConsentID: consent.ID,
 		Provider: provider.ID(), Model: provider.Model(), PromptVersion: analysis.PromptVersion,
 		IdempotencyKey: idempotencyKey, RequestHash: requestHash, Response: response,
 		RegenerationCount: regenerations, Now: s.Now(),
@@ -161,10 +178,10 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	writeJSON(w, http.StatusOK, analysisJSON(record))
+	writeJSON(w, http.StatusOK, analysisJSON(record, snapshot.DependencyHash, snapshot.Revision))
 }
 
-func (s *Server) recordProviderUsage(r *http.Request, ownerID string, response store.AnalysisResponse) {
+func (s *Server) recordProviderUsage(ownerID string, response store.AnalysisResponse) error {
 	prompt, completion := int64(0), int64(0)
 	known := response.PromptTokens != nil && response.CompletionTokens != nil
 	if known {
@@ -172,37 +189,65 @@ func (s *Server) recordProviderUsage(r *http.Request, ownerID string, response s
 	}
 	cost := float64(prompt)/1000*s.Config.Limits.PromptPer1K +
 		float64(completion)/1000*s.Config.Limits.CompletionPer1K
-	reserved := s.Config.Limits.UnknownCallUSD
+	// The reservation is the enforceable max input/output cost, not the lower unknown fallback.
+	reserved := s.Config.Limits.MaxCallCostUSD
 	if !known {
 		cost = reserved
 	}
-	_ = s.Store.RecordUsage(r.Context(), ownerID, prompt, completion, cost, reserved, known, s.Now())
+	// Accounting must survive request cancellation: use a bounded background context. On failure
+	// the reservation is deliberately left in place; it is conservative and will expire with the
+	// day bucket rather than silently under-reporting a billed call.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err := s.Store.RecordUsage(ctx, ownerID, prompt, completion, cost, reserved, known, s.Now())
+	if err != nil {
+		s.Log.Error("usage accounting failed", "correlationId", "", "error", err.Error())
+	}
+	return err
 }
 
 func (s *Server) getAnalysis(w http.ResponseWriter, r *http.Request) {
 	info, _ := authFrom(r)
-	record, err := s.Store.LatestAnalysis(r.Context(), info.OwnerID, r.PathValue("monthID"))
+	monthID := r.PathValue("monthID")
+	record, err := s.Store.LatestAnalysis(r.Context(), info.OwnerID, monthID)
 	if err != nil {
 		s.mapWriteError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, analysisJSON(record))
+	dependencyHash, currentRevision, err := s.Store.DependencyHash(r.Context(), info.OwnerID, monthID)
+	if err != nil {
+		s.databaseOrInternal(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, analysisJSON(record, dependencyHash, currentRevision))
 }
 
-func analysisJSON(record store.AnalysisRecord) map[string]any {
+func analysisJSON(record store.AnalysisRecord, currentDependencyHash string, currentRevision int) map[string]any {
+	freshness := "STALE"
+	if record.Status == "HISTORICAL" {
+		freshness = "HISTORICAL"
+	} else if record.Status == "AVAILABLE" && record.DependencyHash != "" &&
+		record.DependencyHash == currentDependencyHash && record.InputRevision == currentRevision {
+		freshness = "CURRENT"
+	}
 	return map[string]any{
+		"monthId":          record.MonthID,
+		"inputRevision":    record.InputRevision,
+		"currentRevision":  currentRevision,
+		"createdAt":        record.CreatedAt,
+		"freshness":        freshness,
+		"status":           record.Status,
 		"promptVersion":    record.Response.PromptVersion,
 		"observations":     record.Response.Observations,
 		"suggestions":      record.Response.Suggestions,
 		"limitations":      record.Response.Limitations,
 		"promptTokens":     record.Response.PromptTokens,
 		"completionTokens": record.Response.CompletionTokens,
-		"status":           record.Status,
 	}
 }
 
-func hashAnalysisRequest(monthID string, revision int, snapshotHash string, clientPayload json.RawMessage) string {
-	raw := fmt.Sprintf("%s|%d|%s|%s", monthID, revision, snapshotHash, string(clientPayload))
+func hashAnalysisRequest(monthID string, revision int, clientPayload json.RawMessage) string {
+	raw := fmt.Sprintf("%s|%d|%s", monthID, revision, string(clientPayload))
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
 }

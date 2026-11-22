@@ -59,6 +59,9 @@ func (s *Store) TryReserveAnalysis(ctx context.Context, ownerID string, perHour,
 // ReserveProviderCost checks the global daily USD ceiling and places a conservative reservation for
 // one provider call. It is safe against concurrent writers.
 func (s *Store) ReserveProviderCost(ctx context.Context, ceilingUSD, reservationUSD float64, now time.Time) (bool, error) {
+	if reservationUSD <= 0 || ceilingUSD <= 0 {
+		return false, nil
+	}
 	day, _ := JakartaBuckets(now)
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
@@ -69,7 +72,9 @@ func (s *Store) ReserveProviderCost(ctx context.Context, ceilingUSD, reservation
 	if err != nil {
 		return false, err
 	}
-	if cost >= ceilingUSD {
+	// Check spent + outstanding reservations + this reservation. A reservation that cannot fit
+	// the remaining budget is rejected before any provider call.
+	if cost+reservationUSD > ceilingUSD+1e-12 {
 		return false, nil
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO usage_counters

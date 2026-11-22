@@ -89,3 +89,30 @@ func TestDevelopmentUsesExplicitDefaultsAndWarns(t *testing.T) {
 		t.Fatal("unknown provider usage must have a conservative cost")
 	}
 }
+
+func TestCostConfigurationRejectsInvalidValues(t *testing.T) {
+	cases := []map[string]string{
+		{"DAILY_AI_CEILING_USD": "0"},
+		{"DAILY_AI_CEILING_USD": "NaN"},
+		{"UNKNOWN_AI_CALL_COST_USD": "-1"},
+		{"PRICE_PROMPT_PER_1K_USD": "+Inf"},
+		{"LLM_MAX_INPUT_TOKENS": "0"},
+		{"LLM_MAX_OUTPUT_TOKENS": "100001"},
+	}
+	for _, extra := range cases {
+		env := map[string]string{"APP_ENV": "test"}
+		for k, v := range extra {
+			env[k] = v
+		}
+		if _, err := Load(env); err == nil {
+			t.Fatalf("accepted invalid cost configuration %v", extra)
+		}
+	}
+	cfg, err := Load(map[string]string{"APP_ENV": "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Limits.MaxCallCostUSD <= 0 {
+		t.Fatalf("max call cost = %f", cfg.Limits.MaxCallCostUSD)
+	}
+}

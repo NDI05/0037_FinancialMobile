@@ -53,6 +53,20 @@ func (s *Store) ensureNoDeletion(ctx context.Context, ownerID string) error {
 	return nil
 }
 
+// ensureNoDeletionTx is the commit-time guard: a request that passed the early check still cannot
+// insert data after a deletion request wins.
+func ensureNoDeletionTx(ctx context.Context, tx *sql.Tx, ownerID string) error {
+	var count int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM deletion_requests
+		WHERE owner_id = ? AND state = 'PENDING'`, ownerID).Scan(&count); err != nil {
+		return err
+	}
+	if count > 0 {
+		return ErrDeletionInProgress
+	}
+	return nil
+}
+
 // OwnerIDForEmail is byte-for-byte compatible with the Node owner id derivation.
 func OwnerIDForEmail(email string) string {
 	normalized := NormalizeEmail(email)
