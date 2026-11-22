@@ -39,6 +39,7 @@ type Config struct {
 	DataKey            []byte
 	KeyVersion         int
 	LLM                LLM
+	CategoryLLM        CategoryLLM
 	Limits             Limits
 	Warnings           []string
 }
@@ -66,6 +67,25 @@ type LLM struct {
 	MaxInputTokens int
 	Timeout        time.Duration
 	FakeScenario   string
+}
+
+type CategoryLLM struct {
+	Enabled          bool
+	Provider         string
+	BaseURL          string
+	APIKey           string
+	Deployment       string
+	Model            string
+	ModelVersion     string
+	Region           string
+	DeploymentType   string
+	Timeout          time.Duration
+	DailyCeilingUSD  float64
+	MonthlyCeilingUSD float64
+	OwnerAttemptsDay int
+	InstallAttemptsDay int
+	PromptPer1K      float64
+	CompletionPer1K  float64
 }
 
 type Limits struct {
@@ -108,6 +128,24 @@ func Load(env map[string]string) (*Config, error) {
 			Timeout:        time.Duration(intValue(env, "LLM_TIMEOUT_MS", 45000)) * time.Millisecond,
 			FakeScenario:   get(env, "FAKE_LLM_SCENARIO", "valid"),
 		},
+		CategoryLLM: CategoryLLM{
+			Enabled:          boolValue(env, "CATEGORY_LLM_ENABLED", false),
+			Provider:         get(env, "CATEGORY_LLM_PROVIDER", "azure"),
+			BaseURL:          get(env, "AZURE_CLASSIFIER_BASE_URL", ""),
+			APIKey:           get(env, "AZURE_CLASSIFIER_API_KEY", ""),
+			Deployment:       get(env, "AZURE_CLASSIFIER_DEPLOYMENT", ""),
+			Model:            get(env, "AZURE_CLASSIFIER_MODEL", ""),
+			ModelVersion:     get(env, "AZURE_CLASSIFIER_MODEL_VERSION", ""),
+			Region:           get(env, "AZURE_CLASSIFIER_REGION", ""),
+			DeploymentType:   get(env, "AZURE_CLASSIFIER_DEPLOYMENT_TYPE", ""),
+			Timeout:          time.Duration(intValue(env, "CATEGORY_LLM_TIMEOUT_MS", 20000)) * time.Millisecond,
+			DailyCeilingUSD:  floatValue(env, "CATEGORY_LLM_DAILY_CEILING_USD", 0.10),
+			MonthlyCeilingUSD: floatValue(env, "CATEGORY_LLM_MONTHLY_CEILING_USD", 2.00),
+			OwnerAttemptsDay: intValue(env, "CATEGORY_LLM_OWNER_ATTEMPTS_DAY", 20),
+			InstallAttemptsDay: intValue(env, "CATEGORY_LLM_INSTALL_ATTEMPTS_DAY", 100),
+			PromptPer1K:      floatValue(env, "CATEGORY_LLM_PRICE_PROMPT_PER_1K_USD", 0),
+			CompletionPer1K:  floatValue(env, "CATEGORY_LLM_PRICE_COMPLETION_PER_1K_USD", 0),
+		},
 		Limits: Limits{
 			AnalysesPerHour: intValue(env, "RATE_LIMIT_ANALYSES_PER_HOUR", 10),
 			AnalysesPerDay:  intValue(env, "RATE_LIMIT_ANALYSES_PER_DAY", 40),
@@ -144,6 +182,13 @@ func Load(env map[string]string) (*Config, error) {
 	devKeySum := sha256.Sum256([]byte("pam-dev-data-key"))
 	devKey := devKeySum[:]
 
+	if cfg.CategoryLLM.Enabled {
+		if cfg.CategoryLLM.Provider != "azure" || cfg.CategoryLLM.BaseURL == "" ||
+			cfg.CategoryLLM.Deployment == "" || cfg.CategoryLLM.APIKey == "" ||
+			cfg.CategoryLLM.PromptPer1K <= 0 || cfg.CategoryLLM.CompletionPer1K <= 0 {
+			return nil, fmt.Errorf("invalid category LLM configuration: enabled requires azure endpoint/key and verified prices")
+		}
+	}
 	if cfg.Env == "production" {
 		problems := []string{}
 		if cfg.InviteCode == "" || cfg.InviteCode == defaultInviteCode {
@@ -261,6 +306,18 @@ func get(env map[string]string, key, fallback string) string {
 		return strings.TrimSpace(v)
 	}
 	return fallback
+}
+
+func boolValue(env map[string]string, key string, fallback bool) bool {
+	value, ok := env[key]
+	if !ok || value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
 }
 
 func intValue(env map[string]string, key string, fallback int) int {

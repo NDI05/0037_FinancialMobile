@@ -116,3 +116,16 @@ func TestCostConfigurationRejectsInvalidValues(t *testing.T) {
 		t.Fatalf("max call cost = %f", cfg.Limits.MaxCallCostUSD)
 	}
 }
+
+func TestCategoryLLMFailsClosedWithoutVerifiedPrices(t *testing.T) {
+	env := map[string]string{"CATEGORY_LLM_ENABLED": "true", "AZURE_CLASSIFIER_BASE_URL": "https://example.test/openai/v1",
+		"AZURE_CLASSIFIER_DEPLOYMENT": "d", "AZURE_CLASSIFIER_API_KEY": "k"}
+	if _, err := Load(env); err == nil {
+		t.Fatal("enabled category LLM accepted without verified prices")
+	}
+	env["CATEGORY_LLM_PRICE_PROMPT_PER_1K_USD"] = "0.001"
+	env["CATEGORY_LLM_PRICE_COMPLETION_PER_1K_USD"] = "0.002"
+	if _, err := Load(env); err != nil {
+		t.Fatalf("valid category LLM config rejected: %v", err)
+	}
+}

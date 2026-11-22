@@ -25,7 +25,7 @@ func (s *Server) appendConsent(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &body) {
 		return
 	}
-	if body.Purpose != "GMAIL_READ" && body.Purpose != "AI_PROCESSING" {
+	if body.Purpose != "GMAIL_READ" && body.Purpose != "AI_PROCESSING" && body.Purpose != "AI_CATEGORIZATION" {
 		writeError(w, http.StatusBadRequest, "invalid_request", "purpose is invalid", correlationOf(r))
 		return
 	}
