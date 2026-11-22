@@ -14,6 +14,8 @@ import com.pam.recap.domain.model.GmailConnection
 import com.pam.recap.domain.model.GmailConnectionState
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.AnalysisRepository
+import com.pam.recap.data.security.DeletionReceiptStore
+import com.pam.recap.domain.repository.BackendDeletionAck
 import com.pam.recap.domain.repository.BackendDeletionSync
 import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.BackendSessionRepository
@@ -210,6 +212,7 @@ class RequestDeletionUseCase @Inject constructor(
     private val idGenerator: IdGenerator,
     private val backendDeletion: BackendDeletionSync,
     private val appPasswordVault: AppPasswordVault,
+    private val receiptStore: DeletionReceiptStore? = null,
 ) {
 
     suspend operator fun invoke(
@@ -223,28 +226,31 @@ class RequestDeletionUseCase @Inject constructor(
             return Outcome.Failure(AppError.Validation(AppErrorRules.REAUTH_REQUIRED))
         }
 
-        val requestId = idGenerator.newId()
+        val serverAck: BackendDeletionAck? = if (backendDeletion.isEnabled) {
+            if (serverPassword.isNullOrBlank()) {
+                return Outcome.Failure(AppError.Validation(AppErrorRules.REAUTH_REQUIRED))
+            }
+            when (val ack = runCatching { backendDeletion.request(ownerId, serverPassword) }.getOrNull()) {
+                is Outcome.Success -> ack.value
+                is Outcome.Failure -> return Outcome.Failure(ack.error)
+                null -> return Outcome.Failure(AppError.Network("deletion_request_failed"))
+            }
+        } else {
+            null
+        }
+        // Persist recovery data before any destructive local cleanup. A server-backed deletion is
+        // not "completed" merely because the local database was cleared.
+        val requestId = serverAck?.id?.takeIf { it.isNotBlank() } ?: idGenerator.newId()
         var request = DeletionRequest(
             id = requestId,
             ownerId = ownerId,
-            state = DeletionState.REQUESTED,
+            state = if (serverAck != null) DeletionState.IN_PROGRESS else DeletionState.REQUESTED,
             requestedAt = now,
             reauthenticatedAt = reauthenticatedAt,
             completedAt = null,
         )
         deletion.save(request)
-
-        // FR-48/contract §4.3: tell the backend so it blocks sync and sweeps its aggregates. The
-        // returned SLA is surfaced in the UI; a failure never stops the local deletion.
-        val serverSlaDays = if (serverPassword.isNullOrBlank()) {
-            (runCatching { backendDeletion.request(ownerId) }.getOrNull() as? Outcome.Success)?.value
-        } else {
-            (runCatching { backendDeletion.request(ownerId, serverPassword) }.getOrNull()
-                as? Outcome.Success)?.value?.slaDays
-        }
-
-        request = request.copy(state = DeletionState.IN_PROGRESS)
-        deletion.save(request)
+        serverAck?.receiptToken?.let { receiptStore?.save(ownerId, it) }
 
         return runCatching {
             transactions.deleteAll(ownerId)
@@ -259,7 +265,15 @@ class RequestDeletionUseCase @Inject constructor(
 
             val completed = request.copy(state = DeletionState.COMPLETED, completedAt = clock.now())
             deletion.save(completed)
-            Outcome.Success(DeletionResult(request = completed, serverSlaDays = serverSlaDays))
+            Outcome.Success(
+                DeletionResult(
+                    request = completed,
+                    serverSlaDays = serverAck?.slaDays,
+                    serverState = serverAck?.state,
+                    serverReceipt = serverAck?.receiptToken,
+                    deviceOnly = serverAck == null,
+                ),
+            )
         }.getOrElse { error ->
             val failed = request.copy(state = DeletionState.FAILED, failureCode = error::class.simpleName)
             deletion.save(failed)

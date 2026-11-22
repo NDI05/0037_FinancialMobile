@@ -91,6 +91,9 @@ class BackendSyncClient @Inject constructor(
     // Deletion (FR-47/FR-48)
     // ---------------------------------------------------------------------------------------
 
+    override val isEnabled: Boolean
+        get() = config.isEnabled
+
     override suspend fun request(ownerId: String): Outcome<Int> =
         request(ownerId, password = "", confirmation = "").map { it.slaDays }
 
@@ -127,7 +130,8 @@ class BackendSyncClient @Inject constructor(
                         return@withContext Outcome.Failure(backendError(it.code, code))
                     }
                     val decoded = json.decodeFromString(DeletionResponse.serializer(), payload)
-                    Outcome.Success(BackendDeletionAck(decoded.slaDays, decoded.receiptToken))
+                    Outcome.Success(BackendDeletionAck(decoded.id, decoded.state, decoded.slaDays,
+                        decoded.receiptToken))
                 }
             } catch (error: IOException) {
                 SafeLogger.failure(TAG, "deletion_push_failed")

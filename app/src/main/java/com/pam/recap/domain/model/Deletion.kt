@@ -37,6 +37,10 @@ data class DeletionRequest(
 data class DeletionResult(
     val request: DeletionRequest,
     val serverSlaDays: Int? = null,
+    val serverState: String? = null,
+    val serverReceipt: String? = null,
+    /** True only when no v0.4 server was configured; this is a device-only cleanup. */
+    val deviceOnly: Boolean = false,
 )
 
 /** FR-01: a signed-in session. Financial data is owner-scoped by [ownerId] (FR-02). */

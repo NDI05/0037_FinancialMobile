@@ -31,6 +31,9 @@ interface BackendSummarySync {
 
 /** FR-47/FR-48: creates the server-side deletion request and returns the acknowledged SLA. */
 interface BackendDeletionSync {
+    /** True when a v0.4 server is configured; local-only deletion is a different action. */
+    val isEnabled: Boolean get() = false
+
     /** Legacy/no-reauth fallback used by older callers and offline doubles. */
     suspend fun request(ownerId: String): Outcome<Int>
 
@@ -42,7 +45,14 @@ interface BackendDeletionSync {
         ownerId: String,
         password: String,
         confirmation: String = "DELETE_WORKSPACE",
-    ): Outcome<BackendDeletionAck> = request(ownerId).map { BackendDeletionAck(it, null) }
+    ): Outcome<BackendDeletionAck> = request(ownerId).map {
+        BackendDeletionAck("", "UNKNOWN", it, null)
+    }
 }
 
-data class BackendDeletionAck(val slaDays: Int, val receiptToken: String?)
+data class BackendDeletionAck(
+    val id: String,
+    val state: String,
+    val slaDays: Int,
+    val receiptToken: String?,
+)

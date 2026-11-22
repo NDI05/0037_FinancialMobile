@@ -531,7 +531,6 @@ class ScreenScreenshotsTest {
         val viewModel = DataDeletionViewModel(
             sessions = sessions,
             deletion = deletion,
-            gmailSource = gmail,
             requestDeletion = RequestDeletionUseCase(
                 deletion = deletion,
                 transactions = transactions,

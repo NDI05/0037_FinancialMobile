@@ -9,7 +9,6 @@ import com.pam.recap.domain.model.DeletionRequest
 import com.pam.recap.domain.model.DeletionResult
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.DeletionRepository
-import com.pam.recap.domain.repository.GmailSource
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.RequestDeletionUseCase
 import com.pam.recap.domain.usecase.WithdrawAiConsentUseCase
@@ -82,7 +81,6 @@ enum class DeletionStep {
 class DataDeletionViewModel @Inject constructor(
     private val sessions: SessionRepository,
     private val deletion: DeletionRepository,
-    private val gmailSource: GmailSource,
     private val requestDeletion: RequestDeletionUseCase,
     private val withdrawAiConsent: WithdrawAiConsentUseCase,
 ) : ViewModel() {
@@ -91,24 +89,12 @@ class DataDeletionViewModel @Inject constructor(
     val state: StateFlow<DataDeletionUiState> = _state
 
     fun continueToConfirm() {
-        _state.update { it.copy(step = DeletionStep.Confirm, error = null) }
+        // Account password is the reauthentication proof; Gmail/App Password is not a prerequisite.
+        _state.update { it.copy(step = DeletionStep.Confirm, reauthenticated = true, error = null) }
     }
 
-    fun reauthenticate() {
-        if (_state.value.isBusy) return
-        _state.update { it.copy(isBusy = true, error = null) }
-        viewModelScope.launch {
-            val result = gmailSource.authorize()
-            _state.update {
-                it.copy(
-                    isBusy = false,
-                    reauthenticated = result is Outcome.Success,
-                    error = (result as? Outcome.Failure)?.error?.let { error ->
-                        com.pam.recap.ui.util.appErrorRes(error)
-                    },
-                )
-            }
-        }
+    fun clearSensitive() {
+        _state.update { it.copy(serverPassword = "") }
     }
 
     fun onServerPasswordChange(value: String) {
@@ -117,15 +103,12 @@ class DataDeletionViewModel @Inject constructor(
 
     fun confirmDeletion() {
         if (_state.value.isBusy) return
-        if (!_state.value.reauthenticated) {
-            _state.update { it.copy(error = com.pam.recap.R.string.error_reauth_required) }
-            return
-        }
         if (_state.value.serverPassword.isBlank()) {
             _state.update { it.copy(error = com.pam.recap.R.string.deletion_password_required) }
             return
         }
-        _state.update { it.copy(isBusy = true, error = null) }
+        val password = _state.value.serverPassword
+        _state.update { it.copy(isBusy = true, error = null, serverPassword = "") }
         viewModelScope.launch {
             val ownerId = sessions.current()?.ownerId
             if (ownerId == null) {
@@ -140,7 +123,7 @@ class DataDeletionViewModel @Inject constructor(
             val result = requestDeletion(
                 ownerId,
                 Instant.fromEpochMilliseconds(System.currentTimeMillis()),
-                _state.value.serverPassword,
+                password,
             )
             when (result) {
                 is Outcome.Failure -> _state.update {

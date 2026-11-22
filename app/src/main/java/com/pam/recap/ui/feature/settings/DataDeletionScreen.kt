@@ -104,39 +104,18 @@ fun DataDeletionScreen(
                     )
                     PillButton(
                         text = stringResource(R.string.action_cancel),
-                        onClick = onBack,
+                        onClick = { viewModel.clearSensitive(); onBack() },
                         style = PillButtonStyle.Ghost,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
 
                 DeletionStep.Confirm -> {
-                    StatusChip(
-                        kind = if (state.reauthenticated) {
-                            StatusChipKind.Complete
-                        } else {
-                            StatusChipKind.Provisional
-                        },
-                    )
-                    Spacer(modifier = Modifier.height(PamSpacing.xxs))
                     Text(
-                        text = if (state.reauthenticated) {
-                            stringResource(R.string.deletion_reauth_done)
-                        } else {
-                            stringResource(R.string.deletion_reauth_required)
-                        },
+                        text = stringResource(R.string.deletion_reauth_done),
                         style = BodyM,
                         color = OnInkMuted,
                     )
-                    if (!state.reauthenticated) {
-                        PillButton(
-                            text = stringResource(R.string.deletion_reauth_action),
-                            onClick = viewModel::reauthenticate,
-                            loading = state.isBusy,
-                            style = PillButtonStyle.Secondary,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
                     OutlinedTextField(
                         value = state.serverPassword,
                         onValueChange = viewModel::onServerPasswordChange,
@@ -148,13 +127,13 @@ fun DataDeletionScreen(
                     PillButton(
                         text = stringResource(R.string.deletion_confirm),
                         onClick = viewModel::confirmDeletion,
-                        enabled = state.reauthenticated && state.serverPassword.isNotBlank(),
+                        enabled = state.serverPassword.isNotBlank(),
                         loading = state.isBusy,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     PillButton(
                         text = stringResource(R.string.action_cancel),
-                        onClick = onBack,
+                        onClick = { viewModel.clearSensitive(); onBack() },
                         style = PillButtonStyle.Ghost,
                         modifier = Modifier.fillMaxWidth(),
                     )
