@@ -2,6 +2,8 @@ package com.pam.recap.domain.usecase
 
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.CategoryOrigin
+import java.text.Normalizer
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -13,18 +15,20 @@ data class CategoryAssignment(
 )
 
 /**
- * Deterministic keyword rules for imported rows (FR-23/FR-24).
+ * Deterministic merchant/phrase rules for imported rows (FR-23/FR-24).
  *
- * Rules live in data, are ordered from most specific to least, and always produce a confidence so
- * the UI can mark uncertain rows for review instead of presenting a guess as fact. Unmatched rows
- * become [Category.UNCATEGORIZED] with a low confidence — never a silent best guess.
+ * Matching is normalized (NFKD, diacritics, case, punctuation, whitespace) and bounded by whole
+ * tokens, so `kosmetik` is not `kos`, `chair` is not `air`, and `kopiah` is not `kopi`. Rules are
+ * ordered from specific to general; no merchant is special-cased and QRIS alone never implies food.
  */
 @Singleton
 class MerchantCategoryRules @Inject constructor() {
 
     fun classify(description: String, merchantLabel: String?): CategoryAssignment {
-        val haystack = "${description} ${merchantLabel.orEmpty()}".lowercase()
-        val match = RULES.firstOrNull { rule -> rule.keywords.any { haystack.contains(it) } }
+        val tokens = tokenize("${description} ${merchantLabel.orEmpty()}")
+        val match = RULES.firstOrNull { rule ->
+            rule.phrases.any { phrase -> containsPhrase(tokens, phrase) }
+        }
         return if (match != null) {
             CategoryAssignment(match.category, CategoryOrigin.RULE, match.confidence)
         } else {
@@ -32,17 +36,35 @@ class MerchantCategoryRules @Inject constructor() {
         }
     }
 
+    private fun tokenize(value: String): List<String> {
+        val normalized = Normalizer.normalize(value, Normalizer.Form.NFKD)
+            .replace(Regex("\\p{M}+"), "")
+            .lowercase(Locale.ROOT)
+            .replace(Regex("[^a-z0-9]+"), " ")
+            .trim()
+        return normalized.split(' ').filter { it.isNotEmpty() }
+    }
+
+    private fun containsPhrase(tokens: List<String>, phrase: String): Boolean {
+        val wanted = tokenize(phrase)
+        if (wanted.isEmpty() || wanted.size > tokens.size) return false
+        return (0..tokens.size - wanted.size).any { start ->
+            wanted.indices.all { offset -> tokens[start + offset] == wanted[offset] }
+        }
+    }
+
     private data class Rule(
         val category: Category,
-        val keywords: List<String>,
+        val phrases: List<String>,
         val confidence: Float,
     )
 
-    private companion object {
+    companion object {
         const val UNMATCHED_CONFIDENCE = 0.35f
+        const val RULE_VERSION = "merchant-rules/2"
 
-        /** Ordered: the first matching rule wins. */
-        val RULES: List<Rule> = listOf(
+        /** Ordered: the first matching rule wins. Keep specific phrases before broad ones. */
+        private val RULES: List<Rule> = listOf(
             Rule(Category.TRANSFER, listOf("rekening sendiri", "antar rekening", "transfer ke rekening"), 0.95f),
             Rule(
                 Category.HOUSING,
@@ -76,7 +98,11 @@ class MerchantCategoryRules @Inject constructor() {
             ),
             Rule(
                 Category.FOOD,
-                listOf("kopi", "warung", "resto", "bakmi", "es teh", "makan", "kafe", "cafe", "kuliner"),
+                listOf(
+                    "bakso", "mie ayam", "mi ayam", "coffee", "kopi", "warung", "resto",
+                    "bakmi", "es teh", "makanan", "minuman", "makan", "kafe", "cafe",
+                    "kuliner", "nasi", "sate", "martabak", "roti", "kue",
+                ),
                 0.9f,
             ),
             Rule(
