@@ -116,3 +116,19 @@ pada log nyata sudah dilakukan PM; keduanya belum membuktikan acceptance impor.
 - Runbook dan acceptance trace: `QA_C2A_COMMITTED_RESPONSE_LOSS.md`; review `reviews/PM_REVIEW_CEEA72D.md`.
 - Login akun asli dilakukan pemilik sendiri. QA fault injection/clear-data/deletion tetap
   hanya pada akun/AVD/database sintetis terpisah; jangan memakai password utama Gmail sebagai password PAM.
+
+## Resume Livin parser/import — 22 November 2026
+
+- **Parser fix PASS:** `Tanggal Transaksi` + `Waktu Transaksi` separate cells
+  menghasilkan `2026-11-19T02:15:20Z`; synthetic MIME regression
+  `LivinMimeImportTest` lulus. WITA/WIT dan pasangan tidak lengkap ditolak.
+- **Server import upload PARTIAL:** `ServerImportUploader` membuat Go job,
+  mengirim batch kandidat dan finalisasi setelah parse lokal. Unit test
+  `ServerImportUploaderTest` PASS. Belum dibuktikan end-to-end di emulator
+  dengan email fixture/Gmail because no run was completed; counts/reimport/resume
+  UI belum diverifikasi.
+- **C2A gate refresh PASS** (2,53 detik).
+- **C2A lost-response gate masih OPEN**; fault harness tidak konklusif.
+- Android fresh: **250 tests PASS**, assemble/lint 0 error. Go: 42 PASS (backend
+  unchanged on this resume).
+- Pagination/filter, import resume UI, update/delete, S3/S4 tetap belum.
