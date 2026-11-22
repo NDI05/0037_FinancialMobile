@@ -1458,3 +1458,44 @@ func TestDeletionRequiresReauthConfirmationAndRevokesSessions(t *testing.T) {
 		t.Fatalf("receipt while pending: %d %#v", code, body)
 	}
 }
+
+type accountingFailureProvider struct {
+	onCall func()
+}
+
+func (p *accountingFailureProvider) ID() string    { return "accounting-failure" }
+func (p *accountingFailureProvider) Model() string { return "accounting-failure-v1" }
+func (p *accountingFailureProvider) Analyze(context.Context, map[string]any) (store.AnalysisResponse, error) {
+	if p.onCall != nil {
+		p.onCall()
+	}
+	return store.AnalysisResponse{
+		PromptVersion: "analysis-v1",
+		Observations:  []store.Observation{{Text: "Agregat.", MetricKeys: []string{"summary.grossOutflow"}}},
+		Limitations:   []string{"Data sintetis."},
+	}, nil
+}
+
+func TestUsageAccountingFailureIsReportedAndNotPublished(t *testing.T) {
+	provider := &accountingFailureProvider{}
+	h := newHarnessWithProvider(t, provider)
+	provider.onCall = func() { _ = h.store.DB.Close() }
+	h.register("accounting-failure@example.test")
+	token, _ := h.login("accounting-failure@example.test")
+	food := h.category(token, "food")
+	h.request("POST", "/v1/transactions", token, map[string]any{
+		"direction": "DEBIT", "amountMinor": 1_000, "currency": "IDR",
+		"eventAt": "2026-11-19T04:10:00Z", "categoryId": food,
+	})
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	status, body := h.requestWithHeaders("POST", "/v1/analyses", token, map[string]any{
+		"monthId": "2026-11", "inputRevision": 1, "payload": sampleAnalysisPayload("2026-11"),
+	}, map[string]string{"Idempotency-Key": "accounting-failure"})
+	if status != 500 || body["code"] != "usage_accounting_failed" {
+		t.Fatalf("accounting failure: %d %#v", status, body)
+	}
+}
