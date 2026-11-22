@@ -7,7 +7,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -95,11 +94,13 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		sw := &statusWriter{ResponseWriter: w}
 		defer func() {
 			if recovered := recover(); recovered != nil {
-				s.Log.Error("panic", "correlationId", correlation, "panic", fmt.Sprint(recovered))
+				// Never log the recovered value: it can contain request data or a path secret.
+				s.Log.Error("panic", "correlationId", correlation)
 				writeError(sw, http.StatusInternalServerError, "internal_error", "Unexpected error", correlation)
 			}
 			s.Log.Info("request", "correlationId", correlation, "method", r.Method,
-				"path", r.URL.Path, "status", sw.status, "ms", time.Since(started).Milliseconds())
+				"route", sanitizedRoute(r.URL.Path), "status", sw.status,
+				"ms", time.Since(started).Milliseconds())
 		}()
 		r.Body = http.MaxBytesReader(sw, r.Body, 256*1024)
 		next.ServeHTTP(sw, r.WithContext(context.WithValue(ctx, correlationKey, correlation)))
@@ -107,6 +108,45 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 }
 
 const correlationKey contextKey = "pam.correlation"
+
+// sanitizedRoute is a closed route label. Dynamic ids are replaced, and receipt tokens are never
+// logged; unknown paths are not echoed because they may contain a bearer secret.
+func sanitizedRoute(path string) string {
+	switch {
+	case path == "/healthz" || path == "/readyz":
+		return path
+	case path == "/v1/deletion-receipts" || strings.HasPrefix(path, "/v1/deletion-receipts/"):
+		return "/v1/deletion-receipts/{token}"
+	case path == "/v1/internal/sweep":
+		return path
+	case strings.HasPrefix(path, "/v1/transactions/"):
+		return "/v1/transactions/{id}"
+	case strings.HasPrefix(path, "/v1/categories/"):
+		return "/v1/categories/{id}"
+	case strings.HasPrefix(path, "/v1/import-jobs/"):
+		if strings.HasSuffix(path, "/batches") {
+			return "/v1/import-jobs/{id}/batches"
+		}
+		return "/v1/import-jobs/{id}"
+	case strings.HasPrefix(path, "/v1/analyses/"):
+		return "/v1/analyses/{monthId}"
+	case strings.HasPrefix(path, "/v1/budget-plans/"):
+		return "/v1/budget-plans/{monthId}"
+	case strings.HasPrefix(path, "/v1/summaries/"):
+		return "/v1/summaries/{monthId}"
+	case strings.HasPrefix(path, "/v1/deletion-requests/"):
+		return "/v1/deletion-requests/{id}"
+	case strings.HasPrefix(path, "/v1/admin/"):
+		return "/v1/admin/{route}"
+	}
+	switch path {
+	case "/v1/accounts", "/v1/sessions", "/v1/sessions/refresh", "/v1/consents",
+		"/v1/me", "/v1/me/fingerprint-key", "/v1/transactions", "/v1/categories",
+		"/v1/import-jobs", "/v1/analyses", "/v1/deletion-requests":
+		return path
+	}
+	return "{unknown}"
+}
 
 func correlationOf(r *http.Request) string {
 	if v, ok := r.Context().Value(correlationKey).(string); ok {

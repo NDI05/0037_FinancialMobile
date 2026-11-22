@@ -1499,3 +1499,47 @@ func TestUsageAccountingFailureIsReportedAndNotPublished(t *testing.T) {
 		t.Fatalf("accounting failure: %d %#v", status, body)
 	}
 }
+
+func TestReceiptTokenIsNeverWrittenToLogs(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "log.db")
+	cfg, err := config.Load(map[string]string{
+		"APP_ENV": "test", "DATABASE_URL": "file:" + path,
+		"REGISTRATION_INVITE_CODE": "pam-test",
+		"JWT_SECRET":               "0123456789abcdef0123456789abcdef",
+		"REFRESH_PEPPER":           "abcdef0123456789abcdef0123456789",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, err := store.Open(context.Background(), cfg.Database)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	s := store.New(db, cfg.DataKey, cfg.KeyVersion)
+	defer s.Close()
+	var logs strings.Builder
+	logger := slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	api := New(s, cfg, auth.NewIssuer(cfg.JWT.Secret, cfg.JWT.Issuer, cfg.JWT.Audience,
+		cfg.JWT.AccessTTL), logger, &llm.Fake{})
+	server := httptest.NewServer(api.Handler())
+	defer server.Close()
+	canary := "receipt-canary-7f3a9d"
+	for _, target := range []string{
+		"/v1/deletion-receipts/" + canary,
+		"/v1/deletion-receipts/unknown/" + canary,
+		"/v1/unknown-" + canary,
+	} {
+		response, err := http.Get(server.URL + target)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = response.Body.Close()
+	}
+	if strings.Contains(logs.String(), canary) {
+		t.Fatalf("receipt canary leaked into logs: %s", logs.String())
+	}
+	if !strings.Contains(logs.String(), "/v1/deletion-receipts/{token}") {
+		t.Fatalf("route template missing from logs: %s", logs.String())
+	}
+}
