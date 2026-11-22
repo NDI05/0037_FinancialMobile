@@ -12,6 +12,15 @@ Aturan repo: [`AGENTS.md`](../AGENTS.md). Mandat terkini:
 
 ## Inventaris awal yang dipertahankan
 
+Review PM terbaru sesudah worker `4c619f7`:
+[`PM_REVIEW_4C619F7.md`](reviews/PM_REVIEW_4C619F7.md). Arahan lanjut:
+[`RESUME_4C619F7_IMPORT_ACCEPTANCE.md`](agent-prompts/RESUME_4C619F7_IMPORT_ACCEPTANCE.md).
+PM menjalankan 7 targeted tests PASS, tetapi probe parser menolak klaim strict validation
+selesai: 31 Nov dan 24:00 masih dinormalisasi. Uploader awal ada; recovery retry, identity
+job/batch durable, candidate/counts scope, key server dan UI refresh belum memenuhi acceptance.
+Import server PARTIAL; refresh acceptance PM PENDING REVIEW; Android lost-response OPEN.
+Catatan snapshot sebelumnya di bawah tetap historis, bukan status implementation terbaru.
+
 Arahan resume terbaru: [`RESUME_LIVIN_S2_S4.md`](agent-prompts/RESUME_LIVIN_S2_S4.md).
 Pada pemeriksaan PM sebelum commit prompt, HEAD lokal/remote `9571dc3`, worktree bersih.
 Pemeriksaan read-only mailbox menemukan email `Pembayaran Berhasil!` dari sender Livin
@@ -42,7 +51,7 @@ gate C2A dan seluruh sisa S2–S4. Akun/perangkat nyata tidak dipakai untuk QA d
 | S2.1 | GET detail 404/unavailable/parsing | PASS kode | error diteruskan; UI banner |
 | S2.2 | R1 B01–B04 | **PARTIAL/PASS kandidat** | screenshot 393 dp; 360/412/200% belum lengkap |
 | S2.3 | consent server-confirmed | PASS kode | local GRANTED bukan bukti server |
-| S2.3 | fingerprint key server + import job/batch/resume | **NOT DONE** | belum ada port/UI |
+| S2.3 | fingerprint key server + import job/batch/resume | **PARTIAL** | port/uploader awal ada pada 72a9cf4; key server/recovery/counts/UI E2E belum; lihat review 4c619f7 |
 | S2.4 | pagination/filter server | **NOT DONE** | UI halaman pertama; C2B1 |
 | S2.4 | update/delete transaksi | **NOT DONE** | detail capability notice |
 | S2.5 | budget/analysis remote + freshness UI | **NOT DONE** | masih lama/Room |

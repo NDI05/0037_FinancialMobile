@@ -6,6 +6,13 @@ Target kualitas adalah tidak ada defect kritis/tinggi atau blocker yang diketahu
 
 ## Arahan resume PM — checkpoint ceea72d
 
+**Resume terbaru sesudah worker `4c619f7`:** jalankan
+[`RESUME_4C619F7_IMPORT_ACCEPTANCE.md`](RESUME_4C619F7_IMPORT_ACCEPTANCE.md), dengan
+temuan/evidence pada [`PM_REVIEW_4C619F7.md`](../reviews/PM_REVIEW_4C619F7.md).
+Split-date/time valid sudah lulus targeted test, tetapi invalid calendar/clock masih diterima.
+Uploader awal belum menutup retry, durable job/batch identity, counts dan refresh server UI.
+Mandat seluruh S2–S4 tetap berlaku; instruksi checkpoint lebih lama di bawah bersifat historis.
+
 **Addendum aktif 22 November 2026:** baca [`RESUME_LIVIN_S2_S4.md`](RESUME_LIVIN_S2_S4.md).
 PM menemukan tanggal/jam terpisah pada sampel Livin dan 48 skip `malformed_event_time`
 di log emulator; import masih lokal sementara pembaca finance memakai Go. Prioritas baru:
