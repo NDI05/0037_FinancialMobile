@@ -8,6 +8,7 @@ import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Transaction
+import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.repository.TransactionRepository
 import com.pam.recap.domain.usecase.LinkRefundUseCase
@@ -54,6 +55,7 @@ class TransactionDetailViewModel @Inject constructor(
     private val markTransfer: MarkInternalTransferUseCase,
     private val linkRefund: LinkRefundUseCase,
     private val updateNote: UpdateTransactionNoteUseCase,
+    private val server: ServerFinanceRepository? = null,
 ) : ViewModel() {
 
     private val transactionId: String = savedStateHandle.get<String>("transactionId").orEmpty()
@@ -73,10 +75,23 @@ class TransactionDetailViewModel @Inject constructor(
     ) { session, _, currentAction -> session.ownerId to currentAction }
         .flatMapLatest { (ownerId, currentAction) ->
             flow {
-                val transaction = transactions.get(ownerId, transactionId)
+                val transaction = if (server?.isEnabled == true) {
+                    when (val result = server.get(ownerId, transactionId)) {
+                        is Outcome.Success -> result.value
+                        is Outcome.Failure -> null
+                    }
+                } else {
+                    transactions.get(ownerId, transactionId)
+                }
                 val candidates = if (transaction != null && transaction.direction == com.pam.recap.domain.model.Direction.CREDIT) {
-                    transactions.listMonth(ownerId, JakartaMonth.of(transaction.eventAt))
-                        .filter { it.direction == com.pam.recap.domain.model.Direction.DEBIT && !it.isInternalTransfer }
+                    if (server?.isEnabled == true) {
+                        (server.listMonth(ownerId, JakartaMonth.of(transaction.eventAt)) as? Outcome.Success)
+                            ?.value?.items.orEmpty()
+                            .filter { it.direction == com.pam.recap.domain.model.Direction.DEBIT && !it.isInternalTransfer }
+                    } else {
+                        transactions.listMonth(ownerId, JakartaMonth.of(transaction.eventAt))
+                            .filter { it.direction == com.pam.recap.domain.model.Direction.DEBIT && !it.isInternalTransfer }
+                    }
                 } else {
                     emptyList()
                 }
@@ -107,6 +122,10 @@ class TransactionDetailViewModel @Inject constructor(
 
     private fun perform(block: suspend (ownerId: String) -> Outcome<Unit>) {
         if (action.value.isBusy) return
+        if (server?.isEnabled == true) {
+            action.value = ActionState(error = AppError.Configuration("server_edit_not_available"))
+            return
+        }
         action.value = action.value.copy(isBusy = true, error = null)
         viewModelScope.launch {
             val ownerId = sessions.current()?.ownerId

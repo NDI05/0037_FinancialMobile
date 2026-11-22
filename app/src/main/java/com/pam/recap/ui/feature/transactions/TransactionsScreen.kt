@@ -32,6 +32,7 @@ import com.pam.recap.ui.components.FilterPill
 import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassTopBar
 import com.pam.recap.ui.components.LoadingShimmer
+import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.MonthSelector
 import com.pam.recap.ui.components.MonthStrip
 import com.pam.recap.ui.components.PamScaffold
@@ -142,6 +143,10 @@ fun TransactionsScreen(
 
             when {
                 state.isLoading -> LoadingShimmer(rows = 4, showHero = false)
+
+                state.error != null -> NoticeBanner(
+                    text = stringResource(com.pam.recap.ui.util.appErrorRes(requireNotNull(state.error))),
+                )
 
                 state.isEmptyMonth -> EmptyState(
                     eyebrow = stringResource(R.string.transactions_empty_eyebrow),

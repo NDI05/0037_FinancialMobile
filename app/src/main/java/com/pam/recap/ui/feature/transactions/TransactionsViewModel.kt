@@ -8,6 +8,7 @@ import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionFilter
 import com.pam.recap.domain.repository.SessionRepository
+import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.TransactionRepository
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
 import com.pam.recap.ui.components.DayStripCell
@@ -39,6 +40,7 @@ data class TransactionsUiState(
     val items: List<Transaction> = emptyList(),
     val monthTransactionCount: Int = 0,
     val days: List<DayStripCell> = emptyList(),
+    val error: com.pam.recap.core.result.AppError? = null,
 ) {
     /** FR-20: "no data for the month" and "nothing matches the filter" are different states. */
     val isEmptyMonth: Boolean get() = !isLoading && monthTransactionCount == 0
@@ -58,6 +60,7 @@ class TransactionsViewModel @Inject constructor(
     private val sessions: SessionRepository,
     private val transactions: TransactionRepository,
     private val resolveInitialMonth: ResolveInitialMonthUseCase,
+    private val server: ServerFinanceRepository? = null,
 ) : ViewModel() {
 
     private val month = MutableStateFlow<JakartaMonth?>(null)
@@ -82,8 +85,22 @@ class TransactionsViewModel @Inject constructor(
         },
     ) { session, filters -> session.ownerId to filters }
         .flatMapLatest { (ownerId, filters) ->
-            transactions.observeMonth(ownerId, filters.month, TransactionFilter(month = filters.month))
-                .map { all -> filters.reduce(all) }
+            if (server?.isEnabled == true) {
+                kotlinx.coroutines.flow.flow {
+                    emit(TransactionsUiState(isLoading = true, month = filters.month))
+                    when (val page = server.listMonth(ownerId, filters.month)) {
+                        is com.pam.recap.core.result.Outcome.Success -> emit(filters.reduce(page.value.items))
+                        is com.pam.recap.core.result.Outcome.Failure -> emit(
+                            TransactionsUiState(
+                                isLoading = false, month = filters.month, error = page.error,
+                            ),
+                        )
+                    }
+                }
+            } else {
+                transactions.observeMonth(ownerId, filters.month, TransactionFilter(month = filters.month))
+                    .map { all -> filters.reduce(all) }
+            }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TransactionsUiState())
 
