@@ -20,7 +20,7 @@ sudah dibuktikan dari yang masih lokal/Room agar tidak diklaim selesai.
 | Deletion server | UI meminta password akun + konfirmasi; `RequestDeletionUseCase` mengirim server request dan menerima SLA/receipt |
 
 Tes Android baru: `BackendSessionRepositoryTest` (16), `PamApiClientTest` (6) dan
-`RequestDeletionUseCaseTest` (3). Total suite saat dokumen ini ditulis: **240 tes JVM**, 0 gagal.
+`RequestDeletionUseCaseTest` (3). Total suite saat dokumen ini ditulis: **241 tes JVM**, 0 gagal.
 
 ## Perbaikan temuan C2-F1–F4
 
