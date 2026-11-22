@@ -152,7 +152,7 @@
     <string name="overview_gross_out">Out</string>
     <string name="overview_vs_previous">vs last month</string>
     <string name="overview_classified_income">Classified income</string>
-    <string name="overview_classified_expense">Classified expense</string>
+    <string name="overview_classified_expense">Expenses excluding internal transfers</string>
     <string name="overview_composition_label">Expense composition: %1$s is %2$s of classified spending</string>
     <string name="overview_composition_center">largest</string>
     <string name="overview_categories_eyebrow">Expense categories</string>
@@ -224,7 +224,7 @@
     <string name="origin_user">Chosen by you</string>
     <string name="origin_rule">Automatic rule</string>
 
-    <string name="manual_title">Add entry</string>
+    <string name="manual_title">Add transaction</string>
     <string name="manual_eyebrow">Manual entry</string>
     <string name="manual_headline">Add a transaction the email did not contain.</string>
     <string name="manual_body">Manual entries are badged Manual everywhere and are never treated as imported.</string>
@@ -426,4 +426,6 @@
     <string name="settings_demo_cancel">Cancel</string>
     <string name="settings_demo_done">%1$d demo rows deleted.</string>
     <string name="settings_demo_none">No demo data left.</string>
+    <string name="detail_actions_unavailable">Category/note editing and deletion are available after server edit sync (C2B2).</string>
+    <string name="manual_saved_hint">Once saved, this transaction is included in the %1$s summary.</string>
 </resources>

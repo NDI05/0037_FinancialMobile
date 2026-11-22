@@ -337,27 +337,28 @@ private fun NetCashFlowHero(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(PamSpacing.xs),
             ) {
-                StatusChip(kind = StatusChipKind.EmailDerived)
-                StatusChip(kind = summary.coverage.chipKind())
+                StatusChip(kind = StatusChipKind.EmailDerived, onDark = true)
+                StatusChip(kind = summary.coverage.chipKind(), onDark = true)
             }
             Spacer(modifier = Modifier.height(PamSpacing.lg))
-            EyebrowText(text = stringResource(R.string.overview_net_eyebrow), color = OnInkMuted)
+            EyebrowText(text = stringResource(R.string.overview_net_eyebrow), color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f))
             Spacer(modifier = Modifier.height(PamSpacing.xs))
             MoneyText(
                 amount = summary.netCashFlow,
                 tone = if (summary.netCashFlow.isNegative) MoneyTone.Expense else MoneyTone.Income,
                 style = DisplayXl,
+                color = androidx.compose.ui.graphics.Color.White,
             )
             Spacer(modifier = Modifier.height(PamSpacing.xs))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = summary.month.label(),
                     style = TitleM,
-                    color = OnInkMuted,
+                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f),
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 if (comparison != null) {
-                    AmountPill(change = comparison.netChange)
+                    AmountPill(change = comparison.netChange, onDark = true)
                 }
             }
             if (connectionLabel != null) {
@@ -373,7 +374,7 @@ private fun NetCashFlowHero(
                     Text(
                         text = connectionLabel,
                         style = TitleS,
-                        color = OnInkMuted,
+                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),

@@ -37,7 +37,9 @@ import com.pam.recap.ui.components.PamScaffold
 import com.pam.recap.ui.components.PillButton
 import com.pam.recap.ui.components.PillToggleGroup
 import com.pam.recap.ui.components.PillToggleOption
+import androidx.compose.foundation.background
 import com.pam.recap.ui.theme.BodyM
+import com.pam.recap.ui.theme.Surface
 import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.PamSpacing
 import com.pam.recap.ui.theme.TitleM
@@ -70,6 +72,35 @@ fun ManualEntryScreen(
                 title = stringResource(R.string.manual_title),
                 onBack = onBack,
             )
+        },
+        bottomBar = {
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Surface)
+                    .padding(horizontal = PamSpacing.gutter, vertical = PamSpacing.sm),
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.manual_saved_hint,
+                        state.date.format(
+                            java.time.format.DateTimeFormatter.ofPattern(
+                                "MMMM yyyy", java.util.Locale("id", "ID"),
+                            ),
+                        ),
+                    ),
+                    style = BodyM,
+                    color = OnInkMuted,
+                    modifier = Modifier.padding(bottom = PamSpacing.xs),
+                )
+                PillButton(
+                    text = stringResource(R.string.manual_save),
+                    onClick = viewModel::save,
+                    enabled = state.canSave,
+                    loading = state.isSaving,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         },
     ) { padding ->
         Column(
@@ -178,13 +209,6 @@ fun ManualEntryScreen(
                 NoticeBanner(text = stringResource(appErrorRes(requireNotNull(state.error))))
             }
 
-            PillButton(
-                text = stringResource(R.string.manual_save),
-                onClick = viewModel::save,
-                enabled = state.canSave,
-                loading = state.isSaving,
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
     }
 }

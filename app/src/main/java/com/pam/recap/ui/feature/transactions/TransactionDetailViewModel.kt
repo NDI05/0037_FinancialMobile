@@ -38,6 +38,7 @@ data class TransactionDetailUiState(
     val isBusy: Boolean = false,
     val error: AppError? = null,
     val savedAt: Long? = null,
+    val actionsEnabled: Boolean = true,
 )
 
 /**
@@ -110,6 +111,7 @@ class TransactionDetailViewModel @Inject constructor(
                         isBusy = currentAction.isBusy,
                         error = currentAction.error ?: loadError,
                         savedAt = currentAction.savedAt,
+                        actionsEnabled = server?.isEnabled != true,
                     ),
                 )
             }

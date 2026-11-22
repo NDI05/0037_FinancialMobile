@@ -150,6 +150,9 @@ fun TransactionDetailScreen(
             if (state.error != null) {
                 NoticeBanner(text = stringResource(appErrorRes(requireNotNull(state.error))))
             }
+            if (!state.actionsEnabled) {
+                NoticeBanner(text = stringResource(R.string.detail_actions_unavailable))
+            }
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 EyebrowText(text = stringResource(R.string.detail_provenance_eyebrow))

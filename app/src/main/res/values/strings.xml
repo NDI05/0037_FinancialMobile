@@ -163,7 +163,7 @@
     <string name="overview_gross_out">Keluar</string>
     <string name="overview_vs_previous">vs bulan lalu</string>
     <string name="overview_classified_income">Pemasukan terklasifikasi</string>
-    <string name="overview_classified_expense">Pengeluaran terklasifikasi</string>
+    <string name="overview_classified_expense">Pengeluaran tanpa transfer internal</string>
     <string name="overview_composition_label">Komposisi pengeluaran: %1$s menyumbang %2$s dari pengeluaran terklasifikasi</string>
     <string name="overview_composition_center">terbesar</string>
     <string name="overview_categories_eyebrow">Kategori pengeluaran</string>
@@ -239,7 +239,7 @@
     <string name="origin_rule">Aturan otomatis</string>
 
     <!-- Manual entry -->
-    <string name="manual_title">Catat manual</string>
+    <string name="manual_title">Tambah transaksi</string>
     <string name="manual_eyebrow">Entri manual</string>
     <string name="manual_headline">Tambahkan transaksi yang tidak ada di email.</string>
     <string name="manual_body">Entri manual ditandai Manual di semua layar dan tidak pernah dianggap hasil impor.</string>
@@ -448,4 +448,6 @@
     <string name="settings_demo_cancel">Batal</string>
     <string name="settings_demo_done">%1$d baris demo dihapus.</string>
     <string name="settings_demo_none">Tidak ada data demo tersisa.</string>
+    <string name="detail_actions_unavailable">Ubah kategori/catatan dan hapus transaksi tersedia setelah sinkronisasi edit server (C2B2).</string>
+    <string name="manual_saved_hint">Setelah tersimpan, transaksi ini masuk ke ringkasan bulan %1$s.</string>
 </resources>
