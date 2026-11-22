@@ -1,0 +1,29 @@
+{
+  "status": "PASS",
+  "scope": "Go + QA proxy + Python HTTP client; Android UI NOT RUN",
+  "first_response_lost": true,
+  "retry_status": 200,
+  "before": {
+    "rows": 0,
+    "month_revision": 0,
+    "idempotency_records": 0
+  },
+  "after_commit": {
+    "rows": 1,
+    "month_revision": 1,
+    "idempotency_records": 1
+  },
+  "after_retry": {
+    "rows": 1,
+    "month_revision": 1,
+    "idempotency_records": 1
+  },
+  "new_identical_action_status": 201,
+  "after_new_action": {
+    "rows": 2,
+    "month_revision": 2,
+    "idempotency_records": 2
+  },
+  "same_key_body_and_result": true,
+  "evidence_file": "c2a_proxy_backend_smoke.events.jsonl"
+}

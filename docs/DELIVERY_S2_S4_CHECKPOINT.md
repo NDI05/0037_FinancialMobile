@@ -25,7 +25,7 @@ Aturan repo: [`AGENTS.md`](../AGENTS.md). Mandat terkini:
 | Tahap | Deliverable | Status | Bukti/catatan |
 |---|---|---|---|
 | S2.1 | C2A gate mapping/provenance/wire | PASS lokal | `ServerFinanceRepositoryImplTest`, `ManualPendingActionStoreTest` |
-| S2.1 | refresh <5s di emulator | **BELUM** | refresh bus ada; belum diukur ulang |
+| S2.1 | refresh <5s di emulator | **PENDING REVIEW** | worker mengukur 2,53s; mutation baru/baseline/key/row belum terikat evidence yang konsisten |
 | S2.1 | response create hilang → retry satu row | **PARTIAL** | pending key + backend idempotency; fault-injection UI belum |
 | S2.1 | GET detail 404/unavailable/parsing | PASS kode | error diteruskan; UI banner |
 | S2.2 | R1 B01–B04 | **PARTIAL/PASS kandidat** | screenshot 393 dp; 360/412/200% belum lengkap |
@@ -64,7 +64,7 @@ Tidak ada baris yang diberi PASS tanpa bukti.
 
 ## Blocker/pekerjaan berikut
 
-1. Dua verifikasi emulator C2A (refresh <5s, lost-response retry UI).
+1. Rekonsiliasi evidence refresh <5s dan selesaikan lost-response retry UI dengan proxy QA standalone; lihat `QA_C2A_COMMITTED_RESPONSE_LOSS.md`.
 2. C2B1: import job/batch/resume + fingerprint key + pagination/filter >100.
 3. C2B2: edit/delete + conflict.
 4. C2C: budget/analysis/deletion status UI.
@@ -79,14 +79,26 @@ External NOT RUN: Turso cloud, backup/restore, Gmail nyata, provider nyata, phys
 - Alasan run sebelumnya berhenti: agent menutup turn setelah checkpoint dokumentasi R1
   meskipun gate C2A dan C2B1 masih terbuka. Tidak ada blocker kredensial eksternal;
   sisa pekerjaan adalah backlog implementasi yang belum dikerjakan.
-- **Gate refresh <5 detik: PASS aktual.** Emulator → Go `/tmp/pam-gate.db`, DB sebelum
-  satu row. Setelah tap Simpan, UI menampilkan `1 transaksi` dalam **2,53 detik**
-  (polling uiautomator); DB transactions=1, revision=0.
+- **Observasi worker refresh <5 detik: 2,53 detik, acceptance PM PENDING REVIEW.**
+  Worker melaporkan emulator → Go `/tmp/pam-gate.db`, DB sebelum satu row dan sesudah
+  tap Simpan UI `1 transaksi`; DB transactions=1, revision=0. Bukti ini perlu mengikat
+  fresh action/key/record baru dan membedakan record revision dari month revision.
+  Snapshot DB saat review PM berikutnya berisi 3 rows dan month revision 3, sehingga
+  tidak merekonstruksi kondisi historis percobaan tersebut.
 - **Gate lost-response retry: OPEN / NOT PASS.** Percobaan fault injection lokal
   (proxy 8081 dan hook sementara response-drop) tidak menghasilkan bukti yang
-  konsisten: pada percobaan terakhir server sudah commit tetapi klien masih
-  menampilkan success/list, sehingga tidak dapat dibedakan lost response dari
-  response normal. Hook/proxy sementara sudah dihapus dan tidak masuk source.
-  Gate ini belum boleh disebut lulus.
+  konsisten. UI success/list saja belum membuktikan fault gagal atau gate lulus;
+  retry otomatis bisa sah bila trace memperlihatkan drop lalu replay key/body sama.
+  Hook/proxy sementara worker sudah dihapus dan tidak masuk source. Gate Android
+  masih OPEN sampai evidence konsisten tersedia.
 - Setelah gate ini, import job/batch/resume, pagination/filter, update/delete,
   S3/S4 **belum diimplementasikan** pada resume ini.
+
+## Dukungan QA PM setelah review ceea72d
+
+- Proxy standalone ada di `scripts/qa/committed_response_proxy.py`, bukan hook produksi.
+- Smoke Go + proxy + Python client PASS: 0/0/0 → commit dengan respons hilang 1/1/1 →
+  replay HTTP 200 tetap 1/1/1 (rows/month revision/idempotency). Android UI NOT RUN oleh PM.
+- Runbook dan acceptance trace: `QA_C2A_COMMITTED_RESPONSE_LOSS.md`; review `reviews/PM_REVIEW_CEEA72D.md`.
+- Login akun asli dilakukan pemilik sendiri. QA fault injection/clear-data/deletion tetap
+  hanya pada akun/AVD/database sintetis terpisah; jangan memakai password utama Gmail sebagai password PAM.
