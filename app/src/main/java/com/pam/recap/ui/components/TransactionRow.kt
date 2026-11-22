@@ -58,6 +58,7 @@ fun TransactionRow(
     direction: Direction,
     modifier: Modifier = Modifier,
     isLowConfidence: Boolean = false,
+    hasUnconfirmedSuggestion: Boolean = false,
     isManual: Boolean = false,
     currency: String = "IDR",
     onClick: (() -> Unit)? = null,
@@ -107,6 +108,16 @@ fun TransactionRow(
                         contentDescription = null,
                         tint = WarningAmber,
                         modifier = Modifier.size(12.dp),
+                    )
+                }
+                if (hasUnconfirmedSuggestion) {
+                    // A model-suggested category the user has not confirmed yet: a distinct label,
+                    // not the low-confidence warning (which is about data quality).
+                    Text(
+                        text = stringResource(com.pam.recap.R.string.status_ai_suggestion),
+                        style = LabelM,
+                        color = Violet,
+                        maxLines = 1,
                     )
                 }
                 if (isManual) {

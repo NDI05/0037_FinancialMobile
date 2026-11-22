@@ -334,3 +334,79 @@ akun fixture `e2e.uat.1122@pam-uat.test`, 3 consent AI GRANTED. Tidak ada data p
   Override manual TIDAK tersedia lewat UI Android pada build server-mode
   (by design `server_edit_not_available`; jalur USER override = API). Chip review memakai
   ambang konservatif 0.60 (LLM tidak mengirim confidence; kategori USER dikecualikan).
+
+## Perbaikan hasil review a73bb38 — 23 November 2026
+
+Review PM menemukan empat cacat nyata pada build `a73bb38`. Semuanya diperbaiki dengan
+regresi yang mengunci perilakunya.
+
+### 1. Pemetaan hasil klasifikasi berdasarkan `caseId`, bukan posisi array
+- **Defect:** `classifyGroup` menulis `resultByShare[shares[i]] = res` (posisional). Output
+  provider yang valid tetapi urutannya dibalik/diacak menempelkan kategori ke transaksi
+  yang salah — PM mereproduksinya dengan output valid yang dibalik.
+- **Perbaikan:** output divalidasi (`ValidateResults`: cakupan tepat, unik, rentang sah,
+  kode diizinkan, `ReasonCode` ≤40 tanpa CRLF, `NeedsReview` ⇒ uncategorized), lalu dipetakan
+  lewat `resultByCase[CaseIndex(caseId)]` → indeks share di grup request → semua transaksi
+  koalesen. Output tidak valid → job `FAILED invalid_output` (bukan apply sebagian);
+  `caseId` hilang/duplikat/asing ditolak; `MappingVersion = "caseid/1"`.
+- **Regresi:** `TestCaseIDMappingIsNotPositional` (output dibalik → kategori benar per
+  transaksi), `TestCaseIDMappingHandlesSplitBatches` (batch pecah lintas request),
+  `TestCaseIDMappingRejectsInvalidSets` (missing/duplicate/out_of_range/malformed).
+- **Cache lama:** baris `category_cache` pra-perbaikan punya `mapping_version = ''` sehingga
+  otomatis miss (`CategoryCacheGet` menyaring `mapping_version = ?`), baris baru ditulis
+  `caseid/1`. Tidak ada data yang dihapus. `TestCaseCacheIgnoresPreMappingVersionRows`
+  menyuntik baris basi, membuktikan upgrade + kategori USER tidak pernah dikirim ulang/ditimpa.
+
+### 2. Orphan sweep atomik
+- **Perbaikan:** `SweepOrphanCategoryReservations` mengumpulkan orphan lalu setiap reservasi
+  diselesaikan dalam SATU transaksi DB: `UPDATE ... WHERE id=? AND state='RESERVED'`
+  (transisi bersyarat) + pelepasan seluruh counter owner/global harian/bulanan + COMMIT
+  (rollback penuh jika salah satu gagal).
+- **Regresi:** `TestSweepOrphanIsAtomicUnderCounterFailure` memakai trigger SQLite yang
+  menggagalkan update counter instalasi → sweep error, reservasi tetap `RESERVED`, semua
+  counter utuh; setelah trigger dibuang sweep sukses tepat sekali (0.10). 
+  `TestSweepOrphanConcurrentWithSettlement` (8 run, sweep vs settle serentak) → biaya akhir
+  0.10 bila UNKNOWN, 0.06 bila settle menang; `reserved` selalu 0, tidak ada double charge.
+
+### 3. Lease fencing lengkap
+- **Perbaikan:** setiap claim/reclaim menerbitkan `lease_token` baru (`NewID("catlease")`).
+  Semua tulisan hasil (finish, requeue, apply kategori, cache put) disyaratkan
+  `state='RUNNING' AND lease_token=? AND lease_until_unix > now` (dibandingkan numerik agar
+  tidak salah urut karena pecahan detik RFC3339). `ErrLeaseLost` bukan 5xx: worker membaca
+  ulang baris terkini dan berhenti.
+- **Regresi:** `TestLeaseFencingRejectsStaleWorker` — A claim → lease kedaluwarsa → B reclaim
+  (token berbeda) → finish/requeue/apply/cache-put A semuanya `ErrLeaseLost`, job & revisi
+  transaksi tidak berubah, tidak ada cache yang ditulis; B apply+finish → terminal
+  `CLASSIFIED/food`; A yang kembali terlambat tetap ditolak.
+
+### 4. Koreksi kategori lewat Android (server mode)
+- **Perbaikan:** `ServerFinanceRepository.updateCategory` → `PATCH /v1/transactions/{id}`
+  dengan `{categoryId, revision}`; detail ViewModel memuat kategori server, mengirim revisi
+  yang dimuat, dan pada `409` menampilkan konflik lalu me-refresh revisi agar tap berikutnya
+  sukses. Amount/date tetap read-only (tidak ada use case yang menulisnya).
+  Status "saran belum dikonfirmasi" dipisah dari keyakinan rendah:
+  `hasUnconfirmedSuggestion = origin LLM && kategori bukan uncategorized`, chip "Saran AI";
+  `isLowConfidence` tidak lagi dipakai untuk baris LLM/USER. Ambang 0.60 dinyatakan tegas
+  sebagai ambang tinjauan parser/impor, bukan probabilitas akurasi.
+- **E2E Android (emulator, backend UAT :18090, tanpa panggilan Azure baru):**
+  1. Baris `RENTAL MOBIL UJI CARD` (origin LLM, transport) → detail menampilkan chip
+     "Saran AI", teks "Kategori ini saran AI dan belum dikonfirmasi...", dan hint 0,60.
+  2. Tap "Kesehatan" → `PATCH 200`; API readback `health / USER / rev 2`; chip "Saran AI"
+     hilang, label asal menjadi pilihan pengguna.
+  3. Force-stop + relaunch → daftar & detail tetap "Kesehatan" tanpa chip saran (persisten).
+  4. `POST /v1/category-jobs` untuk transaksi itu → `NEEDS_REVIEW / not_eligible`, kategori
+     tetap `health / USER / rev 2` (AI tidak menimpa; tidak ada panggilan provider).
+  5. Konflik: revisi dinaikkan dari luar (rev 3→4→5), lalu tap kategori dengan revisi lama →
+     `PATCH 409` di log backend, banner "Terjadi konflik data." tampil, app me-refresh;
+     tap ulang sukses → `shopping / USER / rev 6`.
+- Regresi unit: `ServerFinanceRepositoryImplTest` (PATCH mengirim `categoryId`+`revision`,
+  409 → `AppError.Conflict`), `TransactionReviewTest` (LLM = saran, bukan keyakinan rendah).
+
+### Gate yang dijalankan ulang
+- Go: `test -race ./...` (semua paket), `go vet ./...`, `go build ./...` — lihat hasil di
+  laporan akhir.
+- Android: `testDebugUnitTest`, `assembleDebug`, `lintDebug` (0 error; 4 terjemahan `en`
+  yang hilang ditambahkan).
+- **Masih TERBUKA:** benchmark akurasi berlabel manusia (gate terpisah, tidak diklaim),
+  36 email event-time malformed, S2 tetap PARTIAL. Auto-sync 30 menit / batch kategori 2 jam /
+  indikator top-bar BELUM diimplementasikan (rencana di `docs/plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md`).

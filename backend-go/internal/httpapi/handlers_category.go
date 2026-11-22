@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -124,7 +125,7 @@ func (s *Server) createCategoryJobs(w http.ResponseWriter, r *http.Request) {
 			jobs = append(jobs, job)
 			continue
 		}
-		claimed, err := s.Store.ClaimCategoryJob(r.Context(), info.OwnerID, job.ID, s.Now(), store.CategoryLeaseDuration)
+		leaseToken, claimed, err := s.Store.ClaimCategoryJob(r.Context(), info.OwnerID, job.ID, s.Now(), store.CategoryLeaseDuration)
 		if err != nil {
 			s.databaseOrInternal(w, r, err)
 			return
@@ -138,6 +139,7 @@ func (s *Server) createCategoryJobs(w http.ResponseWriter, r *http.Request) {
 			jobs = append(jobs, job)
 			continue
 		}
+		job.LeaseToken = leaseToken
 		prepared, eligible, err := s.prepareForClassify(r.Context(), info.OwnerID, job)
 		if err != nil {
 			s.databaseOrInternal(w, r, err)
@@ -172,7 +174,7 @@ func (s *Server) prepareForClassify(ctx context.Context, ownerID string, job sto
 	tx, err := s.Store.GetTransaction(ctx, ownerID, job.TransactionID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
-			fj, ferr := s.finishJob(ctx, ownerID, job.ID, "FAILED", "", "", "transaction_not_found", 0)
+			fj, ferr := s.finishJob(ctx, ownerID, job, "FAILED", "", "", "transaction_not_found", 0)
 			if ferr != nil {
 				return preparedCategory{}, false, ferr
 			}
@@ -182,21 +184,21 @@ func (s *Server) prepareForClassify(ctx context.Context, ownerID string, job sto
 	}
 	if tx.Revision != job.ExpectedRevision {
 		// A concurrent edit (USER override, re-import) moved the revision: the job is stale.
-		fj, ferr := s.finishJob(ctx, ownerID, job.ID, "FAILED", "", "", "stale_job", 0)
+		fj, ferr := s.finishJob(ctx, ownerID, job, "FAILED", "", "", "stale_job", 0)
 		if ferr != nil {
 			return preparedCategory{}, false, ferr
 		}
 		return preparedCategory{job: fj}, false, nil
 	}
 	if tx.CategoryOrigin == "USER" || (tx.CategoryCode != "" && tx.CategoryCode != "uncategorized") {
-		fj, ferr := s.finishJob(ctx, ownerID, job.ID, "NEEDS_REVIEW", "", "not_eligible", "", 0)
+		fj, ferr := s.finishJob(ctx, ownerID, job, "NEEDS_REVIEW", "", "not_eligible", "", 0)
 		if ferr != nil {
 			return preparedCategory{}, false, ferr
 		}
 		return preparedCategory{job: fj}, false, nil
 	}
 	if s.personalOrTransferShaped(tx) {
-		fj, ferr := s.finishJob(ctx, ownerID, job.ID, "NEEDS_REVIEW", "", "not_eligible_personal_transfer", "", 0)
+		fj, ferr := s.finishJob(ctx, ownerID, job, "NEEDS_REVIEW", "", "not_eligible_personal_transfer", "", 0)
 		if ferr != nil {
 			return preparedCategory{}, false, ferr
 		}
@@ -204,7 +206,7 @@ func (s *Server) prepareForClassify(ctx context.Context, ownerID string, job sto
 	}
 	merchant, err := categoryllm.SanitizeMerchant(tx.Sensitive.MerchantLabel)
 	if err != nil {
-		fj, ferr := s.finishJob(ctx, ownerID, job.ID, "NEEDS_REVIEW", "uncategorized", "unsafe_merchant", "", 0)
+		fj, ferr := s.finishJob(ctx, ownerID, job, "NEEDS_REVIEW", "uncategorized", "unsafe_merchant", "", 0)
 		if ferr != nil {
 			return preparedCategory{}, false, ferr
 		}
@@ -243,7 +245,7 @@ func (s *Server) classifyGroup(ctx context.Context, ownerID string, pending []pr
 	for _, p := range pending {
 		key := store.CacheKey(p.merchant, p.tx.Direction, p.method)
 		code, review, reason, err := s.Store.CategoryCacheGet(ctx, ownerID, key, p.tx.Direction, p.method,
-			categoryllm.TaxonomyVersion, classifier.Model(), categoryllm.PromptVersion)
+			categoryllm.TaxonomyVersion, classifier.Model(), categoryllm.PromptVersion, categoryllm.MappingVersion)
 		if err != nil {
 			return out, outcome, err
 		}
@@ -279,7 +281,7 @@ func (s *Server) classifyGroup(ctx context.Context, ownerID string, pending []pr
 			// Even a single candidate exceeds the input cap: never call the provider or reserve spend.
 			for _, si := range shares {
 				for _, p := range byKey[keyOrder[si]] {
-					fj, err := s.finishJob(ctx, ownerID, p.job.ID, "NEEDS_REVIEW", "uncategorized", "input_too_large", "", 0)
+					fj, err := s.finishJob(ctx, ownerID, p.job, "NEEDS_REVIEW", "uncategorized", "input_too_large", "", 0)
 					if err != nil {
 						return out, outcome, err
 					}
@@ -296,7 +298,7 @@ func (s *Server) classifyGroup(ctx context.Context, ownerID string, pending []pr
 			outcome.budgetDenied = true
 			for _, si := range shares {
 				for _, p := range byKey[keyOrder[si]] {
-					fj, err := s.finishJob(ctx, ownerID, p.job.ID, "FAILED", "", "", "budget_exhausted", 0)
+					fj, err := s.finishJob(ctx, ownerID, p.job, "FAILED", "", "", "budget_exhausted", 0)
 					if err != nil {
 						return out, outcome, err
 					}
@@ -312,13 +314,13 @@ func (s *Server) classifyGroup(ctx context.Context, ownerID string, pending []pr
 			for _, si := range shares {
 				for _, p := range byKey[keyOrder[si]] {
 					if transient && p.job.RetryCount < 1 {
-						rj, err := s.Store.RequeueCategoryJob(ctx, ownerID, p.job.ID, s.Now())
+						rj, err := s.Store.RequeueCategoryJob(ctx, ownerID, p.job.ID, p.job.LeaseToken, s.Now())
 						if err != nil {
 							return out, outcome, err
 						}
 						out = append(out, rj)
 					} else {
-						fj, err := s.finishJob(ctx, ownerID, p.job.ID, "FAILED", "", "", code, 0)
+						fj, err := s.finishJob(ctx, ownerID, p.job, "FAILED", "", "", code, 0)
 						if err != nil {
 							return out, outcome, err
 						}
@@ -328,16 +330,35 @@ func (s *Server) classifyGroup(ctx context.Context, ownerID string, pending []pr
 			}
 			continue
 		}
-		resultByShare := map[int]categoryllm.Result{}
-		for i, res := range attempt.response.Results {
-			resultByShare[shares[i]] = res
+		// Results are attributed by validated caseId, never by array position: a model may return
+		// the same valid set in any order. ValidateResults rejects missing, duplicate, unknown and
+		// out-of-range caseIds, and every candidate index must be covered exactly once.
+		if err := categoryllm.ValidateResults(attempt.response.Results, group); err != nil {
+			for _, si := range shares {
+				for _, p := range byKey[keyOrder[si]] {
+					fj, ferr := s.finishJob(ctx, ownerID, p.job, "FAILED", "", "", "invalid_output", 0)
+					if ferr != nil {
+						return out, outcome, ferr
+					}
+					out = append(out, fj)
+				}
+			}
+			continue
 		}
-		for _, si := range shares {
-			res := resultByShare[si]
+		resultByCase := make(map[int]categoryllm.Result, len(group))
+		for _, res := range attempt.response.Results {
+			resultByCase[categoryllm.CaseIndex(res.CaseID)] = res
+		}
+		for i, si := range shares {
+			res, ok := resultByCase[i]
+			if !ok {
+				return out, outcome, fmt.Errorf("category result missing caseId %s", categoryllm.CaseIDForIndex(i))
+			}
 			first := byKey[keyOrder[si]][0]
-			if err := s.Store.CategoryCachePut(ctx, ownerID, keyOrder[si], first.tx.Direction, first.method,
+			if err := s.Store.CategoryCachePut(ctx, ownerID, first.job.ID, first.job.LeaseToken,
+				keyOrder[si], first.tx.Direction, first.method,
 				categoryllm.TaxonomyVersion, classifier.Model(), categoryllm.PromptVersion,
-				res.CategoryCode, res.ReasonCode, res.NeedsReview, s.Now()); err != nil {
+				categoryllm.MappingVersion, res.CategoryCode, res.ReasonCode, res.NeedsReview, s.Now()); err != nil {
 				return out, outcome, err
 			}
 			for _, p := range byKey[keyOrder[si]] {
@@ -398,24 +419,27 @@ func (s *Server) providerAttempt(ctx context.Context, ownerID string, candidates
 func (s *Server) applyAndFinish(ctx context.Context, ownerID string, p preparedCategory, code string, review bool, reason string) (store.CategoryJob, error) {
 	classifier := s.CategoryClassifier
 	if review || code == "" || code == "uncategorized" {
-		return s.finishJob(ctx, ownerID, p.job.ID, "NEEDS_REVIEW", "uncategorized", reason, "", 0)
+		return s.finishJob(ctx, ownerID, p.job, "NEEDS_REVIEW", "uncategorized", reason, "", 0)
 	}
 	if !directionAllows(code, p.tx.Direction, p.candidate.Categories) {
-		return s.finishJob(ctx, ownerID, p.job.ID, "NEEDS_REVIEW", "uncategorized", "category_not_in_direction_allowlist", "", 0)
+		return s.finishJob(ctx, ownerID, p.job, "NEEDS_REVIEW", "uncategorized", "category_not_in_direction_allowlist", "", 0)
 	}
 	categoryID, err := s.Store.CategoryIDForCode(ctx, ownerID, code)
 	if err != nil {
-		return s.finishJob(ctx, ownerID, p.job.ID, "NEEDS_REVIEW", "uncategorized", "unknown_category", "", 0)
+		return s.finishJob(ctx, ownerID, p.job, "NEEDS_REVIEW", "uncategorized", "unknown_category", "", 0)
 	}
-	if _, err := s.Store.ApplyLLMCategory(ctx, ownerID, p.tx.ID, p.tx.Revision, categoryID, code,
-		classifier.ID(), classifier.Model(), categoryllm.PromptVersion,
+	if _, err := s.Store.ApplyLLMCategory(ctx, ownerID, p.tx.ID, p.tx.Revision, p.job.ID, p.job.LeaseToken,
+		categoryID, code, classifier.ID(), classifier.Model(), categoryllm.PromptVersion,
 		categoryllm.TaxonomyVersion, reason, 0, s.Now()); err != nil {
+		if errors.Is(err, store.ErrLeaseLost) {
+			return s.jobAfterLeaseLoss(ctx, ownerID, p.job.ID)
+		}
 		if !errors.Is(err, store.ErrRevisionConflict) {
 			return store.CategoryJob{}, err
 		}
 		return s.finishJobConflict(ctx, ownerID, p.job.ID, code, reason)
 	}
-	return s.finishJob(ctx, ownerID, p.job.ID, "CLASSIFIED", code, reason, "", 0)
+	return s.finishJob(ctx, ownerID, p.job, "CLASSIFIED", code, reason, "", 0)
 }
 
 // finishJobConflict labels apply conflicts. The atomic UPDATE inside ApplyLLMCategory is the
@@ -428,7 +452,11 @@ func (s *Server) finishJobConflict(ctx context.Context, ownerID, jobID, code, re
 	} else if pending, err := s.Store.HasPendingDeletion(ctx, ownerID); err == nil && pending {
 		label = "deletion_pending"
 	}
-	return s.finishJob(ctx, ownerID, jobID, "FAILED", code, reason, label, 0)
+	job, err := s.Store.GetCategoryJob(ctx, ownerID, jobID)
+	if err != nil {
+		return store.CategoryJob{}, err
+	}
+	return s.finishJob(ctx, ownerID, job, "FAILED", code, reason, label, 0)
 }
 
 func directionAllows(code, direction string, allowed []string) bool {
@@ -457,17 +485,25 @@ func classifyErrorCode(err error) string {
 	}
 }
 
-func (s *Server) finishJob(ctx context.Context, ownerID, jobID, state, code, reason, errorCode string, confidence float64) (store.CategoryJob, error) {
+// jobAfterLeaseLoss reports the row as the new owner left it: the stale worker changed nothing.
+func (s *Server) jobAfterLeaseLoss(ctx context.Context, ownerID, jobID string) (store.CategoryJob, error) {
+	return s.Store.GetCategoryJob(ctx, ownerID, jobID)
+}
+
+func (s *Server) finishJob(ctx context.Context, ownerID string, job store.CategoryJob, state, code, reason, errorCode string, confidence float64) (store.CategoryJob, error) {
 	classifier := s.CategoryClassifier
 	provider, model := "", ""
 	if classifier != nil {
 		provider, model = classifier.ID(), classifier.Model()
 	}
-	if err := s.Store.FinishCategoryJob(ctx, ownerID, jobID, state, code, reason, errorCode, provider,
+	if err := s.Store.FinishCategoryJob(ctx, ownerID, job.ID, job.LeaseToken, state, code, reason, errorCode, provider,
 		model, categoryllm.PromptVersion, categoryllm.TaxonomyVersion, confidence, s.Now()); err != nil {
+		if errors.Is(err, store.ErrLeaseLost) {
+			return s.jobAfterLeaseLoss(ctx, ownerID, job.ID)
+		}
 		return store.CategoryJob{}, err
 	}
-	return s.Store.GetCategoryJob(ctx, ownerID, jobID)
+	return s.Store.GetCategoryJob(ctx, ownerID, job.ID)
 }
 
 func categoryJobsJSON(jobs []store.CategoryJob) []categoryJobJSON {

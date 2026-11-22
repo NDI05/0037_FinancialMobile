@@ -26,9 +26,17 @@ func TestMigrateTwiceAndLegacyRows(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM schema_migrations`).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 11 {
+	if count != 12 {
 		t.Fatalf("migrations = %d", count)
 	}
+	// 012 is additive: existing rows get the empty mapping version and an empty lease token, which
+	// is exactly what makes them a cache miss and an invalid lease holder.
+	var legacyMapping, legacyToken string
+	if err := db.QueryRowContext(ctx, `SELECT COALESCE((SELECT mapping_version FROM category_cache LIMIT 1),''),
+		COALESCE((SELECT lease_token FROM category_jobs LIMIT 1),'')`).Scan(&legacyMapping, &legacyToken); err != nil {
+		t.Fatalf("012 columns missing: %v", err)
+	}
+
 	// The last-active-admin trigger must exist on the local engine.
 	s := New(db, make([]byte, 32), 1)
 	now := time.Now()

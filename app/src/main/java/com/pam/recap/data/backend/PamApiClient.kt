@@ -75,6 +75,20 @@ class PamApiClient @Inject constructor(
             RemoteTransaction.serializer())
     }
 
+    suspend fun patchTransactionCategory(
+        ownerId: String,
+        transactionId: String,
+        categoryId: String,
+        revision: Int,
+    ): Outcome<RemoteTransaction> {
+        val encoded = json.encodeToString(
+            RemoteTransactionPatch.serializer(),
+            RemoteTransactionPatch(categoryId = categoryId, revision = revision),
+        )
+        return send(ownerId, "PATCH", "/v1/transactions/$transactionId", encoded, null,
+            RemoteTransaction.serializer())
+    }
+
     suspend fun budget(ownerId: String, monthId: String): Outcome<RemoteBudgetPlan> =
         get(ownerId, "/v1/budget-plans/$monthId", RemoteBudgetPlan.serializer())
 
@@ -318,6 +332,12 @@ data class RemoteTransaction(
     val revision: Int,
     val createdAt: String? = null,
     val updatedAt: String? = null,
+)
+
+@Serializable
+data class RemoteTransactionPatch(
+    val categoryId: String? = null,
+    val revision: Int,
 )
 
 @Serializable

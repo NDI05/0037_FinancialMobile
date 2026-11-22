@@ -229,6 +229,7 @@ private fun TransactionList(
                     amount = transaction.amount,
                     direction = transaction.direction,
                     isLowConfidence = transaction.isLowConfidence,
+                    hasUnconfirmedSuggestion = transaction.hasUnconfirmedSuggestion,
                     isManual = transaction.isManual,
                     currency = transaction.currency,
                     onClick = { onOpenTransaction(transaction.id) },

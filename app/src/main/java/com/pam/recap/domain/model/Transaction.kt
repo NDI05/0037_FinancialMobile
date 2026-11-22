@@ -61,11 +61,21 @@ data class Transaction(
 
     val isPosted: Boolean get() = status == ParseStatus.POSTED
 
-    /** FR-24: low-confidence rows stay reviewable instead of being silently trusted. A USER
-     *  override is a human decision and never carries a "review" chip, even when the server
-     *  reports no classifier confidence for the row (LLM results have no confidence field). */
+    /** FR-24: an LLM category is a *suggestion* the user has not confirmed yet. It is shown as
+     *  such, separate from data-quality confidence, because the model returns no calibrated
+     *  probability — the category code is the only output. Any user edit flips the origin to USER
+     *  and clears this flag. */
+    val hasUnconfirmedSuggestion: Boolean
+        get() = categoryOrigin == CategoryOrigin.LLM && !category.isUncategorized
+
+    /** FR-24: low parser/import confidence marks a row whose *data* is uncertain, so it stays
+     *  reviewable instead of being silently trusted. [LOW_CONFIDENCE_THRESHOLD] is a manual
+     *  review cutoff, not a model accuracy probability. A USER override is a human decision and
+     *  never carries the chip; an LLM row is reported through [hasUnconfirmedSuggestion] instead
+     *  of pretending its missing confidence is a low score. */
     val isLowConfidence: Boolean
         get() = categoryOrigin != CategoryOrigin.USER &&
+            categoryOrigin != CategoryOrigin.LLM &&
             (categoryConfidence ?: parserConfidence) < LOW_CONFIDENCE_THRESHOLD
 
     /** Whether the row contributes to IDR totals (BR-02/BR-04). */

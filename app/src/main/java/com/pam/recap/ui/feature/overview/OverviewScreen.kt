@@ -256,6 +256,7 @@ fun OverviewScreen(
                             amount = transaction.amount,
                             direction = transaction.direction,
                             isLowConfidence = transaction.isLowConfidence,
+                            hasUnconfirmedSuggestion = transaction.hasUnconfirmedSuggestion,
                             currency = transaction.currency,
                             onClick = { onOpenTransaction(transaction.id) },
                             modifier = Modifier.padding(horizontal = 0.dp),

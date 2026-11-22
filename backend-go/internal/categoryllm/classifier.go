@@ -14,6 +14,10 @@ import (
 const (
 	PromptVersion   = "category-prompt/1"
 	TaxonomyVersion = "builtin-categories/1"
+	// MappingVersion identifies how provider results are attributed to candidates. The durable
+	// cache is keyed by it so entries written while results were matched by array position are
+	// never trusted again; a new version is a cache miss, not an overwrite of real data.
+	MappingVersion = "caseid/1"
 	MaxCandidates   = 5
 	MaxMerchantRunes = 120
 	// MaxInputTokens is the model input ceiling enforced by a deterministic conservative bound: the
@@ -178,6 +182,15 @@ func ValidateResults(results []Result, candidates []Candidate) error {
 }
 
 func caseID(i int) string { return "c" + strconv.Itoa(i) }
+
+// CaseIDForIndex is the stable case identifier a request sends for candidate i.
+func CaseIDForIndex(i int) string { return caseID(i) }
+
+// CaseIndex returns the candidate index encoded in a caseId, or -1 when the value is not a caseId.
+// Callers must treat -1 (and out-of-range or duplicate indexes) as invalid provider output instead
+// of falling back to array position.
+func CaseIndex(id string) int { return caseIDIndex(id) }
+
 func caseIDIndex(id string) int {
 	if len(id) < 2 || id[0] != 'c' { return -1 }
 	n, err := strconv.Atoi(id[1:]); if err != nil { return -1 }

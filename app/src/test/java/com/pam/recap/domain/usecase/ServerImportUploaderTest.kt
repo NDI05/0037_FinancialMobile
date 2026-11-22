@@ -75,6 +75,9 @@ class ServerImportUploaderTest {
             Outcome.Success(ServerTransactionPage(emptyList()))
         override suspend fun get(ownerId: String, transactionId: String) =
             Outcome.Failure(com.pam.recap.core.result.AppError.NotFound("unused"))
+        override suspend fun updateCategory(
+            ownerId: String, transactionId: String, categoryId: String, revision: Int,
+        ) = Outcome.Failure(com.pam.recap.core.result.AppError.Configuration("unused"))
         override suspend fun summary(ownerId: String, month: JakartaMonth) =
             Outcome.Failure(com.pam.recap.core.result.AppError.Configuration("unused"))
         override suspend fun classifyTransactions(ownerId: String, transactionIds: List<String>) =

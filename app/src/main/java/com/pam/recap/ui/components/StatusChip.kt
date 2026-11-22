@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CloudOff
@@ -53,6 +54,7 @@ enum class StatusChipKind {
     Historical,
     Manual,
     LowConfidence,
+    Suggestion,
     Unavailable,
 
     /** A mailbox that is currently connected (not a coverage outcome). */
@@ -140,6 +142,12 @@ fun StatusChip(
             labelRes = R.string.status_low_confidence
             icon = Icons.Rounded.WarningAmber
             baseColor = WarningAmber
+        }
+
+        StatusChipKind.Suggestion -> {
+            labelRes = R.string.status_ai_suggestion
+            icon = Icons.Rounded.AutoAwesome
+            baseColor = Violet
         }
 
         StatusChipKind.Unavailable -> {

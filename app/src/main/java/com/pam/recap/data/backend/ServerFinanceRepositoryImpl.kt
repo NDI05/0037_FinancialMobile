@@ -85,6 +85,18 @@ class ServerFinanceRepositoryImpl @Inject constructor(
             is Outcome.Failure -> result
         }
 
+    override suspend fun updateCategory(
+        ownerId: String,
+        transactionId: String,
+        categoryId: String,
+        revision: Int,
+    ): Outcome<Transaction> = when (val result = api.patchTransactionCategory(
+        ownerId, transactionId, categoryId, revision,
+    )) {
+        is Outcome.Success -> wireMap { result.value.toDomain(ownerId) }
+        is Outcome.Failure -> result
+    }
+
     override suspend fun summary(ownerId: String, month: JakartaMonth): Outcome<MonthlySummary> =
         when (val result = api.summary(ownerId, month.id())) {
             is Outcome.Success -> wireMap { result.value.toDomain(ownerId, month) }

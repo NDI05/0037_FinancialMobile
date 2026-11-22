@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pam.recap.core.result.AppError
+import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.Category
@@ -38,7 +39,10 @@ data class TransactionDetailUiState(
     val isBusy: Boolean = false,
     val error: AppError? = null,
     val savedAt: Long? = null,
+    /** Server mode keeps non-category metadata read-only (no endpoint yet). */
     val actionsEnabled: Boolean = true,
+    /** Category correction is wired through the API in server mode and locally otherwise. */
+    val categoryEditable: Boolean = true,
 )
 
 /**
@@ -112,13 +116,57 @@ class TransactionDetailViewModel @Inject constructor(
                         error = currentAction.error ?: loadError,
                         savedAt = currentAction.savedAt,
                         actionsEnabled = server?.isEnabled != true,
+                        categoryEditable = transaction != null,
                     ),
                 )
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TransactionDetailUiState())
 
-    fun setCategory(category: Category) = run { perform { ownerId -> updateCategory(ownerId, transactionId, category) } }
+    fun setCategory(category: Category) {
+        val remote = server
+        if (remote == null || !remote.isEnabled) {
+            perform { ownerId -> updateCategory(ownerId, transactionId, category) }
+            return
+        }
+        if (action.value.isBusy) return
+        val current = state.value.transaction
+        if (current == null) {
+            action.value = ActionState(error = AppError.NotFound("transaction_$transactionId"))
+            return
+        }
+        action.value = action.value.copy(isBusy = true, error = null)
+        viewModelScope.launch {
+            val ownerId = sessions.current()?.ownerId
+            if (ownerId == null) {
+                action.value = ActionState(error = AppError.Validation(AppErrorRules.NOT_SIGNED_IN))
+                return@launch
+            }
+            val target = when (val categories = remote.categories(ownerId)) {
+                is Outcome.Success -> categories.value.firstOrNull { it.code == category.code }
+                is Outcome.Failure -> {
+                    action.value = ActionState(error = categories.error)
+                    return@launch
+                }
+            }
+            if (target == null) {
+                action.value = ActionState(error = AppError.Validation("category_not_found"))
+                return@launch
+            }
+            when (val result = remote.updateCategory(ownerId, transactionId, target.id, current.revision)) {
+                is Outcome.Failure -> {
+                    action.value = ActionState(error = result.error)
+                    // 409: somebody else wrote first. Reload so the next tap uses the fresh revision
+                    // instead of retrying a revision the server already rejected.
+                    if (result.error is AppError.Conflict) refresh.update { it + 1 }
+                }
+                is Outcome.Success -> {
+                    action.value = ActionState(savedAt = System.currentTimeMillis())
+                    refresh.update { it + 1 }
+                }
+            }
+        }
+    }
 
     fun setInternalTransfer(isInternalTransfer: Boolean) =
         perform { ownerId -> markTransfer(ownerId, transactionId, isInternalTransfer) }

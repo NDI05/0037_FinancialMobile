@@ -76,6 +76,28 @@ class ServerFinanceRepositoryImplTest {
     }
 
     @Test
+    fun `server category correction sends the loaded revision`() = runTest {
+        server.enqueue(json(TRANSACTION))
+        val updated = repo.updateCategory("u_1", "tx_1", "cat_food", 3)
+        assertTrue(updated is Outcome.Success)
+        val request = server.takeRequest()
+        assertEquals("PATCH", request.method)
+        assertEquals("/v1/transactions/tx_1", request.path)
+        val body = request.body.readUtf8()
+        assertTrue(body, body.contains("\"categoryId\":\"cat_food\""))
+        assertTrue(body, body.contains("\"revision\":3"))
+        assertEquals(Category.FOOD, (updated as Outcome.Success).value.category)
+    }
+
+    @Test
+    fun `a stale revision is reported as a conflict, not overwritten`() = runTest {
+        server.enqueue(json("""{"code":"revision_conflict","message":"revision mismatch"}""", 409))
+        val result = repo.updateCategory("u_1", "tx_1", "cat_food", 2)
+        assertTrue(result is Outcome.Failure)
+        assertTrue((result as Outcome.Failure).error is com.pam.recap.core.result.AppError.Conflict)
+    }
+
+    @Test
     fun `manual create sends category id and one idempotency key`() = runTest {
         server.enqueue(json(TRANSACTION, 201))
         val result = repo.createManual(

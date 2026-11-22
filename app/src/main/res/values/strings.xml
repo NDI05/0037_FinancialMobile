@@ -76,6 +76,7 @@
     <string name="status_historical">Riwayat</string>
     <string name="status_manual">Manual</string>
     <string name="status_low_confidence">Perlu tinjauan</string>
+    <string name="status_ai_suggestion">Saran AI</string>
     <string name="status_unavailable">Tidak tersedia</string>
     <string name="percent_increase">+%1$d%%</string>
     <string name="percent_decrease">−%1$d%%</string>
@@ -449,6 +450,9 @@
     <string name="settings_demo_done">%1$d baris demo dihapus.</string>
     <string name="settings_demo_none">Tidak ada data demo tersisa.</string>
     <string name="detail_actions_unavailable">Ubah kategori/catatan dan hapus transaksi tersedia setelah sinkronisasi edit server (C2B2).</string>
+    <string name="detail_actions_server_partial">Mode server: kategori disimpan ke server. Catatan, transfer internal, dan tautan refund masih hanya-baca.</string>
+    <string name="detail_confidence_hint">Ambang tinjauan 0,60 untuk keyakinan parser/impor — bukan probabilitas akurasi model.</string>
+    <string name="detail_suggestion_unconfirmed">Kategori ini saran AI dan belum dikonfirmasi. Pilih kategori untuk mengonfirmasi.</string>
     <string name="manual_saved_hint">Setelah tersimpan, transaksi ini masuk ke ringkasan bulan %1$s.</string>
     <string name="consent_category_title">Kategorisasi merchant dengan Azure</string>
     <string name="consent_category_body">Nama merchant usaha yang tersanitasi (maksimal 120 karakter), arah, metode, dan kode kategori dikirim ke Microsoft Azure (GlobalStandard) untuk saran kategori. Tidak ada nominal, tanggal, isi email, catatan, ID pesan, atau data pribadi. GlobalStandard dapat memproses di luar Japan West; ini bukan jaminan lokasi Indonesia atau zero-retention. Menolak tidak menghalangi impor/ringkasan.</string>

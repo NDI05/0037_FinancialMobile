@@ -141,6 +141,10 @@ fun TransactionDetailScreen(
                     Spacer(modifier = Modifier.height(PamSpacing.xxs))
                     StatusChip(kind = StatusChipKind.Unavailable)
                 }
+                if (transaction.hasUnconfirmedSuggestion) {
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    StatusChip(kind = StatusChipKind.Suggestion)
+                }
                 if (transaction.isLowConfidence) {
                     Spacer(modifier = Modifier.height(PamSpacing.xs))
                     StatusChip(kind = StatusChipKind.LowConfidence)
@@ -151,7 +155,7 @@ fun TransactionDetailScreen(
                 NoticeBanner(text = stringResource(appErrorRes(requireNotNull(state.error))))
             }
             if (!state.actionsEnabled) {
-                NoticeBanner(text = stringResource(R.string.detail_actions_unavailable))
+                NoticeBanner(text = stringResource(R.string.detail_actions_server_partial))
             }
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -197,11 +201,25 @@ fun TransactionDetailScreen(
                     confidence = transaction.categoryConfidence ?: transaction.parserConfidence,
                     modifier = Modifier.padding(top = PamSpacing.xxs),
                 )
+                Spacer(modifier = Modifier.height(PamSpacing.xxs))
+                Text(
+                    text = stringResource(R.string.detail_confidence_hint),
+                    style = LabelM,
+                    color = OnInkMuted,
+                )
             }
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 EyebrowText(text = stringResource(R.string.detail_category_eyebrow))
                 Spacer(modifier = Modifier.height(PamSpacing.xs))
+                if (transaction.hasUnconfirmedSuggestion) {
+                    Text(
+                        text = stringResource(R.string.detail_suggestion_unconfirmed),
+                        style = BodyM,
+                        color = OnInkMuted,
+                    )
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                }
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(PamSpacing.xs),
                     verticalArrangement = Arrangement.spacedBy(PamSpacing.xs),
@@ -211,7 +229,11 @@ fun TransactionDetailScreen(
                             category = category,
                             label = stringResource(categoryLabelRes(category)),
                             selected = transaction.category == category,
-                            onClick = { viewModel.setCategory(category) },
+                            onClick = if (state.categoryEditable) {
+                                { viewModel.setCategory(category) }
+                            } else {
+                                null
+                            },
                         )
                     }
                 }

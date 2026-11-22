@@ -435,4 +435,8 @@
     <string name="transactions_classify_none">No eligible uncategorized transactions.</string>
     <string name="transactions_classify_result">Categorization result: %1$s</string>
     <string name="origin_llm">Azure AI suggestion</string>
+    <string name="status_ai_suggestion">AI suggestion</string>
+    <string name="detail_actions_server_partial">Server mode: categories are saved to the server. Notes, internal transfer, and refund links remain read-only.</string>
+    <string name="detail_confidence_hint">The 0.60 review threshold covers parser/import confidence — it is not a model accuracy probability.</string>
+    <string name="detail_suggestion_unconfirmed">This category is an AI suggestion and has not been confirmed. Pick a category to confirm it.</string>
 </resources>

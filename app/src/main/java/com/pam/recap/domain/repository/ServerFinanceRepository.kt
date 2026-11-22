@@ -99,6 +99,15 @@ interface ServerFinanceRepository {
 
     suspend fun get(ownerId: String, transactionId: String): Outcome<Transaction>
 
+    /** Server-mode category correction: PATCH the row with the revision the client loaded so a
+     *  concurrent write is refused as a conflict instead of silently overwriting someone else. */
+    suspend fun updateCategory(
+        ownerId: String,
+        transactionId: String,
+        categoryId: String,
+        revision: Int,
+    ): Outcome<Transaction>
+
     suspend fun summary(ownerId: String, month: JakartaMonth): Outcome<MonthlySummary>
 
     suspend fun classifyTransactions(

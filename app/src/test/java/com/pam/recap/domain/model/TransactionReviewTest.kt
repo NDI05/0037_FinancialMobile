@@ -39,8 +39,17 @@ class TransactionReviewTest {
     }
 
     @Test
-    fun `an LLM row without confidence stays low confidence`() {
-        assertTrue(row(CategoryOrigin.LLM, categoryConfidence = 0f).isLowConfidence)
+    fun `an LLM row is an unconfirmed suggestion, not a low-confidence data row`() {
+        val llm = row(CategoryOrigin.LLM, categoryConfidence = null)
+        assertTrue(llm.hasUnconfirmedSuggestion)
+        assertFalse(llm.isLowConfidence)
+        // A confirmed (user-edited) row is neither a suggestion nor low confidence.
+        val confirmed = row(CategoryOrigin.USER, categoryConfidence = null)
+        assertFalse(confirmed.hasUnconfirmedSuggestion)
+        assertFalse(confirmed.isLowConfidence)
+        // Non-LLM rows never report a pending suggestion.
+        assertFalse(row(CategoryOrigin.IMPORTED, categoryConfidence = 0.3f).hasUnconfirmedSuggestion)
+        assertFalse(row(CategoryOrigin.RULE, categoryConfidence = null).hasUnconfirmedSuggestion)
     }
 
     @Test

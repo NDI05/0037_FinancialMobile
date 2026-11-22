@@ -453,7 +453,11 @@ func TestResetFailedJobIsOwnerScoped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := h.store.FinishCategoryJob(ctx, ownerA, job.ID, "FAILED", "", "", "provider_transient", "p", "m", "v", "t", 0, time.Now()); err != nil {
+	lease, ok, err := h.store.ClaimCategoryJob(ctx, ownerA, job.ID, time.Now(), store.CategoryLeaseDuration)
+	if err != nil || !ok {
+		t.Fatalf("claim ok=%v err=%v", ok, err)
+	}
+	if err := h.store.FinishCategoryJob(ctx, ownerA, job.ID, lease, "FAILED", "", "", "provider_transient", "p", "m", "v", "t", 0, time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := h.store.ResetFailedCategoryJob(ctx, ownerB, job.ID, time.Now()); err == nil {
@@ -468,7 +472,11 @@ func TestResetFailedJobIsOwnerScoped(t *testing.T) {
 		t.Fatalf("reset=%+v", reset)
 	}
 	// CLASSIFIED and NEEDS_REVIEW jobs are not resettable.
-	if err := h.store.FinishCategoryJob(ctx, ownerA, job.ID, "NEEDS_REVIEW", "uncategorized", "unsafe_merchant", "", "p", "m", "v", "t", 0, time.Now()); err != nil {
+	lease, ok, err = h.store.ClaimCategoryJob(ctx, ownerA, job.ID, time.Now(), store.CategoryLeaseDuration)
+	if err != nil || !ok {
+		t.Fatalf("re-claim ok=%v err=%v", ok, err)
+	}
+	if err := h.store.FinishCategoryJob(ctx, ownerA, job.ID, lease, "NEEDS_REVIEW", "uncategorized", "unsafe_merchant", "", "p", "m", "v", "t", 0, time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := h.store.ResetFailedCategoryJob(ctx, ownerA, job.ID, time.Now()); err == nil {
@@ -500,4 +508,289 @@ func setupOwnerRow(t *testing.T, h *harness, email string) (owner, txID, categor
 		t.Fatal(err)
 	}
 	return owner, tx.ID, catID
+}
+
+// scriptedCategory is a programmable classifier: the test decides, per call, which category each
+// candidate deserves and in which array order the results are returned. It records the candidate
+// set it saw so tests can prove coalescing/splitting behaviour.
+type scriptedCategory struct {
+	mu    sync.Mutex
+	calls [][]categoryllm.Candidate
+	code  func(c categoryllm.Candidate) (string, bool)
+	order func(results []categoryllm.Result) []categoryllm.Result
+	split func([]categoryllm.Candidate) [][]categoryllm.Candidate
+}
+
+func (s *scriptedCategory) ID() string    { return "scripted" }
+func (s *scriptedCategory) Model() string { return "scripted-model" }
+func (s *scriptedCategory) FitsInputBudget([]categoryllm.Candidate) bool { return true }
+func (s *scriptedCategory) SplitCandidates(c []categoryllm.Candidate) [][]categoryllm.Candidate {
+	if s.split != nil {
+		return s.split(c)
+	}
+	if len(c) == 0 {
+		return nil
+	}
+	return [][]categoryllm.Candidate{c}
+}
+func (s *scriptedCategory) Classify(_ context.Context, candidates []categoryllm.Candidate) (categoryllm.Response, error) {
+	s.mu.Lock()
+	s.calls = append(s.calls, append([]categoryllm.Candidate(nil), candidates...))
+	s.mu.Unlock()
+	results := make([]categoryllm.Result, len(candidates))
+	for i, c := range candidates {
+		code, review := "uncategorized", true
+		if s.code != nil {
+			code, review = s.code(c)
+		}
+		results[i] = categoryllm.Result{CaseID: categoryllm.CaseIDForIndex(i), CategoryCode: code,
+			NeedsReview: review, ReasonCode: "scripted"}
+	}
+	if s.order != nil {
+		results = s.order(results)
+	}
+	return categoryllm.Response{Results: results, PromptTokens: 300, CompletionTokens: 20, UsageKnown: true}, nil
+}
+func (s *scriptedCategory) count() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.calls)
+}
+
+func merchantCode(c categoryllm.Candidate) (string, bool) {
+	switch {
+	case strings.HasPrefix(c.Merchant, "BAKSO"):
+		return "food", false
+	case strings.HasPrefix(c.Merchant, "SPBU"):
+		return "transport", false
+	case strings.HasPrefix(c.Merchant, "APOTEK"):
+		return "health", false
+	}
+	return "uncategorized", true
+}
+
+func txCategoryCode(t *testing.T, h *harness, token, txID string) string {
+	t.Helper()
+	status, body := h.request("GET", "/v1/transactions/"+txID, token, nil)
+	if status != 200 {
+		t.Fatalf("get tx=%d %v", status, body)
+	}
+	code, _ := body["categoryCode"].(string)
+	return code
+}
+
+// Finding 1 regression: a valid provider response whose array order differs from the request order
+// must still attach each category to the transaction its caseId names. Before the fix results were
+// matched by array position, so a reversed response categorised the wrong transaction (and cached
+// the wrong code under each merchant).
+func TestCaseIDMappingIsNotPositional(t *testing.T) {
+	stub := &scriptedCategory{code: merchantCode, order: func(results []categoryllm.Result) []categoryllm.Result {
+		out := make([]categoryllm.Result, len(results))
+		for i, r := range results {
+			out[len(results)-1-i] = r // valid set, reversed
+		}
+		return out
+	}}
+	h := newCategoryHarness(t, stub)
+	h.register("caseid@example.test")
+	token, _ := h.login("caseid@example.test")
+	grantConsent(t, h, token)
+	txFood := classifyBody(t, h, token, "BAKSO UJI", "QRIS", "a"+strings.Repeat("0", 31))
+	txTransport := classifyBody(t, h, token, "SPBU UJI", "QRIS", "b"+strings.Repeat("0", 31))
+	status, body := h.request("POST", "/v1/category-jobs", token, map[string]any{
+		"transactionIds": []string{txFood, txTransport}})
+	if status != 200 {
+		t.Fatalf("classify=%d %v", status, body)
+	}
+	if got := txCategoryCode(t, h, token, txFood); got != "food" {
+		t.Fatalf("BAKSO got %q want food (reversed response mapped by position)", got)
+	}
+	if got := txCategoryCode(t, h, token, txTransport); got != "transport" {
+		t.Fatalf("SPBU got %q want transport", got)
+	}
+	// The cache must hold the same attribution, keyed per merchant.
+	if code, _, _, err := h.store.CategoryCacheGet(context.Background(), store.OwnerIDForEmail("caseid@example.test"),
+		store.CacheKey("BAKSO UJI", "DEBIT", "QRIS"), "DEBIT", "QRIS", categoryllm.TaxonomyVersion, stub.Model(),
+		categoryllm.PromptVersion, categoryllm.MappingVersion); err != nil || code != "food" {
+		t.Fatalf("BAKSO cache=%q err=%v", code, err)
+	}
+	if code, _, _, err := h.store.CategoryCacheGet(context.Background(), store.OwnerIDForEmail("caseid@example.test"),
+		store.CacheKey("SPBU UJI", "DEBIT", "QRIS"), "DEBIT", "QRIS", categoryllm.TaxonomyVersion, stub.Model(),
+		categoryllm.PromptVersion, categoryllm.MappingVersion); err != nil || code != "transport" {
+		t.Fatalf("SPBU cache=%q err=%v", code, err)
+	}
+	// A later request for the same merchant is served from that cache, not from a poisoned one.
+	txAgain := classifyBody(t, h, token, "BAKSO UJI", "QRIS", "c"+strings.Repeat("0", 31))
+	if status, _ := h.request("POST", "/v1/category-jobs", token, map[string]any{"transactionIds": []string{txAgain}}); status != 200 {
+		t.Fatalf("second classify=%d", status)
+	}
+	if stub.count() != 1 {
+		t.Fatalf("provider called %d times, cache should have answered", stub.count())
+	}
+	if got := txCategoryCode(t, h, token, txAgain); got != "food" {
+		t.Fatalf("cached BAKSO got %q want food", got)
+	}
+}
+
+// Finding 1 regression: a batch split into several provider calls keeps per-call caseId indexing,
+// so group-local index 0 never leaks onto another group's transaction.
+func TestCaseIDMappingHandlesSplitBatches(t *testing.T) {
+	stub := &scriptedCategory{code: merchantCode,
+		split: func(c []categoryllm.Candidate) [][]categoryllm.Candidate {
+			if len(c) < 2 {
+				return [][]categoryllm.Candidate{c}
+			}
+			return [][]categoryllm.Candidate{c[:1], c[1:]}
+		},
+		order: func(results []categoryllm.Result) []categoryllm.Result {
+			out := make([]categoryllm.Result, len(results))
+			for i, r := range results {
+				out[len(results)-1-i] = r
+			}
+			return out
+		}}
+	h := newCategoryHarness(t, stub)
+	h.register("split@example.test")
+	token, _ := h.login("split@example.test")
+	grantConsent(t, h, token)
+	ids := []string{
+		classifyBody(t, h, token, "BAKSO UJI", "QRIS", "a"+strings.Repeat("0", 31)),
+		classifyBody(t, h, token, "SPBU UJI", "QRIS", "b"+strings.Repeat("0", 31)),
+		classifyBody(t, h, token, "APOTEK UJI", "QRIS", "c"+strings.Repeat("0", 31)),
+	}
+	if status, body := h.request("POST", "/v1/category-jobs", token, map[string]any{"transactionIds": ids}); status != 200 {
+		t.Fatalf("classify=%d %v", status, body)
+	}
+	want := []string{"food", "transport", "health"}
+	for i, id := range ids {
+		if got := txCategoryCode(t, h, token, id); got != want[i] {
+			t.Fatalf("tx[%d] category=%q want %q", i, got, want[i])
+		}
+	}
+	if stub.count() != 2 {
+		t.Fatalf("split expected 2 provider calls, got %d", stub.count())
+	}
+}
+
+// Finding 1 regression: invalid provider output is rejected instead of being applied positionally.
+// Missing, duplicate, out-of-range and malformed caseIds all fail the job as invalid_output, leave
+// the transaction untouched and write nothing to the cache.
+func TestCaseIDMappingRejectsInvalidSets(t *testing.T) {
+	cases := []struct {
+		name    string
+		order   func([]categoryllm.Result) []categoryllm.Result
+	}{
+		{"missing", func(r []categoryllm.Result) []categoryllm.Result { return r[:len(r)-1] }},
+		{"duplicate", func(r []categoryllm.Result) []categoryllm.Result {
+			r[1].CaseID = r[0].CaseID
+			return r
+		}},
+		{"out_of_range", func(r []categoryllm.Result) []categoryllm.Result {
+			r[0].CaseID = categoryllm.CaseIDForIndex(9)
+			return r
+		}},
+		{"malformed", func(r []categoryllm.Result) []categoryllm.Result {
+			r[0].CaseID = "x0"
+			return r
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			stub := &scriptedCategory{code: merchantCode, order: tc.order}
+			h := newCategoryHarness(t, stub)
+			email := "invalid-" + tc.name + "@example.test"
+			h.register(email)
+			token, _ := h.login(email)
+			grantConsent(t, h, token)
+			food := classifyBody(t, h, token, "BAKSO UJI", "QRIS", "a"+strings.Repeat("0", 31))
+			transport := classifyBody(t, h, token, "SPBU UJI", "QRIS", "b"+strings.Repeat("0", 31))
+			status, body := h.request("POST", "/v1/category-jobs", token, map[string]any{
+				"transactionIds": []string{food, transport}})
+			if status != 200 {
+				t.Fatalf("classify=%d %v", status, body)
+			}
+			for _, job := range body["jobs"].([]any) {
+				j := job.(map[string]any)
+				if j["state"] != "FAILED" || j["errorCode"] != "invalid_output" {
+					t.Fatalf("job not rejected as invalid_output: %v", j)
+				}
+			}
+			for _, id := range []string{food, transport} {
+				if got := txCategoryCode(t, h, token, id); got != "" && got != "uncategorized" {
+					t.Fatalf("transaction categorised from invalid output: %q", got)
+				}
+			}
+			if code, _, _, _ := h.store.CategoryCacheGet(context.Background(), store.OwnerIDForEmail(email),
+				store.CacheKey("BAKSO UJI", "DEBIT", "QRIS"), "DEBIT", "QRIS", categoryllm.TaxonomyVersion, stub.Model(),
+				categoryllm.PromptVersion, categoryllm.MappingVersion); code != "" {
+				t.Fatalf("invalid output was cached: %q", code)
+			}
+		})
+	}
+}
+
+// Finding 1 regression: rows written by the old positional mapping carry an empty mapping version
+// and are treated as a cache miss, so they can never be replayed. They are not deleted, and a USER
+// category is never rewritten by a classification job.
+func TestCacheIgnoresPreMappingVersionRows(t *testing.T) {
+	stub := &scriptedCategory{code: merchantCode}
+	h := newCategoryHarness(t, stub)
+	h.register("cachever@example.test")
+	token, _ := h.login("cachever@example.test")
+	grantConsent(t, h, token)
+	owner := store.OwnerIDForEmail("cachever@example.test")
+	// A poisoned row from the positional era: BAKSO key holding transport, no mapping version.
+	if _, err := h.store.DB.ExecContext(context.Background(), `INSERT INTO category_cache
+		(owner_id,cache_key,direction,method,taxonomy_version,model,prompt_version,category_code,
+		 needs_review,reason_code,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+		owner, store.CacheKey("BAKSO UJI", "DEBIT", "QRIS"), "DEBIT", "QRIS", categoryllm.TaxonomyVersion, stub.Model(),
+		categoryllm.PromptVersion, "transport", 0, "stale", time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+		t.Fatal(err)
+	}
+	txID := classifyBody(t, h, token, "BAKSO UJI", "QRIS", "a"+strings.Repeat("0", 31))
+	if status, body := h.request("POST", "/v1/category-jobs", token, map[string]any{"transactionIds": []string{txID}}); status != 200 {
+		t.Fatalf("classify=%d %v", status, body)
+	}
+	if stub.count() != 1 {
+		t.Fatalf("old-mapping row short-circuited the provider: calls=%d", stub.count())
+	}
+	if got := txCategoryCode(t, h, token, txID); got != "food" {
+		t.Fatalf("poisoned cache applied: %q", got)
+	}
+	code, _, _, err := h.store.CategoryCacheGet(context.Background(), owner, store.CacheKey("BAKSO UJI", "DEBIT", "QRIS"),
+		"DEBIT", "QRIS", categoryllm.TaxonomyVersion, stub.Model(), categoryllm.PromptVersion,
+		categoryllm.MappingVersion)
+	if err != nil || code != "food" {
+		t.Fatalf("cache not upgraded to current mapping: %q err=%v", code, err)
+	}
+	// A USER-categorised transaction is never sent to the provider and its category is untouched.
+	userTx := classifyBody(t, h, token, "SPBU UJI", "QRIS", "b"+strings.Repeat("0", 31))
+	status, body := h.request("GET", "/v1/categories", token, nil)
+	if status != 200 {
+		t.Fatalf("categories=%d", status)
+	}
+	var shoppingID string
+	for _, c := range body["categories"].([]any) {
+		m := c.(map[string]any)
+		if m["code"] == "shopping" {
+			shoppingID = m["id"].(string)
+		}
+	}
+	if shoppingID == "" {
+		t.Fatal("shopping category id not found")
+	}
+	before := stub.count()
+	if status, patch := h.request("PATCH", "/v1/transactions/"+userTx, token, map[string]any{
+		"categoryId": shoppingID, "revision": 0}); status != 200 {
+		t.Fatalf("user patch=%d %v", status, patch)
+	}
+	if status, _ := h.request("POST", "/v1/category-jobs", token, map[string]any{"transactionIds": []string{userTx}}); status != 200 {
+		t.Fatalf("classify user tx status=%d", status)
+	}
+	if stub.count() != before {
+		t.Fatal("USER category was sent back to the provider")
+	}
+	if got := txCategoryCode(t, h, token, userTx); got != "shopping" {
+		t.Fatalf("USER category overwritten: %q", got)
+	}
 }
