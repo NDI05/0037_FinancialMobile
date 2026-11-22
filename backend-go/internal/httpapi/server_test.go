@@ -1163,3 +1163,104 @@ func TestCustomCategoryRollsUpToSafeProjectionCode(t *testing.T) {
 		t.Fatalf("custom expense was not rolled into other_expense: %s", raw)
 	}
 }
+
+func TestImportRejectsEventOutsideJobMonthAtomically(t *testing.T) {
+	h := newHarness(t)
+	h.register("month-boundary@example.test")
+	token, _ := h.login("month-boundary@example.test")
+	food := h.category(token, "food")
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	_, job := h.request("POST", "/v1/import-jobs", token, map[string]any{
+		"monthId": "2026-11", "templateVersion": "livin-v1",
+	})
+	jobID := job["id"].(string)
+	makeCandidate := func(fingerprint, eventAt string) map[string]any {
+		return map[string]any{"fingerprint": fingerprint, "status": "PARSED", "direction": "DEBIT",
+			"amountMinor": 10_000, "eventAt": eventAt, "categoryId": food,
+			"parserVersion": "livin-v1", "confidence": 0.9}
+	}
+	// Jakarta November starts at 2026-10-31T17:00:00Z.
+	validEdge := makeCandidate(strings.Repeat("a", 32), "2026-10-31T17:00:00Z")
+	invalidEdge := makeCandidate(strings.Repeat("b", 32), "2026-10-31T16:59:59Z")
+	status, body := h.request("POST", "/v1/import-jobs/"+jobID+"/batches", token, map[string]any{
+		"batchKey": "mixed", "pageOrdinal": 0, "candidates": []any{validEdge, invalidEdge},
+	})
+	if status != 400 {
+		t.Fatalf("mixed month batch: %d %#v", status, body)
+	}
+	var txCount, batchCount int
+	var revision int
+	_ = h.store.DB.QueryRow(`SELECT COUNT(*) FROM transactions`).Scan(&txCount)
+	_ = h.store.DB.QueryRow(`SELECT COUNT(*) FROM import_batches WHERE job_id = ?`, jobID).Scan(&batchCount)
+	_ = h.store.DB.QueryRow(`SELECT COALESCE(MAX(revision),0) FROM month_revisions`).Scan(&revision)
+	if txCount != 0 || batchCount != 0 || revision != 0 {
+		t.Fatalf("rejected batch left state: tx=%d batch=%d rev=%d", txCount, batchCount, revision)
+	}
+	// The same batch key can be retried after correcting the body.
+	status, counts := h.request("POST", "/v1/import-jobs/"+jobID+"/batches", token, map[string]any{
+		"batchKey": "mixed", "pageOrdinal": 0, "candidates": []any{validEdge},
+	})
+	if status != 200 || counts["imported"].(float64) != 1 || counts["inputRevision"].(float64) != 1 {
+		t.Fatalf("retry after rejection: %d %#v", status, counts)
+	}
+	// The exact October boundary is rejected for a November job.
+	status, _ = h.request("POST", "/v1/import-jobs/"+jobID+"/batches", token, map[string]any{
+		"batchKey": "outside", "pageOrdinal": 1, "candidates": []any{
+			makeCandidate(strings.Repeat("c", 32), "2026-10-31T16:59:59Z")},
+	})
+	if status != 400 {
+		t.Fatalf("October boundary accepted by November job: %d", status)
+	}
+}
+
+func TestImportDuplicateFingerprintAcrossMonthsAndFinalizeRetry(t *testing.T) {
+	h := newHarness(t)
+	h.register("cross-month@example.test")
+	token, _ := h.login("cross-month@example.test")
+	food := h.category(token, "food")
+	for _, purpose := range []string{"GMAIL_READ", "AI_PROCESSING"} {
+		h.request("POST", "/v1/consents", token, map[string]any{
+			"purpose": purpose, "decision": "GRANTED", "noticeVersion": "v0.4-review",
+		})
+	}
+	fingerprint := strings.Repeat("d", 32)
+	candidate := func(month, eventAt string) (string, map[string]any) {
+		_, job := h.request("POST", "/v1/import-jobs", token, map[string]any{
+			"monthId": month, "templateVersion": "livin-v1"})
+		jobID := job["id"].(string)
+		status, counts := h.request("POST", "/v1/import-jobs/"+jobID+"/batches", token, map[string]any{
+			"batchKey": "page-1", "pageOrdinal": 0, "candidates": []any{map[string]any{
+				"fingerprint": fingerprint, "status": "PARSED", "direction": "DEBIT",
+				"amountMinor": 10_000, "eventAt": eventAt, "categoryId": food,
+				"parserVersion": "livin-v1"}}})
+		if status != 200 {
+			t.Fatalf("%s batch: %d %#v", month, status, counts)
+		}
+		return jobID, counts
+	}
+	octJob, octCounts := candidate("2026-10", "2026-10-20T00:00:00Z")
+	if octCounts["imported"].(float64) != 1 {
+		t.Fatalf("October import: %#v", octCounts)
+	}
+	novJob, novCounts := candidate("2026-11", "2026-11-20T00:00:00Z")
+	if novCounts["imported"].(float64) != 0 || novCounts["duplicates"].(float64) != 1 {
+		t.Fatalf("cross-month fingerprint: %#v", novCounts)
+	}
+	_, nov := h.request("GET", "/v1/summaries/2026-11", token, nil)
+	if nov["transactionCount"].(float64) != 0 || nov["inputRevision"].(float64) != 0 {
+		t.Fatalf("duplicate leaked into November: %#v", nov)
+	}
+	status, first := h.request("PATCH", "/v1/import-jobs/"+novJob, token, map[string]any{"state": "COMPLETE"})
+	if status != 200 {
+		t.Fatalf("finalize: %d %#v", status, first)
+	}
+	status, retry := h.request("PATCH", "/v1/import-jobs/"+novJob, token, map[string]any{"state": "COMPLETE"})
+	if status != 200 || retry["state"] != "COMPLETE" || retry["duplicates"].(float64) != 1 {
+		t.Fatalf("finalize retry: %d %#v", status, retry)
+	}
+	_ = octJob
+}

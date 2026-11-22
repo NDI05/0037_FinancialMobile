@@ -96,6 +96,16 @@ func (s *Store) ImportBatch(ctx context.Context, ownerID, jobID, batchKey, reque
 	if err := s.ensureNoDeletion(ctx, ownerID); err != nil {
 		return ImportBatchCounts{}, false, err
 	}
+	// Resolve the job month before validation so an event outside the job month rejects the whole
+	// page. The job is re-read inside the write transaction after validation.
+	var jobMonth, initialJobState string
+	if err := s.DB.QueryRowContext(ctx, `SELECT month_id, state FROM import_jobs
+		WHERE owner_id = ? AND id = ?`, ownerID, jobID).Scan(&jobMonth, &initialJobState); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ImportBatchCounts{}, false, ErrNotFound
+		}
+		return ImportBatchCounts{}, false, err
+	}
 	// Validate everything before opening a write transaction: an invalid candidate rejects the
 	// entire batch instead of leaving a half-imported page.
 	for _, candidate := range candidates {
@@ -104,6 +114,9 @@ func (s *Store) ImportBatch(ctx context.Context, ownerID, jobID, batchKey, reque
 		}
 		if err := validateAttributes(candidate.Attributes); err != nil {
 			return ImportBatchCounts{}, false, err
+		}
+		if candidate.Status == "PARSED" && monthIDFor(candidate.EventAt) != jobMonth {
+			return ImportBatchCounts{}, false, fmt.Errorf("invalid candidate eventAt: outside the import month %s", jobMonth)
 		}
 		if candidate.CategoryID != "" {
 			if err := s.ensureCategory(ctx, ownerID, candidate.CategoryID); err != nil {
@@ -258,7 +271,12 @@ func (s *Store) FinalizeImportJob(ctx context.Context, ownerID, jobID, finalStat
 		return ImportJob{}, err
 	}
 	if state == "COMPLETE" || state == "PARTIAL" || state == "FAILED" || state == "EMPTY" || state == "PERMISSION_REQUIRED" {
-		return ImportJob{}, fmt.Errorf("import job is already finished")
+		if state == finalState {
+			// A retry after a lost finalization response is recoverable and must not change counts.
+			_ = tx.Rollback()
+			return s.GetImportJob(ctx, ownerID, jobID)
+		}
+		return ImportJob{}, fmt.Errorf("import job is already finished with state %s", state)
 	}
 	if finalState == "COMPLETE" && (pages == 0 || imported+duplicates+skipped != matched) {
 		return ImportJob{}, fmt.Errorf("COMPLETE does not match the recorded counts")

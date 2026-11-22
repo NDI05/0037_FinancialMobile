@@ -105,10 +105,22 @@ func (s *Server) importBatch(w http.ResponseWriter, r *http.Request) {
 		s.mapWriteError(w, r, err)
 		return
 	}
+	updated, err := s.Store.GetImportJob(r.Context(), info.OwnerID, jobID)
+	if err != nil {
+		s.mapWriteError(w, r, err)
+		return
+	}
+	revision, err := s.Store.MonthRevision(r.Context(), info.OwnerID, updated.MonthID)
+	if err != nil {
+		s.databaseOrInternal(w, r, err)
+		return
+	}
 	w.Header().Set("Idempotency-Replayed", boolText(replayed))
 	writeJSON(w, http.StatusOK, map[string]any{
-		"batchKey": body.BatchKey, "matched": counts.Matched, "imported": counts.Imported,
-		"duplicates": counts.Duplicates, "skipped": counts.Skipped, "unresolved": counts.Unresolved,
+		"batchKey": body.BatchKey, "monthId": updated.MonthID, "inputRevision": revision,
+		"matched": counts.Matched, "imported": counts.Imported, "duplicates": counts.Duplicates,
+		"skipped": counts.Skipped, "unresolved": counts.Unresolved,
+		"jobState": updated.State,
 	})
 }
 
