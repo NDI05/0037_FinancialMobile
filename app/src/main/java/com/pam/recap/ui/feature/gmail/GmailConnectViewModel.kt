@@ -52,7 +52,7 @@ data class GmailConnectUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class GmailConnectViewModel @Inject constructor(
-    sessions: SessionRepository,
+    private val sessions: SessionRepository,
     connections: GmailConnectionRepository,
     consents: ConsentRepository,
     private val validator: GmailCredentialValidator,
@@ -134,11 +134,13 @@ class GmailConnectViewModel @Inject constructor(
                 }
 
                 is Outcome.Success -> {
-                    vault.save(email, appPassword)
+                    vault.save(requireNotNull(sessions.current()).ownerId, email, appPassword)
                     val result = connectGmail(ownerId)
                     if (result is Outcome.Failure) {
                         // A credential the provider refused must not stay on the device.
-                        if (result.error is AppError.PermissionRequired) vault.clear()
+                        if (result.error is AppError.PermissionRequired) {
+                            sessions.current()?.ownerId?.let { vault.clear(it) }
+                        }
                         actions.update { it.copy(isBusy = false, error = result.error) }
                     } else {
                         // F2: a real mailbox replaces the demo framing, so sample rows must go.

@@ -6,6 +6,9 @@ import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.data.backend.BackendEndpoints
 import com.pam.recap.data.gmail.LivinQueryBuilder
 import com.pam.recap.testing.FakeAppPasswordVault
+import com.pam.recap.testing.FakeSessionRepository
+import com.pam.recap.domain.model.Session
+import kotlin.time.Instant
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -17,8 +20,18 @@ import org.junit.Test
  */
 class RoutingGmailSourceTest {
 
+    private val sessions = FakeSessionRepository(
+        Session(
+            ownerId = "u_owner", displayName = "Owner", mailboxLabel = null,
+            signedInAt = Instant.parse("2026-03-01T02:00:00Z"), isDemo = false,
+        ),
+    )
     private val imapSource: ImapGmailSource by lazy {
-        ImapGmailSource(vault = FakeAppPasswordVault(), ioDispatcher = kotlinx.coroutines.Dispatchers.Unconfined)
+        ImapGmailSource(
+            vault = FakeAppPasswordVault(),
+            sessions = sessions,
+            ioDispatcher = kotlinx.coroutines.Dispatchers.Unconfined,
+        )
     }
 
     private fun router(backendEnabled: Boolean, withCredential: Boolean = false): RoutingGmailSource {
@@ -36,6 +49,7 @@ class RoutingGmailSourceTest {
             imap = imapSource,
             fixture = FixtureGmailSource(registry),
             backend = endpoints,
+            sessions = sessions,
         )
     }
 

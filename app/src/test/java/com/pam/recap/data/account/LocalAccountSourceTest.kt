@@ -208,6 +208,7 @@ class LocalAccountSourceTest {
             demoData = demoData,
             appPasswordVault = FakeAppPasswordVault(
                 com.pam.recap.domain.model.GmailCredential("andhika@example.test", "abcdefghijklmnop"),
+                initialOwnerId = ownerId,
             ),
         )
 

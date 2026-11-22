@@ -13,6 +13,7 @@ import com.pam.recap.testing.FakeImportRepository
 import com.pam.recap.testing.FakeSessionRepository
 import com.pam.recap.testing.FakeSummaryRepository
 import com.pam.recap.testing.FakeTransactionRepository
+import com.pam.recap.testing.fixedClock
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -49,6 +50,7 @@ class SignOutUseCaseTest {
             imports = FakeImportRepository(),
             backendSessions = backend,
             appPasswordVault = FakeAppPasswordVault(),
+            clock = fixedClock(Instant.parse("2026-03-01T02:00:00Z")),
         )
 
         val result = useCase(session.ownerId)
@@ -57,6 +59,30 @@ class SignOutUseCaseTest {
         assertEquals(1, backend.revokeCalls)
         assertNull(sessions.current())
         assertEquals(1, sessions.seededOwners.size + 1)
+    }
+
+    @Test
+    fun `ordinary sign out keeps the owner Gmail credential`() = runTest {
+        val vault = FakeAppPasswordVault()
+        vault.save(session.ownerId, "mail@example.test", "abcd efgh ijkl mnop")
+        val connections = FakeGmailConnectionRepository()
+        val useCase = SignOutUseCase(
+            sessions = FakeSessionRepository(session),
+            gmailSource = FixtureGmailSource(LivinTemplateRegistry()),
+            gmailConnection = connections,
+            transactions = FakeTransactionRepository(),
+            summaries = FakeSummaryRepository(),
+            analyses = FakeAnalysisRepository(),
+            budgets = FakeBudgetRepository(),
+            imports = FakeImportRepository(),
+            backendSessions = RecordingBackendSessions(),
+            appPasswordVault = vault,
+            clock = fixedClock(Instant.parse("2026-03-01T02:00:00Z")),
+        )
+
+        useCase(session.ownerId)
+
+        assertEquals("mail@example.test", vault.read(session.ownerId)?.email)
     }
 
     private class RecordingBackendSessions : BackendSessionRepository {

@@ -483,26 +483,29 @@ class FakeSessionRepository(initial: Session? = null) : SessionRepository {
     }
 }
 
-/** In-memory credential vault (no Keystore) for JVM tests. */
+/** In-memory owner-scoped credential vault (no Keystore) for JVM tests. */
 class FakeAppPasswordVault(
     initial: GmailCredential? = null,
+    initialOwnerId: String = "u_owner",
 ) : AppPasswordVault {
     val saved = mutableListOf<GmailCredential>()
     var cleared = 0
 
-    private var current: GmailCredential? = initial
-
-    override suspend fun save(email: String, appPassword: String) {
-        val credential = GmailCredential(email = email, appPassword = appPassword)
-        saved += credential
-        current = credential
+    private val credentials = mutableMapOf<String, GmailCredential>().apply {
+        if (initial != null) put(initialOwnerId, initial)
     }
 
-    override suspend fun read(): GmailCredential? = current
+    override suspend fun save(ownerId: String, email: String, appPassword: String) {
+        val credential = GmailCredential(email = email, appPassword = appPassword)
+        saved += credential
+        credentials[ownerId] = credential
+    }
 
-    override suspend fun clear() {
+    override suspend fun read(ownerId: String): GmailCredential? = credentials[ownerId]
+
+    override suspend fun clear(ownerId: String) {
         cleared += 1
-        current = null
+        credentials.remove(ownerId)
     }
 }
 

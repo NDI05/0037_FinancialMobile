@@ -8,18 +8,19 @@ import com.pam.recap.domain.model.GmailCredential
  * (the same mechanism as the SQLCipher passphrase). The plaintext never touches disk, a log, or the
  * network beyond the IMAP login it authorizes.
  *
- * Lifecycle: written after a successful IMAP validation, cleared on sign out, on disconnect, and on
- * workspace deletion.
+ * Lifecycle (CR-003): written after a successful IMAP validation, preserved on ordinary PAM sign
+ * out, cleared only on explicit Gmail disconnect/withdrawal or owner/workspace deletion. Entries are
+ * scoped to the authenticated PAM owner; the legacy global v1 slot is never auto-bound.
  */
 interface AppPasswordVault {
 
-    suspend fun save(email: String, appPassword: String)
+    suspend fun save(ownerId: String, email: String, appPassword: String)
 
-    suspend fun read(): GmailCredential?
+    suspend fun read(ownerId: String): GmailCredential?
 
-    suspend fun clear()
+    suspend fun clear(ownerId: String)
 
-    suspend fun hasCredential(): Boolean = read() != null
+    suspend fun hasCredential(ownerId: String): Boolean = read(ownerId) != null
 }
 
 /**

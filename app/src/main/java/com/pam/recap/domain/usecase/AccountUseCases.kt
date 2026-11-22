@@ -91,20 +91,26 @@ class SignOutUseCase @Inject constructor(
     private val imports: ImportRepository,
     private val backendSessions: BackendSessionRepository,
     private val appPasswordVault: AppPasswordVault,
+    private val clock: ClockProvider,
 ) {
 
     suspend operator fun invoke(ownerId: String): Outcome<Unit> {
         // FR-05: invalidate the server session before the local token cache is dropped.
         runCatching { backendSessions.revoke() }
-        // FR-54: signing out also forgets the mailbox app password.
-        runCatching { appPasswordVault.clear() }
+        // CR-003: ordinary sign-out closes the transport but preserves the owner-scoped Gmail
+        // credential and connection metadata for the next login of this owner.
         runCatching { gmailSource.disconnect() }
+        // Preserve the link metadata and credential, but never leave a stale CONNECTED claim.
+        runCatching {
+            gmailConnection.get(ownerId)?.let {
+                gmailConnection.save(it.copy(state = GmailConnectionState.DISCONNECTED, updatedAt = clock.now()))
+            }
+        }
         transactions.deleteAll(ownerId)
         summaries.deleteAll(ownerId)
         analyses.deleteAll(ownerId)
         budgets.deleteAll(ownerId)
         imports.deleteAll(ownerId)
-        gmailConnection.deleteAll(ownerId)
         sessions.signOut()
         return Outcome.Success(Unit)
     }
@@ -176,8 +182,8 @@ class DisconnectGmailUseCase @Inject constructor(
 
     suspend operator fun invoke(ownerId: String): Outcome<Unit> {
         val revoke = gmailSource.disconnect()
-        // FR-54: disconnecting removes the app password from the device as well.
-        runCatching { appPasswordVault.clear() }
+        // CR-003: explicit disconnect forgets only this owner's credential.
+        runCatching { appPasswordVault.clear(ownerId) }
         val now = clock.now()
         val existing = connections.get(ownerId)
         connections.save(
@@ -260,7 +266,7 @@ class RequestDeletionUseCase @Inject constructor(
             imports.deleteAll(ownerId)
             gmailConnection.deleteAll(ownerId)
             consents.deleteAll(ownerId)
-            appPasswordVault.clear()
+            appPasswordVault.clear(ownerId)
             sessions.signOut()
 
             val completed = request.copy(state = DeletionState.COMPLETED, completedAt = clock.now())

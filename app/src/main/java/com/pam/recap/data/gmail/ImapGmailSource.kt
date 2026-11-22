@@ -11,6 +11,7 @@ import com.pam.recap.domain.repository.GmailMailboxLabelProvider
 import com.pam.recap.domain.repository.GmailMessageRef
 import com.pam.recap.domain.repository.GmailPage
 import com.pam.recap.domain.repository.GmailSource
+import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.repository.LivinQuery
 import com.pam.recap.domain.repository.RawMessage
 import kotlinx.coroutines.CoroutineDispatcher
@@ -61,6 +62,7 @@ import kotlin.time.Instant
 @Singleton
 class ImapGmailSource @Inject constructor(
     private val vault: AppPasswordVault,
+    private val sessions: SessionRepository,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : GmailSource, GmailMailboxLabelProvider, GmailCredentialValidator {
 
@@ -81,7 +83,8 @@ class ImapGmailSource @Inject constructor(
     override fun mailboxLabel(): String? = cachedLabel
 
     override suspend fun authorize(): Outcome<Unit> = withContext(ioDispatcher) {
-        val credential = vault.read()
+        val ownerId = sessions.current()?.ownerId
+        val credential = ownerId?.let { vault.read(it) }
         if (credential == null) {
             connection.value = GmailConnectionState.NOT_CONNECTED
             return@withContext Outcome.Failure(AppError.Configuration("imap_not_configured"))
@@ -193,7 +196,8 @@ class ImapGmailSource @Inject constructor(
      */
     private suspend fun <T> withFolder(block: (Folder) -> Outcome<T>): Outcome<T> =
         withContext(ioDispatcher) {
-            val credential = vault.read()
+            val ownerId = sessions.current()?.ownerId
+            val credential = ownerId?.let { vault.read(it) }
             if (credential == null) {
                 connection.value = GmailConnectionState.NOT_CONNECTED
                 return@withContext Outcome.Failure(AppError.Configuration("imap_not_configured"))

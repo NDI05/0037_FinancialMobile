@@ -462,6 +462,7 @@ class ScreenScreenshotsTest {
                 imports = imports,
                 backendSessions = NoopBackendSessionRepository(),
                 appPasswordVault = noopVault,
+                clock = clock,
             ),
         )
 
@@ -496,6 +497,7 @@ class ScreenScreenshotsTest {
                 imports = imports,
                 backendSessions = NoopBackendSessionRepository(),
                 appPasswordVault = noopVault,
+                clock = clock,
             ),
         )
 

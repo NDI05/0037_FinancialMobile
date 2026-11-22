@@ -39,6 +39,7 @@ import kotlin.time.Instant
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class AppPasswordVaultTest {
+    private val OWNER = "u_owner"
 
     private lateinit var context: Context
     private lateinit var vault: AppPasswordVault
@@ -56,18 +57,18 @@ class AppPasswordVaultTest {
 
     @Test
     fun `the credential round-trips`() = runTest {
-        vault.save("andhika@example.test", "abcd efgh ijkl mnop")
+        vault.save(OWNER, "andhika@example.test", "abcd efgh ijkl mnop")
 
-        val stored = vault.read()
+        val stored = vault.read(OWNER)
 
         assertEquals("andhika@example.test", stored?.email)
         assertEquals("abcd efgh ijkl mnop", stored?.appPassword)
-        assertTrue(vault.hasCredential())
+        assertTrue(vault.hasCredential(OWNER))
     }
 
     @Test
     fun `the plaintext is never written to preferences`() = runTest {
-        vault.save("andhika@example.test", "abcd efgh ijkl mnop")
+        vault.save(OWNER, "andhika@example.test", "abcd efgh ijkl mnop")
 
         val prefs = context.getSharedPreferences("pam_app_password_vault", Context.MODE_PRIVATE)
         val raw = prefs.all.values.filterIsInstance<String>().joinToString("\n")
@@ -79,11 +80,11 @@ class AppPasswordVaultTest {
 
     @Test
     fun `clear removes the credential`() = runTest {
-        vault.save("andhika@example.test", "abcd efgh ijkl mnop")
-        vault.clear()
+        vault.save(OWNER, "andhika@example.test", "abcd efgh ijkl mnop")
+        vault.clear(OWNER)
 
-        assertNull(vault.read())
-        assertFalse(vault.hasCredential())
+        assertNull(vault.read(OWNER))
+        assertFalse(vault.hasCredential(OWNER))
         assertTrue(
             context.getSharedPreferences("pam_app_password_vault", Context.MODE_PRIVATE).all.isEmpty(),
         )
@@ -109,12 +110,24 @@ class AppPasswordVaultTest {
             clock = fixedClock(Instant.parse("2026-03-01T02:00:00Z")),
         )
 
-        vault.save("andhika@example.test", "abcd efgh ijkl mnop")
+        vault.save(OWNER, "andhika@example.test", "abcd efgh ijkl mnop")
         val result = useCase("u_owner")
 
         assertTrue(result is com.pam.recap.core.result.Outcome.Success)
-        assertNull(vault.read())
+        assertNull(vault.read(OWNER))
         assertEquals(GmailConnectionState.DISCONNECTED, connections.get("u_owner")?.state)
+    }
+
+    @Test
+    fun `credentials are scoped per owner and clearing B keeps A`() = runTest {
+        vault.save("u_a", "a@example.test", "aaaa aaaa aaaa aaaa")
+        vault.save("u_b", "b@example.test", "bbbb bbbb bbbb bbbb")
+
+        assertEquals("a@example.test", vault.read("u_a")?.email)
+        assertEquals("b@example.test", vault.read("u_b")?.email)
+        vault.clear("u_b")
+        assertNull(vault.read("u_b"))
+        assertEquals("a@example.test", vault.read("u_a")?.email)
     }
 
     /** Reversible transform, but not the plaintext: a stand-in for the Keystore wrapping. */

@@ -10,6 +10,7 @@ import com.pam.recap.domain.repository.GmailPage
 import com.pam.recap.domain.repository.GmailSource
 import com.pam.recap.domain.repository.LivinQuery
 import com.pam.recap.domain.repository.RawMessage
+import com.pam.recap.domain.repository.SessionRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -30,13 +31,26 @@ class RoutingGmailSource @Inject constructor(
     private val imap: ImapGmailSource,
     private val fixture: FixtureGmailSource,
     private val backend: BackendEndpoints,
+    private val sessions: SessionRepository,
 ) : GmailSource, GmailMailboxLabelProvider {
 
     /** Null means "this account has no mailbox": server mode without a credential. */
-    private suspend fun active(): GmailSource? = when {
-        vault.hasCredential() -> imap
-        backend.isEnabled -> null
-        else -> fixture
+    @Volatile
+    private var activeOwnerId: String? = null
+
+    private suspend fun ownerId(): String? = sessions.current()?.ownerId
+
+    private suspend fun active(): GmailSource? {
+        val owner = ownerId() ?: run {
+            activeOwnerId = null
+            return null
+        }
+        activeOwnerId = owner
+        return when {
+            vault.hasCredential(owner) -> imap
+            backend.isEnabled -> null
+            else -> fixture
+        }
     }
 
     override suspend fun authorize(): Outcome<Unit> =
@@ -50,15 +64,19 @@ class RoutingGmailSource @Inject constructor(
     override suspend fun fetchMessage(id: String): Outcome<RawMessage> =
         active()?.fetchMessage(id) ?: Outcome.Failure(AppError.Configuration(NO_MAILBOX))
 
-    override suspend fun disconnect(): Outcome<Unit> = when {
-        vault.hasCredential() -> imap.disconnect()
-        backend.isEnabled -> Outcome.Success(Unit)
-        else -> fixture.disconnect()
+    override suspend fun disconnect(): Outcome<Unit> {
+        val owner = ownerId()
+        activeOwnerId = null
+        return when {
+            owner != null && vault.hasCredential(owner) -> imap.disconnect()
+            backend.isEnabled -> Outcome.Success(Unit)
+            else -> fixture.disconnect()
+        }
     }
 
     override fun mailboxLabel(): String? =
-        // The IMAP label is the saved address; the fixture label is offline-demo data only.
-        imap.mailboxLabel() ?: if (backend.isEnabled) null else fixture.mailboxLabel()
+        // The IMAP label is cleared on logout; a signed-out or different owner never inherits it.
+        if (activeOwnerId == null) null else imap.mailboxLabel() ?: if (backend.isEnabled) null else fixture.mailboxLabel()
 
     private companion object {
         const val NO_MAILBOX = "mailbox_not_configured"

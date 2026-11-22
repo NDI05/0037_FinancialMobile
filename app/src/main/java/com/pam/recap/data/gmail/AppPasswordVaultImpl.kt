@@ -28,7 +28,8 @@ class AppPasswordVaultImpl @Inject constructor(
     private val prefs: SharedPreferences
         get() = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    override suspend fun save(email: String, appPassword: String) {
+    override suspend fun save(ownerId: String, email: String, appPassword: String) {
+        if (ownerId.isBlank()) return
         val payload = json.encodeToString(
             StoredCredential.serializer(),
             StoredCredential(email = email.trim(), appPassword = appPassword.trim()),
@@ -38,27 +39,30 @@ class AppPasswordVaultImpl @Inject constructor(
                 SafeLogger.failure(TAG, "credential_wrap_failed")
                 return
             }
-        prefs.edit(commit = true) { putString(KEY_CREDENTIAL, wrapped) }
+        prefs.edit(commit = true) { putString(key(ownerId), wrapped) }
         SafeLogger.event(TAG, "credential_stored")
     }
 
-    override suspend fun read(): GmailCredential? {
-        val wrapped = prefs.getString(KEY_CREDENTIAL, null) ?: return null
+    override suspend fun read(ownerId: String): GmailCredential? {
+        if (ownerId.isBlank()) return null
+        val wrapped = prefs.getString(key(ownerId), null) ?: return null
         val stored = runCatching {
             val plain = secretStore.unwrap(wrapped).decodeToString()
             json.decodeFromString(StoredCredential.serializer(), plain)
         }.getOrElse {
             // A blob from another key (reinstall, cleared keystore) is dropped, never trusted.
-            clear()
+            clear(ownerId)
             null
         } ?: return null
         if (stored.appPassword.isEmpty()) return null
         return GmailCredential(email = stored.email, appPassword = stored.appPassword)
     }
 
-    override suspend fun clear() {
-        prefs.edit(commit = true) { remove(KEY_CREDENTIAL) }
+    override suspend fun clear(ownerId: String) {
+        if (ownerId.isNotBlank()) prefs.edit(commit = true) { remove(key(ownerId)) }
     }
+
+    private fun key(ownerId: String) = KEY_PREFIX + ownerId
 
     @Serializable
     private data class StoredCredential(
@@ -69,6 +73,8 @@ class AppPasswordVaultImpl @Inject constructor(
     private companion object {
         const val TAG = "AppPasswordVault"
         const val PREFS_NAME = "pam_app_password_vault"
-        const val KEY_CREDENTIAL = "wrapped_app_password_v1"
+        const val KEY_PREFIX = "wrapped_app_password_v2_"
+        // v1 was a single global slot. Ownership cannot be proven, so it is intentionally ignored
+        // rather than being bound to the first account that logs in (CR-003).
     }
 }

@@ -3,6 +3,7 @@ package com.pam.recap.data.account
 import android.util.Patterns
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.AppErrorRules
+import com.pam.recap.core.security.OwnerIdFactory
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.AccountRepository
@@ -94,7 +95,8 @@ class LocalAccountSource @Inject constructor(
     private suspend fun createProfile(email: String, displayName: String?): Outcome<Session> {
         val offline = !isBackendEnabled
         // A stored app password means real imports are possible: no sample rows, in any mode.
-        val seedable = offline && !appPasswordVault.hasCredential()
+        val ownerId = OwnerIdFactory.ownerIdFor(email)
+        val seedable = offline && appPasswordVault.read(ownerId) == null
         val result = signIn(
             accountId = email,
             displayName = displayName ?: email.substringBefore('@'),
