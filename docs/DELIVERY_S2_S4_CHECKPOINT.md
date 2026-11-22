@@ -12,6 +12,15 @@ Aturan repo: [`AGENTS.md`](../AGENTS.md). Mandat terkini:
 
 ## Inventaris awal yang dipertahankan
 
+**Review PM terbaru sesudah `c68dc38`:**
+[`RESUME_C68DC38_CR003_ACCEPTANCE.md`](agent-prompts/RESUME_C68DC38_CR003_ACCEPTANCE.md).
+PM targeted 13 tests PASS (vault 5/routing 2/signout 2/classifier 4). Vault per owner dan
+whole-word classifier terimplementasi, tetapi CR-003 tetap PARTIAL: UI connect masih menolak
+password kosong, restore setelah login belum ada, owner dapat berubah selama validation sebelum
+vault.save memakai sesi baru, dan handle/folder/cache/state belum membuktikan generation guard.
+Failure path ini diperoleh dari source, bukan insiden akun asli. Category provenance/reclassification
+dan Android uploader→Go→UI acceptance masih terbuka. Review ini hanya dokumen, tidak patch APK.
+
 **Prioritas terbaru sesudah checkpoint worker `2d279da`:** owner meminta Gmail tetap tertaut
 setelah logout/login akun PAM yang sama dan kategori QRIS berbasis merchant diperbaiki.
 [CR-003](changes/CR_003_GMAIL_SESSION_CATEGORY.md) mencatat perubahan lifecycle credential yang
