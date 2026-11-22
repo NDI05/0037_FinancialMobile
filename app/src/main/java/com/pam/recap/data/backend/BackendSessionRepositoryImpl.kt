@@ -93,6 +93,7 @@ class BackendSessionRepositoryImpl @Inject constructor(
             LoginBody.serializer(),
             LoginBody(email = email.trim(), password = password),
         )
+        val attemptGeneration = generation.get()
         return withContext(ioDispatcher) {
             when (val call = execute(endpoint, body)) {
                 null -> Outcome.Failure(AppError.Network("backend_unreachable"))
@@ -103,6 +104,9 @@ class BackendSessionRepositoryImpl @Inject constructor(
                         }.getOrNull()
                         if (session == null) {
                             Outcome.Failure(AppError.Network("backend_invalid_response"))
+                        } else if (generation.get() != attemptGeneration) {
+                            // Logout or a newer login won while this response was in flight.
+                            Outcome.Failure(AppError.Unauthorized("backend_session_superseded"))
                         } else {
                             generation.incrementAndGet()
                             writeCached(
@@ -162,7 +166,7 @@ class BackendSessionRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun renew(ownerId: String): Outcome<String> {
+    override suspend fun renew(ownerId: String, rejectedToken: String?): Outcome<String> {
         if (!config.isEnabled) return Outcome.Failure(AppError.Configuration(BACKEND_NOT_CONFIGURED))
         return withContext(ioDispatcher) {
             refreshMutex.withLock {
@@ -170,6 +174,10 @@ class BackendSessionRepositoryImpl @Inject constructor(
                     ?: return@withLock Outcome.Failure(AppError.Unauthorized("backend_no_session"))
                 if (current.ownerId != ownerId) {
                     return@withLock Outcome.Failure(AppError.Unauthorized("backend_session_other_owner"))
+                }
+                // Another caller may already have replaced the rejected access token.
+                if (rejectedToken != null && current.accessToken != rejectedToken) {
+                    return@withLock Outcome.Success(current.accessToken)
                 }
                 refreshLocked(current)
             }

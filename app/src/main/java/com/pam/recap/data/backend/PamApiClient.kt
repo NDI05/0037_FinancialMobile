@@ -138,8 +138,9 @@ class PamApiClient @Inject constructor(
         deserializer: DeserializationStrategy<T>,
     ): Outcome<T> = withContext(ioDispatcher) {
         var refreshed = false
+        var rejectedToken: String? = null
         while (true) {
-            val tokenResult = if (!refreshed) sessions.token(ownerId) else sessions.renew(ownerId)
+            val tokenResult = if (!refreshed) sessions.token(ownerId) else sessions.renew(ownerId, rejectedToken)
             if (tokenResult is Outcome.Failure) {
                 return@withContext Outcome.Failure(tokenResult.error)
             }
@@ -158,6 +159,7 @@ class PamApiClient @Inject constructor(
             }
             if (response.code == 401 && !refreshed) {
                 refreshed = true
+                rejectedToken = token
                 continue
             }
             if (response.code !in 200..299) {

@@ -12,6 +12,7 @@ import com.pam.recap.core.security.WrappedSecretStore
 import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.util.PamJson
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -273,6 +274,41 @@ class BackendSessionRepositoryTest {
         assertFalse(repository.isEnabled)
         assertTrue(repository.login(EMAIL, "x") is Outcome.Failure)
         assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `a late login response cannot resurrect a cleared session`() = runTest {
+        val entered = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                entered.countDown()
+                check(release.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                return sessionResponse("late-access", refreshToken = "late-refresh")
+            }
+        }
+        val repository = repository()
+        val pending = async(Dispatchers.IO) { repository.login(EMAIL, "correct-horse-battery") }
+        check(entered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        repository.clear()
+        release.countDown()
+        val result = pending.await()
+        assertTrue(result is Outcome.Failure)
+        assertTrue(repository.token(OWNER) is Outcome.Failure)
+    }
+
+    @Test
+    fun `two rejections of the same token share one refresh rotation`() = runTest {
+        server.enqueue(sessionResponse("old-access", refreshToken = "refresh-1"))
+        val repository = repository()
+        repository.login(EMAIL, "correct-horse-battery")
+        server.takeRequest()
+        server.enqueue(refreshResponse("new-access", "refresh-2"))
+        val first = repository.renew(OWNER, "old-access")
+        val second = repository.renew(OWNER, "old-access")
+        assertTrue(first is Outcome.Success && first.value == "new-access")
+        assertTrue(second is Outcome.Success && second.value == "new-access")
+        assertEquals(2, server.requestCount) // login + exactly one refresh
     }
 
     // ---- helpers -------------------------------------------------------------------------

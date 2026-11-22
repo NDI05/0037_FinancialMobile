@@ -36,7 +36,7 @@ interface BackendSessionRepository {
      * The default keeps test doubles source-compatible; the real repository shares the same
      * single-flight mutex as [token].
      */
-    suspend fun renew(ownerId: String): Outcome<String> = token(ownerId)
+    suspend fun renew(ownerId: String, rejectedToken: String? = null): Outcome<String> = token(ownerId)
 
     /** FR-05: server-side invalidation on sign-out; clears the cache even when the call fails. */
     suspend fun revoke()

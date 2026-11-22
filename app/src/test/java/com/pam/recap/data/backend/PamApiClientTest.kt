@@ -125,7 +125,7 @@ class PamApiClientTest {
         override suspend fun register(email: String, password: String, displayName: String?, inviteCode: String) = Outcome.Success(Unit)
         override suspend fun login(email: String, password: String) = Outcome.Success(Unit)
         override suspend fun token(ownerId: String): Outcome<String> = Outcome.Success("access-1")
-        override suspend fun renew(ownerId: String): Outcome<String> {
+        override suspend fun renew(ownerId: String, rejectedToken: String?): Outcome<String> {
             renewals++
             return renewFailure?.let { Outcome.Failure(it) } ?: Outcome.Success("access-2")
         }
