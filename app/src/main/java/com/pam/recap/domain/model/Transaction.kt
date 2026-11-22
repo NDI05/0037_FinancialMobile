@@ -44,6 +44,9 @@ data class Transaction(
     val revision: Int,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** Server identity retained even when the enum must fall back to OTHER_EXPENSE. */
+    val serverCategoryId: String? = null,
+    val serverCategoryLabel: String? = null,
 ) {
 
     val isCredit: Boolean get() = direction == Direction.CREDIT

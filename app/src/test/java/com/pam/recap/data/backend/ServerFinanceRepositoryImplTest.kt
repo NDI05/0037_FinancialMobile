@@ -1,0 +1,114 @@
+package com.pam.recap.data.backend
+
+import com.pam.recap.core.result.Outcome
+import com.pam.recap.core.time.JakartaMonth
+import com.pam.recap.core.util.PamJson
+import com.pam.recap.domain.model.Category
+import com.pam.recap.domain.model.Direction
+import com.pam.recap.domain.model.TransactionSource
+import com.pam.recap.domain.repository.BackendSessionRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
+import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class ServerFinanceRepositoryImplTest {
+    private lateinit var server: MockWebServer
+    private lateinit var repo: ServerFinanceRepositoryImpl
+
+    @Before
+    fun setUp() {
+        server = MockWebServer(); server.start()
+        val endpoints = object : BackendEndpoints {
+            override val isEnabled = true
+            override val analysesUrl: String? = server.url("/v1/analyses").toString()
+            override fun endpoint(path: String) = server.url(path).toString()
+        }
+        val sessions = object : BackendSessionRepository {
+            override val isEnabled = true
+            override suspend fun register(email: String, password: String, displayName: String?, inviteCode: String) = Outcome.Success(Unit)
+            override suspend fun login(email: String, password: String) = Outcome.Success(Unit)
+            override suspend fun token(ownerId: String) = Outcome.Success("token")
+            override suspend fun revoke() = Unit
+            override fun clear() = Unit
+        }
+        val api = PamApiClient(OkHttpClient(), PamJson, endpoints, sessions, UnconfinedTestDispatcher())
+        repo = ServerFinanceRepositoryImpl(api, endpoints)
+    }
+
+    @After
+    fun tearDown() = server.shutdown()
+
+    @Test
+    fun `categories and summary come from the server with integer money`() = runTest {
+        server.enqueue(json("""{"categories":[{"id":"cat_food","code":"food","label":"Makan","kind":"EXPENSE","revision":2}]}"""))
+        server.enqueue(json(SUMMARY))
+        val categories = (repo.categories("u_1") as Outcome.Success).value
+        assertEquals("cat_food", categories.single().id)
+        val summary = (repo.summary("u_1", requireNotNull(JakartaMonth.parse("2026-11"))) as Outcome.Success).value
+        assertEquals(17_500_000L, summary.grossOutflow.minor)
+        assertEquals(Category.FOOD, summary.categoryTotals.single().category)
+        assertEquals(1, summary.transactionCount)
+    }
+
+    @Test
+    fun `transaction list and detail retain server identity`() = runTest {
+        server.enqueue(json("""{"items":[${TRANSACTION}],"nextCursor":null}"""))
+        server.enqueue(json(TRANSACTION))
+        val page = (repo.listMonth("u_1", requireNotNull(JakartaMonth.parse("2026-11"))) as Outcome.Success).value
+        val tx = page.items.single()
+        assertEquals("tx_1", tx.id)
+        assertEquals(3, tx.revision)
+        assertEquals(Direction.DEBIT, tx.direction)
+        assertEquals(TransactionSource.MANUAL, tx.source)
+        assertEquals(Category.FOOD, tx.category)
+        assertEquals("cat_food", tx.serverCategoryId)
+        val detail = (repo.get("u_1", "tx_1") as Outcome.Success).value
+        assertEquals("tx_1", detail.id)
+    }
+
+    @Test
+    fun `manual create sends category id and one idempotency key`() = runTest {
+        server.enqueue(json(TRANSACTION, 201))
+        val result = repo.createManual(
+            "u_1",
+            com.pam.recap.domain.repository.ManualTransactionDraft(
+                direction = "DEBIT", amountMinor = 17_500_000,
+                eventAtEpochMilliseconds = 1_763_524_200_000, categoryId = "cat_food",
+                description = "Synthetic", note = "note",
+            ),
+            "manual-key-1",
+        ) as Outcome.Success
+        assertEquals("tx_1", result.value.id)
+        val req = server.takeRequest()
+        assertEquals("manual-key-1", req.getHeader("Idempotency-Key"))
+        assertTrue(req.body.readUtf8().contains("\"categoryId\":\"cat_food\""))
+    }
+
+    private fun json(body: String, code: Int = 200) = MockResponse()
+        .setResponseCode(code)
+        .setHeader("content-type", "application/json")
+        .setBody(body)
+
+    private companion object {
+        const val SUMMARY = """{"monthId":"2026-11","inputRevision":2,"coverage":"PARTIAL",
+            "grossInflowMinor":0,"grossOutflowMinor":17500000,"netMinor":-17500000,
+            "classifiedIncomeMinor":0,"classifiedExpenseMinor":17500000,"transactionCount":1,
+            "manualEntryCount":1,"uncategorizedCount":0,
+            "categoryTotals":[{"categoryCode":"food","label":"Makan","amountMinor":17500000,"count":1}],
+            "generatedAt":"2026-11-22T00:00:00Z"}"""
+        const val TRANSACTION = """{"id":"tx_1","categoryId":"cat_food","categoryCode":"food",
+            "categoryKind":"EXPENSE","direction":"DEBIT","source":"MANUAL",
+            "amountMinor":17500000,"currency":"IDR","eventAt":"2026-11-19T04:10:00Z",
+            "monthId":"2026-11","categoryOrigin":"USER","isInternalTransfer":false,
+            "revision":3,"createdAt":"2026-11-22T00:00:00Z","updatedAt":"2026-11-22T00:00:00Z"}"""
+    }
+}

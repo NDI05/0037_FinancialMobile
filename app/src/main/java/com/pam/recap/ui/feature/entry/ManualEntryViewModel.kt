@@ -12,6 +12,7 @@ import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.repository.SessionRepository
+import com.pam.recap.data.security.ManualPendingActionStore
 import com.pam.recap.domain.usecase.AddManualEntryUseCase
 import com.pam.recap.ui.util.MoneyInput
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -53,6 +54,7 @@ class ManualEntryViewModel @Inject constructor(
     private val sessions: SessionRepository,
     private val addManualEntry: AddManualEntryUseCase,
     clock: ClockProvider,
+    private val pendingActions: ManualPendingActionStore? = null,
 ) : ViewModel() {
 
     private val zone: ZoneId = ZoneId.of(JakartaMonth.ZONE.id)
@@ -63,6 +65,22 @@ class ManualEntryViewModel @Inject constructor(
             date = requestedMonth?.let { LocalDate.of(it.year, it.month, 1) } ?: LocalDate.now(zone),
         ),
     )
+
+    init {
+        viewModelScope.launch {
+            val ownerId = sessions.current()?.ownerId ?: return@launch
+            val pending = pendingActions?.read(ownerId) ?: return@launch
+            _state.update {
+                it.copy(
+                    amountText = pending.amountText,
+                    description = pending.description,
+                    date = runCatching { LocalDate.parse(pending.dateIso) }.getOrDefault(it.date),
+                    direction = runCatching { Direction.valueOf(pending.direction) }.getOrDefault(it.direction),
+                    category = Category.fromCode(pending.categoryCode) ?: it.category,
+                )
+            }
+        }
+    }
     val state: StateFlow<ManualEntryUiState> = _state.asStateFlow()
 
     fun setDirection(direction: Direction) {
@@ -105,6 +123,25 @@ class ManualEntryViewModel @Inject constructor(
             val eventAt = kotlin.time.Instant.fromEpochMilliseconds(
                 current.date.atTime(LocalTime.NOON).atZone(zone).toInstant().toEpochMilli(),
             )
+            val identity = listOf(
+                current.direction.name, current.amountText, current.description,
+                current.date.toString(), current.category.code,
+            ).joinToString("|")
+            val existing = pendingActions?.read(ownerId)
+            val key = if (existing?.identity == identity) {
+                existing.key
+            } else {
+                java.util.UUID.randomUUID().toString().also { fresh ->
+                    pendingActions?.save(
+                        ownerId,
+                        ManualPendingActionStore.Pending(
+                            key = fresh, identity = identity, amountText = current.amountText,
+                            description = current.description, dateIso = current.date.toString(),
+                            direction = current.direction.name, categoryCode = current.category.code,
+                        ),
+                    )
+                }
+            }
             when (
                 val result = addManualEntry(
                     ownerId = ownerId,
@@ -113,10 +150,14 @@ class ManualEntryViewModel @Inject constructor(
                     eventAt = eventAt,
                     description = current.description,
                     category = current.category,
+                    idempotencyKey = key,
                 )
             ) {
                 is Outcome.Failure -> _state.update { it.copy(isSaving = false, error = result.error) }
-                is Outcome.Success -> _state.update { it.copy(isSaving = false, saved = true) }
+                is Outcome.Success -> {
+                    pendingActions?.clear(ownerId)
+                    _state.update { it.copy(isSaving = false, saved = true) }
+                }
             }
         }
     }

@@ -18,6 +18,8 @@ import com.pam.recap.domain.model.TransactionFilter
 import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.AnalysisRepository
 import com.pam.recap.domain.repository.SummaryRepository
+import com.pam.recap.domain.repository.ManualTransactionDraft
+import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -31,6 +33,7 @@ class AddManualEntryUseCase @Inject constructor(
     private val fingerprints: FingerprintFactory,
     private val clock: ClockProvider,
     private val idGenerator: IdGenerator,
+    private val server: ServerFinanceRepository? = null,
 ) {
 
     suspend operator fun invoke(
@@ -41,6 +44,7 @@ class AddManualEntryUseCase @Inject constructor(
         description: String,
         category: Category? = null,
         note: String? = null,
+        idempotencyKey: String? = null,
     ): Outcome<Transaction> {
         if (!amount.isPositive) {
             return Outcome.Failure(AppError.Validation(AppErrorRules.INVALID_AMOUNT))
@@ -55,6 +59,31 @@ class AddManualEntryUseCase @Inject constructor(
             Category.UNCATEGORIZED
         }
         val now = clock.now()
+        val serverCategoryId = if (server?.isEnabled == true) {
+            when (val categories = server.categories(ownerId)) {
+                is Outcome.Success -> categories.value.firstOrNull {
+                    it.code == resolvedCategory.code
+                }?.id
+                is Outcome.Failure -> return categories
+            }
+        } else {
+            null
+        }
+        if (server?.isEnabled == true) {
+            val key = idempotencyKey ?: "manual-${ownerId}-${now.toEpochMilliseconds()}-${idGenerator.newId()}"
+            return server.createManual(
+                ownerId,
+                ManualTransactionDraft(
+                    direction = direction.name,
+                    amountMinor = amount.minor,
+                    eventAtEpochMilliseconds = eventAt.toEpochMilliseconds(),
+                    categoryId = serverCategoryId,
+                    description = description.trim(),
+                    note = note?.trim()?.takeIf { it.isNotEmpty() },
+                ),
+                key,
+            )
+        }
         val id = idGenerator.newId()
         val fingerprint = fingerprints.fingerprint(
             ownerId = ownerId,

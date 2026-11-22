@@ -40,6 +40,12 @@ class PamApiClient @Inject constructor(
     suspend fun summary(ownerId: String, monthId: String): Outcome<RemoteSummary> =
         get(ownerId, "/v1/summaries/$monthId", RemoteSummary.serializer())
 
+    suspend fun categories(ownerId: String): Outcome<RemoteCategoriesResponse> =
+        get(ownerId, "/v1/categories", RemoteCategoriesResponse.serializer())
+
+    suspend fun getTransaction(ownerId: String, transactionId: String): Outcome<RemoteTransaction> =
+        get(ownerId, "/v1/transactions/$transactionId", RemoteTransaction.serializer())
+
     suspend fun listTransactions(
         ownerId: String,
         monthId: String,
@@ -224,6 +230,18 @@ data class RemoteSummary(
     val categoryTotals: List<RemoteCategoryTotal> = emptyList(),
     val generatedAt: String? = null,
     val emailDerived: Boolean = true,
+)
+
+@Serializable
+data class RemoteCategoriesResponse(val categories: List<RemoteCategoryItem> = emptyList())
+
+@Serializable
+data class RemoteCategoryItem(
+    val id: String,
+    val code: String,
+    val label: String? = null,
+    val kind: String,
+    val revision: Int = 0,
 )
 
 @Serializable
