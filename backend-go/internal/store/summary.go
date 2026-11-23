@@ -23,6 +23,12 @@ type Summary struct {
 	TransactionCount       int                     `json:"transactionCount"`
 	ManualEntryCount       int                     `json:"manualEntryCount"`
 	UncategorizedCount     int                     `json:"uncategorizedCount"`
+	CategorizedCount       int                     `json:"categorizedCount"`
+	RefundMinor            int64                   `json:"refundMinor"`
+	RefundCount            int                     `json:"refundCount"`
+	TransferInMinor        int64                   `json:"transferInMinor"`
+	TransferOutMinor       int64                   `json:"transferOutMinor"`
+	TransferCount          int                     `json:"transferCount"`
 	CategoryTotals         []finance.CategoryTotal `json:"categoryTotals"`
 	GeneratedAt            time.Time               `json:"generatedAt"`
 	EmailDerived           bool                    `json:"emailDerived"`
@@ -104,7 +110,10 @@ func (s *Store) ComputeSummary(ctx context.Context, ownerID, monthID string, now
 		NetMinor: totals.NetMinor, ClassifiedIncomeMinor: totals.ClassifiedIncomeMinor,
 		ClassifiedExpenseMinor: totals.ClassifiedExpenseMinor,
 		TransactionCount:       totals.TransactionCount, ManualEntryCount: totals.ManualCount,
-		UncategorizedCount: totals.UncategorizedCount, CategoryTotals: categoryTotals,
+		UncategorizedCount: totals.UncategorizedCount, CategorizedCount: totals.CategorizedCount,
+		RefundMinor: totals.RefundMinor, RefundCount: totals.RefundCount,
+		TransferInMinor: totals.TransferInMinor, TransferOutMinor: totals.TransferOutMinor,
+		TransferCount: totals.TransferCount, CategoryTotals: categoryTotals,
 		GeneratedAt: now.UTC(), EmailDerived: true,
 	}, nil
 }

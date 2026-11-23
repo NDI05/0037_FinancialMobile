@@ -87,12 +87,25 @@ type categoryPatch struct {
 
 func (s *Server) listCategories(w http.ResponseWriter, r *http.Request) {
 	info, _ := authFrom(r)
-	categories, err := s.Store.ListCategories(r.Context(), info.OwnerID, r.URL.Query().Get("q"))
+	query := r.URL.Query()
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	// limit<=0 means the store default (50); >100 is clamped to 100.
+	page, err := s.Store.ListCategories(r.Context(), info.OwnerID, query.Get("q"), limit,
+		query.Get("cursor"))
 	if err != nil {
+		if errors.Is(err, store.ErrInvalidCursor) {
+			writeError(w, http.StatusBadRequest, "invalid_cursor",
+				"cursor was issued for a different query; restart from the first page", correlationOf(r))
+			return
+		}
 		s.databaseOrInternal(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"categories": categoriesJSON(categories)})
+	response := map[string]any{"categories": categoriesJSON(page.Items)}
+	if page.NextCursor != "" {
+		response["nextCursor"] = page.NextCursor
+	}
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (s *Server) createCategory(w http.ResponseWriter, r *http.Request) {
@@ -323,7 +336,17 @@ func (s *Server) updateTransaction(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) deleteTransaction(w http.ResponseWriter, r *http.Request) {
 	info, _ := authFrom(r)
-	if err := s.Store.DeleteTransaction(r.Context(), info.OwnerID, r.PathValue("id"), s.Now()); err != nil {
+	// Optional compare-and-swap: ?revision=N or If-Match: "N". Without either the historical
+	// unconditional delete still works for older clients; a value of 0 is a real guard.
+	expected := -1
+	if r.Header.Get("If-Match") != "" {
+		expected = revisionHeader(r)
+	}
+	if raw := strings.TrimSpace(r.URL.Query().Get("revision")); raw != "" {
+		expected, _ = strconv.Atoi(raw)
+	}
+	if err := s.Store.DeleteTransaction(r.Context(), info.OwnerID, r.PathValue("id"),
+		expected, s.Now()); err != nil {
 		s.mapWriteError(w, r, err)
 		return
 	}
@@ -400,21 +423,46 @@ func (s *Server) getSummary(w http.ResponseWriter, r *http.Request) {
 		s.mapWriteError(w, r, err)
 		return
 	}
+	// freshness describes the relationship between the live aggregate and the last client-uploaded
+	// summary (PUT /v1/summaries/{monthID}):
+	//   CURRENT    - no stored payload, or the stored payload has the current month revision;
+	//   STALE      - a stored payload is behind the live rows and should be refreshed;
+	//   HISTORICAL - the stored payload is ahead of the server rows (for example a restored or
+	//                client-side historical snapshot); it must not be treated as current.
+	freshness := "CURRENT"
 	response := map[string]any{
 		"monthId": computed.MonthID, "inputRevision": computed.InputRevision,
-		"coverage": computed.Coverage, "grossInflowMinor": computed.GrossInflowMinor,
+		"currentRevision": computed.InputRevision,
+		"coverage":        computed.Coverage, "freshness": freshness,
+		"grossInflowMinor": computed.GrossInflowMinor,
 		"grossOutflowMinor": computed.GrossOutflowMinor, "netMinor": computed.NetMinor,
 		"classifiedIncomeMinor":  computed.ClassifiedIncomeMinor,
 		"classifiedExpenseMinor": computed.ClassifiedExpenseMinor,
 		"transactionCount":       computed.TransactionCount, "manualEntryCount": computed.ManualEntryCount,
-		"uncategorizedCount": computed.UncategorizedCount, "categoryTotals": computed.CategoryTotals,
+		"uncategorizedCount": computed.UncategorizedCount,
+		"categorizedCount":   computed.CategorizedCount,
+		"refundMinor":        computed.RefundMinor, "refundCount": computed.RefundCount,
+		"transferInMinor": computed.TransferInMinor, "transferOutMinor": computed.TransferOutMinor,
+		"transferCount": computed.TransferCount, "categoryTotals": computed.CategoryTotals,
 		"generatedAt": computed.GeneratedAt, "emailDerived": true,
 	}
-	if stored, err := s.Store.GetStoredSummary(r.Context(), info.OwnerID, monthID); err == nil {
+	stored, storedErr := s.Store.GetStoredSummary(r.Context(), info.OwnerID, monthID)
+	switch {
+	case storedErr == nil:
+		switch {
+		case stored.InputRevision < computed.InputRevision:
+			freshness = "STALE"
+		case stored.InputRevision > computed.InputRevision:
+			freshness = "HISTORICAL"
+		}
+		response["freshness"] = freshness
 		response["payload"] = stored.Payload
 		response["storedInputRevision"] = stored.InputRevision
 		response["storedCoverage"] = stored.Coverage
 		response["storedUpdatedAt"] = stored.UpdatedAt
+	case !errors.Is(storedErr, store.ErrNotFound):
+		s.databaseOrInternal(w, r, storedErr)
+		return
 	}
 	writeJSON(w, http.StatusOK, response)
 }
@@ -489,6 +537,7 @@ func budgetJSON(plan store.BudgetPlan) map[string]any {
 		"monthId": plan.MonthID, "expectedIncomeMinor": plan.ExpectedIncomeMinor,
 		"plannedSavingsMinor": plan.PlannedSavingsMinor, "limits": plan.Limits,
 		"attributes": plan.Attributes, "revision": plan.Revision, "gapMinor": plan.GapMinor,
+		"totalLimitMinor": plan.TotalLimitMinor,
 		"createdAt": plan.CreatedAt, "updatedAt": plan.UpdatedAt,
 	}
 }
@@ -513,6 +562,9 @@ func (s *Server) mapWriteError(w http.ResponseWriter, r *http.Request, err error
 		writeError(w, http.StatusConflict, "deletion_in_progress", "A deletion request is in progress", correlationOf(r))
 	case errors.Is(err, store.ErrIdempotencyConflict):
 		writeError(w, http.StatusConflict, "idempotency_conflict", "This Idempotency-Key was already used with a different body", correlationOf(r))
+	case errors.Is(err, store.ErrInvalidCursor):
+		writeError(w, http.StatusBadRequest, "invalid_cursor",
+			"cursor was issued for a different query; restart from the first page", correlationOf(r))
 	default:
 		// Validation errors from the store are client errors, not 500s.
 		message := err.Error()

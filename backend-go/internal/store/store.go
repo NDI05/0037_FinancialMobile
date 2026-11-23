@@ -23,6 +23,7 @@ var (
 	ErrRevisionConflict    = errors.New("revision conflict")
 	ErrDeletionInProgress  = errors.New("deletion in progress")
 	ErrIdempotencyConflict = errors.New("idempotency key conflict")
+	ErrInvalidCursor       = errors.New("cursor does not match the current query")
 	ErrConsentChanged      = errors.New("consent changed")
 	ErrSessionStale        = errors.New("session no longer active")
 	ErrCrossOwner          = errors.New("object belongs to another owner")

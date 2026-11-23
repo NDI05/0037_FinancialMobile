@@ -176,6 +176,12 @@ type TransactionPage struct {
 	Truncated  bool
 }
 
+// searchScanWindow bounds how many decrypted rows one search page may inspect. Plain listing is
+// index-backed, but q filters plaintext that lives in the sealed payload, so it has to walk the
+// owner's rows. When the window is exhausted the page still returns a cursor anchored at the last
+// scanned row, so a caller can continue a long search instead of silently losing matches.
+const searchScanWindow = 2000
+
 func (s *Store) ListTransactions(ctx context.Context, ownerID, monthID, categoryID, direction, source, q string, limit int, cursor string) (TransactionPage, error) {
 	if limit <= 0 {
 		limit = 50
@@ -187,6 +193,7 @@ func (s *Store) ListTransactions(ctx context.Context, ownerID, monthID, category
 	if err != nil {
 		return TransactionPage{}, err
 	}
+	scope := cursorScope(ownerID, monthID, categoryID, direction, source, q)
 	args := []any{ownerID, start.UnixMilli(), end.UnixMilli()}
 	sqlText := `SELECT t.id, t.owner_id, COALESCE(t.category_id, ''), COALESCE(c.code, ''),
 		COALESCE(c.kind, 'UNCATEGORIZED'), t.direction, t.source, t.amount_minor, t.currency,
@@ -213,9 +220,14 @@ func (s *Store) ListTransactions(ctx context.Context, ownerID, monthID, category
 		args = append(args, source)
 	}
 	if cursor != "" {
-		ms, id, err := decodeCursor(cursor)
+		ms, id, cursorScopeValue, err := decodeCursor(cursor)
 		if err != nil {
-			return TransactionPage{}, err
+			return TransactionPage{}, ErrInvalidCursor
+		}
+		// A cursor is issued for one owner + month + filter/query combination. Reusing it with a
+		// different scope would skip or duplicate rows, so it is rejected instead of reinterpreted.
+		if cursorScopeValue != scope {
+			return TransactionPage{}, ErrInvalidCursor
 		}
 		sqlText += " AND (t.event_at_ms < ? OR (t.event_at_ms = ? AND t.id < ?))"
 		args = append(args, ms, ms, id)
@@ -223,7 +235,7 @@ func (s *Store) ListTransactions(ctx context.Context, ownerID, monthID, category
 	sqlText += " ORDER BY t.event_at_ms DESC, t.id DESC LIMIT ?"
 	fetchLimit := limit + 1
 	if q != "" {
-		fetchLimit = 2001
+		fetchLimit = searchScanWindow + 1
 	}
 	args = append(args, fetchLimit)
 	rows, err := s.DB.QueryContext(ctx, sqlText, args...)
@@ -232,34 +244,45 @@ func (s *Store) ListTransactions(ctx context.Context, ownerID, monthID, category
 	}
 	defer rows.Close()
 	page := TransactionPage{}
+	var lastScanned Transaction
+	full := false
 	for rows.Next() {
 		transaction, err := scanTransaction(ctx, rows, s, ownerID)
 		if err != nil {
 			return TransactionPage{}, err
 		}
 		page.Scanned++
+		lastScanned = transaction
 		if q != "" && !transactionMatches(transaction, q) {
 			continue
 		}
 		page.Items = append(page.Items, transaction)
 		if len(page.Items) > limit {
 			page.Items = page.Items[:limit]
+			full = true
 			break
 		}
 	}
 	if err := rows.Err(); err != nil {
 		return TransactionPage{}, err
 	}
-	if len(page.Items) == limit && q == "" {
-		last := page.Items[len(page.Items)-1]
-		page.NextCursor = encodeCursor(last.EventAt.UnixMilli(), last.ID)
-	}
-	if q != "" {
-		page.Truncated = page.Scanned >= 2000
-		if len(page.Items) == limit && !page.Truncated {
+	if q == "" {
+		// Scanned > limit means the extra probe row exists: only then is there a next page.
+		if full || page.Scanned > limit {
 			last := page.Items[len(page.Items)-1]
-			page.NextCursor = encodeCursor(last.EventAt.UnixMilli(), last.ID)
+			page.NextCursor = encodeCursor(last.EventAt.UnixMilli(), last.ID, scope)
 		}
+		return page, nil
+	}
+	// Search pages are filtered after decryption. A full page continues from the last returned
+	// item; an exhausted scan window continues from the last row that was actually inspected, so
+	// a match deeper in the month is still reachable on the next request.
+	if full {
+		last := page.Items[len(page.Items)-1]
+		page.NextCursor = encodeCursor(last.EventAt.UnixMilli(), last.ID, scope)
+	} else if page.Scanned > searchScanWindow {
+		page.Truncated = true
+		page.NextCursor = encodeCursor(lastScanned.EventAt.UnixMilli(), lastScanned.ID, scope)
 	}
 	return page, nil
 }
@@ -368,7 +391,11 @@ func (s *Store) UpdateTransaction(ctx context.Context, ownerID, id string, patch
 	return s.GetTransaction(ctx, ownerID, id)
 }
 
-func (s *Store) DeleteTransaction(ctx context.Context, ownerID, id string, now time.Time) error {
+// DeleteTransaction soft-deletes one row and its attachment metadata. expectedRevision is
+// optional: a negative value keeps the historical unconditional delete for older clients, while
+// 0 or greater makes the delete compare-and-swap so a stale client cannot delete a row it never
+// saw.
+func (s *Store) DeleteTransaction(ctx context.Context, ownerID, id string, expectedRevision int, now time.Time) error {
 	if err := s.ensureNoDeletion(ctx, ownerID); err != nil {
 		return err
 	}
@@ -378,15 +405,20 @@ func (s *Store) DeleteTransaction(ctx context.Context, ownerID, id string, now t
 	}
 	defer func() { _ = tx.Rollback() }()
 	var monthID string
-	if err := tx.QueryRowContext(ctx, `SELECT month_id FROM transactions
-		WHERE owner_id = ? AND id = ? AND deleted_at IS NULL`, ownerID, id).Scan(&monthID); err != nil {
+	var revision int
+	if err := tx.QueryRowContext(ctx, `SELECT month_id, revision FROM transactions
+		WHERE owner_id = ? AND id = ? AND deleted_at IS NULL`, ownerID, id).Scan(&monthID, &revision); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrNotFound
 		}
 		return err
 	}
+	if expectedRevision >= 0 && revision != expectedRevision {
+		return ErrRevisionConflict
+	}
 	if _, err := tx.ExecContext(ctx, `UPDATE transactions SET deleted_at = ?, revision = revision + 1,
-		updated_at = ? WHERE owner_id = ? AND id = ?`, nowString(now), nowString(now), ownerID, id); err != nil {
+		updated_at = ? WHERE owner_id = ? AND id = ? AND deleted_at IS NULL`,
+		nowString(now), nowString(now), ownerID, id); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE attachments SET deleted_at = ?, revision = revision + 1,
@@ -467,24 +499,36 @@ func transactionMatches(t Transaction, q string) bool {
 	return strings.Contains(strings.ToLower(string(attributes)), needle)
 }
 
-func encodeCursor(ms int64, id string) string {
-	return base64.RawURLEncoding.EncodeToString([]byte(strconv.FormatInt(ms, 10) + "|" + id))
+// cursorScope binds a cursor to the exact query that produced it: owner, month and every filter
+// that changes the result set. The q text is hashed, not embedded, so a cursor never echoes a
+// private search term.
+func cursorScope(ownerID, monthID, categoryID, direction, source, q string) string {
+	sum := sha256.Sum256([]byte(strings.Join([]string{ownerID, monthID, categoryID,
+		direction, source, strings.ToLower(strings.TrimSpace(q))}, "\x00")))
+	return hex.EncodeToString(sum[:8])
 }
 
-func decodeCursor(cursor string) (int64, string, error) {
+func encodeCursor(ms int64, id, scope string) string {
+	raw := strconv.FormatInt(ms, 10) + "|" + id + "|" + scope
+	return base64.RawURLEncoding.EncodeToString([]byte(raw))
+}
+
+func decodeCursor(cursor string) (int64, string, string, error) {
 	raw, err := base64.RawURLEncoding.DecodeString(cursor)
 	if err != nil {
-		return 0, "", fmt.Errorf("invalid cursor")
+		return 0, "", "", fmt.Errorf("invalid cursor")
 	}
-	parts := strings.SplitN(string(raw), "|", 2)
-	if len(parts) != 2 {
-		return 0, "", fmt.Errorf("invalid cursor")
+	// Exactly three fields are required. A legacy two-field cursor is not silently upgraded
+	// because it carries no scope and could otherwise be replayed against different filters.
+	parts := strings.Split(string(raw), "|")
+	if len(parts) != 3 || len(parts[1]) == 0 || len(parts[2]) != 16 {
+		return 0, "", "", fmt.Errorf("invalid cursor")
 	}
 	ms, err := strconv.ParseInt(parts[0], 10, 64)
 	if err != nil {
-		return 0, "", fmt.Errorf("invalid cursor")
+		return 0, "", "", fmt.Errorf("invalid cursor")
 	}
-	return ms, parts[1], nil
+	return ms, parts[1], parts[2], nil
 }
 
 func nullableString(value string) any {

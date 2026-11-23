@@ -29,8 +29,17 @@ type Totals struct {
 	TransactionCount       int
 	ManualCount            int
 	UncategorizedCount     int
-	CategoryTotals         map[string]int64
-	CategoryCounts         map[string]int
+	CategorizedCount       int
+	// RefundMinor/RefundCount cover credits explicitly linked to an expense row. They are also
+	// reflected in gross inflow and in the linked category total, so clients must not add them
+	// to an income total a second time.
+	RefundMinor      int64
+	RefundCount      int
+	TransferInMinor  int64
+	TransferOutMinor int64
+	TransferCount    int
+	CategoryTotals   map[string]int64
+	CategoryCounts   map[string]int
 }
 
 // Compute implements BR-02/BR-03/BR-04:
@@ -57,6 +66,16 @@ func Compute(entries []Entry) Totals {
 		}
 		if entry.CategoryKind == "UNCATEGORIZED" || entry.CategoryCode == "" {
 			totals.UncategorizedCount++
+		} else {
+			totals.CategorizedCount++
+		}
+		if entry.IsInternalTransfer {
+			totals.TransferCount++
+			if entry.Direction == "CREDIT" {
+				totals.TransferInMinor += entry.AmountMinor
+			} else {
+				totals.TransferOutMinor += entry.AmountMinor
+			}
 		}
 		switch entry.Direction {
 		case "CREDIT":
@@ -67,6 +86,8 @@ func Compute(entries []Entry) Totals {
 			if entry.LinkedRefundOf != "" {
 				if linked, ok := byID[entry.LinkedRefundOf]; ok && linked.CategoryKind == "EXPENSE" {
 					totals.CategoryTotals[linked.CategoryCode] -= entry.AmountMinor
+					totals.RefundMinor += entry.AmountMinor
+					totals.RefundCount++
 				}
 			}
 		case "DEBIT":

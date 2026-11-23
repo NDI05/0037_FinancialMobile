@@ -103,9 +103,18 @@ func Build(ctx context.Context, s *store.Store, ownerID, monthID string) (Snapsh
 	if err != nil {
 		return Snapshot{}, err
 	}
-	categories, err := s.ListCategories(ctx, ownerID, "")
-	if err != nil {
-		return Snapshot{}, err
+	var categories []store.Category
+	cursor := ""
+	for {
+		page, err := s.ListCategories(ctx, ownerID, "", 100, cursor)
+		if err != nil {
+			return Snapshot{}, err
+		}
+		categories = append(categories, page.Items...)
+		if page.NextCursor == "" {
+			break
+		}
+		cursor = page.NextCursor
 	}
 	kinds := make(map[string]string, len(categories))
 	for _, category := range categories {
