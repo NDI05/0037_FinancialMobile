@@ -22,17 +22,17 @@ var ErrLeaseLost = errors.New("category job lease lost")
 // CategoryJob is one durable classification attempt for an owner-scoped transaction at a fixed
 // revision. LeaseUntil guards run ownership for recovery; RetryCount bounds transient retries.
 type CategoryJob struct {
-	ID, OwnerID, TransactionID string
-	ExpectedRevision int
-	State string
-	CategoryCode string
-	Confidence float64
+	ID, OwnerID, TransactionID                                             string
+	ExpectedRevision                                                       int
+	State                                                                  string
+	CategoryCode                                                           string
+	Confidence                                                             float64
 	Provider, Model, PromptVersion, TaxonomyVersion, ReasonCode, ErrorCode string
 	// LeaseToken is minted on every claim/reclaim. Writers pass it back so only the holder at that
 	// moment may finish, requeue, apply a category or store a provider result for the job.
-	LeaseToken string
-	LeaseUntil *time.Time
-	RetryCount int
+	LeaseToken           string
+	LeaseUntil           *time.Time
+	RetryCount           int
 	CreatedAt, UpdatedAt time.Time
 }
 
@@ -44,9 +44,11 @@ func (s *Store) CategoryCacheGet(ctx context.Context, ownerID, key, direction, m
 	var review int
 	err := s.DB.QueryRowContext(ctx, `SELECT category_code, needs_review, reason_code FROM category_cache
 		WHERE owner_id=? AND cache_key=? AND direction=? AND method=? AND taxonomy_version=? AND model=? AND prompt_version=? AND mapping_version=?`,
-		ownerID,key,direction,method,taxonomy,model,prompt,mappingVersion).Scan(&code,&review,&reason)
-	if errors.Is(err, sql.ErrNoRows) { return "",false,"",nil }
-	return code, review==1, reason, err
+		ownerID, key, direction, method, taxonomy, model, prompt, mappingVersion).Scan(&code, &review, &reason)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, "", nil
+	}
+	return code, review == 1, reason, err
 }
 
 // CategoryCachePut stores a provider result only while the writer still holds the job lease. A
@@ -54,18 +56,24 @@ func (s *Store) CategoryCacheGet(ctx context.Context, ownerID, key, direction, m
 // store the same merchant result under its own lease.
 func (s *Store) CategoryCachePut(ctx context.Context, ownerID, jobID, leaseToken, key, direction, method, taxonomy, model, prompt, mappingVersion, code, reason string, review bool, now time.Time) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
-	if err != nil { return err }
-	defer func(){ _ = tx.Rollback() }()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
 	held, err := s.leaseHeld(ctx, tx, ownerID, jobID, leaseToken, now)
-	if err != nil { return err }
-	if !held { return tx.Commit() }
+	if err != nil {
+		return err
+	}
+	if !held {
+		return tx.Commit()
+	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO category_cache
 		(owner_id,cache_key,direction,method,taxonomy_version,model,prompt_version,mapping_version,category_code,needs_review,reason_code,updated_at)
 		VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT(owner_id,cache_key,taxonomy_version,model,prompt_version) DO UPDATE SET
 		mapping_version=excluded.mapping_version,category_code=excluded.category_code,
 		needs_review=excluded.needs_review,reason_code=excluded.reason_code,updated_at=excluded.updated_at`,
-		ownerID,key,direction,method,taxonomy,model,prompt,mappingVersion,code,boolInt(review),reason,nowString(now)); err != nil {
+		ownerID, key, direction, method, taxonomy, model, prompt, mappingVersion, code, boolInt(review), reason, nowString(now)); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -84,12 +92,15 @@ func (s *Store) leaseHeld(ctx context.Context, q rowQueryer, ownerID, jobID, lea
 	err := q.QueryRowContext(ctx, `SELECT 1 FROM category_jobs
 		WHERE owner_id=? AND id=? AND state='RUNNING' AND lease_token=? AND lease_until_unix > ?`,
 		ownerID, jobID, leaseToken, now.UnixMilli()).Scan(&one)
-	if errors.Is(err, sql.ErrNoRows) { return false, nil }
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
 	return err == nil, err
 }
 
 func CacheKey(merchant, direction, method string) string {
-	sum:=sha256.Sum256([]byte(merchant+"\x1f"+direction+"\x1f"+method)); return hex.EncodeToString(sum[:])
+	sum := sha256.Sum256([]byte(merchant + "\x1f" + direction + "\x1f" + method))
+	return hex.EncodeToString(sum[:])
 }
 
 // ReserveCategoryCall atomically checks owner/installation attempts plus global daily/monthly
@@ -97,33 +108,55 @@ func CacheKey(merchant, direction, method string) string {
 // buckets captured here, so crossing midnight/month-end cannot hide spend.
 func (s *Store) ReserveCategoryCall(ctx context.Context, ownerID string, ownerCap, installCap int,
 	dailyCap, monthlyCap, reserveUSD float64, now time.Time) (string, bool, error) {
-	day,_:=JakartaBuckets(now); month:=day[:7]
-	tx,err:=s.DB.BeginTx(ctx,nil); if err!=nil{return "",false,err}; defer func(){_=tx.Rollback()}()
-	type bound struct{ scope,bucket string; capAttempts int; capUSD float64 }
-	bounds:=[]bound{
-		{ownerID,"day:"+day,ownerCap,dailyCap},
-		{ownerID,"month:"+month,0,monthlyCap},
-		{"*","day:"+day,installCap,dailyCap},
-		{"*","month:"+month,0,monthlyCap},
+	day, _ := JakartaBuckets(now)
+	month := day[:7]
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return "", false, err
 	}
-	for _,b:=range bounds {
-		var attempts int; var reserved,actual float64
-		err:=tx.QueryRowContext(ctx,`SELECT attempts,reserved_usd,actual_usd FROM category_usage WHERE scope=? AND bucket=?`,b.scope,b.bucket).Scan(&attempts,&reserved,&actual)
-		if err!=nil && !errors.Is(err,sql.ErrNoRows){return "",false,err}
-		if b.capAttempts>0 && attempts>=b.capAttempts{return "",false,nil}
-		if b.capUSD>0 && actual+reserved+reserveUSD>b.capUSD+1e-12{return "",false,nil}
+	defer func() { _ = tx.Rollback() }()
+	type bound struct {
+		scope, bucket string
+		capAttempts   int
+		capUSD        float64
 	}
-	for _,b:=range bounds {
-		if _,err:=tx.ExecContext(ctx,`INSERT INTO category_usage(scope,bucket,attempts,reserved_usd,actual_usd) VALUES(?,?,1,?,0)
+	bounds := []bound{
+		{ownerID, "day:" + day, ownerCap, dailyCap},
+		{ownerID, "month:" + month, 0, monthlyCap},
+		{"*", "day:" + day, installCap, dailyCap},
+		{"*", "month:" + month, 0, monthlyCap},
+	}
+	for _, b := range bounds {
+		var attempts int
+		var reserved, actual float64
+		err := tx.QueryRowContext(ctx, `SELECT attempts,reserved_usd,actual_usd FROM category_usage WHERE scope=? AND bucket=?`, b.scope, b.bucket).Scan(&attempts, &reserved, &actual)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return "", false, err
+		}
+		if b.capAttempts > 0 && attempts >= b.capAttempts {
+			return "", false, nil
+		}
+		if b.capUSD > 0 && actual+reserved+reserveUSD > b.capUSD+1e-12 {
+			return "", false, nil
+		}
+	}
+	for _, b := range bounds {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO category_usage(scope,bucket,attempts,reserved_usd,actual_usd) VALUES(?,?,1,?,0)
 			ON CONFLICT(scope,bucket) DO UPDATE SET attempts=category_usage.attempts+1,reserved_usd=category_usage.reserved_usd+excluded.reserved_usd`,
-			b.scope,b.bucket,reserveUSD);err!=nil{return "",false,err}
+			b.scope, b.bucket, reserveUSD); err != nil {
+			return "", false, err
+		}
 	}
-	id:=NewID("catres")
-	if _,err:=tx.ExecContext(ctx,`INSERT INTO category_reservations
+	id := NewID("catres")
+	if _, err := tx.ExecContext(ctx, `INSERT INTO category_reservations
 		(id,owner_id,day_bucket,month_bucket,reserve_usd,estimated_usd,actual_usd,usage_unknown,state,created_at)
-		VALUES(?,?,?,?,?,?,0,0,'RESERVED',?)`,id,ownerID,day,month,reserveUSD,reserveUSD,nowString(now));err!=nil{return "",false,err}
-	if err:=tx.Commit();err!=nil{return "",false,err}
-	return id,true,nil
+		VALUES(?,?,?,?,?,?,0,0,'RESERVED',?)`, id, ownerID, day, month, reserveUSD, reserveUSD, nowString(now)); err != nil {
+		return "", false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return "", false, err
+	}
+	return id, true, nil
 }
 
 // SettleCategoryReservation replaces the conservative reservation with measured/estimated cost.
@@ -136,9 +169,16 @@ func (s *Store) ReserveCategoryCall(ctx context.Context, ownerID string, ownerCa
 //     same reservation apply the cost deltas exactly once; the loser is a no-op.
 func (s *Store) SettleCategoryReservation(ctx context.Context, ownerID, reservationID string,
 	estimatedUSD, actualUSD float64, usageKnown bool, now time.Time) error {
-	tx,err:=s.DB.BeginTx(ctx,nil); if err!=nil{return err}; defer func(){_=tx.Rollback()}()
-	var day,month,state string; var reserve float64
-	if err:=tx.QueryRowContext(ctx,`SELECT day_bucket,month_bucket,reserve_usd,state FROM category_reservations WHERE id=? AND owner_id=?`,reservationID,ownerID).Scan(&day,&month,&reserve,&state);err!=nil{return err}
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var day, month, state string
+	var reserve float64
+	if err := tx.QueryRowContext(ctx, `SELECT day_bucket,month_bucket,reserve_usd,state FROM category_reservations WHERE id=? AND owner_id=?`, reservationID, ownerID).Scan(&day, &month, &reserve, &state); err != nil {
+		return err
+	}
 	switch state {
 	case "SETTLED", "UNKNOWN":
 		// Terminal: replaying must not charge again, and there is nothing to reconcile here.
@@ -147,20 +187,30 @@ func (s *Store) SettleCategoryReservation(ctx context.Context, ownerID, reservat
 	default:
 		return fmt.Errorf("category reservation %s in unexpected state %q", reservationID, state)
 	}
-	settled:=actualUSD; if !usageKnown { settled=reserve }
-	nextState:="SETTLED"; if !usageKnown { nextState="UNKNOWN" }
-	res,err:=tx.ExecContext(ctx,`UPDATE category_reservations
+	settled := actualUSD
+	if !usageKnown {
+		settled = reserve
+	}
+	nextState := "SETTLED"
+	if !usageKnown {
+		nextState = "UNKNOWN"
+	}
+	res, err := tx.ExecContext(ctx, `UPDATE category_reservations
 		SET estimated_usd=?,actual_usd=?,usage_unknown=?,state=?,settled_at=?
 		WHERE id=? AND owner_id=? AND state='RESERVED'`,
-		estimatedUSD,settled,boolInt(!usageKnown),nextState,nowString(now),reservationID,ownerID)
-	if err!=nil{return err}
-	n,_:=res.RowsAffected()
-	if n!=1 {
+		estimatedUSD, settled, boolInt(!usageKnown), nextState, nowString(now), reservationID, ownerID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n != 1 {
 		// Another transaction settled (or terminal) first: exactly-once means we do no cost deltas.
 		return tx.Commit()
 	}
-	for _,b:=range []struct{scope,bucket string}{{ownerID,"day:"+day},{ownerID,"month:"+month},{"*","day:"+day},{"*","month:"+month}} {
-		if _,err:=tx.ExecContext(ctx,`UPDATE category_usage SET reserved_usd=MAX(0,reserved_usd-?), actual_usd=actual_usd+? WHERE scope=? AND bucket=?`,reserve,settled,b.scope,b.bucket);err!=nil{return err}
+	for _, b := range []struct{ scope, bucket string }{{ownerID, "day:" + day}, {ownerID, "month:" + month}, {"*", "day:" + day}, {"*", "month:" + month}} {
+		if _, err := tx.ExecContext(ctx, `UPDATE category_usage SET reserved_usd=MAX(0,reserved_usd-?), actual_usd=actual_usd+? WHERE scope=? AND bucket=?`, reserve, settled, b.scope, b.bucket); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }
@@ -171,21 +221,38 @@ func (s *Store) SettleCategoryReservation(ctx context.Context, ownerID, reservat
 // concurrent reconciliations are exactly-once no-ops after the first winner.
 func (s *Store) ReconcileCategoryReservation(ctx context.Context, ownerID, reservationID string,
 	measuredUSD float64, now time.Time) error {
-	tx,err:=s.DB.BeginTx(ctx,nil); if err!=nil{return err}; defer func(){_=tx.Rollback()}()
-	var day,month,state string; var reserve,priorActual float64
-	if err:=tx.QueryRowContext(ctx,`SELECT day_bucket,month_bucket,reserve_usd,actual_usd,state FROM category_reservations WHERE id=? AND owner_id=?`,reservationID,ownerID).Scan(&day,&month,&reserve,&priorActual,&state);err!=nil{return err}
-	if state=="SETTLED" { return tx.Commit() } // already settled (with or without known usage)
-	if state!="UNKNOWN" { return fmt.Errorf("category reservation %s cannot be reconciled in state %q", reservationID, state) }
-	res,err:=tx.ExecContext(ctx,`UPDATE category_reservations
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var day, month, state string
+	var reserve, priorActual float64
+	if err := tx.QueryRowContext(ctx, `SELECT day_bucket,month_bucket,reserve_usd,actual_usd,state FROM category_reservations WHERE id=? AND owner_id=?`, reservationID, ownerID).Scan(&day, &month, &reserve, &priorActual, &state); err != nil {
+		return err
+	}
+	if state == "SETTLED" {
+		return tx.Commit()
+	} // already settled (with or without known usage)
+	if state != "UNKNOWN" {
+		return fmt.Errorf("category reservation %s cannot be reconciled in state %q", reservationID, state)
+	}
+	res, err := tx.ExecContext(ctx, `UPDATE category_reservations
 		SET estimated_usd=?,actual_usd=?,usage_unknown=0,state='SETTLED',settled_at=?
 		WHERE id=? AND owner_id=? AND state='UNKNOWN'`,
-		measuredUSD,measuredUSD,nowString(now),reservationID,ownerID)
-	if err!=nil{return err}
-	n,_:=res.RowsAffected()
-	if n!=1 { return tx.Commit() } // a concurrent reconciliation won; do not double-apply the delta
-	delta:=measuredUSD-priorActual
-	for _,b:=range []struct{scope,bucket string}{{ownerID,"day:"+day},{ownerID,"month:"+month},{"*","day:"+day},{"*","month:"+month}} {
-		if _,err:=tx.ExecContext(ctx,`UPDATE category_usage SET actual_usd=MAX(0,actual_usd+?) WHERE scope=? AND bucket=?`,delta,b.scope,b.bucket);err!=nil{return err}
+		measuredUSD, measuredUSD, nowString(now), reservationID, ownerID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n != 1 {
+		return tx.Commit()
+	} // a concurrent reconciliation won; do not double-apply the delta
+	delta := measuredUSD - priorActual
+	for _, b := range []struct{ scope, bucket string }{{ownerID, "day:" + day}, {ownerID, "month:" + month}, {"*", "day:" + day}, {"*", "month:" + month}} {
+		if _, err := tx.ExecContext(ctx, `UPDATE category_usage SET actual_usd=MAX(0,actual_usd+?) WHERE scope=? AND bucket=?`, delta, b.scope, b.bucket); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }
@@ -202,21 +269,35 @@ func (s *Store) ReconcileCategoryReservation(ctx context.Context, ownerID, reser
 func (s *Store) SweepOrphanCategoryReservations(ctx context.Context, createdBefore time.Time, now time.Time) (int, error) {
 	rows, err := s.DB.QueryContext(ctx, `SELECT id, owner_id, day_bucket, month_bucket, reserve_usd
 		FROM category_reservations WHERE state='RESERVED' AND created_at < ? ORDER BY created_at`, nowString(createdBefore))
-	if err != nil { return 0, err }
-	type orphan struct{ id, owner, day, month string; reserve float64 }
+	if err != nil {
+		return 0, err
+	}
+	type orphan struct {
+		id, owner, day, month string
+		reserve               float64
+	}
 	var orphans []orphan
 	for rows.Next() {
 		var o orphan
-		if err := rows.Scan(&o.id, &o.owner, &o.day, &o.month, &o.reserve); err != nil { rows.Close(); return 0, err }
+		if err := rows.Scan(&o.id, &o.owner, &o.day, &o.month, &o.reserve); err != nil {
+			rows.Close()
+			return 0, err
+		}
 		orphans = append(orphans, o)
 	}
 	rows.Close()
-	if err := rows.Err(); err != nil { return 0, err }
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
 	swept := 0
 	for _, o := range orphans {
 		done, err := s.sweepOrphanReservation(ctx, o.id, o.owner, o.day, o.month, o.reserve, now)
-		if err != nil { return swept, err }
-		if done { swept++ }
+		if err != nil {
+			return swept, err
+		}
+		if done {
+			swept++
+		}
 	}
 	return swept, nil
 }
@@ -224,12 +305,16 @@ func (s *Store) SweepOrphanCategoryReservations(ctx context.Context, createdBefo
 // sweepOrphanReservation performs the conditional transition and every counter delta atomically.
 func (s *Store) sweepOrphanReservation(ctx context.Context, id, owner, day, month string, reserve float64, now time.Time) (bool, error) {
 	tx, err := s.DB.BeginTx(ctx, nil)
-	if err != nil { return false, err }
-	defer func(){ _ = tx.Rollback() }()
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = tx.Rollback() }()
 	res, err := tx.ExecContext(ctx, `UPDATE category_reservations
 		SET estimated_usd=?,actual_usd=?,usage_unknown=1,state='UNKNOWN',settled_at=?
 		WHERE id=? AND state='RESERVED'`, reserve, reserve, nowString(now), id)
-	if err != nil { return false, err }
+	if err != nil {
+		return false, err
+	}
 	if n, _ := res.RowsAffected(); n != 1 {
 		// Settled (or reconciled) in-flight: not an orphan. Nothing to adjust.
 		return false, tx.Commit()
@@ -240,28 +325,39 @@ func (s *Store) sweepOrphanReservation(ctx context.Context, id, owner, day, mont
 			return false, err
 		}
 	}
-	if err := tx.Commit(); err != nil { return false, err }
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
 	return true, nil
 }
 
-func (s *Store) CreateCategoryJob(ctx context.Context, ownerID, transactionID string, revision int, now time.Time) (CategoryJob,error) {
-	id:=NewID("catjob")
-	_,err:=s.DB.ExecContext(ctx,`INSERT INTO category_jobs(id,owner_id,transaction_id,expected_revision,state,created_at,updated_at)
+func (s *Store) CreateCategoryJob(ctx context.Context, ownerID, transactionID string, revision int, now time.Time) (CategoryJob, error) {
+	id := NewID("catjob")
+	_, err := s.DB.ExecContext(ctx, `INSERT INTO category_jobs(id,owner_id,transaction_id,expected_revision,state,created_at,updated_at)
 		VALUES(?,?,?,?,'PENDING',?,?) ON CONFLICT(owner_id,transaction_id,expected_revision) DO NOTHING`,
-		id,ownerID,transactionID,revision,nowString(now),nowString(now)); if err!=nil{return CategoryJob{},err}
-	row:=s.DB.QueryRowContext(ctx,categoryJobColumns+`WHERE owner_id=? AND transaction_id=? AND expected_revision=?`,ownerID,transactionID,revision)
+		id, ownerID, transactionID, revision, nowString(now), nowString(now))
+	if err != nil {
+		return CategoryJob{}, err
+	}
+	row := s.DB.QueryRowContext(ctx, categoryJobColumns+`WHERE owner_id=? AND transaction_id=? AND expected_revision=?`, ownerID, transactionID, revision)
 	return scanCategoryJob(row)
 }
 
 // ClaimCategoryJob atomically moves one PENDING job to RUNNING under a fresh lease token. Duplicate
 // taps lose the claim and must replay the existing job rather than call the provider again. The
 // returned token is the caller's only proof of ownership for every later write.
-func (s *Store) ClaimCategoryJob(ctx context.Context, ownerID, id string, now time.Time, lease time.Duration) (string,bool,error) {
-	token:=NewID("catlease")
-	res,err:=s.DB.ExecContext(ctx,`UPDATE category_jobs SET state='RUNNING',lease_token=?,lease_until=?,lease_until_unix=?,updated_at=?
+func (s *Store) ClaimCategoryJob(ctx context.Context, ownerID, id string, now time.Time, lease time.Duration) (string, bool, error) {
+	token := NewID("catlease")
+	res, err := s.DB.ExecContext(ctx, `UPDATE category_jobs SET state='RUNNING',lease_token=?,lease_until=?,lease_until_unix=?,updated_at=?
 		WHERE owner_id=? AND id=? AND state='PENDING'`,
-		token,nowString(now.Add(lease)),now.Add(lease).UnixMilli(),nowString(now),ownerID,id)
-	if err!=nil{return "",false,err}; if n,_:=res.RowsAffected(); n!=1{return "",false,nil}; return token,true,nil
+		token, nowString(now.Add(lease)), now.Add(lease).UnixMilli(), nowString(now), ownerID, id)
+	if err != nil {
+		return "", false, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return "", false, nil
+	}
+	return token, true, nil
 }
 
 // ClaimCategoryJobsForRecovery reclaims due PENDING jobs and RUNNING jobs whose lease expired (the
@@ -269,48 +365,77 @@ func (s *Store) ClaimCategoryJob(ctx context.Context, ownerID, id string, now ti
 // reclaimed: the queue window belongs to the row, so a recovery tick cannot shortcut the batching
 // target. Each reclaim is a conditional UPDATE, so a live worker with an unexpired lease cannot lose
 // its job to this sweep.
-func (s *Store) ClaimCategoryJobsForRecovery(ctx context.Context, now time.Time, lease time.Duration, limit int) ([]CategoryJob,error) {
-	rows,err:=s.DB.QueryContext(ctx,`SELECT owner_id,id FROM category_jobs
+func (s *Store) ClaimCategoryJobsForRecovery(ctx context.Context, now time.Time, lease time.Duration, limit int) ([]CategoryJob, error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT owner_id,id FROM category_jobs
 		WHERE (state='PENDING' AND due_at_unix <= ?)
 		   OR (state='RUNNING' AND (lease_until_unix IS NULL OR lease_until_unix <= ?))
-		ORDER BY created_at LIMIT ?`,now.UnixMilli(),now.UnixMilli(),limit)
-	if err!=nil{return nil,err}
-	type ref struct{ owner,id string }
+		ORDER BY created_at LIMIT ?`, now.UnixMilli(), now.UnixMilli(), limit)
+	if err != nil {
+		return nil, err
+	}
+	type ref struct{ owner, id string }
 	var refs []ref
-	for rows.Next(){ var r ref; if err:=rows.Scan(&r.owner,&r.id);err!=nil{rows.Close();return nil,err}; refs=append(refs,r) }
-	rows.Close(); if err:=rows.Err();err!=nil{return nil,err}
+	for rows.Next() {
+		var r ref
+		if err := rows.Scan(&r.owner, &r.id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		refs = append(refs, r)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	var out []CategoryJob
-	for _,r:=range refs {
-		token:=NewID("catlease")
-		res,err:=s.DB.ExecContext(ctx,`UPDATE category_jobs SET state='RUNNING',lease_token=?,lease_until=?,lease_until_unix=?,updated_at=?
+	for _, r := range refs {
+		token := NewID("catlease")
+		res, err := s.DB.ExecContext(ctx, `UPDATE category_jobs SET state='RUNNING',lease_token=?,lease_until=?,lease_until_unix=?,updated_at=?
 			WHERE owner_id=? AND id=? AND ((state='PENDING' AND due_at_unix <= ?)
 			   OR (state='RUNNING' AND (lease_until_unix IS NULL OR lease_until_unix <= ?)))`,
-			token,nowString(now.Add(lease)),now.Add(lease).UnixMilli(),nowString(now),r.owner,r.id,now.UnixMilli(),now.UnixMilli())
-		if err!=nil{return out,err}
-		n,_:=res.RowsAffected(); if n!=1{continue}
-		job,err:=s.GetCategoryJob(ctx,r.owner,r.id); if err!=nil{return out,err}
-		out=append(out,job)
+			token, nowString(now.Add(lease)), now.Add(lease).UnixMilli(), nowString(now), r.owner, r.id, now.UnixMilli(), now.UnixMilli())
+		if err != nil {
+			return out, err
+		}
+		n, _ := res.RowsAffected()
+		if n != 1 {
+			continue
+		}
+		job, err := s.GetCategoryJob(ctx, r.owner, r.id)
+		if err != nil {
+			return out, err
+		}
+		out = append(out, job)
 	}
-	return out,nil
+	return out, nil
 }
 
 // RequeueCategoryJob returns a RUNNING job to PENDING for a bounded transient retry or a graceful
 // shutdown. retry_count increments so the policy can stop after one retry.
-func (s *Store) RequeueCategoryJob(ctx context.Context, ownerID, id, leaseToken string, now time.Time) (CategoryJob,error) {
-	res,err:=s.DB.ExecContext(ctx,`UPDATE category_jobs SET state='PENDING',lease_token='',lease_until=NULL,lease_until_unix=NULL,retry_count=retry_count+1,updated_at=?
+func (s *Store) RequeueCategoryJob(ctx context.Context, ownerID, id, leaseToken string, now time.Time) (CategoryJob, error) {
+	res, err := s.DB.ExecContext(ctx, `UPDATE category_jobs SET state='PENDING',lease_token='',lease_until=NULL,lease_until_unix=NULL,retry_count=retry_count+1,updated_at=?
 		WHERE owner_id=? AND id=? AND state='RUNNING' AND lease_token=? AND lease_until_unix > ?`,
-		nowString(now),ownerID,id,leaseToken,now.UnixMilli())
-	if err!=nil{return CategoryJob{},err}
-	n,_:=res.RowsAffected(); if n!=1{return CategoryJob{},s.jobWriteRefusal(ctx,ownerID,id)}
-	return s.GetCategoryJob(ctx,ownerID,id)
+		nowString(now), ownerID, id, leaseToken, now.UnixMilli())
+	if err != nil {
+		return CategoryJob{}, err
+	}
+	n, _ := res.RowsAffected()
+	if n != 1 {
+		return CategoryJob{}, s.jobWriteRefusal(ctx, ownerID, id)
+	}
+	return s.GetCategoryJob(ctx, ownerID, id)
 }
 
 // jobWriteRefusal distinguishes "the row is gone / not mine" from "a recovery worker owns it now".
 func (s *Store) jobWriteRefusal(ctx context.Context, ownerID, id string) error {
 	var one int
 	err := s.DB.QueryRowContext(ctx, `SELECT 1 FROM category_jobs WHERE owner_id=? AND id=?`, ownerID, id).Scan(&one)
-	if errors.Is(err, sql.ErrNoRows) { return ErrNotFound }
-	if err != nil { return err }
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
 	return ErrLeaseLost
 }
 
@@ -320,11 +445,13 @@ const categoryJobColumns = `SELECT id,owner_id,transaction_id,expected_revision,
 	COALESCE(error_code,''),COALESCE(lease_token,''),COALESCE(lease_until,''),COALESCE(retry_count,0),created_at,updated_at
 	FROM category_jobs `
 
-func (s *Store) GetCategoryJob(ctx context.Context, ownerID,id string)(CategoryJob,error){
-	row:=s.DB.QueryRowContext(ctx,categoryJobColumns+`WHERE owner_id=? AND id=?`,ownerID,id)
-	job,err:=scanCategoryJob(row)
-	if errors.Is(err,sql.ErrNoRows){return CategoryJob{},ErrNotFound}
-	return job,err
+func (s *Store) GetCategoryJob(ctx context.Context, ownerID, id string) (CategoryJob, error) {
+	row := s.DB.QueryRowContext(ctx, categoryJobColumns+`WHERE owner_id=? AND id=?`, ownerID, id)
+	job, err := scanCategoryJob(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return CategoryJob{}, ErrNotFound
+	}
+	return job, err
 }
 
 // ResetFailedCategoryJob makes an explicit user retry possible: a terminal FAILED job at the same
@@ -347,18 +474,35 @@ func (s *Store) ResetFailedCategoryJob(ctx context.Context, ownerID, id string, 
 // FinishCategoryJob moves a job to a terminal state only while the caller still holds the lease it
 // was granted. Lease loss returns ErrLeaseLost and the row is left untouched, so a stale worker can
 // never overwrite the terminal state written by the worker that reclaimed it.
-func (s *Store) FinishCategoryJob(ctx context.Context, ownerID,id,leaseToken,state,code,reason,errorCode,provider,model,prompt,taxonomy string,confidence float64,now time.Time) error {
-	res,err:=s.DB.ExecContext(ctx,`UPDATE category_jobs SET state=?,category_code=?,confidence=?,provider=?,model=?,prompt_version=?,taxonomy_version=?,reason_code=?,error_code=?,lease_until=NULL,lease_until_unix=NULL,lease_token='',updated_at=?
+func (s *Store) FinishCategoryJob(ctx context.Context, ownerID, id, leaseToken, state, code, reason, errorCode, provider, model, prompt, taxonomy string, confidence float64, now time.Time) error {
+	res, err := s.DB.ExecContext(ctx, `UPDATE category_jobs SET state=?,category_code=?,confidence=?,provider=?,model=?,prompt_version=?,taxonomy_version=?,reason_code=?,error_code=?,lease_until=NULL,lease_until_unix=NULL,lease_token='',updated_at=?
 		WHERE owner_id=? AND id=? AND state='RUNNING' AND lease_token=? AND lease_until_unix > ?`,
-		state,code,confidence,provider,model,prompt,taxonomy,reason,errorCode,nowString(now),ownerID,id,leaseToken,now.UnixMilli())
-	if err!=nil{return err}; n,_:=res.RowsAffected(); if n!=1{return s.jobWriteRefusal(ctx,ownerID,id)}; return nil
+		state, code, confidence, provider, model, prompt, taxonomy, reason, errorCode, nowString(now), ownerID, id, leaseToken, now.UnixMilli())
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n != 1 {
+		return s.jobWriteRefusal(ctx, ownerID, id)
+	}
+	return nil
 }
 
-func scanCategoryJob(row rowScanner)(CategoryJob,error){
-	var j CategoryJob; var created,updated,lease string; var retry int
-	if err:=row.Scan(&j.ID,&j.OwnerID,&j.TransactionID,&j.ExpectedRevision,&j.State,&j.CategoryCode,&j.Confidence,&j.Provider,&j.Model,&j.PromptVersion,&j.TaxonomyVersion,&j.ReasonCode,&j.ErrorCode,&j.LeaseToken,&lease,&retry,&created,&updated);err!=nil{return CategoryJob{},err}
-	if lease!=""{t:=parseTime(lease); j.LeaseUntil=&t}
-	j.RetryCount=retry; j.CreatedAt=parseTime(created); j.UpdatedAt=parseTime(updated); return j,nil
+func scanCategoryJob(row rowScanner) (CategoryJob, error) {
+	var j CategoryJob
+	var created, updated, lease string
+	var retry int
+	if err := row.Scan(&j.ID, &j.OwnerID, &j.TransactionID, &j.ExpectedRevision, &j.State, &j.CategoryCode, &j.Confidence, &j.Provider, &j.Model, &j.PromptVersion, &j.TaxonomyVersion, &j.ReasonCode, &j.ErrorCode, &j.LeaseToken, &lease, &retry, &created, &updated); err != nil {
+		return CategoryJob{}, err
+	}
+	if lease != "" {
+		t := parseTime(lease)
+		j.LeaseUntil = &t
+	}
+	j.RetryCount = retry
+	j.CreatedAt = parseTime(created)
+	j.UpdatedAt = parseTime(updated)
+	return j, nil
 }
 
 // ApplyLLMCategory updates only a non-USER row at the expected revision and bumps month revision.
@@ -368,12 +512,21 @@ func scanCategoryJob(row rowScanner)(CategoryJob,error){
 // deletion or USER override: the row only changes when all of them still hold at commit time.
 // Failures collapse to ErrRevisionConflict; callers classify the specific reason with a read-only
 // pre-check for diagnostics, never as the authoritative guard.
-func (s *Store) ApplyLLMCategory(ctx context.Context, ownerID, transactionID string, expectedRevision int, jobID, leaseToken, categoryID, code, provider, model, prompt, taxonomy, reason string, confidence float64, now time.Time) (Transaction,error) {
-	row:=s.DB.QueryRowContext(ctx,`SELECT month_id, category_origin FROM transactions WHERE owner_id=? AND id=? AND deleted_at IS NULL`,ownerID,transactionID)
-	var month,origin string; if err:=row.Scan(&month,&origin);err!=nil{return Transaction{},err}
-	if origin=="USER" { return Transaction{}, ErrRevisionConflict }
-	tx,err:=s.DB.BeginTx(ctx,nil); if err!=nil{return Transaction{},err}; defer func(){_=tx.Rollback()}()
-	res,err:=tx.ExecContext(ctx,`UPDATE transactions SET category_id=?,category_origin='RULE',
+func (s *Store) ApplyLLMCategory(ctx context.Context, ownerID, transactionID string, expectedRevision int, jobID, leaseToken, categoryID, code, provider, model, prompt, taxonomy, reason string, confidence float64, now time.Time) (Transaction, error) {
+	row := s.DB.QueryRowContext(ctx, `SELECT month_id, category_origin FROM transactions WHERE owner_id=? AND id=? AND deleted_at IS NULL`, ownerID, transactionID)
+	var month, origin string
+	if err := row.Scan(&month, &origin); err != nil {
+		return Transaction{}, err
+	}
+	if origin == "USER" {
+		return Transaction{}, ErrRevisionConflict
+	}
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return Transaction{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	res, err := tx.ExecContext(ctx, `UPDATE transactions SET category_id=?,category_origin='RULE',
 		classifier_origin='LLM',category_confidence=?,category_rule_version=?,category_reason=?,
 		category_taxonomy_version=?,revision=revision+1,updated_at=?
 		WHERE owner_id=? AND id=? AND revision=? AND deleted_at IS NULL AND category_origin!='USER'
@@ -387,14 +540,31 @@ func (s *Store) ApplyLLMCategory(ctx context.Context, ownerID, transactionID str
 		  AND EXISTS (SELECT 1 FROM category_jobs j
 		      WHERE j.owner_id = transactions.owner_id AND j.id=? AND j.state='RUNNING'
 		        AND j.lease_token=? AND j.lease_until_unix > ?)`,
-		categoryID,confidence,prompt+"|"+model,reason,taxonomy,nowString(now),ownerID,transactionID,expectedRevision,jobID,leaseToken,now.UnixMilli())
-	if err!=nil{return Transaction{},err}; n,_:=res.RowsAffected(); if n!=1{
-		if held,herr:=s.leaseHeld(ctx,tx,ownerID,jobID,leaseToken,now); herr==nil && !held{return Transaction{},ErrLeaseLost}
-		return Transaction{},ErrRevisionConflict
+		categoryID, confidence, prompt+"|"+model, reason, taxonomy, nowString(now), ownerID, transactionID, expectedRevision, jobID, leaseToken, now.UnixMilli())
+	if err != nil {
+		return Transaction{}, err
 	}
-	if err:=bumpMonthRevision(ctx,tx,ownerID,month,now);err!=nil{return Transaction{},err}; if err:=tx.Commit();err!=nil{return Transaction{},err}; return s.GetTransaction(ctx,ownerID,transactionID)
+	n, _ := res.RowsAffected()
+	if n != 1 {
+		if held, herr := s.leaseHeld(ctx, tx, ownerID, jobID, leaseToken, now); herr == nil && !held {
+			return Transaction{}, ErrLeaseLost
+		}
+		return Transaction{}, ErrRevisionConflict
+	}
+	if err := bumpMonthRevision(ctx, tx, ownerID, month, now); err != nil {
+		return Transaction{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Transaction{}, err
+	}
+	return s.GetTransaction(ctx, ownerID, transactionID)
 }
 
-func (s *Store) CategoryIDForCode(ctx context.Context, ownerID, code string)(string,error){
-	var id string; err:=s.DB.QueryRowContext(ctx,`SELECT id FROM categories WHERE owner_id=? AND code=? AND deleted_at IS NULL`,ownerID,code).Scan(&id); if errors.Is(err,sql.ErrNoRows){return "",fmt.Errorf("category code not found")}; return id,err
+func (s *Store) CategoryIDForCode(ctx context.Context, ownerID, code string) (string, error) {
+	var id string
+	err := s.DB.QueryRowContext(ctx, `SELECT id FROM categories WHERE owner_id=? AND code=? AND deleted_at IS NULL`, ownerID, code).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", fmt.Errorf("category code not found")
+	}
+	return id, err
 }

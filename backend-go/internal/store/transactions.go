@@ -24,33 +24,33 @@ type TransactionSensitive struct {
 }
 
 type Transaction struct {
-	ID                 string
-	OwnerID            string
-	CategoryID         string
-	CategoryCode       string
-	CategoryKind       string
-	Direction          string
-	Source             string
-	AmountMinor        int64
-	Currency           string
-	EventAt            time.Time
-	MonthID            string
-	Fingerprint        string
-	ParserVersion      string
-	ParserConfidence   float64
-	CategoryOrigin     string
-	ClassifierOrigin   string
-	CategoryConfidence float64
-	CategoryRuleVersion string
-	CategoryReason     string
+	ID                      string
+	OwnerID                 string
+	CategoryID              string
+	CategoryCode            string
+	CategoryKind            string
+	Direction               string
+	Source                  string
+	AmountMinor             int64
+	Currency                string
+	EventAt                 time.Time
+	MonthID                 string
+	Fingerprint             string
+	ParserVersion           string
+	ParserConfidence        float64
+	CategoryOrigin          string
+	ClassifierOrigin        string
+	CategoryConfidence      float64
+	CategoryRuleVersion     string
+	CategoryReason          string
 	CategoryTaxonomyVersion string
-	Sensitive          TransactionSensitive
-	IsInternalTransfer bool
-	LinkedRefundOf     string
-	Revision           int
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	DeletedAt          *time.Time
+	Sensitive               TransactionSensitive
+	IsInternalTransfer      bool
+	LinkedRefundOf          string
+	Revision                int
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	DeletedAt               *time.Time
 }
 
 type TransactionInput struct {
