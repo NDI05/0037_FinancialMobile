@@ -73,7 +73,7 @@ class TransactionDetailScreenTest {
     private fun setContent(vm: TransactionDetailViewModel) {
         composeRule.setContent {
             PamTheme {
-                TransactionDetailScreen(onBack = {}, viewModel = vm)
+                TransactionDetailScreen(onBack = {}, viewModel = vm, attachments = {})
             }
         }
     }
