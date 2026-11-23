@@ -28,6 +28,13 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideDatabasePassphraseProvider(
+        @ApplicationContext context: Context,
+        keystoreSecretStore: com.pam.recap.core.security.KeystoreSecretStore,
+    ): DatabasePassphraseProvider = DatabasePassphraseProvider(context, keystoreSecretStore)
+
+    @Provides
+    @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context,
         passphraseProvider: DatabasePassphraseProvider,
