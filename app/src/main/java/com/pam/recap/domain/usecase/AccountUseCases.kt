@@ -21,6 +21,7 @@ import com.pam.recap.data.security.DeletionReceiptStore
 import com.pam.recap.domain.repository.BackendDeletionAck
 import com.pam.recap.domain.repository.BackendDeletionSync
 import com.pam.recap.domain.repository.AppPasswordVault
+import com.pam.recap.data.security.ImportUploadJournal
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.domain.repository.BudgetRepository
 import com.pam.recap.domain.repository.ConsentRepository
@@ -106,6 +107,8 @@ class SignOutUseCase @Inject constructor(
     private val syncStatus: SyncStatusHolder? = null,
     private val autoCategory: AutoCategoryScheduler? = null,
     private val categoryStatus: CategoryStatusHolder? = null,
+    /** Optional so existing tests/doubles keep compiling; the app always binds the real journal. */
+    private val importUploadJournal: ImportUploadJournal? = null,
 ) {
 
     suspend operator fun invoke(ownerId: String): Outcome<Unit> {
@@ -129,6 +132,8 @@ class SignOutUseCase @Inject constructor(
         // so nothing from this session can be reported as a success for the next one.
         runCatching { autoSync?.cancelAll() }
         runCatching { syncCursors?.clear(ownerId) }
+        // P1 follow-up: a pending upload snapshot must not survive the session that owned it.
+        runCatching { importUploadJournal?.clearPending(ownerId) }
         runCatching { syncStatus?.reset() }
         runCatching { autoCategory?.cancelAll() }
         runCatching { categoryStatus?.reset() }
@@ -214,6 +219,7 @@ class DisconnectGmailUseCase @Inject constructor(
     private val syncCursors: SyncCursorStore? = null,
     private val syncStatus: SyncStatusHolder? = null,
     private val categoryStatus: CategoryStatusHolder? = null,
+    private val importUploadJournal: ImportUploadJournal? = null,
 ) {
 
     suspend operator fun invoke(ownerId: String): Outcome<Unit> {
@@ -223,6 +229,8 @@ class DisconnectGmailUseCase @Inject constructor(
         runCatching { autoSync?.cancelAll() }
         runCatching { autoCategory?.cancelAll() }
         runCatching { syncCursors?.clear(ownerId) }
+        // P1 follow-up: the pending snapshot belongs to the mailbox being disconnected.
+        runCatching { importUploadJournal?.clearPending(ownerId) }
         runCatching { syncStatus?.reset() }
         runCatching { categoryStatus?.reset() }
         // CR-003: explicit disconnect forgets only this owner's credential.
