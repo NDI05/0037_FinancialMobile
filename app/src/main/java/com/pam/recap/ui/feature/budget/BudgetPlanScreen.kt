@@ -29,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pam.recap.R
 import com.pam.recap.core.money.IdrFormatter
+import com.pam.recap.core.money.Money
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.BudgetComparisonRow
 import com.pam.recap.domain.model.Category
@@ -341,16 +342,37 @@ fun BudgetPlanScreen(
                         }
                         state.planHistory.forEach { plan ->
                             JakartaMonth.parse(plan.monthId)?.let { month ->
-                                Text(
-                                    text = stringResource(
-                                        R.string.budget_history_item,
-                                        month.label(),
-                                        plan.revision,
-                                    ),
-                                    style = BodyM,
-                                    color = OnInk,
-                                )
+                                Column {
+                                    Text(
+                                        text = stringResource(
+                                            R.string.budget_history_item,
+                                            month.label(),
+                                            plan.revision,
+                                        ),
+                                        style = BodyM,
+                                        color = OnInk,
+                                    )
+                                    Text(
+                                        text = stringResource(
+                                            R.string.budget_history_item_detail,
+                                            IdrFormatter.format(Money(plan.totalLimitMinor)),
+                                            IdrFormatter.format(Money(plan.gapMinor)),
+                                        ),
+                                        style = LabelM,
+                                        color = OnInkMuted,
+                                    )
+                                }
                             }
+                        }
+                        if (state.hasMoreHistory) {
+                            Text(
+                                text = stringResource(
+                                    R.string.budget_history_truncated,
+                                    state.planHistory.size,
+                                ),
+                                style = LabelM,
+                                color = OnInkMuted,
+                            )
                         }
                     }
                     state.historyError?.let { error ->

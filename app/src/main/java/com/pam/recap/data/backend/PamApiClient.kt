@@ -797,6 +797,8 @@ data class RemoteBudgetPlan(
     val limits: List<RemoteBudgetLimit> = emptyList(),
     val revision: Int,
     val gapMinor: Long = 0,
+    /** Period-search rows carry the summed limits; single-plan reads may omit it. */
+    val totalLimitMinor: Long = 0,
     /** Older servers omit the field; the domain treats absence as no attributes. */
     val attributes: Map<String, String>? = null,
 )

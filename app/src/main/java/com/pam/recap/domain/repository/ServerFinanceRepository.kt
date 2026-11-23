@@ -43,6 +43,8 @@ data class ServerBudgetPlan(
     val plannedSavingsMinor: Long,
     val limitsByCategoryId: Map<String, Long>,
     val gapMinor: Long,
+    /** Sum of the per-category limits; the list endpoint reports it, older servers omit it. */
+    val totalLimitMinor: Long = 0,
     val revision: Int,
     /** Owner-defined string attributes (S3 dynamic fields); absent on older servers. */
     val attributes: Map<String, String> = emptyMap(),
@@ -53,6 +55,8 @@ data class ServerCategoryPage(
     val items: List<ServerCategory>,
     val nextCursor: String? = null,
     val scanned: Int = 0,
+    /** The server scan hit its cap; some matches may be beyond the page even without a cursor. */
+    val truncated: Boolean = false,
 )
 
 /** One page of the C15 budget-plan period search, newest month first. */

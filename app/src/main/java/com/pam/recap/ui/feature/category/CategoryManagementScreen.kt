@@ -139,6 +139,17 @@ private fun CategoryList(
             color = OnInkMuted,
             style = BodyM,
         )
+        if (state.searchedOnServer && state.hasMore) {
+            Text(
+                text = stringResource(
+                    R.string.category_more_hint,
+                    state.categories.size,
+                    state.serverScanned,
+                ),
+                color = OnInkMuted,
+                style = BodyM,
+            )
+        }
         if (state.visible.isEmpty() && !state.isLoading) {
             NoticeBanner(text = stringResource(R.string.category_manage_empty))
         }

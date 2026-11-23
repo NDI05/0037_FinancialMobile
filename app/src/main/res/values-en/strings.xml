@@ -638,4 +638,12 @@
     <string name="admin_audit_empty">No audit record yet.</string>
     <string name="admin_audit_load_more">Load more audit</string>
     <string name="settings_admin_row">Manage invitations, roles and account status.</string>
+    <string name="budget_history_eyebrow">Saved plans</string>
+    <string name="budget_history_load">Load plan history</string>
+    <string name="budget_history_body">%1$d plans from %2$s to %3$s.</string>
+    <string name="budget_history_empty">No plan yet from %1$s to %2$s.</string>
+    <string name="budget_history_item">%1$s · revision %2$d</string>
+    <string name="budget_history_item_detail">limit %1$s · gap %2$s</string>
+    <string name="budget_history_truncated">Showing the latest %1$d plans; narrow the month range to see the rest.</string>
+    <string name="category_more_hint">Showing %1$d of %2$d scanned categories; narrow the search to see the rest.</string>
 </resources>

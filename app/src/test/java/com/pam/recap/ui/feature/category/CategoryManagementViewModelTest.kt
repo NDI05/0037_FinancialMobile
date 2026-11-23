@@ -16,10 +16,16 @@ import com.pam.recap.domain.repository.ServerTransactionPage
 import com.pam.recap.testing.FakeSessionRepository
 import com.pam.recap.ui.components.DynamicField
 import com.pam.recap.ui.components.DynamicFieldRules
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -68,10 +74,13 @@ class CategoryManagementViewModelTest {
         val model = vm(FakeCategories())
         model.state.first { !it.isLoading }
         model.onQueryChange("makan")
+        advanceUntilIdle()
         assertEquals(listOf("food"), model.state.value.visible.map { it.code })
         model.onQueryChange("tidak-ada")
+        advanceUntilIdle()
         assertTrue(model.state.value.visible.isEmpty())
         model.onQueryChange("")
+        advanceUntilIdle()
         assertEquals(2, model.state.value.visible.size)
     }
 
@@ -82,12 +91,78 @@ class CategoryManagementViewModelTest {
         model.state.first { !it.isLoading }
 
         model.onQueryChange("kopi")
+        advanceUntilIdle()
 
         assertEquals(listOf("kopi"), server.searches)
+        assertEquals(listOf<String?>(null), server.searchCursors)
         val state = model.state.value
         assertTrue(state.searchedOnServer)
         assertEquals(2, state.serverScanned)
         assertEquals(listOf("kopi_lama"), state.visible.map { it.code })
+    }
+
+    @Test
+    fun `a typing burst makes one debounced owner-scoped search from a null cursor`() = runTest {
+        val server = FakeCategories()
+        val model = vm(server)
+        model.state.first { !it.isLoading }
+
+        listOf("k", "ko", "kop", "kopi").forEach { model.onQueryChange(it) }
+        assertTrue(server.searches.isEmpty())
+
+        advanceTimeBy(300)
+        runCurrent()
+
+        assertEquals(listOf("kopi"), server.searches)
+        assertEquals(listOf<String?>(null), server.searchCursors)
+    }
+
+    @Test
+    fun `a stale search response never overwrites a newer query`() = runTest {
+        val server = FakeCategories().apply { gateSearch = true }
+        val model = vm(server)
+        model.state.first { !it.isLoading }
+
+        model.onQueryChange("lama")
+        advanceTimeBy(300)
+        runCurrent()
+        model.onQueryChange("baru")
+        advanceTimeBy(300)
+        runCurrent()
+        assertEquals(listOf("lama", "baru"), server.searches)
+
+        // The newer query answers first (no row matches "baru").
+        server.releaseSearch(1)
+        runCurrent()
+        assertTrue(model.state.value.visible.isEmpty())
+
+        // The older "lama" response lands late and must be dropped by the generation guard.
+        server.releaseSearch(0)
+        runCurrent()
+        assertTrue(model.state.value.visible.isEmpty())
+        assertEquals("baru", model.state.value.query)
+    }
+
+    @Test
+    fun `reload drops an in-flight search response`() = runTest {
+        val server = FakeCategories().apply { gateSearch = true }
+        val model = vm(server)
+        model.state.first { !it.isLoading }
+
+        model.onQueryChange("kopi")
+        advanceTimeBy(300)
+        runCurrent()
+        model.load()
+        model.state.first { !it.isLoading }
+
+        server.releaseSearch(0)
+        runCurrent()
+
+        val state = model.state.value
+        assertFalse(state.searchedOnServer)
+        // The reloaded owner-scoped page wins; the search payload never replaced it.
+        assertEquals(2, state.categories.size)
+        assertNull(state.error)
     }
 
     @Test
@@ -170,6 +245,13 @@ class CategoryManagementViewModelTest {
         )
 
         val searches = mutableListOf<String>()
+        val searchCursors = mutableListOf<String?>()
+        var gateSearch = false
+        private val gates = mutableListOf<CompletableDeferred<Unit>>()
+
+        fun releaseSearch(index: Int) {
+            gates[index].complete(Unit)
+        }
 
         override suspend fun categories(ownerId: String) = Outcome.Success(rows.toList())
 
@@ -181,6 +263,13 @@ class CategoryManagementViewModelTest {
             cursor: String?,
         ): Outcome<ServerCategoryPage> {
             searches += query
+            searchCursors += cursor
+            if (gateSearch) {
+                val gate = CompletableDeferred<Unit>()
+                gates += gate
+                // NonCancellable so a "stale response" scenario can still deliver its payload.
+                withContext(NonCancellable) { gate.await() }
+            }
             val filtered = rows.filter {
                 it.code.contains(query, ignoreCase = true) || it.label.contains(query, ignoreCase = true)
             }

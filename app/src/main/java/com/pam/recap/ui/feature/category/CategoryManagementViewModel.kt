@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -49,6 +51,8 @@ data class CategoryManagementUiState(
     val serverScanned: Int = 0,
     /** True once the visible rows come from the server `q` search rather than the loaded page. */
     val searchedOnServer: Boolean = false,
+    /** The server page was cut by its limit/cursor: more matches exist beyond the visible rows. */
+    val hasMore: Boolean = false,
     val editor: CategoryEditor? = null,
     val pendingDelete: ServerCategory? = null,
     val deleteNeedsReassign: Boolean = false,
@@ -86,9 +90,19 @@ class CategoryManagementViewModel @Inject constructor(
     }
 
     fun load() {
+        // Menaikkan generation membatalkan respons search yang masih in-flight: reload tidak boleh
+        // ditimpa hasil query lama.
+        searchGeneration++
+        queryJob?.cancel()
         viewModelScope.launch {
             _state.update {
-                it.copy(isLoading = true, error = null, serverScanned = 0, searchedOnServer = false)
+                it.copy(
+                    isLoading = true,
+                    error = null,
+                    serverScanned = 0,
+                    searchedOnServer = false,
+                    hasMore = false,
+                )
             }
             if (!server.isEnabled) {
                 _state.update { it.copy(isLoading = false, serverEnabled = false) }
@@ -110,16 +124,20 @@ class CategoryManagementViewModel @Inject constructor(
     }
 
     private var searchGeneration = 0
+    private var queryJob: Job? = null
 
     /**
-     * C10: once a backend search envelope is available the query is answered by the server, and a
-     * late response for an older query is dropped instead of overwriting newer rows.
+     * C10: once a backend search envelope is available the query is answered by the server. Typing
+     * is debounced by [QUERY_DEBOUNCE_MS] so a burst of keystrokes produces one request, and a late
+     * response for an older query is dropped instead of overwriting newer rows.
      */
     fun onQueryChange(query: String) {
         _state.update { it.copy(query = query) }
         if (!_state.value.serverEnabled) return
         val generation = ++searchGeneration
-        viewModelScope.launch {
+        queryJob?.cancel()
+        queryJob = viewModelScope.launch {
+            delay(QUERY_DEBOUNCE_MS)
             val ownerId = ownerId() ?: return@launch
             when (val result = server.searchCategories(ownerId, query.trim())) {
                 is Outcome.Success -> if (generation == searchGeneration) {
@@ -128,6 +146,7 @@ class CategoryManagementViewModel @Inject constructor(
                             categories = result.value.items,
                             serverScanned = result.value.scanned,
                             searchedOnServer = true,
+                            hasMore = result.value.nextCursor != null || result.value.truncated,
                         )
                     }
                 }
@@ -263,4 +282,9 @@ class CategoryManagementViewModel @Inject constructor(
 
     private suspend fun ownerId(): String? =
         sessions.observe().filterNotNull().first().ownerId
+
+    private companion object {
+        /** One request per typing burst instead of one per keystroke. */
+        const val QUERY_DEBOUNCE_MS = 250L
+    }
 }

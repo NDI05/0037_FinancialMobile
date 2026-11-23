@@ -81,6 +81,8 @@ data class BudgetPlanUiState(
     val historyTo: JakartaMonth? = null,
     val isHistoryLoading: Boolean = false,
     val historyError: AppError? = null,
+    /** More stored plans exist beyond this page; the list is capped by the server page size. */
+    val hasMoreHistory: Boolean = false,
     /** The last refresh attempt failed; the old numbers stay visible but are marked unknown. */
     val summaryRefreshFailed: Boolean = false,
     /** Explicit delete of the server plan: confirm first, then fall back to an unsaved suggestion. */
@@ -185,6 +187,7 @@ class BudgetPlanViewModel @Inject constructor(
                         planHistory = result.value.items,
                         historyFrom = from,
                         historyTo = to,
+                        hasMoreHistory = result.value.nextCursor != null,
                     )
                 }
                 is Outcome.Failure -> _state.update {

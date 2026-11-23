@@ -84,6 +84,7 @@ class ServerFinanceRepositoryImpl @Inject constructor(
                 items = result.value.categories.map { it.toServer() },
                 nextCursor = result.value.nextCursor,
                 scanned = result.value.search?.scanned ?: result.value.categories.size,
+                truncated = result.value.search?.truncated ?: false,
             ),
         )
         is Outcome.Failure -> result
@@ -194,6 +195,7 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         plannedSavingsMinor = plannedSavingsMinor,
         limitsByCategoryId = limits.associate { it.categoryId to it.amountMinor },
         gapMinor = gapMinor,
+        totalLimitMinor = totalLimitMinor,
         revision = revision,
         attributes = attributes.orEmpty(),
     )
