@@ -6,18 +6,24 @@ import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.result.SafeLogger
 import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.time.JakartaMonth
+import com.pam.recap.data.security.ImportUploadJournal
 import com.pam.recap.domain.model.AutoSyncConfig
 import com.pam.recap.domain.model.ImportState
 import com.pam.recap.domain.model.DeltaWindow
+import com.pam.recap.domain.model.MailboxWatermark
+import com.pam.recap.domain.model.PendingUploadMonth
+import com.pam.recap.domain.model.PendingUploadRun
 import com.pam.recap.domain.model.SyncCursor
 import com.pam.recap.domain.model.SyncPhase
 import com.pam.recap.domain.model.SyncSnapshot
+import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.DeletionRepository
 import com.pam.recap.domain.model.ImportJob
 import com.pam.recap.domain.repository.GmailSource
 import com.pam.recap.domain.repository.ImportRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.repository.SyncCursorStore
+import com.pam.recap.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -110,6 +116,16 @@ class IncrementalSyncUseCase @Inject constructor(
      * server, so this only avoids waiting a whole period for a candidate to become visible.
      */
     private val autoCategory: AutoCategoryUseCase? = null,
+    /**
+     * Optional in tests; production binds the Room repository. It reads back the committed snapshot
+     * of a run so the durable pending record names the exact candidate fingerprints.
+     */
+    private val transactions: TransactionRepository? = null,
+    /**
+     * Durable identity of a committed-but-unacknowledged run. Without it a failed upload would be
+     * retried against a fresh (deduped-to-empty) local job and never reach the server.
+     */
+    private val journal: ImportUploadJournal? = null,
 ) {
 
     private val gate = Mutex()
@@ -137,6 +153,22 @@ class IncrementalSyncUseCase @Inject constructor(
             it.copy(ownerId = ownerId, phase = SyncPhase.SYNCING, isRunning = true, lastAttemptAt = startedAt)
         }
         try {
+            // Same recovery contract as the automatic path: a previous unacknowledged run must be
+            // finished before this month is imported/uploaded again.
+            when (val recovery = recoverPendingRun(ownerId, startedAt)) {
+                is PendingRecovery.Failed -> {
+                    val code = syncCode(recovery.error)
+                    recordFailure(
+                        ownerId,
+                        cursors.read(ownerId) ?: SyncCursor(ownerId),
+                        startedAt,
+                        code,
+                        uploadPending = true,
+                    )
+                    return Outcome.Failure(recovery.error)
+                }
+                PendingRecovery.Done, PendingRecovery.None -> Unit
+            }
             val previous = imports?.latestForMonth(ownerId, month)
             if (previous != null && previous.state == ImportState.COMPLETE) {
                 // Nothing to repair: a re-run would only re-read the same month.
@@ -153,13 +185,14 @@ class IncrementalSyncUseCase @Inject constructor(
             if (sessions.current()?.ownerId != ownerId) {
                 return Outcome.Failure(AppError.Conflict("owner_changed"))
             }
+            persistPendingRun(ownerId, job, upTo = null, startedAt = startedAt)
             when (val upload = uploader.upload(ownerId, job)) {
                 is Outcome.Failure -> {
                     recordFailure(ownerId, cursors.read(ownerId) ?: SyncCursor(ownerId), startedAt,
                         upload.error.kind.name.lowercase(), uploadPending = true)
                     return Outcome.Failure(upload.error)
                 }
-                is Outcome.Success -> Unit
+                is Outcome.Success -> clearPendingIfSettled(ownerId, job.id)
             }
             val complete = job.state == ImportState.COMPLETE || job.state == ImportState.EMPTY
             status.update {
@@ -193,7 +226,32 @@ class IncrementalSyncUseCase @Inject constructor(
         val ownerId = sessions.current()?.ownerId
             ?: return Outcome.Failure(AppError.Configuration("not_signed_in"))
         if (!gate.tryLock()) return Outcome.Failure(AppError.Conflict("sync_in_progress"))
+        val startedAt = clock.now()
         try {
+            // A pending run is the run that must be finished; re-uploading the newest local job
+            // instead would send the old rows again under a fresh server job.
+            when (val recovery = recoverPendingRun(ownerId, startedAt)) {
+                is PendingRecovery.Failed -> {
+                    val code = syncCode(recovery.error)
+                    recordFailure(
+                        ownerId,
+                        cursors.read(ownerId) ?: SyncCursor(ownerId),
+                        startedAt,
+                        code,
+                        uploadPending = true,
+                    )
+                    return Outcome.Failure(recovery.error)
+                }
+                PendingRecovery.Done -> {
+                    status.update {
+                        it.copy(phase = SyncPhase.SUCCEEDED, isRunning = false, pendingUpload = false, lastErrorCode = null)
+                    }
+                    return imports?.latestForMonth(ownerId, month)
+                        ?.let { Outcome.Success(it) }
+                        ?: Outcome.Failure(AppError.NotFound("import_job"))
+                }
+                PendingRecovery.None -> Unit
+            }
             val job = imports?.latestForMonth(ownerId, month)
                 ?: return Outcome.Failure(AppError.NotFound("import_job"))
             return when (val upload = uploader.upload(ownerId, job)) {
@@ -222,7 +280,8 @@ class IncrementalSyncUseCase @Inject constructor(
         val lastActivity = listOfNotNull(cursor?.lastAttemptAt, cursor?.lastSuccessAt).maxOrNull()
         val tooSoon = lastActivity != null &&
             clock.now() - lastActivity < config.foregroundCooldown
-        if (tooSoon && cursor?.uploadPending != true) {
+        val pending = journal?.readPending(ownerId) != null
+        if (tooSoon && cursor?.uploadPending != true && !pending) {
             return SyncOutcome.Skipped("cooldown")
         }
         return run(trigger)
@@ -236,20 +295,23 @@ class IncrementalSyncUseCase @Inject constructor(
      * only: no IMAP, no HTTP.
      */
     suspend fun hydrate(ownerId: String) {
-        val cursor = cursors.read(ownerId) ?: return
+        val cursor = cursors.read(ownerId)
+        val pending = journal?.readPending(ownerId)
+        if (cursor == null && pending == null) return
         if (status.snapshot.value.lastAttemptAt != null) return
+        val uploadPending = cursor?.uploadPending == true || pending != null
         status.update {
             it.copy(
                 ownerId = ownerId,
                 phase = when {
-                    cursor.lastErrorCode != null -> SyncPhase.PAUSED
-                    cursor.uploadPending -> SyncPhase.SUCCEEDED
+                    cursor?.lastErrorCode != null -> SyncPhase.PAUSED
+                    uploadPending -> SyncPhase.SUCCEEDED
                     else -> SyncPhase.IDLE
                 },
-                lastAttemptAt = cursor.lastAttemptAt,
-                lastSuccessAt = cursor.lastSuccessAt,
-                lastErrorCode = cursor.lastErrorCode,
-                pendingUpload = cursor.uploadPending,
+                lastAttemptAt = cursor?.lastAttemptAt,
+                lastSuccessAt = cursor?.lastSuccessAt,
+                lastErrorCode = cursor?.lastErrorCode,
+                pendingUpload = uploadPending,
             )
         }
     }
@@ -280,6 +342,24 @@ class IncrementalSyncUseCase @Inject constructor(
                 lastAttemptAt = startedAt,
             )
         }
+        // Recovery comes FIRST and before `upTo` is captured: a committed-but-unacknowledged run
+        // must be finished before this range may close. The cursor may only move after every month
+        // of that run is acknowledged, otherwise a failed upload would be skipped forever.
+        when (val recovery = recoverPendingRun(ownerId, startedAt)) {
+            is PendingRecovery.Failed -> {
+                val code = syncCode(recovery.error)
+                recordFailure(
+                    ownerId,
+                    cursors.read(ownerId) ?: SyncCursor(ownerId),
+                    startedAt,
+                    code,
+                    uploadPending = true,
+                )
+                return SyncOutcome.Failed(code)
+            }
+            PendingRecovery.Done, PendingRecovery.None -> Unit
+        }
+
         val cursor = cursors.read(ownerId) ?: SyncCursor(ownerId = ownerId)
         // The watermark is captured BEFORE reading so a mid-run arrival stays above the cursor.
         val upTo = (gmail.watermark() as? Outcome.Success)?.value
@@ -325,6 +405,11 @@ class IncrementalSyncUseCase @Inject constructor(
             return SyncOutcome.Skipped("owner_changed")
         }
 
+        // Durable run identity BEFORE the first upload attempt. Room's INSERT OR IGNORE keeps these
+        // rows on THIS importJobId, so a later run's snapshot would be empty; without this record
+        // the next tick could never find them again.
+        persistPendingRun(ownerId, job, upTo, startedAt)
+
         when (val upload = uploader.upload(ownerId, job)) {
             is Outcome.Failure -> {
                 // The local commit stays; the cursor does not advance, so the next run retries the
@@ -334,7 +419,7 @@ class IncrementalSyncUseCase @Inject constructor(
                 return SyncOutcome.Failed(code)
             }
 
-            is Outcome.Success -> Unit
+            is Outcome.Success -> clearPendingIfSettled(ownerId, job.id)
         }
 
         // Second late-result guard: the account may have changed while the upload was in flight, and
@@ -433,6 +518,116 @@ class IncrementalSyncUseCase @Inject constructor(
         }
         return SyncOutcome.Completed(job.importedCount, job.duplicateCount, job.state.name)
     }
+
+    /** Result of the durable pending-run recovery, so each entry point can react honestly. */
+    private sealed interface PendingRecovery {
+        /** Nothing was pending; the caller proceeds with its own range/month. */
+        data object None : PendingRecovery
+
+        /** The pending run is fully acknowledged and the cursor was persisted. */
+        data object Done : PendingRecovery
+
+        data class Failed(val error: AppError) : PendingRecovery
+    }
+
+    /**
+     * Finishes the committed-but-unacknowledged run for [ownerId] before a new delta range may
+     * close. This is what makes recovery automatic: the next periodic/foreground tick finds the
+     * durable pending record, finishes THAT run, and only then advances the cursor.
+     */
+    private suspend fun recoverPendingRun(ownerId: String, startedAt: Instant): PendingRecovery {
+        val store = journal ?: return PendingRecovery.None
+        val pending = store.readPending(ownerId) ?: return PendingRecovery.None
+        SafeLogger.event(TAG, "pending_recovery_start")
+        status.update { it.copy(pendingUpload = true) }
+        when (val resumed = uploader.resumePending(ownerId)) {
+            is Outcome.Failure -> return PendingRecovery.Failed(resumed.error)
+            is Outcome.Success -> Unit
+        }
+        if (sessions.current()?.ownerId != ownerId) {
+            return PendingRecovery.Failed(AppError.Conflict("owner_changed"))
+        }
+        if (store.readPending(ownerId) != null) {
+            // At least one month is still unacknowledged: the watermark must not move.
+            return PendingRecovery.Failed(AppError.Storage("pending_upload_incomplete"))
+        }
+        val cursor = cursors.read(ownerId) ?: SyncCursor(ownerId = ownerId)
+        // A PARTIAL/FAILED local run still has rows worth uploading, but its watermark would hide
+        // the unread tail of the range; only a fully processed range may publish it.
+        val advance = pending.rangeComplete && pending.watermark != null
+        val saved = cursors.save(
+            cursor.copy(
+                watermark = if (advance) pending.watermark else cursor.watermark,
+                lastAttemptAt = startedAt,
+                lastSuccessAt = if (advance) clock.now() else cursor.lastSuccessAt,
+                lastErrorCode = if (advance) null else cursor.lastErrorCode,
+                consecutiveFailures = if (advance) 0 else cursor.consecutiveFailures,
+                uploadPending = false,
+            ),
+        )
+        if (!saved) return PendingRecovery.Failed(AppError.Storage("storage_unavailable"))
+        SafeLogger.event(TAG, "pending_recovery_done")
+        return PendingRecovery.Done
+    }
+
+    /**
+     * Writes the durable identity of a just-committed local run BEFORE the first upload attempt.
+     * The fingerprint list is the exact candidate set, so a later tick can send it even though Room
+     * dedupe keeps the rows attached to this (older) `importJobId`.
+     */
+    private suspend fun persistPendingRun(
+        ownerId: String,
+        job: ImportJob,
+        upTo: MailboxWatermark?,
+        startedAt: Instant,
+    ) {
+        val store = journal ?: return
+        val repository = transactions ?: return
+        val rows = repository.listByImportJob(ownerId, job.id)
+            .filter { it.source == TransactionSource.EMAIL }
+        val byMonth = rows.groupBy { JakartaMonth.of(it.eventAt).id() }
+        val months = if (byMonth.isEmpty()) {
+            // An EMPTY run still has to close its primary month on the server.
+            mapOf(job.month.id() to PendingUploadMonth(job.month.id(), emptyList()))
+        } else {
+            byMonth.mapValues { (monthId, monthRows) ->
+                PendingUploadMonth(monthId, monthRows.map { it.fingerprint }.sorted())
+            }
+        }
+        val pending = PendingUploadRun(
+            ownerId = ownerId,
+            localJobId = job.id,
+            primaryMonthId = job.month.id(),
+            localState = job.state.name,
+            templateVersion = job.templateVersion,
+            errorCode = job.errorCode,
+            watermark = upTo,
+            startedAtEpochMillis = startedAt.toEpochMilliseconds(),
+            months = months,
+        )
+        if (!store.savePending(pending)) {
+            // Do not fail the run: the in-memory snapshot is still uploadable. The missing record
+            // only means a later tick cannot resume it, which is logged as a technical event.
+            SafeLogger.event(TAG, "pending_journal_not_saved")
+        }
+    }
+
+    /**
+     * The uploader clears its own record after a full acknowledgement. This also settles the
+     * local-only build (nothing to acknowledge), so a leftover record cannot keep bypassing the
+     * foreground cooldown forever.
+     */
+    private fun clearPendingIfSettled(ownerId: String, localJobId: String) {
+        val store = journal ?: return
+        if (store.readPending(ownerId)?.localJobId == localJobId) store.clearPending(ownerId)
+    }
+
+    private fun syncCode(error: AppError): String =
+        if (error is AppError.Storage && error.debugDetail == "storage_unavailable") {
+            "storage_unavailable"
+        } else {
+            error.kind.name.lowercase()
+        }
 
     private fun recordFailure(
         ownerId: String,

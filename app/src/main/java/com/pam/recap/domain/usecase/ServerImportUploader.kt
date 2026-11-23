@@ -7,6 +7,8 @@ import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.data.security.ImportUploadJournal
 import com.pam.recap.domain.model.ImportJob
 import com.pam.recap.domain.model.ImportState
+import com.pam.recap.domain.model.PendingUploadMonth
+import com.pam.recap.domain.model.PendingUploadRun
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.ServerFinanceRepository
@@ -17,16 +19,29 @@ import javax.inject.Inject
 
 fun interface ImportUploader {
     suspend fun upload(ownerId: String, job: ImportJob): Outcome<String>
+
+    /**
+     * Finishes the durable pending run for [ownerId], if one exists, and clears it only after every
+     * month was acknowledged. The default is a no-op so simple doubles/test lambdas stay valid; the
+     * real uploader always overrides it.
+     */
+    suspend fun resumePending(ownerId: String): Outcome<String> = Outcome.Success("no_pending")
 }
 
 /**
- * Uploads one completed local parse to the Go import job/batch API.
+ * Uploads one committed local parse to the Go import job/batch API.
  *
- * The candidate set is the immutable run snapshot ([TransactionRepository.listByImportJob]), not
- * "every EMAIL row of job.month": a routine sync must never re-upload history, and a late email
- * whose transaction date is in another month must land in that month's server job. Rows are grouped
- * by their own transaction month, each month gets its own server job, and every batch key/body is
- * deterministic per (run, month, page) so a retry is idempotent.
+ * The candidate set is the durable run snapshot, not "every EMAIL row of job.month": a routine sync
+ * must never re-upload history, and a late email whose transaction date is in another month must
+ * land in that month's server job. Rows are grouped by their own transaction month, each month gets
+ * its own server job, and every batch key/body is deterministic per (run, month, page) so a retry
+ * is idempotent.
+ *
+ * Two things make a failed upload recoverable without user action:
+ * - the run identity is read from [ImportUploadJournal]'s pending record, not only from `job.id`,
+ *   so the next tick finishes the OLD run instead of a fresh (deduped-to-empty) local job;
+ * - a month already acknowledged by the server is never sent again, and a month still running keeps
+ *   its server job id and batch keys, so the server dedupes the replay.
  *
  * Success means every month of the run was acknowledged. A failure on any month returns a failure,
  * so the caller keeps the cursor where it is.
@@ -43,39 +58,103 @@ class ServerImportUploader @Inject constructor(
         SafeLogger.event("ServerImportUploader", "upload_start")
         if (!server.isEnabled) return Outcome.Success(job.id)
 
-        val rows = transactions.listByImportJob(ownerId, job.id)
+        // Never acknowledge an older unreconciled run through a newer (possibly EMPTY) job: Room
+        // dedupe keeps the old rows on the old importJobId, so an empty new snapshot says nothing
+        // about them. Drain the old run first; only then may this job be uploaded.
+        val prior = journal?.readPending(ownerId)
+        if (prior != null && prior.localJobId != job.id) {
+            SafeLogger.event("ServerImportUploader", "pending_drain_before_new_job")
+            val priorRun = prior.toRunOrNull()
+                ?: return Outcome.Failure(AppError.Storage("pending_journal_corrupt"))
+            when (val drained = uploadRun(ownerId, priorRun)) {
+                is Outcome.Success -> Unit
+                is Outcome.Failure -> return drained
+            }
+        }
+        val own = journal?.readPending(ownerId)?.takeIf { it.localJobId == job.id }
+        return uploadRun(ownerId, Run(job.id, job.month, job.state, job.templateVersion, job.errorCode, own))
+    }
+
+    override suspend fun resumePending(ownerId: String): Outcome<String> {
+        val pending = journal?.readPending(ownerId) ?: return Outcome.Success("no_pending")
+        SafeLogger.event("ServerImportUploader", "pending_resume")
+        if (!server.isEnabled) {
+            // Local-only build: there is no server acknowledgement to wait for.
+            journal?.clearPending(ownerId)
+            return Outcome.Success("no_server")
+        }
+        val run = pending.toRunOrNull()
+            ?: return Outcome.Failure(AppError.Storage("pending_journal_corrupt"))
+        return uploadRun(ownerId, run)
+    }
+
+    private suspend fun uploadRun(ownerId: String, run: Run): Outcome<String> {
+        if (!server.isEnabled) return Outcome.Success(run.localJobId)
+        val snapshot = transactions.listByImportJob(ownerId, run.localJobId)
             .filter { it.source == TransactionSource.EMAIL }
             .sortedBy { it.fingerprint }
-        val byMonth: Map<String, List<Transaction>> = rows.groupBy { JakartaMonth.of(it.eventAt).id() }
-        // An empty run still closes its primary month so the server job does not stay RUNNING.
-        val months = if (byMonth.isEmpty()) mapOf(job.month.id() to emptyList()) else byMonth
+        val byMonth: Map<String, List<Transaction>> = snapshot.groupBy { JakartaMonth.of(it.eventAt).id() }
+        var pending = run.pending
 
-        val entry = journal?.read(ownerId, job.id)
-            ?: ImportUploadJournal.Entry(ownerId, job.id, emptyMap())
+        // The durable pending record is authoritative for "which months exist", because an EMPTY
+        // run has no rows but still has a primary month to close. Without it, fall back to the
+        // snapshot's own months (legacy path used by ServerImportUploaderTest).
+        val monthIds = when {
+            pending != null && pending.months.isNotEmpty() -> pending.months.keys.sorted()
+            byMonth.isNotEmpty() -> byMonth.keys.sorted()
+            else -> listOf(run.month.id())
+        }
+
+        val entry = journal?.read(ownerId, run.localJobId)
+            ?: ImportUploadJournal.Entry(ownerId, run.localJobId, emptyMap())
         val state = entry.months.toMutableMap()
 
         val categories = (server.categories(ownerId) as? Outcome.Success)?.value.orEmpty()
         val categoryIds = categories.associate { it.code to it.id }
 
-        var lastJobId = job.id
-        for (monthId in months.keys.sorted()) {
-            val monthRows = months.getValue(monthId)
-            val month = JakartaMonth.parse(monthId) ?: job.month
+        var lastJobId = run.localJobId
+        for (monthId in monthIds) {
+            val pendingMonth = pending?.months?.get(monthId)
             val known = state[monthId]
-            val serverJob = if (known != null) {
+
+            // A month the server already acknowledged is never re-sent. Its id is still carried so
+            // a later failure cannot make the caller report a different month.
+            val acknowledged = (pendingMonth?.acknowledged == true) ||
+                (known != null && known.finalState != RUNNING_STATE)
+            if (acknowledged) {
+                lastJobId = known?.serverJobId ?: pendingMonth?.serverJobId ?: lastJobId
+                continue
+            }
+
+            val month = JakartaMonth.parse(monthId) ?: run.month
+            val monthRows = byMonth[monthId].orEmpty().filter { transaction ->
+                pendingMonth == null ||
+                    pendingMonth.fingerprints.isEmpty() ||
+                    transaction.fingerprint in pendingMonth.fingerprints
+            }
+
+            val serverJob = if (known != null && known.finalState == RUNNING_STATE) {
                 ServerImportJob(known.serverJobId, monthId, known.finalState)
             } else {
-                val created = when (val result = server.createImportJob(ownerId, month, job.templateVersion)) {
+                val created = when (val result = server.createImportJob(ownerId, month, run.templateVersion)) {
                     is Outcome.Success -> result.value
                     is Outcome.Failure -> return result
                 }
-                state[monthId] = ImportUploadJournal.MonthJob(monthId, created.id, "RUNNING")
-                if (journal != null && !journal.save(ImportUploadJournal.Entry(ownerId, job.id, state.toMap()))) {
+                state[monthId] = ImportUploadJournal.MonthJob(monthId, created.id, RUNNING_STATE)
+                if (journal != null && !journal.save(ImportUploadJournal.Entry(ownerId, run.localJobId, state.toMap()))) {
                     return Outcome.Failure(AppError.Storage("import_journal_not_saved"))
+                }
+                // Remember the server job in the pending record too: a crash before the first batch
+                // must not create a second server job for the same month.
+                val currentPending = pending
+                if (currentPending != null) {
+                    pending = persistPendingServerJob(currentPending, monthId, created.id, monthRows)
+                        ?: return Outcome.Failure(AppError.Storage("import_journal_not_saved"))
                 }
                 created
             }
             lastJobId = serverJob.id
+
             monthRows.chunked(PAGE_SIZE).forEachIndexed { page, chunk ->
                 val candidates = chunk.map { transaction ->
                     ServerImportCandidate(
@@ -93,15 +172,16 @@ class ServerImportUploader @Inject constructor(
                 }
                 // Deterministic per run *and* month, so a retry after a partial acknowledgement
                 // replays the same key and the same body.
-                val batchKey = "${job.id}-$monthId-page-$page"
+                val batchKey = "${run.localJobId}-$monthId-page-$page"
                 when (val result = server.importBatch(ownerId, serverJob.id, batchKey, page, candidates)) {
                     is Outcome.Success -> Unit
                     is Outcome.Failure -> return result
                 }
             }
+
             val finalState = when {
                 monthRows.isEmpty() -> "EMPTY"
-                else -> when (job.state) {
+                else -> when (run.state) {
                     ImportState.COMPLETE -> "COMPLETE"
                     ImportState.EMPTY -> "EMPTY"
                     ImportState.PARTIAL -> "PARTIAL"
@@ -110,21 +190,72 @@ class ServerImportUploader @Inject constructor(
                     else -> "PARTIAL"
                 }
             }
-            when (val finalized = server.finalizeImportJob(ownerId, serverJob.id, finalState, job.errorCode)) {
+            when (val finalized = server.finalizeImportJob(ownerId, serverJob.id, finalState, run.errorCode)) {
                 is Outcome.Success -> {
+                    // Durable acknowledgement of this month BEFORE the cursor may move.
                     state[monthId] = ImportUploadJournal.MonthJob(monthId, finalized.value.id, finalState)
-                    if (journal != null && !journal.save(ImportUploadJournal.Entry(ownerId, job.id, state.toMap()))) {
-                        return Outcome.Failure(AppError.Storage("import_journal_not_saved"))
+                    if (journal != null) {
+                        if (!journal.save(ImportUploadJournal.Entry(ownerId, run.localJobId, state.toMap()))) {
+                            return Outcome.Failure(AppError.Storage("import_journal_not_saved"))
+                        }
+                        val acked = pending?.acknowledged(monthId, finalized.value.id, finalState)
+                        if (acked != null && !journal.savePending(acked)) {
+                            return Outcome.Failure(AppError.Storage("import_journal_not_saved"))
+                        }
+                        pending = acked
                     }
+                    lastJobId = finalized.value.id
                 }
                 is Outcome.Failure -> return finalized
             }
         }
-        journal?.clear(ownerId, job.id)
+
+        // The run is only finished when every planned month is acknowledged. Re-derive that from the
+        // durable journal as well, so a failed pending-record update cannot strand it forever.
+        val allAcknowledged = monthIds.all { monthId ->
+            pending?.months?.get(monthId)?.acknowledged == true ||
+                state[monthId]?.finalState?.let { it != RUNNING_STATE } == true
+        }
+        if (allAcknowledged) {
+            journal?.clearPending(ownerId)
+            journal?.clear(ownerId, run.localJobId)
+        }
         return Outcome.Success(lastJobId)
+    }
+
+    /** Returns the updated pending record, or null when the durable write failed. */
+    private fun persistPendingServerJob(
+        pending: PendingUploadRun,
+        monthId: String,
+        serverJobId: String,
+        monthRows: List<Transaction>,
+    ): PendingUploadRun? {
+        val current = pending.months[monthId]
+            ?: PendingUploadMonth(monthId, monthRows.map { it.fingerprint }.sorted())
+        val updated = pending.copy(
+            months = pending.months + (monthId to current.copy(serverJobId = serverJobId)),
+        )
+        if (journal != null && !journal.savePending(updated)) return null
+        return updated
+    }
+
+    private data class Run(
+        val localJobId: String,
+        val month: JakartaMonth,
+        val state: ImportState,
+        val templateVersion: String,
+        val errorCode: String?,
+        val pending: PendingUploadRun?,
+    )
+
+    private fun PendingUploadRun.toRunOrNull(): Run? {
+        val month = JakartaMonth.parse(primaryMonthId) ?: return null
+        val state = runCatching { ImportState.valueOf(localState) }.getOrDefault(ImportState.COMPLETE)
+        return Run(localJobId, month, state, templateVersion, errorCode, this)
     }
 
     private companion object {
         const val PAGE_SIZE = 100
+        const val RUNNING_STATE = "RUNNING"
     }
 }
