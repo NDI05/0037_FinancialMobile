@@ -67,6 +67,11 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /v1/consents", s.authed(s.appendConsent))
 	mux.Handle("GET /v1/categories", s.authed(s.listCategories))
 	mux.Handle("POST /v1/categories", s.authed(s.createCategory))
+	mux.Handle("GET /v1/attachments", s.authed(s.listAttachments))
+	mux.Handle("POST /v1/attachments", s.authed(s.createAttachment))
+	mux.Handle("GET /v1/attachments/{id}", s.authed(s.getAttachment))
+	mux.Handle("PATCH /v1/attachments/{id}", s.authed(s.updateAttachment))
+	mux.Handle("DELETE /v1/attachments/{id}", s.authed(s.deleteAttachment))
 	mux.Handle("GET /v1/categories/{id}", s.authed(s.getCategory))
 	mux.Handle("PATCH /v1/categories/{id}", s.authed(s.updateCategory))
 	mux.Handle("DELETE /v1/categories/{id}", s.authed(s.deleteCategory))
@@ -136,6 +141,8 @@ func sanitizedRoute(path string) string {
 		return path
 	case strings.HasPrefix(path, "/v1/transactions/"):
 		return "/v1/transactions/{id}"
+	case strings.HasPrefix(path, "/v1/attachments/"):
+		return "/v1/attachments/{id}"
 	case strings.HasPrefix(path, "/v1/categories/"):
 		return "/v1/categories/{id}"
 	case strings.HasPrefix(path, "/v1/import-jobs/"):
