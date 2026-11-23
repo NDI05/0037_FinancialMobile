@@ -57,6 +57,7 @@
     <string name="action_search">Cari</string>
     <string name="action_retry">Coba lagi</string>
     <string name="action_continue">Lanjut</string>
+    <string name="action_delete">Hapus</string>
     <string name="action_cancel">Batal</string>
     <string name="action_save">Simpan</string>
     <string name="action_next">Berikutnya</string>
@@ -230,6 +231,22 @@
     <string name="detail_note_eyebrow">Catatan pribadi</string>
     <string name="detail_note_label">Catatan</string>
     <string name="detail_note_placeholder">Hanya tersimpan di perangkat</string>
+    <string name="detail_edit_eyebrow">Ubah detail</string>
+    <string name="detail_description_label">Deskripsi</string>
+    <string name="detail_description_placeholder">Deskripsi transaksi</string>
+    <string name="detail_merchant_label">Merchant</string>
+    <string name="detail_merchant_placeholder">Nama merchant (opsional)</string>
+    <string name="detail_note_placeholder_edit">Catatan pribadi untuk transaksi ini</string>
+    <string name="detail_unsaved_hint">Perubahan belum disimpan.</string>
+    <string name="detail_delete_eyebrow">Hapus transaksi</string>
+    <string name="detail_delete_body">Transaksi yang dihapus tidak bisa dikembalikan.</string>
+    <string name="detail_delete_title">Hapus transaksi ini?</string>
+    <string name="detail_delete_confirm_body">Transaksi akan dihapus dari server dan hilang dari daftar.</string>
+    <string name="detail_conflict_message">Transaksi ini sudah diubah di tempat lain. Data terbaru sudah dimuat; periksa lagi sebelum menyimpan.</string>
+    <string name="detail_description_required">Deskripsi wajib diisi.</string>
+    <string name="detail_description_too_long">Deskripsi maksimal 200 karakter.</string>
+    <string name="detail_merchant_too_long">Nama merchant maksimal 120 karakter.</string>
+    <string name="detail_note_too_long">Catatan maksimal 500 karakter.</string>
     <string name="detail_audit_eyebrow">Jejak audit</string>
     <string name="detail_created_at">Dibuat</string>
     <string name="detail_updated_at">Diubah</string>
@@ -315,6 +332,26 @@
     <string name="analysis_limitations_eyebrow">Batasan</string>
 
     <!-- Budget -->
+    <string name="budget_plan_freshness_current">Rencana server · revisi %1$d</string>
+    <string name="budget_plan_freshness_unsaved">Rencana belum disimpan ke server</string>
+    <string name="budget_plan_freshness_stale">Rencana di server sudah berubah</string>
+    <string name="budget_conflict_message">Rencana ini sudah diubah di tempat lain. Muat data terbaru sebelum menyimpan lagi.</string>
+    <string name="budget_reload_latest">Muat data terbaru</string>
+    <string name="budget_summary_coverage_complete">Ringkasan server: lengkap</string>
+    <string name="budget_summary_coverage_partial">Ringkasan server: sebagian</string>
+    <string name="budget_summary_coverage_empty">Ringkasan server: kosong</string>
+    <string name="budget_summary_coverage_failed">Ringkasan server: gagal</string>
+    <string name="budget_summary_generated">Ringkasan diperbarui %1$s</string>
+    <string name="budget_summary_outdated">Ringkasan dihitung sebelum perubahan terakhir; angka aktual mungkin tertinggal.</string>
+    <string name="budget_summary_freshness_current">Ringkasan server terkini.</string>
+    <string name="budget_summary_freshness_stale">Ringkasan server sudah usang; angka aktual mungkin belum termasuk perubahan terakhir.</string>
+    <string name="budget_summary_freshness_historical">Ringkasan ini berasal dari arsip, bukan bulan berjalan; angka aktual tidak diperbarui.</string>
+    <string name="budget_summary_refresh">Perbarui ringkasan</string>
+    <string name="budget_summary_refresh_failed">Ringkasan gagal diperbarui; angka di layar belum tentu terbaru.</string>
+    <string name="budget_delete_plan">Hapus rencana</string>
+    <string name="budget_delete_title">Hapus rencana anggaran ini?</string>
+    <string name="budget_delete_body">Rencana di server akan dihapus dan editor kembali menampilkan usulan yang belum disimpan. Tindakan ini tidak memindahkan uang.</string>
+    <string name="budget_plan_deleted">Rencana di server sudah dihapus. Nilai di bawah adalah usulan yang belum disimpan.</string>
     <string name="budget_title">Rencana anggaran</string>
     <string name="budget_eyebrow">Rencana bulan depan</string>
     <string name="budget_seeded_label">Nilai awal berdasarkan rata-rata historis</string>
@@ -390,6 +427,11 @@
         <item quantity="other">%1$d transaksi</item>
     </plurals>
     <string name="transactions_days_caption">Hari dengan transaksi · %1$s</string>
+    <string name="transactions_refreshing">Memperbarui hasil…</string>
+    <string name="transactions_coverage_incomplete">Server memeriksa %1$d transaksi; hasil mungkin belum lengkap.</string>
+    <string name="transactions_coverage_scanned">Server memeriksa %1$d transaksi.</string>
+    <string name="transactions_coverage_partial">%1$d transaksi dimuat; masih ada halaman berikutnya.</string>
+    <string name="transactions_load_more">Muat lebih banyak</string>
     <string name="overview_after_refund">Setelah refund</string>
     <string name="overview_refund_badge">Refund</string>
     <string name="status_connected">Terhubung</string>
@@ -450,7 +492,7 @@
     <string name="settings_demo_done">%1$d baris demo dihapus.</string>
     <string name="settings_demo_none">Tidak ada data demo tersisa.</string>
     <string name="detail_actions_unavailable">Ubah kategori/catatan dan hapus transaksi tersedia setelah sinkronisasi edit server (C2B2).</string>
-    <string name="detail_actions_server_partial">Mode server: kategori disimpan ke server. Catatan, transfer internal, dan tautan refund masih hanya-baca.</string>
+    <string name="detail_actions_server_partial">Mode server: kategori dan detail transaksi disimpan ke server. Transfer internal dan tautan refund masih hanya-baca.</string>
     <string name="detail_confidence_hint">Ambang tinjauan 0,60 untuk keyakinan parser/impor — bukan probabilitas akurasi model.</string>
     <string name="detail_suggestion_unconfirmed">Kategori ini saran AI dan belum dikonfirmasi. Pilih kategori untuk mengonfirmasi.</string>
     <string name="manual_saved_hint">Setelah tersimpan, transaksi ini masuk ke ringkasan bulan %1$s.</string>

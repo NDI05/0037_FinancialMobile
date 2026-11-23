@@ -169,13 +169,47 @@ fun TransactionsScreen(
                     modifier = Modifier.padding(start = PamSpacing.xs),
                 )
             }
+            if (state.isRefreshing) {
+                Text(
+                    text = stringResource(R.string.transactions_refreshing),
+                    style = LabelM,
+                    color = OnInkFaint,
+                )
+            }
+            // S2.4: a paged server search must say how many rows it examined and whether its scan
+            // cap could have cut matches. Only shown when the server is actually paging the month.
+            if (state.isServerMode) {
+                val coverage = when {
+                    state.truncated -> stringResource(R.string.transactions_coverage_incomplete, state.scanned)
+                    state.isFiltered && state.scanned > 0 ->
+                        stringResource(R.string.transactions_coverage_scanned, state.scanned)
+                    state.hasMore -> stringResource(R.string.transactions_coverage_partial, state.items.size)
+                    else -> null
+                }
+                coverage?.let { text ->
+                    Text(
+                        text = text,
+                        style = LabelM,
+                        color = OnInkFaint,
+                        modifier = Modifier.padding(bottom = PamSpacing.xxs),
+                    )
+                }
+            }
 
             when {
                 state.isLoading -> LoadingShimmer(rows = 4, showHero = false)
 
-                state.error != null -> NoticeBanner(
-                    text = stringResource(com.pam.recap.ui.util.appErrorRes(requireNotNull(state.error))),
-                )
+                state.error != null -> Column {
+                    NoticeBanner(
+                        text = stringResource(com.pam.recap.ui.util.appErrorRes(requireNotNull(state.error))),
+                    )
+                    PillButton(
+                        text = stringResource(R.string.action_retry),
+                        onClick = viewModel::retry,
+                        style = PillButtonStyle.Secondary,
+                        modifier = Modifier.padding(top = PamSpacing.xs),
+                    )
+                }
 
                 state.isEmptyMonth -> EmptyState(
                     eyebrow = stringResource(R.string.transactions_empty_eyebrow),
@@ -193,6 +227,11 @@ fun TransactionsScreen(
 
                 else -> TransactionList(
                     items = state.items,
+                    hasMore = state.hasMore,
+                    isLoadingMore = state.isLoadingMore,
+                    loadMoreError = state.loadMoreError,
+                    onLoadMore = viewModel::loadMore,
+                    onRetryLoadMore = viewModel::retryLoadMore,
                     onOpenTransaction = onOpenTransaction,
                 )
             }
@@ -203,6 +242,11 @@ fun TransactionsScreen(
 @Composable
 private fun TransactionList(
     items: List<Transaction>,
+    hasMore: Boolean,
+    isLoadingMore: Boolean,
+    loadMoreError: com.pam.recap.core.result.AppError?,
+    onLoadMore: () -> Unit,
+    onRetryLoadMore: () -> Unit,
     onOpenTransaction: (String) -> Unit,
 ) {
     val grouped = items.groupBy { PamDateFormat.localDateTime(it.eventAt).toLocalDate() }
@@ -235,6 +279,35 @@ private fun TransactionList(
                     currency = transaction.currency,
                     onClick = { onOpenTransaction(transaction.id) },
                 )
+            }
+        }
+        if (loadMoreError != null || hasMore) {
+            item(key = "load-more") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = PamSpacing.sm),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    if (loadMoreError != null) {
+                        NoticeBanner(
+                            text = stringResource(com.pam.recap.ui.util.appErrorRes(loadMoreError)),
+                        )
+                        PillButton(
+                            text = stringResource(R.string.action_retry),
+                            onClick = onRetryLoadMore,
+                            style = PillButtonStyle.Secondary,
+                            modifier = Modifier.padding(top = PamSpacing.xs),
+                        )
+                    } else {
+                        PillButton(
+                            text = stringResource(R.string.transactions_load_more),
+                            onClick = onLoadMore,
+                            style = PillButtonStyle.Secondary,
+                            loading = isLoadingMore,
+                        )
+                    }
+                }
             }
         }
     }
