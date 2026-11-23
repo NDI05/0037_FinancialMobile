@@ -79,6 +79,13 @@ func NormalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
 
+// NormalizeSearchTerm makes a free-text filter and the cursor scope derived from it agree. A
+// whitespace-only term means "no filter" instead of searching for a space, and surrounding spaces
+// are ignored by both, so equal result sets always share one cursor scope.
+func NormalizeSearchTerm(q string) string {
+	return strings.TrimSpace(q)
+}
+
 func NewID(prefix string) string {
 	raw := make([]byte, 16)
 	if _, err := rand.Read(raw); err != nil {

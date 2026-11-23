@@ -231,6 +231,11 @@ func (s *Store) ListAdminAccounts(ctx context.Context, q, role, status string, l
 	scope := adminAccountCursorScope(q, role, status)
 	sqlText := adminAccountSelect + ` WHERE 1 = 1`
 	args := []any{}
+	if status == "" {
+		// Contract §11: the default listing excludes soft-deleted accounts; DELETE /status=DELETED
+		// remains reachable by asking for it explicitly.
+		sqlText += ` AND status <> 'DELETED'`
+	}
 	if trimmed := strings.TrimSpace(q); trimmed != "" {
 		like := "%" + strings.ToLower(trimmed) + "%"
 		sqlText += ` AND (LOWER(email) LIKE ? OR LOWER(COALESCE(display_name, '')) LIKE ?)`

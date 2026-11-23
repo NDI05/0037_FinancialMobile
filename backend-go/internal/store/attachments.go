@@ -245,6 +245,7 @@ func (s *Store) ListAttachments(ctx context.Context, ownerID, transactionID, mim
 	if mime != "" && !attachmentMIMEs[mime] {
 		return AttachmentPage{}, fmt.Errorf("invalid mimeType filter")
 	}
+	q = NormalizeSearchTerm(q)
 	scope := attachmentCursorScope(ownerID, transactionID, mime, q)
 	sqlText := attachmentSelect + ` WHERE a.owner_id = ? AND a.deleted_at IS NULL`
 	args := []any{ownerID}
@@ -265,10 +266,14 @@ func (s *Store) ListAttachments(ctx context.Context, ownerID, transactionID, mim
 		args = append(args, ms, ms, id)
 	}
 	sqlText += ` ORDER BY a.created_at_ms DESC, a.id DESC LIMIT ?`
-	args = append(args, limit+1000)
-	// q filters the sealed file name, so when q is present the window has to be wider. 1000 extra
-	// rows is plenty for a month's attachment metadata, and the cursor still advances by the last
-	// scanned row when the window is exhausted.
+	// q filters the sealed file name, so only then does the window have to be wider than one page.
+	// 1000 extra rows is plenty for a month's attachment metadata, and the cursor still advances
+	// by the last scanned row when the window is exhausted.
+	fetchLimit := limit + 1
+	if q != "" {
+		fetchLimit = limit + 1000
+	}
+	args = append(args, fetchLimit)
 	rows, err := s.DB.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return AttachmentPage{}, err
@@ -298,7 +303,7 @@ func (s *Store) ListAttachments(ctx context.Context, ownerID, transactionID, mim
 	if err := rows.Err(); err != nil {
 		return AttachmentPage{}, err
 	}
-	if scanned >= limit+1000 {
+	if q != "" && scanned >= fetchLimit {
 		page.NextCursor = encodeCursor(lastScanned.CreatedAt.UnixMilli(), lastScanned.ID, scope)
 	}
 	return page, nil

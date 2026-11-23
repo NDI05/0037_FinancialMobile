@@ -75,7 +75,91 @@ Production refuses short/absent JWT/refresh secrets and a `libsql://` URL withou
 - budget plans/limits; canonical analysis snapshot, strict FR-37 validator, consent/deletion/
   session/revision guard, cache by consent+snapshot, one regeneration, fake/OpenAI adapter;
 - usage/cost recording with a global daily USD ceiling; deletion request, sweep, session revoke
-  and last-admin protection; token-gated internal sweep.
+  and last-admin protection; token-gated internal sweep;
+- attachments metadata (FR-59) and admin accounts/invitations/audit (FR-65).
 
-Not yet ported: admin users/invitations (FR-65), attachments (FR-59), full Android C2 remote
-repository. See the parity matrix.
+## Search, paging and budget list contracts
+
+All list endpoints take `limit` (1..100, default 50), an opaque `nextCursor` and, where noted,
+`q`. Cursors are bound to owner + filters, so reusing one with another owner/filter is a clean
+`400 {"code":"invalid_cursor"}`; `q` is trimmed once and filtered case-insensitively, so a
+whitespace-only `q` behaves exactly like no filter.
+
+### Categories (C10)
+
+```http
+GET /v1/categories?q=kopi&kind=EXPENSE&limit=20&cursor=...
+Authorization: Bearer <access token>
+```
+
+`kind` is optional and one of `INCOME, EXPENSE, TRANSFER, UNCATEGORIZED` (anything else is
+`400 invalid_request`). `q` matches the decrypted label and the code.
+
+```json
+{
+  "categories": [
+    {"id": "cat_...", "code": "kopi-susu", "label": "Kopi Susu", "kind": "EXPENSE",
+     "isBuiltin": false, "revision": 0, "attributes": {}, "createdAt": "...", "updatedAt": "..."}
+  ],
+  "search": {"scanned": 14, "truncated": false},
+  "nextCursor": "eyJidWlsdGluIjpmYWxzZSw..."
+}
+```
+
+`search.scanned` counts the owner rows examined to build the page; the scan stops one match
+past `limit`, so `truncated` is always `false` for this bounded owner-scoped list. The same
+`search` envelope is returned by `GET /v1/transactions` (C05), where a text search examines at
+most a fixed 2000-row window and may report `truncated: true`.
+
+### Attachments (C20)
+
+```http
+GET /v1/attachments?transactionId=tx_...&mime=application/pdf&q=struk&limit=20
+```
+
+`mime` is one of the upload MIME allow-list (`400 invalid_request` otherwise) and `q` matches
+the sealed file name/hash. Unfiltered pages fetch only `limit+1` rows; a `q` search widens the
+window because the name is encrypted.
+
+### Admin accounts (C25)
+
+```http
+GET /v1/admin/accounts?q=alice&role=USER&status=ACTIVE&limit=20&cursor=...
+```
+
+`role` is `ADMIN|USER` and `status` is `ACTIVE|SUSPENDED|DELETED` (invalid values are
+`400 invalid_request`). The default listing excludes `DELETED`; pass `status=DELETED` to see
+soft-deleted accounts explicitly.
+
+### Budget plans by period (C15)
+
+The budget screen needs the months around the one it shows, not only the current month:
+
+```http
+GET /v1/budget-plans?from=2026-09&to=2026-11&limit=50&cursor=...
+Authorization: Bearer <access token>
+```
+
+`from`/`to` are inclusive `YYYY-MM` months, must be supplied together and `from <= to` (a
+violation is `400 invalid_request`); omitting both lists every month for the owner. Plans come
+newest-first. Each item is identical to `GET /v1/budget-plans/{monthID}`:
+
+```json
+{
+  "plans": [
+    {"monthId": "2026-11", "expectedIncomeMinor": 6000000, "plannedSavingsMinor": 1500000,
+     "limits": [{"categoryId": "cat_...", "categoryCode": "food", "amountMinor": 2000000}],
+     "attributes": {"currency": "IDR"}, "revision": 1,
+     "gapMinor": 2500000, "totalLimitMinor": 2000000,
+     "createdAt": "...", "updatedAt": "..."}
+  ],
+  "nextCursor": "MC4yMDI2LTExLj..."
+}
+```
+
+`gapMinor = expectedIncomeMinor - plannedSavingsMinor - totalLimitMinor` (contract §9). The
+per-category actual is already in `GET /v1/summaries/{monthID}` under
+`categoryTotals[].{categoryCode, amountMinor}`, joined to `limits[].categoryCode`, so the
+actual-vs-limit view needs no extra server field.
+
+Remaining parity gap: full Android C2 remote repository. See the parity matrix.
