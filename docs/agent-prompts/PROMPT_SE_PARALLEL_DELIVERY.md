@@ -71,8 +71,10 @@ tanggung jawab integrasi kepada worker terakhir.
   yang akan tertimpa; koordinasikan checkpoint/WIP tanpa reset/stash diam-diam.
 - Jangan memindahkan seluruh branch/copy folder untuk mengatasi konflik. Tinjau konflik,
   pertahankan behavior dan tests dari kedua slice, lalu jalankan pemeriksaan interop.
-- Setelah sukses, jangan langsung menghapus branch/worktree yang masih berisi WIP atau
-  evidence unik. Ikuti retirement policy dan pertahankan referensi commit.
+- Setelah hasil tugas terintegrasi dan terverifikasi di remote, lepaskan worktree yang
+  bersih dan hapus branch baru itu dari lokal dan remote. Aturan ini wajib, dengan
+  pengecualian `main`. Pastikan WIP dan bukti unik sudah diamankan, lalu catat commit
+  integrasi dan hasil penghapusan.
 
 ## 4. Tiket minimum Worker A — P1 yang dibuktikan PM
 

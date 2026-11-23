@@ -15,6 +15,11 @@ dan menginstruksikan: **setiap commit langsung dipush ke branch kerja yang sama*
   Jangan menggunakan force-push, reset destruktif atau menghapus history untuk memaksakan sinkronisasi.
 - Merge dan deployment tetap memerlukan instruksi pemilik tersendiri. Push feature branch
   tidak sama dengan penerimaan gate sprint atau izin merge/deploy.
+- Setiap branch baru wajib dihapus dari lokal dan remote setelah pekerjaannya
+  terintegrasi ke target yang diotorisasi dan hasil integrasi terverifikasi di remote.
+  **Pengecualian: `main`.** Lepaskan worktree yang bersih lebih dahulu dan pastikan
+  seluruh perubahan unik sudah terintegrasi. Bila masih ada WIP, tuntaskan atau
+  amankan pekerjaannya sebelum penghapusan.
 
 ## Delivery aktif
 
