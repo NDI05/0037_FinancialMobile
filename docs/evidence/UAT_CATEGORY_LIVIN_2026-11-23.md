@@ -177,3 +177,22 @@ Semua di `docs/evidence/assets/category_livin_2026-11-23/`:
 - `isolated_provider_stub_hits.log` — merchant yang benar-benar dikirim ke provider stub
 - `uat_backend_log_excerpt.txt` — baris log request UAT 22:26–22:27 (tanpa data sensitif)
 - `test_results.txt` — ringkasan gate Go/Android
+
+## 12. Addendum merged head (23 November 2026, malam)
+
+Lane kategori sudah digabung ke `feat/c2-android` (`dda4084`) dan diverifikasi ulang pada APK
+merged `a310067` di perangkat owner tanpa menghapus data sesi:
+
+- Aksi "Kategorikan dengan AI" sekali tekan → **`classified=0 needsReview=5 failed=0`**;
+  alasan tampil di Android: "Perlu tinjauan: nama merchant tidak aman dikirim ke AI. Pilih
+  kategori secara manual." (dulu kode alasan `unsafe_merchant`; pemetaan Android baru
+  menerjemahkan alasan API menjadi kalimat).
+- Request baru ke backend 18090: `POST /v1/category-jobs` + `GET /v1/transactions` saja;
+  **0** panggilan provider Azure untuk kelima job tersebut (label numerik tetap ditolak
+  sanitasi sebelum provider).
+- Notis "nomor referensi" pada detail transaksi **belum teramati** pada record owner yang
+  dibuka (label merchant tidak dirender layout detail untuk record itu); logika notis lulus
+  uji unit. Kategori AI terklasifikasi + persistensi setelah restart tetap **NOT RUN**
+  (tidak ada sampel owner yang dapat diklasifikasi), dan precision ≥95% tetap **NOT RUN**
+  (tanpa benchmark berlabel).
+- Detail lengkap bukti merged: [UAT_MERGED_UI_CATEGORY_2026-11-23.md](UAT_MERGED_UI_CATEGORY_2026-11-23.md).

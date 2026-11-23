@@ -90,3 +90,26 @@ bukan data pemilik.
   sha256 `fa0d224e…`; batas: foreground-only sync, tanpa `applicationIdSuffix` (tidak bisa
   coexist dengan debug), tanpa data finansial lokal.
 - Tidak ada baris di matriks ini yang diberi PASS tanpa menyebut bukti dan batasnya.
+
+## Addendum 23 November 2026 (malam) — revamp UI sinkronisasi + alasan kategori
+
+Perubahan ini bukan aksi baru C01–C25, tetapi merevisi permukaan UI/UX dan pesan alasan atas
+aksi yang sudah ada. Karena itu status diberi label bukti sendiri, tidak menaikkan status
+S3/S4 di atas tanpa bukti baru.
+
+| Butir | Status | Bukti | Batas |
+|---|---|---|---|
+| Ringkasan tanpa banner "Tidak ada email Livin", CTA impor, kartu Sumber data, ikon gear | **PASS runtime (dua perangkat)** | APK merged `a310067`: grep dump UI 0 kemunculan; Pengaturan tetap via tab bawah. [UAT_MERGED_UI_CATEGORY_2026-11-23.md](../evidence/UAT_MERGED_UI_CATEGORY_2026-11-23.md) §2 | Keadaan bulan kosong hanya diverifikasi dengan data sintetis |
+| Judul top app bar terpusat terhadap lebar layar | **PASS runtime (393 dp, 360 dp/font 200%)**; **PARTIAL** untuk back+judul panjang & 412 dp | Pusat glyph 540,0 px / 540,5 px vs pusat layar 540,0 px; baris back+judul panjang & 412 dp hanya uji Robolectric. Idem §3 | Tidak ada tangkapan perangkat untuk 412 dp dan judul sangat panjang |
+| Ikon status 48 dp + label singkat fade 2–3 s + TalkBack | **PASS runtime** target 48 dp & `content-desc` dinamis; label live **PARTIAL**; TalkBack live **NOT RUN** | Bounds 126 px dan 144 px pada dua density; bingkai animasi live tidak tertangkap; TalkBack terhalang dialog izin notifikasi di perangkat sintetis. Idem §4 | Animasi & TalkBack dibuktikan uji unit/Robolectric, bukan live |
+| Satu sheet "Status pembaruan"; buka sheet tanpa impor; satu job untuk satu tap; hasil sama setelah tutup/buka dan minimize/relaunch | **PASS runtime** | Log backend 18090: buka sheet 263→263, satu tap = satu `POST /v1/import-jobs` 201, tutup/buka dan minimize/relaunch menampilkan hasil sama tanpa request baru. Idem §5 | Bingkai running/progress live **PARTIAL** (job sintetis < 2 s); resume unggahan pending live **NOT RUN** |
+| Kegagalan + "Coba lagi" di perangkat owner | **PASS runtime** (tampilan alasan & tombol) ; alur resume unggahan **NOT RUN** | Sheet owner idle: alasan gagal tampil, tombol sinkron; buka/tutup ulang identik, tanpa request baru | Tidak ada unggahan pending yang boleh dipicu ulang di data owner |
+| Alasan kategori AI tampil di Android | **PASS runtime (owner, backend 18090 lama)** | `classified=0 needsReview=5 failed=0`; copy "Perlu tinjauan: nama merchant tidak aman dikirim ke AI…"; 0 panggilan Azure. [UAT_CATEGORY_LIVIN_2026-11-23.md](../evidence/UAT_CATEGORY_LIVIN_2026-11-23.md) §12 | Notis nomor referensi di detail **belum teramati** pada record owner; kategori AI terklasifikasi/precision ≥95% tetap **NOT RUN** |
+| Route/layar impor lama pensiun | **PASS by construction + grep**; probe deep-link **NOT RUN** | Destination/shortcut/string impor hilang; tidak ada deep link yang pernah mengekspos route itu. [UAT_UI_REVAMP_2026-11-23.md](../evidence/UAT_UI_REVAMP_2026-11-23.md) §5 | Tidak ada percobaan runtime ke route lama |
+| "Buat Analisis" sebagai gate terpisah (provider Ollama, bulan EMPTY-coverage + tx manual) | **NOT RUN** | Build UAT ini memakai analisis deterministik on-device (`PAM_ANALYSIS_BACKEND_URL` kosong); bulan uji menampilkan "Belum ada data". [UAT_MERGED_UI_CATEGORY_2026-11-23.md](../evidence/UAT_MERGED_UI_CATEGORY_2026-11-23.md) §7 | Perlu konfigurasi URL analisis backend + bulan EMPTY berisi tx manual |
+
+Gate merged head `a310067`: 509 tes debug / 519 tes assessment (0 gagal), `lintDebug` 0
+error (112 warning), `lintAssessment` 0 error (120 warning), assemble debug+assessment PASS,
+Go test/vet/build/`-race` PASS, APK debug sha256 `0e9169f2…`, assessment `dea936b8…`.
+Regresi merge-only yang ditemukan auditor (7 `MissingTranslation`) diperbaiki di `a310067`
+dan diverifikasi ulang.

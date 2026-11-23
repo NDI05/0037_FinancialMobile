@@ -81,6 +81,26 @@ top (no weighted `Row`), so chrome never moves the title.
 | `:app:lintDebug` | PASS — 0 errors after adding the English translations for the new status strings (109 pre-existing warnings unchanged) |
 | `:app:assembleDebug` | PASS |
 
+### 6.1 Refresh pasca-merge (HEAD `a310067`)
+
+Angka di tabel §6 adalah angka **lane** pada `1362c11` (sebelum string kategori ada). Setelah
+kedua lane digabung, `:app:lintDebug`/`:app:lintAssessment` sempat **gagal** dengan 7
+`MissingTranslation` karena string kategori hanya berbahasa Indonesia; perbaikan `a310067`
+menambahkan 7 string Inggris. Gate merged-head yang fresh:
+
+| Gate merged `a310067` | Hasil |
+| --- | --- |
+| `:app:testDebugUnitTest --rerun-tasks` | PASS — 509 tes, 0 gagal, 0 skip |
+| `:app:testAssessmentUnitTest --rerun-tasks` | PASS — 519 tes, 0 gagal, 0 skip |
+| `:app:lintDebug --rerun-tasks` | PASS — 0 error, 112 warning, 1 hint |
+| `:app:lintAssessment --rerun-tasks` | PASS — 0 error, 120 warning, 1 hint |
+| `:app:assembleDebug` / `:app:assembleAssessment` | PASS (sha256 debug `0e9169f2…`, assessment `dea936b8…`) |
+
+UAT perangkat pada APK merged (Ringkasan bersih, judul terpusat 393 dp + 360 dp font 200%,
+ikon status 48 dp, sheet tunggal tanpa impor saat dibuka, satu job impor per tap, hasil sama
+setelah tutup/buka dan minimize/relaunch, alasan kategori tampil) ada di
+[UAT_MERGED_UI_CATEGORY_2026-11-23.md](UAT_MERGED_UI_CATEGORY_2026-11-23.md).
+
 ## 7. Caveats
 
 - The UAT backend mailbox/demo connection is still partial, so a full "complete with no new

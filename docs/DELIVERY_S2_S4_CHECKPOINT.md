@@ -743,3 +743,61 @@ dikecualikan.
 
 Mailbox nyata + email baru tiba, benchmark berlabel manusia, 36 email malformed, UAT pemilik
 di perangkat, hosting/backup-restore, serta keputusan merge/deploy ke `develop`/`main`.
+
+## Revisi UI sinkronisasi + kategori Livin — merged `a310067` (23 November 2026, malam)
+
+Mandat PM kali ini merevisi permukaan UI/UX dan pesan alasan kategori, bukan menambah aksi
+baru. Dua lane dikerjakan paralel, digabung, lalu diverifikasi ulang pada APK hasil merge.
+
+### Commit
+
+- Lane UI: `9aeea28` (merge `work/ui-summary-sheet` @ `1362c11`,
+  `feat(android-ui): unify sync status sheet and simplify Ringkasan`).
+- Lane kategori: `dda4084` (merge `work/category-livin` @ `5451db9`,
+  `test(category): cover detail reference flag and correct evidence citations`).
+- Perbaikan pasca-merge: `a310067` — 7 string Inggris untuk alasan tinjauan + notis nomor
+  referensi (memperbaiki 7 `MissingTranslation` yang lolos karena lint lane kategori tidak
+  dijalankan setelah string baru masuk).
+- Semua commit dipush ke `origin/feat/c2-android`; `main` tidak disentuh.
+
+### Hasil gate merged `a310067`
+
+- Android: debug **509** tes / assessment **519** tes, 0 gagal; `lintDebug` 0 error
+  (112 warning, 1 hint); `lintAssessment` 0 error (120 warning, 1 hint);
+  `assembleDebug`+`assembleAssessment` PASS; BuildConfig `http://10.0.2.2:18090`.
+- Go: `test -count=1 ./...`, `vet`, `build`, dan `-race ./internal/store ./internal/httpapi`
+  PASS.
+- Audit independen: verdict awal **FAIL** karena gate lint merged (B1) — diperbaiki,
+  re-audit menyusul dokumen ini; laporan auditor di
+  [AUDIT_MERGED_UI_CATEGORY_2026-11-23.md](evidence/AUDIT_MERGED_UI_CATEGORY_2026-11-23.md).
+
+### Bukti runtime perangkat
+
+Ringkasan bersih; judul terpusat (393 dp 540,0 px; 360 dp + font 200% 540,5 px); ikon status
+48 dp; satu sheet tanpa request saat dibuka; satu tap = satu job impor; hasil sama setelah
+tutup/buka dan minimize/relaunch; alasan kategori tampil di Android (`classified=0
+needsReview=5 failed=0`, 0 panggilan Azure). Rincian: [UAT_MERGED_UI_CATEGORY_2026-11-23.md](evidence/UAT_MERGED_UI_CATEGORY_2026-11-23.md).
+
+### Batas dan NOT RUN (jangan dibaca lulus)
+
+Bingkai running/progress live, fade label live, TalkBack live, baris back+judul panjang dan
+412 dp di perangkat, notis nomor referensi di detail owner, persistensi banner alasan setelah
+restart, resume unggahan pending live, kategori AI terklasifikasi pada data owner, precision
+≥95% (tanpa benchmark berlabel), "Buat Analisis" via Ollama dengan bulan EMPTY-coverage,
+probe deep-link route impor lama.
+
+### Gap/dokumen
+
+Draf perubahan kebutuhan: [CR_006](changes/CR_006_DRAFT_SYNC_UI_CATEGORY_REVIEW.md) (melengkapi
+CR-005); SRS resmi tidak diubah. Matriks acceptance diberi addendum bukti; UAT UI dan UAT
+kategori diberi addendum pasca-merge.
+
+### Cleanup
+
+Worktree lane dan branch `work/*` dihapus setelah integrasi terverifikasi; hanya checkout
+utama yang tersisa; `origin/feat/c2-android == a310067`.
+
+### S5 tetap terbuka
+
+Mailbox nyata + email baru otomatis, benchmark berlabel manusia (precision), 36 email
+malformed, UAT pemilik penuh, hosting/backup-restore, serta keputusan merge/deploy.
