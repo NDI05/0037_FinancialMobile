@@ -490,3 +490,37 @@ func (s *Store) ListAudit(ctx context.Context, targetID, action string, limit in
 	}
 	return page, nil
 }
+
+// BootstrapAdmin grants the ADMIN role to an existing account from an operator-controlled CLI.
+// There is deliberately no public HTTP route for this: provisioning stays an ops action backed by
+// database credentials. The call is idempotent (a second run reports changed=false and writes no
+// audit row) and every real promotion appends an admin_audit entry attributed to the promoted
+// account with source=ops-cli, so the audit trail explains where the privilege came from.
+func (s *Store) BootstrapAdmin(ctx context.Context, email string, now time.Time) (AdminAccount, bool, error) {
+	account, err := s.FindAccountByEmail(ctx, email)
+	if err != nil {
+		return AdminAccount{}, false, err
+	}
+	if account.Role == "ADMIN" {
+		current, err := s.GetAdminAccount(ctx, account.OwnerID)
+		return current, false, err
+	}
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return AdminAccount{}, false, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if _, err := tx.ExecContext(ctx, `UPDATE users SET role = 'ADMIN', revision = revision + 1,
+		updated_at = ? WHERE owner_id = ?`, nowString(now), account.OwnerID); err != nil {
+		return AdminAccount{}, false, err
+	}
+	if err := insertAuditTx(ctx, tx, account.OwnerID, account.OwnerID, "bootstrap_admin",
+		map[string]any{"source": "ops-cli"}, now); err != nil {
+		return AdminAccount{}, false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return AdminAccount{}, false, err
+	}
+	current, err := s.GetAdminAccount(ctx, account.OwnerID)
+	return current, true, err
+}
