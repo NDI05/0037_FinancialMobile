@@ -559,6 +559,12 @@
     <string name="dynamic_field_value">Value</string>
     <string name="dynamic_field_add">Add field</string>
     <string name="dynamic_fields_hint">Up to 10 fields, name 40 characters, value 200 characters. Never sent to the AI model.</string>
+    <string name="dynamic_fields_too_many">At most 10 extra fields.</string>
+    <string name="dynamic_field_key_too_long">A field name can be at most 40 characters.</string>
+    <string name="dynamic_field_value_too_long">A field value can be at most 200 characters.</string>
+    <string name="dynamic_field_duplicate">Field names must be unique.</string>
+    <string name="dynamic_fields_too_large">The extra fields are too large.</string>
+    <string name="dynamic_fields_invalid">Check the extra fields again.</string>
     <string name="action_remove">Remove</string>
     <string name="settings_categories_body">Manage transaction categories, including your own.</string>
 

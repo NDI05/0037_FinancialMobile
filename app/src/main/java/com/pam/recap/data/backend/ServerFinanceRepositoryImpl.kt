@@ -33,6 +33,8 @@ import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.ServerTransactionPage
 import com.pam.recap.domain.repository.TransactionPatch
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.math.roundToInt
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -115,6 +117,7 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         plannedSavingsMinor: Long,
         limitsByCategoryId: Map<String, Long>,
         revision: Int,
+        attributes: Map<String, String>,
     ): Outcome<ServerBudgetPlan> = when (
         val result = api.saveBudget(
             ownerId,
@@ -123,6 +126,7 @@ class ServerFinanceRepositoryImpl @Inject constructor(
                 expectedIncomeMinor,
                 plannedSavingsMinor,
                 limitsByCategoryId.map { (id, amount) -> RemoteBudgetLimit(id, amount) },
+                attributes,
                 revision,
             ),
         )
@@ -152,6 +156,7 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         limitsByCategoryId = limits.associate { it.categoryId to it.amountMinor },
         gapMinor = gapMinor,
         revision = revision,
+        attributes = attributes.orEmpty(),
     )
 
     override suspend fun attachments(
@@ -340,6 +345,7 @@ class ServerFinanceRepositoryImpl @Inject constructor(
                 description = patch.description,
                 merchantLabel = patch.merchantLabel,
                 note = patch.note,
+                attributes = patch.attributes,
                 revision = patch.revision,
             ),
         )
@@ -491,7 +497,23 @@ class ServerFinanceRepositoryImpl @Inject constructor(
             updatedAt = updated,
             serverCategoryId = categoryId,
             serverCategoryLabel = null,
+            attributes = attributes.toStringAttributes(),
         )
+    }
+
+    /**
+     * S3 attributes are a flat string map on the Android side, while the server stores a generic
+     * JSON object. A non-string value cannot be edited by the dynamic-field editor, so it is a
+     * protocol failure for this client rather than being silently dropped: the row is surfaced as
+     * `backend_invalid_response` and never written back with the unknown value erased.
+     */
+    private fun JsonObject?.toStringAttributes(): Map<String, String> {
+        if (this == null) return emptyMap()
+        return entries.associate { (key, value) ->
+            val text = value as? JsonPrimitive
+            require(text != null && text.isString) { "attribute $key is not a string" }
+            key to text.content
+        }
     }
 
     private fun RemoteTransaction.toDomain(ownerId: String): Transaction {

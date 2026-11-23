@@ -581,6 +581,12 @@
     <string name="dynamic_field_value">Isi</string>
     <string name="dynamic_field_add">Tambah kolom</string>
     <string name="dynamic_fields_hint">Maksimal 10 kolom, nama 40 karakter, isi 200 karakter. Tidak pernah dikirim ke model AI.</string>
+    <string name="dynamic_fields_too_many">Maksimal 10 kolom tambahan.</string>
+    <string name="dynamic_field_key_too_long">Nama kolom maksimal 40 karakter.</string>
+    <string name="dynamic_field_value_too_long">Isi kolom maksimal 200 karakter.</string>
+    <string name="dynamic_field_duplicate">Nama kolom tidak boleh sama.</string>
+    <string name="dynamic_fields_too_large">Total isi kolom tambahan terlalu besar.</string>
+    <string name="dynamic_fields_invalid">Periksa lagi kolom tambahan.</string>
     <string name="action_remove">Hapus</string>
     <string name="settings_categories_body">Atur kategori transaksi, termasuk kategori buatan sendiri.</string>
 

@@ -117,6 +117,8 @@ internal open class RecordingServerFinanceRepository : ServerFinanceRepository {
             description = patch.description ?: current.description,
             merchantLabel = patch.merchantLabel ?: current.merchantLabel,
             note = patch.note ?: current.note,
+            // The S3 editor is authoritative, so the stored map is replaced by the patched one.
+            attributes = patch.attributes,
             revision = current.revision + 1,
         )
         transactionRow = updated
@@ -169,6 +171,7 @@ internal open class RecordingServerFinanceRepository : ServerFinanceRepository {
         plannedSavingsMinor: Long,
         limitsByCategoryId: Map<String, Long>,
         revision: Int,
+        attributes: Map<String, String>,
     ): Outcome<ServerBudgetPlan> {
         val submitted = ServerBudgetPlan(
             monthId = month.id(),
@@ -177,6 +180,7 @@ internal open class RecordingServerFinanceRepository : ServerFinanceRepository {
             limitsByCategoryId = limitsByCategoryId,
             gapMinor = expectedIncomeMinor - plannedSavingsMinor - limitsByCategoryId.values.sum(),
             revision = revision,
+            attributes = attributes,
         )
         savedPlans += submitted
         return savePlanOutcome?.invoke(submitted)
@@ -246,6 +250,7 @@ internal fun testTransaction(
     description: String = "QRIS $id",
     merchantLabel: String? = null,
     revision: Int = 3,
+    attributes: Map<String, String> = emptyMap(),
 ): Transaction = Transaction(
     id = id,
     ownerId = "u_owner",
@@ -273,4 +278,5 @@ internal fun testTransaction(
     revision = revision,
     createdAt = testNow,
     updatedAt = testNow,
+    attributes = attributes,
 )

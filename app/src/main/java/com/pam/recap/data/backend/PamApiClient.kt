@@ -668,6 +668,8 @@ data class RemoteTransactionPatch(
     val description: String? = null,
     val merchantLabel: String? = null,
     val note: String? = null,
+    /** Null keeps the stored attributes; a map (including an empty one) replaces them. */
+    val attributes: Map<String, String>? = null,
     val revision: Int,
 )
 
@@ -750,6 +752,8 @@ data class RemoteBudgetPlan(
     val limits: List<RemoteBudgetLimit> = emptyList(),
     val revision: Int,
     val gapMinor: Long = 0,
+    /** Older servers omit the field; the domain treats absence as no attributes. */
+    val attributes: Map<String, String>? = null,
 )
 
 @Serializable
@@ -760,6 +764,8 @@ data class RemoteBudgetWrite(
     val expectedIncomeMinor: Long,
     val plannedSavingsMinor: Long,
     val limits: List<RemoteBudgetLimit> = emptyList(),
+    /** The editor is authoritative: the sent map replaces the stored attribute set. */
+    val attributes: Map<String, String> = emptyMap(),
     val revision: Int,
 )
 

@@ -47,6 +47,11 @@ data class Transaction(
     /** Server identity retained even when the enum must fall back to OTHER_EXPENSE. */
     val serverCategoryId: String? = null,
     val serverCategoryLabel: String? = null,
+    /**
+     * S3 dynamic fields: owner-defined string attributes stored with the row. Empty for the local
+     * Room path; populated from the server readback so the detail editor can prefill after restart.
+     */
+    val attributes: Map<String, String> = emptyMap(),
 ) {
 
     val isCredit: Boolean get() = direction == Direction.CREDIT

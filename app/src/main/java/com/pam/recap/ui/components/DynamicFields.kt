@@ -1,5 +1,6 @@
 package com.pam.recap.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -64,6 +65,17 @@ object DynamicFieldRules {
 
     fun fromMap(attributes: Map<String, String>): List<DynamicField> =
         attributes.entries.map { DynamicField(it.key, it.value) }.ifEmpty { listOf(DynamicField()) }
+}
+
+/** Localized copy for a [DynamicFieldRules] rule id; every attributes editor shares this mapping. */
+@StringRes
+fun dynamicFieldRuleRes(rule: String): Int = when (rule) {
+    DynamicFieldRules.RULE_TOO_MANY -> R.string.dynamic_fields_too_many
+    DynamicFieldRules.RULE_KEY_TOO_LONG -> R.string.dynamic_field_key_too_long
+    DynamicFieldRules.RULE_VALUE_TOO_LONG -> R.string.dynamic_field_value_too_long
+    DynamicFieldRules.RULE_DUPLICATE -> R.string.dynamic_field_duplicate
+    DynamicFieldRules.RULE_TOO_LARGE -> R.string.dynamic_fields_too_large
+    else -> R.string.dynamic_fields_invalid
 }
 
 /**

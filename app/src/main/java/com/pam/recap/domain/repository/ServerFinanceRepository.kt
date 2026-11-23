@@ -44,6 +44,8 @@ data class ServerBudgetPlan(
     val limitsByCategoryId: Map<String, Long>,
     val gapMinor: Long,
     val revision: Int,
+    /** Owner-defined string attributes (S3 dynamic fields); absent on older servers. */
+    val attributes: Map<String, String> = emptyMap(),
 )
 
 /** A manual action before the server assigns its final id/revision. */
@@ -82,6 +84,11 @@ data class TransactionPatch(
     val description: String? = null,
     val merchantLabel: String? = null,
     val note: String? = null,
+    /**
+     * Owner-defined string attributes (S3 dynamic fields). The editor is authoritative: the map
+     * sent on save replaces the stored attribute set, so an empty map clears it.
+     */
+    val attributes: Map<String, String> = emptyMap(),
 )
 
 /**
@@ -198,6 +205,8 @@ interface ServerFinanceRepository {
         plannedSavingsMinor: Long,
         limitsByCategoryId: Map<String, Long>,
         revision: Int,
+        /** The editor is authoritative, so the write replaces the whole attribute set. */
+        attributes: Map<String, String> = emptyMap(),
     ): Outcome<ServerBudgetPlan> =
         Outcome.Failure(AppError.Configuration("backend_budget_not_supported"))
 

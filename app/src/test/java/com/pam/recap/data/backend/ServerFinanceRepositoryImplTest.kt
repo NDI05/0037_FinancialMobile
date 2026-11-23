@@ -1,5 +1,6 @@
 package com.pam.recap.data.backend
 
+import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.core.util.PamJson
@@ -7,6 +8,7 @@ import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.BackendSessionRepository
+import com.pam.recap.domain.repository.TransactionPatch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -147,6 +149,81 @@ class ServerFinanceRepositoryImplTest {
         }
     }
 
+    @Test
+    fun `transaction patch sends attributes and parses the readback`() = runTest {
+        server.enqueue(json(withAttributes(TRANSACTION, """{"sumber":"kamera","catatan":"QRIS"}""")))
+        val result = repo.updateTransaction(
+            "u_1",
+            "tx_1",
+            TransactionPatch(
+                revision = 3,
+                note = "note",
+                attributes = mapOf("sumber" to "kamera", "catatan" to "QRIS"),
+            ),
+        ) as Outcome.Success
+        val request = server.takeRequest()
+        assertEquals("PATCH", request.method)
+        assertEquals("/v1/transactions/tx_1", request.path)
+        val body = request.body.readUtf8()
+        assertTrue(body, body.contains("\"attributes\":{\"sumber\":\"kamera\",\"catatan\":\"QRIS\"}"))
+        assertEquals(mapOf("sumber" to "kamera", "catatan" to "QRIS"), result.value.attributes)
+    }
+
+    @Test
+    fun `transaction readback treats an absent attributes map as empty`() = runTest {
+        server.enqueue(json(TRANSACTION))
+        val transaction = (repo.get("u_1", "tx_1") as Outcome.Success).value
+        assertTrue(transaction.attributes.isEmpty())
+    }
+
+    @Test
+    fun `a non-string transaction attribute is a protocol failure, not a silent drop`() = runTest {
+        server.enqueue(json(withAttributes(TRANSACTION, """{"tags":["makan"]}""")))
+        val result = repo.get("u_1", "tx_1")
+        assertTrue(result is Outcome.Failure)
+        assertTrue((result as Outcome.Failure).error is AppError.Parsing)
+    }
+
+    @Test
+    fun `budget write sends attributes and parses the readback`() = runTest {
+        server.enqueue(json(BUDGET_PLAN))
+        val result = repo.saveBudgetPlan(
+            ownerId = "u_1",
+            month = requireNotNull(JakartaMonth.parse("2026-11")),
+            expectedIncomeMinor = 500_000_000,
+            plannedSavingsMinor = 100_000_000,
+            limitsByCategoryId = mapOf("cat_food" to 17_500_000L),
+            revision = 2,
+            attributes = mapOf("sumber" to "kamera"),
+        ) as Outcome.Success
+        val request = server.takeRequest()
+        assertEquals("PUT", request.method)
+        assertEquals("/v1/budget-plans/2026-11", request.path)
+        val body = request.body.readUtf8()
+        assertTrue(body, body.contains("\"attributes\":{\"sumber\":\"kamera\"}"))
+        assertEquals(mapOf("sumber" to "kamera"), result.value.attributes)
+        assertEquals(17_500_000L, result.value.limitsByCategoryId["cat_food"])
+    }
+
+    @Test
+    fun `budget readback tolerates an absent attributes map`() = runTest {
+        server.enqueue(json(BUDGET_PLAN.replace(",\"attributes\":{\"sumber\":\"kamera\"}", "")))
+        val plan = (repo.budgetPlan("u_1", requireNotNull(JakartaMonth.parse("2026-11"))) as Outcome.Success).value
+        assertTrue(plan.attributes.isEmpty())
+    }
+
+    @Test
+    fun `a non-string budget attribute is a protocol failure, not a silent drop`() = runTest {
+        server.enqueue(json(BUDGET_PLAN.replace("\"sumber\":\"kamera\"", "\"jumlah\":3")))
+        val result = repo.budgetPlan("u_1", requireNotNull(JakartaMonth.parse("2026-11")))
+        assertTrue(result is Outcome.Failure)
+        assertTrue((result as Outcome.Failure).error is AppError.Parsing)
+    }
+
+    /** Appends an `attributes` object to one of the compact JSON fixtures above. */
+    private fun withAttributes(body: String, attributes: String): String =
+        body.dropLast(1) + ",\"attributes\":$attributes}"
+
     private fun json(body: String, code: Int = 200) = MockResponse()
         .setResponseCode(code)
         .setHeader("content-type", "application/json")
@@ -164,5 +241,9 @@ class ServerFinanceRepositoryImplTest {
             "amountMinor":17500000,"currency":"IDR","eventAt":"2026-11-19T04:10:00Z",
             "monthId":"2026-11","categoryOrigin":"USER","isInternalTransfer":false,
             "revision":3,"createdAt":"2026-11-22T00:00:00Z","updatedAt":"2026-11-22T00:00:00Z"}"""
+        const val BUDGET_PLAN = """{"monthId":"2026-11","expectedIncomeMinor":500000000,
+            "plannedSavingsMinor":100000000,
+            "limits":[{"categoryId":"cat_food","amountMinor":17500000}],
+            "revision":2,"gapMinor":0,"attributes":{"sumber":"kamera"}}"""
     }
 }
