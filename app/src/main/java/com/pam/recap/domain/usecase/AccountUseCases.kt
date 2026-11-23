@@ -266,6 +266,7 @@ class RequestDeletionUseCase @Inject constructor(
     private val autoCategory: AutoCategoryScheduler? = null,
     private val syncStatus: SyncStatusHolder? = null,
     private val categoryStatus: CategoryStatusHolder? = null,
+    private val syncCursors: SyncCursorStore? = null,
 ) {
 
     suspend operator fun invoke(
@@ -312,6 +313,9 @@ class RequestDeletionUseCase @Inject constructor(
             runCatching { autoCategory?.cancelAll() }
             runCatching { syncStatus?.reset() }
             runCatching { categoryStatus?.reset() }
+            // A watermark that outlives the account would make the next session skip mail whose
+            // transactions were just deleted.
+            runCatching { syncCursors?.clear(ownerId) }
             transactions.deleteAll(ownerId)
             summaries.deleteAll(ownerId)
             analyses.deleteAll(ownerId)
