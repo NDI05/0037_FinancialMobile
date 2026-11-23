@@ -77,6 +77,66 @@ data class SyncSnapshot(
     val ownerId: String? = null,
 )
 
+/**
+ * One calendar month of one committed local import run, as recorded *before* the first upload
+ * attempt.
+ *
+ * The fingerprint list is the exact candidate set the run produced. It is durable so a later
+ * automatic tick can send the same rows even though Room's `INSERT OR IGNORE` dedupe keeps them
+ * attached to this (older) local import job instead of the newest one.
+ */
+data class PendingUploadMonth(
+    val monthId: String,
+    /** Candidate fingerprints committed locally for this month; empty means "nothing matched". */
+    val fingerprints: List<String> = emptyList(),
+    /** Server import job created for this month, when one exists. */
+    val serverJobId: String? = null,
+    /** Server month state once it was acknowledged; null means still unacknowledged. */
+    val finalState: String? = null,
+) {
+    val acknowledged: Boolean get() = finalState != null
+}
+
+/**
+ * Durable identity of a local import run whose upload has not been fully acknowledged.
+ *
+ * It is written by the sync layer right after the local commit (so the same snapshot is known
+ * even after process death) and is only cleared once every month is acknowledged by the server.
+ * The cursor watermark captured in [watermark] may never be published before that, otherwise a
+ * failed upload would be silently skipped forever.
+ */
+data class PendingUploadRun(
+    val ownerId: String,
+    val localJobId: String,
+    /** Month the local import targeted; an EMPTY run still needs this month to exist server-side. */
+    val primaryMonthId: String,
+    /** [ImportState] name of the local job at commit time. */
+    val localState: String,
+    val templateVersion: String,
+    val errorCode: String? = null,
+    /** Mailbox watermark captured before the local import. */
+    val watermark: MailboxWatermark? = null,
+    val startedAtEpochMillis: Long = 0L,
+    val months: Map<String, PendingUploadMonth> = emptyMap(),
+) {
+    /**
+     * Only a fully processed range may move the cursor. A PARTIAL/FAILED run still has rows worth
+     * uploading, but its watermark would hide the unread tail of the range.
+     */
+    val rangeComplete: Boolean
+        get() = localState == ImportState.COMPLETE.name || localState == ImportState.EMPTY.name
+
+    val fullyAcknowledged: Boolean get() = months.values.all { it.acknowledged }
+
+    /** Marks one month acknowledged; the caller persists the result before advancing anything. */
+    fun acknowledged(monthId: String, serverJobId: String, finalState: String): PendingUploadRun {
+        val current = months[monthId] ?: PendingUploadMonth(monthId)
+        return copy(
+            months = months + (monthId to current.copy(serverJobId = serverJobId, finalState = finalState)),
+        )
+    }
+}
+
 /** The window one automatic check actually reads: a delta, never the whole month. */
 data class DeltaWindow(
     val fromInclusive: Instant,
