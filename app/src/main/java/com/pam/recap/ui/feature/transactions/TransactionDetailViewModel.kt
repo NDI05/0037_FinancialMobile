@@ -18,6 +18,8 @@ import com.pam.recap.domain.usecase.LinkRefundUseCase
 import com.pam.recap.domain.usecase.MarkInternalTransferUseCase
 import com.pam.recap.domain.usecase.UpdateTransactionCategoryUseCase
 import com.pam.recap.domain.usecase.UpdateTransactionNoteUseCase
+import com.pam.recap.ui.components.DynamicField
+import com.pam.recap.ui.components.DynamicFieldRules
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -70,6 +72,10 @@ data class TransactionDetailUiState(
     /** Network failure: the draft is kept and the same save can be retried. */
     val canRetry: Boolean = false,
     val fieldError: TransactionFieldError? = null,
+    /** S3 dynamic fields draft, prefilled from the row's stored attributes when the sheet opens. */
+    val attributeFields: List<DynamicField> = listOf(DynamicField()),
+    /** Rule id from [DynamicFieldRules.validate]; the screen maps it to localized copy. */
+    val attributeRule: String? = null,
     val hasUnsavedChanges: Boolean = false,
     val deleteConfirmation: Boolean = false,
     val isDeleted: Boolean = false,
@@ -108,6 +114,7 @@ class TransactionDetailViewModel @Inject constructor(
         val description: String = "",
         val merchant: String = "",
         val note: String = "",
+        val attributes: List<DynamicField> = listOf(DynamicField()),
         val dirty: Boolean = false,
     )
 
@@ -165,6 +172,7 @@ class TransactionDetailViewModel @Inject constructor(
                 description = transaction.description,
                 merchant = transaction.merchantLabel.orEmpty(),
                 note = transaction.note.orEmpty(),
+                attributes = DynamicFieldRules.fromMap(transaction.attributes),
                 dirty = false,
             )
         }
@@ -177,6 +185,7 @@ class TransactionDetailViewModel @Inject constructor(
                 descriptionDraft = draft.description,
                 merchantDraft = draft.merchant,
                 noteDraft = draft.note,
+                attributeFields = draft.attributes,
                 // An unresolved conflict is still shown as the typed error until the user resolves it,
                 // so reloading the newest row does not hide what happened.
                 error = if (it.conflict) it.error ?: loadError else loadError,
@@ -194,6 +203,9 @@ class TransactionDetailViewModel @Inject constructor(
 
     fun setNote(value: String) = editDraft { it.copy(note = value) }
 
+    /** S3: the dynamic-field rows are part of the same metadata draft as the text fields. */
+    fun setAttributeFields(fields: List<DynamicField>) = editDraft { it.copy(attributes = fields) }
+
     private fun editDraft(transform: (Draft) -> Draft) {
         if (!_state.value.metadataEditable) return
         draft = transform(draft).copy(dirty = true)
@@ -202,8 +214,10 @@ class TransactionDetailViewModel @Inject constructor(
                 descriptionDraft = draft.description,
                 merchantDraft = draft.merchant,
                 noteDraft = draft.note,
+                attributeFields = draft.attributes,
                 hasUnsavedChanges = true,
                 fieldError = null,
+                attributeRule = null,
                 conflict = false,
                 canRetry = false,
             )
@@ -235,6 +249,14 @@ class TransactionDetailViewModel @Inject constructor(
             _state.update { it.copy(fieldError = fieldError, error = null) }
             return
         }
+        // S3 dynamic fields share the S3 limits with categories; the rule id is surfaced so the
+        // screen can show the matching localized copy and no PATCH leaves the device.
+        val attributeRule = DynamicFieldRules.validate(current.attributeFields)
+        if (attributeRule != null) {
+            _state.update { it.copy(fieldError = null, attributeRule = attributeRule, error = null) }
+            return
+        }
+        val attributes = DynamicFieldRules.toMap(current.attributeFields)
 
         val remote = server
         if (remote == null || !remote.isEnabled) {
@@ -244,7 +266,14 @@ class TransactionDetailViewModel @Inject constructor(
         }
 
         _state.update {
-            it.copy(isBusy = true, error = null, conflict = false, canRetry = false, fieldError = null)
+            it.copy(
+                isBusy = true,
+                error = null,
+                conflict = false,
+                canRetry = false,
+                fieldError = null,
+                attributeRule = null,
+            )
         }
         viewModelScope.launch {
             val ownerId = sessions.current()?.ownerId
@@ -263,6 +292,7 @@ class TransactionDetailViewModel @Inject constructor(
                 // An empty string clears the field; `null` would mean "keep the current value".
                 merchantLabel = merchant,
                 note = note,
+                attributes = attributes,
             )
             when (val result = remote.updateTransaction(ownerId, transactionId, patch)) {
                 is Outcome.Failure -> {

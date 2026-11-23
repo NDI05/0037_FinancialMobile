@@ -37,6 +37,7 @@ import com.pam.recap.ui.components.ConfidenceBar
 import com.pam.recap.ui.components.amountLabel
 import com.pam.recap.ui.components.moneyToneColor
 import com.pam.recap.ui.components.ConsentSwitchRow
+import com.pam.recap.ui.components.DynamicFieldsEditor
 import com.pam.recap.ui.feature.attachment.TransactionAttachmentsSection
 import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassCard
@@ -52,6 +53,7 @@ import com.pam.recap.ui.components.PillButtonStyle
 import com.pam.recap.ui.components.SheetScaffold
 import com.pam.recap.ui.components.StatusChip
 import com.pam.recap.ui.components.StatusChipKind
+import com.pam.recap.ui.components.dynamicFieldRuleRes
 import com.pam.recap.ui.theme.BodyM
 import com.pam.recap.ui.theme.DisplayL
 import com.pam.recap.ui.theme.LabelM
@@ -308,6 +310,16 @@ fun TransactionDetailScreen(
                     state.fieldError?.let { error ->
                         Spacer(modifier = Modifier.height(PamSpacing.xs))
                         NoticeBanner(text = stringResource(fieldErrorRes(error)))
+                    }
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    DynamicFieldsEditor(
+                        fields = state.attributeFields,
+                        onFieldsChange = viewModel::setAttributeFields,
+                        enabled = !state.isBusy,
+                    )
+                    state.attributeRule?.let { rule ->
+                        Spacer(modifier = Modifier.height(PamSpacing.xs))
+                        NoticeBanner(text = stringResource(dynamicFieldRuleRes(rule)))
                     }
                     if (state.hasUnsavedChanges) {
                         Spacer(modifier = Modifier.height(PamSpacing.xs))

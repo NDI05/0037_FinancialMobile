@@ -10,11 +10,14 @@ import com.pam.recap.domain.usecase.MarkInternalTransferUseCase
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
 import com.pam.recap.domain.usecase.UpdateTransactionCategoryUseCase
 import com.pam.recap.domain.usecase.UpdateTransactionNoteUseCase
+import com.pam.recap.domain.model.Transaction
 import com.pam.recap.testing.FakeAnalysisRepository
 import com.pam.recap.testing.FakeSessionRepository
 import com.pam.recap.testing.FakeSummaryRepository
 import com.pam.recap.testing.FakeTransactionRepository
 import com.pam.recap.testing.fixedClock
+import com.pam.recap.ui.components.DynamicField
+import com.pam.recap.ui.components.DynamicFieldRules
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -78,9 +81,10 @@ class TransactionMutationTest {
         )
     }
 
-    private fun server(): RecordingServerFinanceRepository = RecordingServerFinanceRepository().apply {
-        transactionRow = row
-    }
+    private fun server(row: Transaction = this.row): RecordingServerFinanceRepository =
+        RecordingServerFinanceRepository().apply {
+            transactionRow = row
+        }
 
     private fun TestScope.recordEvents() = mutableListOf<FinanceRefreshEvent>().also { sink ->
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -288,5 +292,97 @@ class TransactionMutationTest {
         assertFalse(vm.state.value.deleteConfirmation)
         assertFalse(vm.state.value.isDeleted)
         assertTrue(remote.deleteCalls.isEmpty())
+    }
+
+    @Test
+    fun `stored attributes are prefilled into the editor`() = runTest {
+        val remote = server(
+            row.copy(attributes = mapOf("sumber" to "kamera", "catatan" to "QRIS")),
+        )
+        val vm = viewModel(remote)
+
+        val loaded = vm.state.first { it.transaction != null }
+
+        assertEquals(
+            listOf(DynamicField("sumber", "kamera"), DynamicField("catatan", "QRIS")),
+            loaded.attributeFields,
+        )
+    }
+
+    @Test
+    fun `saving attributes sends the map and refreshes the readback`() = runTest {
+        val remote = server()
+        val vm = viewModel(remote)
+        val events = recordEvents()
+        vm.state.first { it.transaction != null }
+
+        vm.setAttributeFields(listOf(DynamicField("sumber", "kamera")))
+        vm.saveMetadata()
+        remote.awaitWrites()
+        val saved = vm.state.first { it.savedAt != null }
+
+        assertEquals(mapOf("sumber" to "kamera"), remote.updateCalls.single().attributes)
+        // The detail row is reloaded from the PATCH response, so the saved map is what is shown.
+        assertEquals(mapOf("sumber" to "kamera"), saved.transaction?.attributes)
+        assertEquals(listOf(DynamicField("sumber", "kamera")), saved.attributeFields)
+        assertEquals(1, events.size)
+    }
+
+    @Test
+    fun `attribute limits are enforced before a patch leaves the device`() = runTest {
+        val cases = mapOf(
+            DynamicFieldRules.RULE_TOO_MANY to List(DynamicFieldRules.MAX_FIELDS + 1) {
+                DynamicField("k$it", "v")
+            },
+            DynamicFieldRules.RULE_KEY_TOO_LONG to listOf(
+                DynamicField("k".repeat(DynamicFieldRules.MAX_KEY + 1), "v"),
+            ),
+            DynamicFieldRules.RULE_VALUE_TOO_LONG to listOf(
+                DynamicField("k", "v".repeat(DynamicFieldRules.MAX_VALUE + 1)),
+            ),
+            DynamicFieldRules.RULE_DUPLICATE to listOf(
+                DynamicField("sama", "a"),
+                DynamicField("sama", "b"),
+            ),
+            DynamicFieldRules.RULE_TOO_LARGE to List(DynamicFieldRules.MAX_FIELDS) {
+                DynamicField("k$it", "v".repeat(DynamicFieldRules.MAX_VALUE))
+            },
+        )
+        for ((rule, fields) in cases) {
+            val remote = server()
+            val vm = viewModel(remote)
+            vm.state.first { it.transaction != null }
+
+            vm.setAttributeFields(fields)
+            vm.saveMetadata()
+
+            assertEquals(rule, vm.state.first { it.attributeRule != null }.attributeRule)
+            assertTrue("rule $rule must not send a patch", remote.updateCalls.isEmpty())
+            assertNull(vm.state.value.savedAt)
+        }
+    }
+
+    @Test
+    fun `blank editor rows are dropped from the saved map`() = runTest {
+        val remote = server()
+        val vm = viewModel(remote)
+        vm.state.first { it.transaction != null }
+
+        vm.setAttributeFields(
+            listOf(
+                DynamicField(),
+                DynamicField("", "tanpa nama"),
+                DynamicField("sumber", "kamera"),
+                DynamicField("catatan", ""),
+            ),
+        )
+        vm.saveMetadata()
+        remote.awaitWrites()
+        vm.state.first { it.savedAt != null }
+
+        assertEquals(
+            mapOf("sumber" to "kamera", "catatan" to ""),
+            remote.updateCalls.single().attributes,
+        )
     }
 }

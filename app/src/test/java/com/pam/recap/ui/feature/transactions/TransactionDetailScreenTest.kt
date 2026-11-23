@@ -3,6 +3,7 @@ package com.pam.recap.ui.feature.transactions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -93,7 +94,8 @@ class TransactionDetailScreenTest {
         setContent(vm)
         composeRule.waitUntil(5_000) { vm.state.value.metadataEditable }
 
-        composeRule.onNodeWithText("Hapus").performScrollTo().performClick()
+        // The dynamic-fields editor also has a "Hapus" remove button; the delete affordance is last.
+        composeRule.onAllNodesWithText("Hapus").onLast().performScrollTo().performClick()
 
         awaitText("Hapus transaksi ini?")
         // Dialog content lives in its own window; assert the sheet text is in the semantics tree.
@@ -131,5 +133,30 @@ class TransactionDetailScreenTest {
             .assertIsDisplayed()
         // The typed value was not thrown away by the reload.
         composeRule.onNodeWithText("Draft saya").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `stored attributes are visible and an invalid row shows the rule copy`() {
+        val server = RecordingServerFinanceRepository().apply {
+            transactionRow = row.copy(attributes = mapOf("sumber" to "kamera"))
+        }
+        val vm = viewModel(server)
+        setContent(vm)
+        composeRule.waitUntil(5_000) { vm.state.value.metadataEditable }
+
+        composeRule.onNodeWithText("kamera").performScrollTo().assertIsDisplayed()
+
+        vm.setAttributeFields(
+            listOf(com.pam.recap.ui.components.DynamicField("sama", "a"),
+                com.pam.recap.ui.components.DynamicField("sama", "b")),
+        )
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Simpan").performScrollTo().performClick()
+
+        composeRule.waitUntil(5_000) { vm.state.value.attributeRule != null }
+        composeRule.onNodeWithText("Nama kolom tidak boleh sama.")
+            .performScrollTo()
+            .assertIsDisplayed()
+        org.junit.Assert.assertTrue(server.updateCalls.isEmpty())
     }
 }
