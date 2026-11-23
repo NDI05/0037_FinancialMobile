@@ -159,8 +159,6 @@
     <string name="overview_categories_eyebrow">Expense categories</string>
     <string name="overview_recent_eyebrow">Recent transactions</string>
     <string name="overview_empty_eyebrow">No data yet</string>
-    <string name="overview_import_eyebrow">Data source</string>
-    <string name="overview_import_now">Import now</string>
     <string name="overview_never_imported">Never imported</string>
     <string name="overview_last_import">Import: %1$s</string>
 
@@ -254,30 +252,6 @@
     <string name="manual_save">Save transaction</string>
     <string name="currency_code">IDR</string>
 
-    <string name="import_title">Import</string>
-    <string name="import_eyebrow">Inbox import</string>
-    <string name="import_headline">Processing this month\'s Livin notifications.</string>
-    <string name="import_pages">Pages processed: %1$d of %2$d</string>
-    <string name="import_finished_at">Finished at %1$s</string>
-    <string name="import_matched">Matched</string>
-    <string name="import_imported">Saved</string>
-    <string name="import_skipped">Skipped</string>
-    <string name="import_unresolved">Unresolved</string>
-    <string name="import_empty">No matching Livin email. That does not mean there was no spending.</string>
-    <string name="import_partial">Some pages failed. Page one is saved; run again to complete the month.</string>
-    <string name="import_failed">The import failed before any page completed.</string>
-    <string name="import_permission">Read permission was revoked, so the import stopped. Reconnect the mailbox.</string>
-    <string name="import_reconnect">Open mailbox</string>
-    <string name="import_complete">Import finished for every configured page.</string>
-    <string name="import_running">Import is running. You may leave this screen.</string>
-    <string name="import_skipped_eyebrow">Skip reasons</string>
-    <string name="import_skipped_note">Only the reason is stored. Email bodies, senders and message ids are never kept.</string>
-    <string name="import_state_running">Running</string>
-    <string name="import_state_complete">Complete</string>
-    <string name="import_state_partial">Partial</string>
-    <string name="import_state_failed">Failed</string>
-    <string name="import_state_permission">Permission required</string>
-    <string name="import_state_empty">Empty</string>
 
     <string name="reason_missing_amount">Amount missing</string>
     <string name="reason_malformed_amount">Amount unreadable</string>
@@ -418,7 +392,6 @@
     <string name="status_declined">Declined</string>
     <string name="non_idr_marker">Non-IDR</string>
     <string name="status_available">Available</string>
-    <string name="import_pages_processed">Pages processed: %1$d</string>
     <string name="error_rate_limited">Analysis limit reached. Try again later.</string>
     <string name="deletion_server_sla">Server data is removed within %1$d days.</string>
     <string name="welcome_sign_in">Sign in</string>
@@ -523,6 +496,19 @@
     <string name="update_status_reason_timeout">The server is not responding. Updates retry automatically.</string>
     <string name="update_status_reason_budget">The categorization budget is reached. The queue is kept until the limit resets.</string>
     <string name="update_status_reason_rate_limited">Too many requests. Waiting for the next slot.</string>
+    <string name="update_status_sync_now">Sync now</string>
+    <string name="update_status_sync_retry">Try again</string>
+    <string name="update_status_sync_running">Syncing</string>
+    <string name="update_status_sync_period">Period: %1$s</string>
+    <string name="update_status_sync_progress">Page %1$d of %2$d</string>
+    <string name="update_status_sync_conflict">A sync is already running. This panel will show its progress.</string>
+    <string name="update_status_stage_checking">Checking the email range...</string>
+    <string name="update_status_stage_upload">Uploading locally saved data...</string>
+    <string name="update_status_stage_categorizing">Categorizing merchants...</string>
+    <string name="update_status_stage_offline">Offline. Saved data stays readable.</string>
+    <string name="update_status_matched">Matching emails in this import: %1$d</string>
+    <string name="update_status_cd_pending">Some transactions are saved on the device but not yet acknowledged by the server.</string>
+    <string name="update_status_cd_attention">There is something that needs attention.</string>
     <string name="update_status_reason_partial">This email range is not finished yet. Saved data stays safe; the next check continues the rest.</string>
     <string name="update_status_reason_storage">The check status could not be saved permanently, so progress is not recorded. Try again when device storage is available.</string>
     <string name="update_status_reason_pending_snapshot">Some saved transactions are not on the server yet. The upload is retried before progress is considered complete.</string>

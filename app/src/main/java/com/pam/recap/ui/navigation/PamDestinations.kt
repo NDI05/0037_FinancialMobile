@@ -44,9 +44,6 @@ sealed interface PamDestination {
     data class ManualEntry(val monthId: String? = null) : PamDestination
 
     @Serializable
-    data class ImportJob(val jobId: String? = null, val monthId: String? = null) : PamDestination
-
-    @Serializable
     data class Analysis(val monthId: String? = null) : PamDestination
 
     @Serializable

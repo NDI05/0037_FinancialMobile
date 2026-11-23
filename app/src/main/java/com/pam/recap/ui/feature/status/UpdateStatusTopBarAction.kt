@@ -21,8 +21,14 @@ import com.pam.recap.ui.components.UpdateStatusPill
 val LocalUpdateStatusAction = staticCompositionLocalOf<(@Composable (Modifier) -> Unit)?> { null }
 
 /**
+ * App-level "open the status sheet" entry point. The bottom bar's raised action uses it after the
+ * retired import route was removed, so the one surface that starts a sync is the one sheet.
+ */
+val LocalOpenUpdateStatusSheet = staticCompositionLocalOf<(() -> Unit)?> { null }
+
+/**
  * App-level provider: resolves the shared view model once and publishes the pill + sheet as a slot.
- * Mounting it performs no import and no category request.
+ * Mounting it performs no import and no category request; only an explicit tap inside the sheet does.
  */
 @Composable
 fun UpdateStatusActionProvider(content: @Composable () -> Unit) {
@@ -36,10 +42,16 @@ fun UpdateStatusActionProvider(content: @Composable () -> Unit) {
         LocalUpdateStatusAction provides { modifier ->
             UpdateStatusPill(status = status, onClick = { sheetOpen = true }, modifier = modifier)
         },
+        LocalOpenUpdateStatusSheet provides { sheetOpen = true },
     ) {
         content()
         if (sheetOpen) {
-            UpdateStatusSheet(status = status, now = openedAt, onDismiss = { sheetOpen = false })
+            UpdateStatusSheet(
+                status = status,
+                now = openedAt,
+                onDismiss = { sheetOpen = false },
+                onSyncNow = viewModel::syncNow,
+            )
         }
     }
 }

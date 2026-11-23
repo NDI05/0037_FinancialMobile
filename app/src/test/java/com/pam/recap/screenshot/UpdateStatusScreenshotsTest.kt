@@ -21,6 +21,8 @@ import com.pam.recap.ui.feature.status.AttentionItem
 import com.pam.recap.ui.feature.status.UpdateHeadline
 import com.pam.recap.ui.feature.status.UpdateStatusSheet
 import com.pam.recap.ui.feature.status.UpdateStatusUi
+import com.pam.recap.core.result.AppError
+import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.CategoryQueuePhase
 import com.pam.recap.ui.theme.Ink
 import com.pam.recap.ui.theme.PamTheme
@@ -127,6 +129,42 @@ class UpdateStatusScreenshotsTest {
                 lastAttemptAt = now - 3.minutes,
                 lastSuccessAt = now - 26.minutes,
                 pendingUpload = true,
+                hasEverSucceeded = true,
+            ),
+            "16-sheet-running-progress" to UpdateStatusUi(
+                headline = UpdateHeadline.FETCHING,
+                month = JakartaMonth.of(now),
+                lastAttemptAt = now,
+                lastSuccessAt = now - 30.minutes,
+                syncRunning = true,
+                syncAttempt = 2,
+                pagesProcessed = 2,
+                pagesExpected = 6,
+                hasEverSucceeded = true,
+            ),
+            "17-sheet-running-unknown-total" to UpdateStatusUi(
+                headline = UpdateHeadline.SAVING,
+                month = JakartaMonth.of(now),
+                lastAttemptAt = now,
+                syncRunning = true,
+                syncAttempt = 1,
+                pagesProcessed = 1,
+                pendingUpload = true,
+                hasEverSucceeded = true,
+            ),
+            "18-sheet-failed-retry" to UpdateStatusUi(
+                headline = UpdateHeadline.NEEDS_ATTENTION,
+                month = JakartaMonth.of(now),
+                lastAttemptAt = now,
+                syncError = AppError.Network("io"),
+                attention = listOf(AttentionItem("network", AttentionItem.Scope.TRANSACTIONS)),
+                hasEverSucceeded = true,
+            ),
+            "19-sheet-conflict" to UpdateStatusUi(
+                headline = UpdateHeadline.CHECKING,
+                month = JakartaMonth.of(now),
+                lastAttemptAt = now,
+                syncConflict = true,
                 hasEverSucceeded = true,
             ),
             "13-sheet-attention" to UpdateStatusUi(

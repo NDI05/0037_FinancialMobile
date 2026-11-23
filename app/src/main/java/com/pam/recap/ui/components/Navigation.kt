@@ -195,8 +195,8 @@ data class BottomNavItem(
 fun BottomNavBar(
     items: List<BottomNavItem>,
     onSelect: (String) -> Unit,
-    onImport: () -> Unit,
-    importLabel: String,
+    onOpenStatus: () -> Unit,
+    statusLabel: String,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -220,14 +220,14 @@ fun BottomNavBar(
             items.take(half).forEach { item ->
                 BottomNavCell(item = item, onSelect = onSelect)
             }
-            // Centre raised import action.
+            // Centre raised action: the single update-status sheet, which owns the sync trigger.
             Box(
                 modifier = Modifier
                     .size(PamSize.minTouch)
                     .clip(CircleShape)
                     .background(PamGradients.brand)
-                    .clickable(onClick = onImport)
-                    .semantics { contentDescription = importLabel },
+                    .clickable(onClick = onOpenStatus)
+                    .semantics { contentDescription = statusLabel },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

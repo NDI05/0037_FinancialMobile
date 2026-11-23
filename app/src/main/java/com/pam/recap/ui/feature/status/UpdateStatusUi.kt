@@ -1,10 +1,14 @@
 package com.pam.recap.ui.feature.status
 
+import com.pam.recap.core.result.AppError
+import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.AutoSyncConfig
 import com.pam.recap.domain.model.CategoryQueuePhase
 import com.pam.recap.domain.model.CategoryQueueSnapshot
+import com.pam.recap.domain.model.ImportJob
 import com.pam.recap.domain.model.SyncPhase
 import com.pam.recap.domain.model.SyncSnapshot
+import com.pam.recap.domain.usecase.SyncSessionState
 import kotlin.time.Instant
 
 /**
@@ -58,12 +62,27 @@ data class UpdateStatusUi(
     val attention: List<AttentionItem> = emptyList(),
     /** Calendar day of the last successful check, used for "Terakhir berhasil …" wording. */
     val hasEverSucceeded: Boolean = false,
+    /** Period the manual "Sinkronkan sekarang" trigger would target, and that it last targeted. */
+    val month: JakartaMonth? = null,
+    val syncRunning: Boolean = false,
+    /** Monotonic attempt token; animations key on this instead of recomposition. */
+    val syncAttempt: Long = 0,
+    val syncError: AppError? = null,
+    /** Another pipeline run already owns the single-flight gate. */
+    val syncConflict: Boolean = false,
+    val pagesProcessed: Int = 0,
+    val pagesExpected: Int? = null,
+    /** Last local import job, the source of the per-run matched/saved/… metrics. */
+    val lastJob: ImportJob? = null,
 ) {
     val isActive: Boolean get() = headline.isActive
     val hasBacklog: Boolean get() = categoryPending > 0
     val needsAttention: Boolean get() = attention.isNotEmpty()
     /** Any per-run count worth a line in the panel; zero everywhere is a clean run. */
     val hasRunCounts: Boolean get() = savedCount > 0 || duplicateCount > 0 || skippedCount > 0 || unresolvedCount > 0
+    val hasDefiniteProgress: Boolean get() = (pagesExpected ?: 0) > 0
+    /** True whenever the trigger should be disabled: this attempt or a concurrent pipeline run. */
+    val syncBusy: Boolean get() = syncRunning || syncConflict || isActive
 }
 
 /**
@@ -80,6 +99,7 @@ object UpdateStatusMapper {
         category: CategoryQueueSnapshot,
         online: Boolean,
         config: AutoSyncConfig = AutoSyncConfig(),
+        session: SyncSessionState = SyncSessionState(),
     ): UpdateStatusUi {
         val attention = buildList {
             sync.lastErrorCode?.let { add(AttentionItem(it, AttentionItem.Scope.TRANSACTIONS)) }
@@ -110,6 +130,14 @@ object UpdateStatusMapper {
             categoryLastDrained = category.lastDrained,
             attention = attention,
             hasEverSucceeded = sync.lastSuccessAt != null,
+            month = session.month,
+            syncRunning = session.running,
+            syncAttempt = session.attempt,
+            syncError = session.error,
+            syncConflict = session.conflict,
+            pagesProcessed = session.pagesProcessed,
+            pagesExpected = session.pagesExpected,
+            lastJob = session.lastJob,
         )
     }
 

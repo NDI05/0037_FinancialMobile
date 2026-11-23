@@ -39,7 +39,6 @@ import com.pam.recap.ui.feature.category.CategoryManagementScreen
 import com.pam.recap.ui.feature.consent.ConsentScreen
 import com.pam.recap.ui.feature.entry.ManualEntryScreen
 import com.pam.recap.ui.feature.gmail.GmailConnectScreen
-import com.pam.recap.ui.feature.importjob.ImportJobScreen
 import com.pam.recap.ui.feature.overview.OverviewScreen
 import com.pam.recap.ui.feature.settings.ConsentHistoryScreen
 import com.pam.recap.ui.feature.settings.DataDeletionScreen
@@ -124,7 +123,6 @@ fun PamNavHost(modifier: Modifier = Modifier) {
 
             composable<PamDestination.Overview> {
                 OverviewScreen(
-                    onOpenSettings = { navController.navigateTab(PamDestination.Settings) },
                     onOpenTransactions = { categoryCode, monthId ->
                         navController.navigate(
                             PamDestination.Transactions(
@@ -136,7 +134,6 @@ fun PamNavHost(modifier: Modifier = Modifier) {
                     onOpenTransaction = { id ->
                         navController.navigate(PamDestination.TransactionDetail(id))
                     },
-                    onOpenImport = { monthId -> navController.navigate(PamDestination.ImportJob(monthId = monthId)) },
                 )
             }
 
@@ -168,13 +165,6 @@ fun PamNavHost(modifier: Modifier = Modifier) {
                 ManualEntryScreen(
                     onBack = { navController.popBackStack() },
                     onSaved = { navController.popBackStack() },
-                )
-            }
-
-            composable<PamDestination.ImportJob> {
-                ImportJobScreen(
-                    onBack = { navController.popBackStack() },
-                    onOpenGmail = { navController.navigate(PamDestination.GmailConnect) },
                 )
             }
 
@@ -222,11 +212,12 @@ fun PamNavHost(modifier: Modifier = Modifier) {
 
         val showBottomBar = gate is GateState.Ready && destination.isTopLevel()
         if (showBottomBar) {
+            val openStatus = com.pam.recap.ui.feature.status.LocalOpenUpdateStatusSheet.current
             BottomNavBar(
                 items = bottomItems(destination),
                 onSelect = { key -> navController.navigateTabFor(key) },
-                onImport = { navController.navigate(PamDestination.ImportJob()) },
-                importLabel = stringResource(R.string.overview_import_now),
+                onOpenStatus = { openStatus?.invoke() },
+                statusLabel = stringResource(R.string.update_status_open),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars),

@@ -171,8 +171,6 @@
     <string name="overview_categories_eyebrow">Kategori pengeluaran</string>
     <string name="overview_recent_eyebrow">Transaksi terbaru</string>
     <string name="overview_empty_eyebrow">Belum ada data</string>
-    <string name="overview_import_eyebrow">Sumber data</string>
-    <string name="overview_import_now">Impor sekarang</string>
     <string name="overview_never_imported">Belum pernah impor</string>
     <string name="overview_last_import">Impor: %1$s</string>
 
@@ -271,30 +269,6 @@
     <string name="currency_code">IDR</string>
 
     <!-- Import job -->
-    <string name="import_title">Impor</string>
-    <string name="import_eyebrow">Impor kotak masuk</string>
-    <string name="import_headline">Memproses notifikasi Livin bulan ini.</string>
-    <string name="import_pages">Halaman diproses: %1$d dari %2$d</string>
-    <string name="import_finished_at">Selesai pada %1$s</string>
-    <string name="import_matched">Cocok</string>
-    <string name="import_imported">Tersimpan</string>
-    <string name="import_skipped">Dilewati</string>
-    <string name="import_unresolved">Belum jelas</string>
-    <string name="import_empty">Tidak ada email Livin yang cocok. Ini bukan berarti tidak ada pengeluaran.</string>
-    <string name="import_partial">Sebagian halaman gagal diproses. Data halaman pertama sudah tersimpan; jalankan ulang untuk melengkapi.</string>
-    <string name="import_failed">Impor gagal sebelum ada halaman yang selesai.</string>
-    <string name="import_permission">Izin baca dicabut sehingga impor berhenti. Hubungkan ulang kotak masuk.</string>
-    <string name="import_reconnect">Buka kotak masuk</string>
-    <string name="import_complete">Impor selesai untuk semua halaman yang dikonfigurasi.</string>
-    <string name="import_running">Impor sedang berjalan. Anda boleh meninggalkan layar ini.</string>
-    <string name="import_skipped_eyebrow">Alasan dilewati</string>
-    <string name="import_skipped_note">Hanya alasan yang disimpan. Isi email, pengirim, dan ID pesan tidak pernah disimpan.</string>
-    <string name="import_state_running">Berjalan</string>
-    <string name="import_state_complete">Selesai</string>
-    <string name="import_state_partial">Sebagian</string>
-    <string name="import_state_failed">Gagal</string>
-    <string name="import_state_permission">Perlu izin</string>
-    <string name="import_state_empty">Kosong</string>
 
     <!-- Redacted skip reasons -->
     <string name="reason_missing_amount">Nominal tidak ditemukan</string>
@@ -449,7 +423,6 @@
     <string name="status_declined">Ditolak</string>
     <string name="non_idr_marker">Non-IDR</string>
     <string name="status_available">Tersedia</string>
-    <string name="import_pages_processed">Halaman diproses: %1$d</string>
     <string name="error_rate_limited">Batas analisis tercapai. Coba lagi nanti.</string>
     <string name="deletion_server_sla">Data di server dihapus dalam ≤ %1$d hari.</string>
     <string name="welcome_sign_in">Masuk</string>
@@ -559,6 +532,19 @@
     <string name="update_status_reason_unresolved">Sebagian email belum bisa dibaca dan belum dihitung sebagai transaksi.</string>
     <string name="update_status_run_counts">Tersimpan %1$d, duplikat %2$d, dilewati %3$d, belum terbaca %4$d.</string>
     <string name="update_status_reason_unknown">Pembaruan terakhir gagal. Coba lagi nanti.</string>
+    <string name="update_status_sync_now">Sinkronkan sekarang</string>
+    <string name="update_status_sync_retry">Coba lagi</string>
+    <string name="update_status_sync_running">Sedang sinkron</string>
+    <string name="update_status_sync_period">Periode: %1$s</string>
+    <string name="update_status_sync_progress">Halaman %1$d dari %2$d</string>
+    <string name="update_status_sync_conflict">Pemeriksaan lain sedang berjalan. Progresnya tampil di panel ini.</string>
+    <string name="update_status_stage_checking">Memeriksa email Livin…</string>
+    <string name="update_status_stage_upload">Mengirim transaksi ke server…</string>
+    <string name="update_status_stage_categorizing">Mengategorikan transaksi…</string>
+    <string name="update_status_stage_offline">Offline. Sinkron berjalan saat koneksi kembali.</string>
+    <string name="update_status_matched">Email cocok pada impor ini: %1$d</string>
+    <string name="update_status_cd_pending">Ada transaksi yang belum diakui server.</string>
+    <string name="update_status_cd_attention">Ada hal yang perlu perhatian.</string>
     <string name="category_manage_title">Kategori</string>
     <string name="category_manage_eyebrow">Kategori transaksi</string>
     <string name="category_manage_body">Kategori bawaan terlindungi. Kategori buatan sendiri bisa diubah atau dihapus tanpa memindahkan transaksi ke kategori lain.</string>
