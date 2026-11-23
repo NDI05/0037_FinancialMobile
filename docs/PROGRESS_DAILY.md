@@ -25,7 +25,7 @@ Dokumen sebelum repository tidak direkonstruksi tanpa bukti.
 
 | Tanggal (WIB) | Hasil / perubahan | Bukti dan tingkat verifikasi | Gate tersisa / tindak lanjut | Referensi commit |
 |---|---|---|---|---|
-| **23 Nov 2026** | Classifier mapping/ledger/lease dan koreksi UI; incremental sync, snapshot uploader lintas bulan, due-window worker, shared coordinator dan status UI; README/log harian/cleanup | Android 311 tests, lint/build dan E2E panel TERLAPOR SE. PM fresh race tests CategoryWindow/AutoCategory PASS; probe real import+uploader/fake server FAIL: upload gagal→run baru EMPTY→cursor maju, kandidat server 0 dari 1 | **P1 recovery upload OPEN; S2 PARTIAL**. Resume pending run durable dan buktikan server readback; lalu S2.4 pagination/search, S2.5 budget/analysis, S3/S4. Benchmark, mailbox/perangkat nyata dan parser tetap gate terpisah | `746b598`, `f20b098`, `e033de3`, `82a1d22`, `a12cfae`, `ce56d9c` |
+| **23 Nov 2026** | Classifier mapping/ledger/lease dan koreksi UI; incremental sync, snapshot uploader lintas bulan, due-window worker, shared coordinator dan status UI; README/log harian/cleanup; mandat paralel disiapkan (belum menjalankan worker) | Android 311 tests, lint/build dan E2E panel TERLAPOR SE. PM fresh race tests CategoryWindow/AutoCategory PASS; probe real import+uploader/fake server FAIL: upload gagal→run baru EMPTY→cursor maju, kandidat server 0 dari 1 | **P1 recovery upload OPEN; S2 PARTIAL**. Resume pending run durable dan buktikan server readback; lalu S2.4 pagination/search, S2.5 budget/analysis, S3/S4. Benchmark, mailbox/perangkat nyata dan parser tetap gate terpisah | `746b598`, `f20b098`, `e033de3`, `82a1d22`, `a12cfae`, `ce56d9c` |
 | **22 Nov 2026** | Strict parser split date/time, impor Go, gate C2A, consent classifier, SRS v0.5, Azure setup/smoke, typed adapter, reservation/ledger dan recovery awal | Evidence smoke sintetis dan harga resmi tersedia. Hasil unit/integration berkembang per checkpoint; bukan benchmark akurasi atau penerimaan semua runtime | Runtime/Android E2E dan defect review diteruskan 23 Nov; S2 tetap parsial | `2d279da`, `c9d4a57`, `ceea14a`, `0d80b50`, `c95d9d4`, `db05257`, `22c0674`, `f4ffe6f` |
 | **21 Nov 2026** | Onboarding/Gmail decline, batas HTML/MIME; kontrak v0.4; implementasi Go, JWT/refresh, finance/import/deletion dan interop | C1 lokal, interop dan emulator subset terdokumentasi. Snapshot tes historis di dokumen migrasi/README lama; tidak dijalankan ulang pada restrukturisasi README | Integrasi Android C2, cloud/operasional dan kelengkapan penilaian saat itu belum selesai | `a75a534`, `9c287fc`, `36581dd`, `9e9695d`, `d1a7751`, `d714d09` |
 | **20 Nov 2026** | Perbaikan analisis, opsi model lokal, perubahan koneksi Gmail ke IMAP/App Password, diagnosis MIME, kajian pedoman dan rancangan migrasi | Commit implementasi/review tersedia; tidak mengubahnya menjadi klaim semua Gmail nyata atau cloud telah lulus | MIME/import dan rancangan kepatuhan dilanjutkan pada hari berikutnya | `87bb997`, `97881a0`, `07fc806`, `9ccde29`, `8d1640d`, `c10ca67` |
@@ -62,6 +62,13 @@ menambahkan perbaikan terkait; PM mengulang regresi jadwal dengan hasil PASS. Pa
 ce56d9c ditemukan P1 baru pada kombinasi upload gagal dan retry lintas run, terdokumentasi
 di review terbaru. Lane belum diterima penuh. Pertahankan histori dan bedakan hasil fresh
 dari hasil TERLAPOR; jangan memakai hasil lama sebagai run baru.
+
+## Penyesuaian cara kerja — 23 November 2026
+
+Pemilik meminta SE memakai sub-agent bersamaan. [Mandat paralel](agent-prompts/PROMPT_SE_PARALLEL_DELIVERY.md)
+menetapkan tiga worker (sync, Go/API, Android UI) + koordinator, worktree/ownership terpisah,
+kontrak, integrasi dan QA. Status pada perubahan dokumentasi ini **mandat tersedia**, bukan
+worker sudah berjalan atau backlog selesai. Penutupan P1 dan S2–S4 tetap mengikuti evidence.
 
 ## Aturan pemeliharaan harian
 

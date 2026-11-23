@@ -79,7 +79,7 @@ bukan klaim setiap gate telah lulus pada tanggal tersebut.
 | 20 Nov 2026 | Jalur IMAP/App Password, MIME, perbaikan analisis dan kajian pedoman | Perbaikan/parser fixture tercatat di Git | Integrasi nyata dan migrasi kepatuhan |
 | 21 Nov 2026 | Onboarding, kontrak v0.4, migrasi Go dan baseline C1 | Backend lokal/interop dan emulator subset terdokumentasi | C2 Android dan kelengkapan CRUDS |
 | 22 Nov 2026 | Parser strict, impor Go, consent, SRS v0.5, setup/runtime Azure | Unit/integration dan smoke berkembang per checkpoint; bukan benchmark | Runtime recovery dan Android acceptance saat itu |
-| **23 Nov 2026** | Perbaikan classifier, koreksi Android, auto-sync/antrean/status UI; kebijakan cleanup | 311 tes Android/E2E status TERLAPOR; regresi scheduler PASS fresh PM, tetapi probe upload gagal→retry kehilangan kandidat server | **P1 recovery OPEN; S2 PARTIAL**, S3/S4, benchmark dan gate operasional |
+| **23 Nov 2026** | Perbaikan classifier, koreksi Android, auto-sync/antrean/status UI; kebijakan cleanup; mandat sub-agent disiapkan | 311 tes Android/E2E status TERLAPOR; regresi scheduler PASS fresh PM, tetapi probe upload gagal→retry kehilangan kandidat server | **P1 recovery OPEN; S2 PARTIAL**, S3/S4, benchmark dan gate operasional |
 
 **[Buka log harian lengkap, commit, bukti, dan template pembaruan →](docs/PROGRESS_DAILY.md)**
 
@@ -240,6 +240,7 @@ berbeda dari jaminan jadwal batch; integrasi worker/jadwal masih dalam review.
 | [Progres harian](docs/PROGRESS_DAILY.md) | Hasil per tanggal, bukti, gate terbuka dan template update |
 | [Living checkpoint](docs/DELIVERY_S2_S4_CHECKPOINT.md) | Handoff implementasi dan snapshot pengujian |
 | [Mandat S2–S4](docs/agent-prompts/MANDAT_S2_S4.md) | Scope dan matriks 25 aksi CRUDS |
+| [Mandat sub-agent paralel](docs/agent-prompts/PROMPT_SE_PARALLEL_DELIVERY.md) | Tiga worker, worktree terpisah, ownership dan gate integrasi |
 | [Rencana auto-sync/status](docs/plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md) | AS/BC/UX/OBS acceptance dan dependency |
 | [Draf CR-005](docs/changes/CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md) | Perubahan untuk revisi SRS nanti; bukan SRS resmi baru |
 | [SRS v0.5 DOCX](docs/specifications/PAM_SRS_v0.5_Azure_LLM.docx) / [PDF](docs/specifications/PAM_SRS_v0.5_Azure_LLM.pdf) | Baseline formal; belum direvisi pada perapian ini |
