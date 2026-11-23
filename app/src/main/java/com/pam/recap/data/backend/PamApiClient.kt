@@ -169,6 +169,55 @@ class PamApiClient @Inject constructor(
         return requestNoContent(ownerId, Request.Builder().url(url).delete())
     }
 
+    suspend fun attachments(
+        ownerId: String,
+        transactionId: String,
+        mimeType: String?,
+        query: String,
+        limit: Int,
+        cursor: String?,
+    ): Outcome<RemoteAttachmentPage> {
+        val base = config.endpoint("/v1/attachments")
+            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
+        val url = base.toHttpUrl().newBuilder()
+            .addQueryParameter("transactionId", transactionId)
+            .addQueryParameter("limit", limit.coerceIn(1, 100).toString())
+            .apply {
+                mimeType?.takeIf { it.isNotBlank() }?.let { addQueryParameter("mime", it) }
+                query.trim().takeIf { it.isNotEmpty() }?.let { addQueryParameter("q", it) }
+                cursor?.takeIf { it.isNotBlank() }?.let { addQueryParameter("cursor", it) }
+            }
+            .build()
+        return request(ownerId, Request.Builder().url(url).get(), RemoteAttachmentPage.serializer())
+    }
+
+    suspend fun createAttachment(ownerId: String, body: RemoteAttachmentWrite): Outcome<RemoteAttachment> {
+        val encoded = json.encodeToString(RemoteAttachmentWrite.serializer(), body)
+        return send(ownerId, "POST", "/v1/attachments", encoded, null, RemoteAttachment.serializer())
+    }
+
+    suspend fun patchAttachment(
+        ownerId: String,
+        attachmentId: String,
+        body: RemoteAttachmentPatch,
+    ): Outcome<RemoteAttachment> {
+        val encoded = json.encodeToString(RemoteAttachmentPatch.serializer(), body)
+        return send(ownerId, "PATCH", "/v1/attachments/$attachmentId", encoded, null,
+            RemoteAttachment.serializer())
+    }
+
+    suspend fun deleteAttachment(
+        ownerId: String,
+        attachmentId: String,
+        revision: Int?,
+    ): Outcome<Unit> {
+        val endpoint = config.endpoint("/v1/attachments/$attachmentId")
+            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
+        val builder = Request.Builder().url(endpoint).delete()
+        revision?.let { builder.header("If-Match", "\"$it\"") }
+        return requestNoContent(ownerId, builder)
+    }
+
     suspend fun budget(ownerId: String, monthId: String): Outcome<RemoteBudgetPlan> =
         get(ownerId, "/v1/budget-plans/$monthId", RemoteBudgetPlan.serializer())
 
@@ -520,6 +569,50 @@ data class RemoteTransactionCreate(
     val merchantLabel: String? = null,
     val note: String? = null,
     val attributes: Map<String, String>? = null,
+)
+
+@Serializable
+data class RemoteAttachment(
+    val id: String,
+    val transactionId: String,
+    val fileName: String,
+    val mimeType: String,
+    val sizeBytes: Long,
+    val sha256: String,
+    val storageRef: String,
+    val deviceRef: String? = null,
+    val localFileId: String? = null,
+    val attributes: Map<String, String> = emptyMap(),
+    val revision: Int = 0,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
+)
+
+@Serializable
+data class RemoteAttachmentWrite(
+    val transactionId: String,
+    val fileName: String,
+    val mimeType: String,
+    val sizeBytes: Long,
+    val sha256: String,
+    val storageRef: String,
+    val deviceRef: String? = null,
+    val localFileId: String? = null,
+    val attributes: Map<String, String> = emptyMap(),
+)
+
+@Serializable
+data class RemoteAttachmentPatch(
+    val revision: Int,
+    val fileName: String? = null,
+    val storageRef: String? = null,
+    val attributes: Map<String, String>? = null,
+)
+
+@Serializable
+data class RemoteAttachmentPage(
+    val items: List<RemoteAttachment> = emptyList(),
+    val nextCursor: String? = null,
 )
 
 @Serializable
