@@ -137,9 +137,11 @@ class RemoteAnalysisEngine @Inject constructor(
     @Serializable
     private data class RemoteAnalysisResponse(
         val promptVersion: String? = null,
-        val observations: List<RemoteObservation> = emptyList(),
-        val suggestions: List<RemoteSuggestion> = emptyList(),
-        val limitations: List<String> = emptyList(),
+        // The backend writes explicit JSON null for empty GET fields (e.g. `"suggestions": null`);
+        // nullable here so a successful POST is not misreported as an invalid response.
+        val observations: List<RemoteObservation>? = null,
+        val suggestions: List<RemoteSuggestion>? = null,
+        val limitations: List<String>? = null,
         val promptTokens: Int? = null,
         val completionTokens: Int? = null,
     ) {
@@ -147,10 +149,10 @@ class RemoteAnalysisEngine @Inject constructor(
             providerId = PROVIDER_ID,
             modelId = MODEL_ID,
             promptVersion = promptVersion ?: AnalysisPrompt.REMOTE_VERSION,
-            observations = observations.map { observation ->
+            observations = observations.orEmpty().map { observation ->
                 RawObservation(text = observation.text, metricKeys = observation.metricKeys)
             },
-            suggestions = suggestions.map { suggestion ->
+            suggestions = suggestions.orEmpty().map { suggestion ->
                 RawSuggestion(
                     text = suggestion.text,
                     metricKeys = suggestion.metricKeys,
@@ -158,7 +160,7 @@ class RemoteAnalysisEngine @Inject constructor(
                     suggestedAmountMinor = suggestion.suggestedAmountMinor,
                 )
             },
-            limitations = limitations,
+            limitations = limitations.orEmpty(),
             usage = AnalysisUsage(promptTokens = promptTokens, completionTokens = completionTokens),
         )
     }

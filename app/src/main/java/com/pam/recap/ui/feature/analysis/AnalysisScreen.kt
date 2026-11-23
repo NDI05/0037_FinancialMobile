@@ -37,6 +37,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pam.recap.R
 import com.pam.recap.domain.model.Analysis
 import com.pam.recap.domain.model.AnalysisStatus
+import com.pam.recap.domain.model.MonthlySummary
+import com.pam.recap.domain.model.SummaryFreshness
+import com.pam.recap.domain.model.displayStatus
+import com.pam.recap.domain.model.freshnessAgainst
 import com.pam.recap.domain.model.Observation
 import com.pam.recap.domain.model.Suggestion
 import com.pam.recap.ui.components.CompactMoneyText
@@ -141,7 +145,7 @@ fun AnalysisScreen(
                 )
 
                 else -> {
-                    AnalysisHeader(analysis = analysis)
+                    AnalysisFreshnessHeader(analysis = analysis, summary = state.summary)
                     PillToggleGroup(
                         options = listOf(
                             PillToggleOption(false, stringResource(R.string.analysis_tab_observations)),
@@ -256,8 +260,31 @@ private fun AnalysisEmptyCard(
     }
 }
 
+/**
+ * S2.5: the header renders the *effective* status. A stored analysis whose frozen revision is
+ * behind the canonical month revision shows the outdated chip and an explicit stale notice that
+ * names both revisions, so "stale" can never be confused with a provider/network error (which the
+ * screen renders separately from [AppError]) or with "no result yet" (the empty card).
+ */
 @Composable
-private fun AnalysisHeader(analysis: Analysis) {
+internal fun AnalysisFreshnessHeader(analysis: Analysis, summary: MonthlySummary?) {
+    AnalysisHeader(status = analysis.displayStatus(summary))
+    if (analysis.freshnessAgainst(summary) == SummaryFreshness.STALE) {
+        val currentRevision = summary?.currentRevision ?: analysis.inputRevision
+        // B-2: the server can report STALE without a revision bump when the dependency hash moved
+        // (prior month, categories, budget plan or an import job). Say that instead of printing
+        // two identical revision numbers.
+        val text = if (analysis.inputRevision < currentRevision) {
+            stringResource(R.string.analysis_stale_body, analysis.inputRevision, currentRevision)
+        } else {
+            stringResource(R.string.analysis_stale_dependency_body, analysis.inputRevision)
+        }
+        NoticeBanner(text = text)
+    }
+}
+
+@Composable
+private fun AnalysisHeader(status: AnalysisStatus) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -265,7 +292,7 @@ private fun AnalysisHeader(analysis: Analysis) {
     ) {
         EyebrowText(text = stringResource(R.string.analysis_eyebrow))
         Spacer(modifier = Modifier.weight(1f))
-        StatusChip(kind = analysis.status.chipKind())
+        StatusChip(kind = status.chipKind())
     }
 }
 

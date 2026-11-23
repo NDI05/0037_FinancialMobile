@@ -219,6 +219,8 @@ fun BudgetPlanScreen(
                             icon = Icons.Rounded.WarningAmber,
                         )
 
+                        SummaryFreshness.UNKNOWN -> Unit
+
                         null -> Unit
                     }
                     if (state.summaryRefreshFailed) {

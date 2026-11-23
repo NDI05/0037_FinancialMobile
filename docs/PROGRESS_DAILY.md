@@ -42,6 +42,7 @@ Dokumen sebelum repository tidak direkonstruksi tanpa bukti.
 | [Rencana AS/BC/UX/OBS](plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md) | Target acceptance, bukan hasil test |
 | [UAT lampiran S4.1](evidence/UAT_S4_ATTACHMENTS_2026-11-23.md) | Create/read-after-restart/delete PASS di emulator; bug parsing ditemukan dan diperbaiki |
 | [UAT admin S4.2](evidence/UAT_S4_ADMIN_2026-11-23.md) | Invite, list/cari, edit+konflik CAS, deactivate, audit setelah restart; batas dicatat |
+| [UAT gap analisis S2.5](evidence/UAT_GAP_ANALYSIS_2026-11-23.md) | Wiring freshness server ke layar Analisis (B-1/B-2/B-3); E2E perangkat stale→regenerate→CURRENT bertahan setelah reopen; batas dicatat |
 | [Matriks C01–C25](delivery/ACCEPTANCE_C01_C25.md) | Pemetaan tiap aksi ke bukti nyata dan batasnya; bukan label PASS massal |
 | [Arsip README](archive/README_BEFORE_RESTRUCTURE_2026-11-23.md) | Snapshot historis sebelum restrukturisasi; klaim lama dapat sudah digantikan |
 

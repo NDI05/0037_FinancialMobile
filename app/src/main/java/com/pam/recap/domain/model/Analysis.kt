@@ -175,3 +175,44 @@ enum class AnalysisLimitation {
     /** The default engine is deterministic and offline (OI-07). */
     DETERMINISTIC,
 }
+
+/**
+ * S2.5: freshness of a stored analysis derived from the canonical aggregate revision the server
+ * reports for the month.
+ *
+ * The server keeps `status=AVAILABLE` for a stored analysis even after the rows that fed it moved
+ * on; it reports `freshness=STALE` on `GET /v1/analyses/{monthId}` because `currentRevision` is
+ * ahead of the frozen `inputRevision`. The summary carries the same canonical
+ * `currentRevision` (as `inputRevision`), so the UI must derive the stale state from that
+ * revision comparison instead of trusting [Analysis.status] alone.
+ *
+ * Priority: consent withdrawal (`HISTORICAL`) and a locally invalidated row win over the revision
+ * comparison, and a summary the server itself marks STALE or HISTORICAL propagates unchanged.
+ */
+fun Analysis.freshnessAgainst(summary: MonthlySummary?): SummaryFreshness {
+    if (status == AnalysisStatus.HISTORICAL) return SummaryFreshness.HISTORICAL
+    // A server-stored analysis mapped from `freshness=STALE` (e.g. only the dependency hash moved
+    // without a revision bump) arrives as OUTDATED, so the server signal wins over the revision
+    // comparison below.
+    if (status == AnalysisStatus.OUTDATED) return SummaryFreshness.STALE
+    // B-3: without a canonical revision we cannot claim the report is current.
+    if (summary == null) return SummaryFreshness.UNKNOWN
+    if (summary.freshness == SummaryFreshness.HISTORICAL) return SummaryFreshness.HISTORICAL
+    if (summary.freshness == SummaryFreshness.STALE) return SummaryFreshness.STALE
+    if (summary.freshness == SummaryFreshness.UNKNOWN) return SummaryFreshness.UNKNOWN
+    if (isPublishable && inputRevision < summary.currentRevision) return SummaryFreshness.STALE
+    return SummaryFreshness.CURRENT
+}
+
+/**
+ * S2.5: the status the analysis chip must show. A stale analysis renders as
+ * [AnalysisStatus.OUTDATED] even when the server still stores it as `AVAILABLE`, so the chip can
+ * never claim a report is current while the canonical revision has moved.
+ */
+fun Analysis.displayStatus(summary: MonthlySummary?): AnalysisStatus =
+    when (freshnessAgainst(summary)) {
+        SummaryFreshness.STALE -> AnalysisStatus.OUTDATED
+        SummaryFreshness.HISTORICAL -> AnalysisStatus.HISTORICAL
+        SummaryFreshness.UNKNOWN -> AnalysisStatus.UNAVAILABLE
+        SummaryFreshness.CURRENT -> status
+    }

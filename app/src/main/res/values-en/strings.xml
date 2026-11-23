@@ -311,6 +311,8 @@
     <string name="analysis_tab_suggestions">Suggestions</string>
     <string name="analysis_observation_of">%1$d of %2$d</string>
     <string name="analysis_limitations_eyebrow">Limitations</string>
+    <string name="analysis_stale_body">This analysis was generated from revision %1$d, but this month is now at revision %2$d. Regenerate the analysis so it matches the latest data.</string>
+    <string name="analysis_stale_dependency_body">This analysis was built from data that has changed since (revision %1$d), even though the month revision number did not move. Regenerate the analysis to match the latest data.</string>
 
     <string name="budget_plan_freshness_current">Server plan · revision %1$d</string>
     <string name="budget_plan_freshness_unsaved">Plan not saved to the server yet</string>

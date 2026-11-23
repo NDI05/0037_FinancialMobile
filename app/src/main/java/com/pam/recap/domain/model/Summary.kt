@@ -30,7 +30,14 @@ data class CategoryTotal(
  * (BR-05).
  */
 /** Server-computed freshness of a month summary (S2.5). */
-enum class SummaryFreshness { CURRENT, STALE, HISTORICAL }
+enum class SummaryFreshness {
+    CURRENT,
+    STALE,
+    HISTORICAL,
+
+    /** The canonical revision could not be loaded; never render this as current. */
+    UNKNOWN,
+}
 
 data class MonthlySummary(
     val id: String,
@@ -54,6 +61,12 @@ data class MonthlySummary(
     val generatedAt: Instant,
     /** FR-22: set when a row changed after this summary was computed. */
     val isOutdated: Boolean = false,
+    /**
+     * S2.5: canonical revision the server reports as live for this month (the summary endpoint's
+     * `currentRevision`). For local summaries this equals [inputRevision]. Analysis freshness must
+     * compare against this value, never only against the stored payload revision.
+     */
+    val currentRevision: Int = inputRevision,
     /** S2.5: CURRENT when computed from the latest revision, STALE when older, HISTORICAL when newer. */
     val freshness: SummaryFreshness = if (isOutdated) SummaryFreshness.STALE else SummaryFreshness.CURRENT,
 ) {

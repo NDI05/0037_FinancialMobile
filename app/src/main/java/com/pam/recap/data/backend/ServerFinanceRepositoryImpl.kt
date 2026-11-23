@@ -623,6 +623,8 @@ class ServerFinanceRepositoryImpl @Inject constructor(
             transactionCount = transactionCount,
             coverage = coverage,
             inputRevision = inputRevision,
+            // S2.5: the canonical live revision, independent of the stored payload revision.
+            currentRevision = maxOf(currentRevision, inputRevision),
             summaryVersion = "server-v1",
             generatedAt = generatedAt?.let { runCatching { Instant.parse(it) }.getOrNull() } ?: Instant.fromEpochMilliseconds(0),
             isOutdated = false,

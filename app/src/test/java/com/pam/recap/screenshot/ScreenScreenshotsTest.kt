@@ -14,6 +14,7 @@ import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.security.FingerprintFactory
 import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.data.ai.AiPayloadBuilder
+import com.pam.recap.data.backend.DisabledServerAnalysisRepository
 import com.pam.recap.data.ai.AndroidAnalysisCopySource
 import com.pam.recap.data.ai.OnDeviceAnalysisEngine
 import com.pam.recap.data.gmail.FixtureGmailSource
@@ -82,6 +83,7 @@ import com.pam.recap.testing.completeJob
 import com.pam.recap.testing.fixedClock
 import com.pam.recap.ui.feature.analysis.AnalysisScreen
 import com.pam.recap.ui.feature.analysis.AnalysisViewModel
+import com.pam.recap.ui.feature.transactions.RecordingServerFinanceRepository
 import com.pam.recap.ui.feature.budget.BudgetPlanScreen
 import com.pam.recap.ui.feature.budget.BudgetPlanViewModel
 import com.pam.recap.ui.feature.consent.ConsentScreen
@@ -407,6 +409,8 @@ class ScreenScreenshotsTest {
             computeSummary = computeSummary,
             requestAnalysis = requestAnalysis,
             resolveInitialMonth = resolveMonth,
+            serverAnalysis = DisabledServerAnalysisRepository,
+            serverFinance = RecordingServerFinanceRepository(),
         )
 
         shot("04-analysis") {

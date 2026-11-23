@@ -831,9 +831,11 @@ data class RemoteAnalysis(
     val freshness: String = "STALE",
     val status: String = "AVAILABLE",
     val promptVersion: String = "",
-    val observations: List<RemoteObservation> = emptyList(),
-    val suggestions: List<RemoteSuggestion> = emptyList(),
-    val limitations: List<String> = emptyList(),
+    // The backend serialises absent GET fields as explicit JSON null (e.g. `"suggestions": null`
+    // for an analysis with no suggestions); nullable here so decoding does not fail.
+    val observations: List<RemoteObservation>? = null,
+    val suggestions: List<RemoteSuggestion>? = null,
+    val limitations: List<String>? = null,
 )
 
 @Serializable
