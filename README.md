@@ -79,7 +79,7 @@ bukan klaim setiap gate telah lulus pada tanggal tersebut.
 | 20 Nov 2026 | Jalur IMAP/App Password, MIME, perbaikan analisis dan kajian pedoman | Perbaikan/parser fixture tercatat di Git | Integrasi nyata dan migrasi kepatuhan |
 | 21 Nov 2026 | Onboarding, kontrak v0.4, migrasi Go dan baseline C1 | Backend lokal/interop dan emulator subset terdokumentasi | C2 Android dan kelengkapan CRUDS |
 | 22 Nov 2026 | Parser strict, impor Go, consent, SRS v0.5, setup/runtime Azure | Unit/integration dan smoke berkembang per checkpoint; bukan benchmark | Runtime recovery dan Android acceptance saat itu |
-| **23 Nov 2026** | Hari integrasi S2/S3/S4 di `feat/c2-android`: paket P1 recovery, Android acceptance, varian assessment (`99cb3df`), lalu penutupan gap S2–S4 malam: admin C24/C25 (`a512770`), bukti C01 create manual + identitas lost-response (`aa61a7b`), wiring analisis server S2.5 + guard consent (`7337559`); semua paket lewat audit independen; branch tugas/worktree dibersihkan; dokumen merged-head acceptance ditambahkan. | Android **493 tests/68 class/0 failure** debug + **503 tests/69 class/0 failure** assessment, lint **0 error/115 warning** debug & **0 error/123 warning** assessment, Go test/vet/build/race ok; merged head `7337559`: C01 create UI `POST /v1/transactions` 201 + ringkasan 92/89→93/90, S2.5 CURRENT→STALE→regenerate→CURRENT→dependency-STALE di perangkat, C24/C25 walk teraudit + regresi; APK debug sha256 `6497a406…`, assessment `fa0d224e…`. | **S3 lulus (C01 PASS runtime)**; **S4.1/S4.2/S4.4 lulus** (batas perangkat C24/C25 dan foreground-only assessment dicatat); **S2.5 PASS runtime** (catatan INFO dependency-churn sync); temuan LOW audit tetap follow-up; gate eksternal S5 (mailbox nyata, benchmark, hosting/backup, UAT pemilik, merge/deploy). | `e3eeb17`, `94e2f37`, `99cb3df`, `a512770`, `aa61a7b`, `7337559`, plus commit lane di log harian |
+| **23 Nov 2026** | Hari integrasi S2/S3/S4 di `feat/c2-android`: paket P1 recovery, Android acceptance, varian assessment (`99cb3df`), lalu penutupan gap S2–S4 malam: admin C24/C25 (`a512770`), bukti C01 create manual + identitas lost-response (`aa61a7b`), wiring analisis server S2.5 + guard consent (`7337559`); semua paket lewat audit independen; branch tugas/worktree dibersihkan; dokumen merged-head acceptance ditambahkan.; profil UAT Go + Azure + Ollama disamakan dengan Run Android Studio dan aturan agent diperbarui | Android **493 tests/68 class/0 failure** debug + **503 tests/69 class/0 failure** assessment, lint **0 error/115 warning** debug & **0 error/123 warning** assessment, Go test/vet/build/race ok; merged head `7337559`: C01 create UI `POST /v1/transactions` 201 + ringkasan 92/89→93/90, S2.5 CURRENT→STALE→regenerate→CURRENT→dependency-STALE di perangkat, C24/C25 walk teraudit + regresi; APK debug sha256 `6497a406…`, assessment `fa0d224e…`.; build debug sukses, BuildConfig 10.0.2.2:18090, readiness emulator HTTP 200, probe sintetis Ollama HTTP 200 | **S3 lulus (C01 PASS runtime)**; **S4.1/S4.2/S4.4 lulus** (batas perangkat C24/C25 dan foreground-only assessment dicatat); **S2.5 PASS runtime** (catatan INFO dependency-churn sync); temuan LOW audit tetap follow-up; gate eksternal S5 (mailbox nyata, benchmark, hosting/backup, UAT pemilik, merge/deploy).; smoke UI dari Run Android Studio dan panggilan Azure pada sesi penyelarasan belum dijalankan | `e3eeb17`, `94e2f37`, `99cb3df`, `a512770`, `aa61a7b`, `7337559`, plus commit lane di log harian |
 
 **[Buka log harian lengkap, commit, bukti, dan template pembaruan →](docs/PROGRESS_DAILY.md)**
 
@@ -150,21 +150,36 @@ database UAT pemilik atau membuat panggilan Azure. Kode invite di atas hanya con
 bukan konfigurasi production. Konfigurasi rinci: [backend Go](backend-go/README.md) dan
 [kontrak API](docs/06_BACKEND_CONTRACT.md); beberapa status dalam README backend bersifat historis.
 
-### B. Build Android menuju backend lokal
+### B. Android Studio dan UAT pemilik
 
-Di terminal lain, dari root repository:
+Buka direktori `pam-app` di Android Studio. Gunakan JDK 21 sebagai Gradle JDK, pilih
+varian `debug`, konfigurasi Run `app`, dan emulator. Tambahkan atau perbarui pengaturan
+ini di `local.properties` tanpa menghapus `sdk.dir`:
 
-```bash
-./scripts/build.sh :app:assembleDebug -PPAM_BACKEND_BASE_URL=http://10.0.2.2:8080
+```properties
+PAM_BACKEND_BASE_URL=http://10.0.2.2:18090
 ```
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`.
-`10.0.2.2` dipakai emulator untuk mengakses host. Perangkat fisik memerlukan endpoint yang
-reachable atau `adb reverse`; jangan menganggap localhost HP sama dengan localhost laptop.
-Debug UAT existing memakai port 18090 dan dapat memakai `127.0.0.1` dengan `adb reverse`;
-itu konfigurasi terpisah, bukan service publik 24/7.
+Gradle membaca `local.properties` saat build. Opsi `-P` dan nilai dari `gradle.properties`
+mendahuluinya. Gunakan alamat yang sama saat membuat APK pembanding. `10.0.2.2`
+menghubungkan emulator ke host. Perangkat fisik perlu endpoint yang dapat dijangkau atau
+alamat loopback yang cocok dengan `adb reverse`.
 
-Setelah install: buat/login akun, pilih consent, lalu hubungkan Gmail jika diperlukan.
+Jika backend UAT belum berjalan, dari root repo jalankan:
+
+```bash
+(cd backend-go && ../scripts/go.sh build -o /tmp/pam-android-studio-uat-api ./cmd/api)
+python3 scripts/run_real_uat_with_classifier.py /tmp/pam-android-studio-uat-api
+```
+
+Launcher membaca profil privat di `~/.config/pam/` untuk Turso, classifier Azure, dan
+analisis Ollama lokal. Pastikan port profilnya `18090`, model Ollama yang tercantum
+di profil tersedia, dan `/readyz` merespons dari emulator. Readiness mengecek database.
+Uji tombol **Kategorikan dengan AI** serta **Buat Analisis** secara terpisah di UI Android
+Studio karena keduanya memakai provider dan consent masing-masing. Untuk build CLI UAT,
+jalankan `./scripts/build.sh :app:assembleDebug` dengan konfigurasi lokal yang sama.
+
+Setelah menekan **Run**, masuk ke akun, pilih consent, lalu hubungkan Gmail jika diperlukan.
 Gunakan Gmail **App Password** pada layar koneksi, bukan password utama Gmail. Fixture/demo
 harus berlabel; keberhasilan demo tidak membuktikan data server atau mailbox nyata.
 

@@ -27,6 +27,26 @@ Mandat gabungan S2–S4 berada di `docs/agent-prompts/MANDAT_S2_S4.md`.
 Living checkpoint berada di `docs/DELIVERY_S2_S4_CHECKPOINT.md`.
 Lanjutkan dari status repo/checkpoint terkini dan jaga perbedaan PASS/PARTIAL/NOT RUN.
 
+## Android Studio dan kesetaraan konfigurasi UAT
+
+- Kerjakan dan verifikasi perubahan Android dari proyek `pam-app` yang dibuka di
+  Android Studio. Untuk acceptance fitur yang terlihat pengguna, pilih varian `debug`,
+  jalankan konfigurasi `app` dari Android Studio pada emulator, lalu uji fitur lewat UI.
+  Suite CLI tetap dipakai untuk regresi. Bila Android Studio atau emulator tidak tersedia,
+  catat gate Android Studio sebagai `NOT RUN`.
+- Untuk UAT pemilik, build dari **Run** Android Studio dan build verifikasi harus memakai
+  varian, commit, endpoint Go, database, dan profil provider yang sama. Gunakan konfigurasi
+  di [README bagian Android Studio](README.md#b-android-studio-dan-uat-pemilik), dengan
+  `PAM_BACKEND_BASE_URL=http://10.0.2.2:18090` di `local.properties` untuk emulator.
+  Periksa `BuildConfig` efektif dan `/readyz` dari emulator setelah mengganti konfigurasi.
+- Jalankan backend UAT dengan launcher resmi yang memuat profil privat Turso, classifier
+  Azure, dan provider analisis. Pertahankan batas biaya serta consent. Simpan secret di
+  luar repo dan hindari mencetaknya di log atau laporan.
+- Bukti dari backend fixture, port terisolasi, provider simulasi, atau varian
+  `assessment` harus menyebut profilnya. Gate UAT pemilik memakai build dan profil UAT
+  yang sama seperti yang akan dibuka pemilik. Laporkan varian, endpoint, status provider,
+  dan hasil UI yang benar-benar dicoba sebelum serah terima.
+
 ## Transparansi progres harian
 
 - Setiap penutupan pekerjaan memperbarui baris tanggal WIB yang sama pada
