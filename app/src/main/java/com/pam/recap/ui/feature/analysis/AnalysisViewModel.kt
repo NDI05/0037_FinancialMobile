@@ -10,6 +10,7 @@ import com.pam.recap.domain.model.Analysis
 import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.MonthlySummary
 import com.pam.recap.domain.repository.AnalysisRepository
+import com.pam.recap.domain.repository.FinanceRefreshBus
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.ComputeMonthlySummaryUseCase
@@ -64,6 +65,7 @@ class AnalysisViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val month = MutableStateFlow<JakartaMonth?>(null)
+    private val refreshTick = MutableStateFlow(0L)
     private val ui = MutableStateFlow(UiToggles())
     private val requestedMonth = savedStateHandle.get<String>("monthId")?.let(JakartaMonth::parse)
 
@@ -76,6 +78,16 @@ class AnalysisViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // A category correction changes the classified totals the analysis reads, so the same
+            // owner+month invalidation that refreshes Overview also refreshes this page.
+            FinanceRefreshBus.events.collect { event ->
+                val owner = sessions.current()?.ownerId
+                if (owner == event.ownerId && month.value?.id() == event.monthId) {
+                    refreshTick.update { it + 1 }
+                }
+            }
+        }
+        viewModelScope.launch {
             val ownerId = sessions.current()?.ownerId
             month.value = requestedMonth ?: ownerId?.let { resolveInitialMonth(it) }
         }
@@ -83,7 +95,7 @@ class AnalysisViewModel @Inject constructor(
 
     val state: StateFlow<AnalysisUiState> = combine(
         sessions.observe().filterNotNull(),
-        month.filterNotNull(),
+        combine(month.filterNotNull(), refreshTick) { selected, _ -> selected },
     ) { session, selectedMonth -> session.ownerId to selectedMonth }
         .flatMapLatest { (ownerId, selectedMonth) ->
             combine(

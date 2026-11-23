@@ -9,6 +9,7 @@ import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Transaction
+import com.pam.recap.domain.repository.FinanceRefreshBus
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.repository.TransactionRepository
@@ -126,7 +127,11 @@ class TransactionDetailViewModel @Inject constructor(
     fun setCategory(category: Category) {
         val remote = server
         if (remote == null || !remote.isEnabled) {
-            perform { ownerId -> updateCategory(ownerId, transactionId, category) }
+            // A category change moves money between totals, so every page that reads those totals
+            // has to be told. `perform` publishes the owner+month invalidation on success only.
+            perform(invalidateFinance = true) { ownerId ->
+                updateCategory(ownerId, transactionId, category)
+            }
             return
         }
         if (action.value.isBusy) return
@@ -162,6 +167,7 @@ class TransactionDetailViewModel @Inject constructor(
                 }
                 is Outcome.Success -> {
                     action.value = ActionState(savedAt = System.currentTimeMillis())
+                    publishInvalidation(ownerId, current)
                     refresh.update { it + 1 }
                 }
             }
@@ -176,7 +182,10 @@ class TransactionDetailViewModel @Inject constructor(
 
     fun saveNote(note: String) = perform { ownerId -> updateNote(ownerId, transactionId, note) }
 
-    private fun perform(block: suspend (ownerId: String) -> Outcome<Unit>) {
+    private fun perform(
+        invalidateFinance: Boolean = false,
+        block: suspend (ownerId: String) -> Outcome<Unit>,
+    ) {
         if (action.value.isBusy) return
         if (server?.isEnabled == true) {
             action.value = ActionState(error = AppError.Configuration("server_edit_not_available"))
@@ -193,9 +202,20 @@ class TransactionDetailViewModel @Inject constructor(
                 is Outcome.Failure -> action.value = ActionState(error = result.error)
                 is Outcome.Success -> {
                     action.value = ActionState(savedAt = System.currentTimeMillis())
+                    if (invalidateFinance) publishInvalidation(ownerId, state.value.transaction)
                     refresh.update { it + 1 }
                 }
             }
         }
+    }
+
+    /**
+     * One owner+month invalidation for every screen that reads the month (list, overview,
+     * analysis). It is emitted only after the server/local write succeeded: a failed or conflicting
+     * write must not look like a successful one anywhere else in the app.
+     */
+    private fun publishInvalidation(ownerId: String, transaction: Transaction?) {
+        val month = transaction?.eventAt?.let(JakartaMonth::of) ?: return
+        FinanceRefreshBus.notify(ownerId, month.id())
     }
 }
