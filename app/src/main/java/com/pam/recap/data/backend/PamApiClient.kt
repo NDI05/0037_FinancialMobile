@@ -123,10 +123,44 @@ class PamApiClient @Inject constructor(
             RemoteTransaction.serializer())
     }
 
+    suspend fun deleteBudget(ownerId: String, monthId: String): Outcome<Unit> {
+        val endpoint = config.endpoint("/v1/budget-plans/$monthId")
+            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
+        return requestNoContent(ownerId, Request.Builder().url(endpoint).delete())
+    }
+
     suspend fun deleteTransaction(ownerId: String, transactionId: String): Outcome<Unit> {
         val endpoint = config.endpoint("/v1/transactions/$transactionId")
             ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
         return requestNoContent(ownerId, Request.Builder().url(endpoint).delete())
+    }
+
+    suspend fun createCategory(ownerId: String, body: RemoteCategoryWrite): Outcome<RemoteCategoryItem> {
+        val encoded = json.encodeToString(RemoteCategoryWrite.serializer(), body)
+        return send(ownerId, "POST", "/v1/categories", encoded, null, RemoteCategoryItem.serializer())
+    }
+
+    suspend fun patchCategory(
+        ownerId: String,
+        categoryId: String,
+        body: RemoteCategoryPatch,
+    ): Outcome<RemoteCategoryItem> {
+        val encoded = json.encodeToString(RemoteCategoryPatch.serializer(), body)
+        return send(ownerId, "PATCH", "/v1/categories/$categoryId", encoded, null,
+            RemoteCategoryItem.serializer())
+    }
+
+    suspend fun deleteCategory(
+        ownerId: String,
+        categoryId: String,
+        reassignTo: String?,
+    ): Outcome<Unit> {
+        val base = config.endpoint("/v1/categories/$categoryId")
+            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
+        val url = base.toHttpUrl().newBuilder()
+            .apply { reassignTo?.takeIf { it.isNotBlank() }?.let { addQueryParameter("reassignTo", it) } }
+            .build()
+        return requestNoContent(ownerId, Request.Builder().url(url).delete())
     }
 
     suspend fun budget(ownerId: String, monthId: String): Outcome<RemoteBudgetPlan> =
@@ -382,6 +416,27 @@ data class RemoteCategoryItem(
     val label: String? = null,
     val kind: String,
     val revision: Int = 0,
+    val color: String? = null,
+    val isBuiltin: Boolean = false,
+    val attributes: Map<String, String> = emptyMap(),
+)
+
+@Serializable
+data class RemoteCategoryWrite(
+    val code: String,
+    val label: String,
+    val kind: String,
+    val color: String? = null,
+    val attributes: Map<String, String> = emptyMap(),
+)
+
+@Serializable
+data class RemoteCategoryPatch(
+    val label: String? = null,
+    val kind: String? = null,
+    val color: String? = null,
+    val attributes: Map<String, String>? = null,
+    val revision: Int,
 )
 
 @Serializable

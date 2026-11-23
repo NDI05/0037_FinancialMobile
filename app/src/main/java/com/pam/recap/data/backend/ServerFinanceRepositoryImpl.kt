@@ -16,6 +16,9 @@ import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.CategoryDrainResult
 import com.pam.recap.domain.repository.CategoryEnqueueResult
 import com.pam.recap.domain.repository.ManualTransactionDraft
+import com.pam.recap.domain.repository.CategoryDraft
+import com.pam.recap.domain.repository.CategoryPatch
+import com.pam.recap.domain.repository.ServerBudgetPlan
 import com.pam.recap.domain.repository.ServerCategory
 import com.pam.recap.domain.repository.ServerImportCandidate
 import com.pam.recap.domain.repository.ServerImportCounts
@@ -41,12 +44,98 @@ class ServerFinanceRepositoryImpl @Inject constructor(
     override suspend fun categories(ownerId: String): Outcome<List<ServerCategory>> =
         api.categories(ownerId).let { result ->
             when (result) {
-                is Outcome.Success -> Outcome.Success(result.value.categories.map {
-                    ServerCategory(it.id, it.code, it.label.orEmpty(), it.kind)
-                })
+                is Outcome.Success -> Outcome.Success(result.value.categories.map { it.toServer() })
                 is Outcome.Failure -> result
             }
         }
+
+    override suspend fun createCategory(
+        ownerId: String,
+        draft: CategoryDraft,
+    ): Outcome<ServerCategory> = when (
+        val result = api.createCategory(
+            ownerId,
+            RemoteCategoryWrite(draft.code, draft.label, draft.kind, draft.color, draft.attributes),
+        )
+    ) {
+        is Outcome.Success -> Outcome.Success(result.value.toServer())
+        is Outcome.Failure -> result
+    }
+
+    override suspend fun updateCategoryMeta(
+        ownerId: String,
+        categoryId: String,
+        patch: CategoryPatch,
+    ): Outcome<ServerCategory> = when (
+        val result = api.patchCategory(
+            ownerId,
+            categoryId,
+            RemoteCategoryPatch(patch.label, patch.kind, patch.color, patch.attributes, patch.revision),
+        )
+    ) {
+        is Outcome.Success -> Outcome.Success(result.value.toServer())
+        is Outcome.Failure -> result
+    }
+
+    override suspend fun deleteCategory(
+        ownerId: String,
+        categoryId: String,
+        reassignTo: String?,
+    ): Outcome<Unit> = api.deleteCategory(ownerId, categoryId, reassignTo)
+
+    override suspend fun budgetPlan(
+        ownerId: String,
+        month: JakartaMonth,
+    ): Outcome<ServerBudgetPlan> = when (val result = api.budget(ownerId, month.id())) {
+        is Outcome.Success -> Outcome.Success(result.value.toServer())
+        is Outcome.Failure -> result
+    }
+
+    override suspend fun saveBudgetPlan(
+        ownerId: String,
+        month: JakartaMonth,
+        expectedIncomeMinor: Long,
+        plannedSavingsMinor: Long,
+        limitsByCategoryId: Map<String, Long>,
+        revision: Int,
+    ): Outcome<ServerBudgetPlan> = when (
+        val result = api.saveBudget(
+            ownerId,
+            month.id(),
+            RemoteBudgetWrite(
+                expectedIncomeMinor,
+                plannedSavingsMinor,
+                limitsByCategoryId.map { (id, amount) -> RemoteBudgetLimit(id, amount) },
+                revision,
+            ),
+        )
+    ) {
+        is Outcome.Success -> Outcome.Success(result.value.toServer())
+        is Outcome.Failure -> result
+    }
+
+    override suspend fun deleteBudgetPlan(ownerId: String, month: JakartaMonth): Outcome<Unit> =
+        api.deleteBudget(ownerId, month.id())
+
+    private fun RemoteCategoryItem.toServer() = ServerCategory(
+        id = id,
+        code = code,
+        label = label.orEmpty(),
+        kind = kind,
+        isBuiltin = isBuiltin,
+        color = color,
+        attributes = attributes,
+        revision = revision,
+    )
+
+    private fun RemoteBudgetPlan.toServer() = ServerBudgetPlan(
+        monthId = monthId,
+        expectedIncomeMinor = expectedIncomeMinor,
+        plannedSavingsMinor = plannedSavingsMinor,
+        limitsByCategoryId = limits.associate { it.categoryId to it.amountMinor },
+        gapMinor = gapMinor,
+        revision = revision,
+    )
 
     override suspend fun createManual(
         ownerId: String,

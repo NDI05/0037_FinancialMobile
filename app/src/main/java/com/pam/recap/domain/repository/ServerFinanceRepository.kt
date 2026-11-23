@@ -13,6 +13,37 @@ data class ServerCategory(
     val code: String,
     val label: String,
     val kind: String,
+    val isBuiltin: Boolean = false,
+    val color: String? = null,
+    val attributes: Map<String, String> = emptyMap(),
+    val revision: Int = 0,
+)
+
+/** A custom category write; built-ins reject edits/deletes on the server. */
+data class CategoryDraft(
+    val code: String,
+    val label: String,
+    val kind: String,
+    val color: String? = null,
+    val attributes: Map<String, String> = emptyMap(),
+)
+
+data class CategoryPatch(
+    val revision: Int,
+    val label: String? = null,
+    val kind: String? = null,
+    val color: String? = null,
+    val attributes: Map<String, String>? = null,
+)
+
+/** Server budget envelope for one month; amounts are minor units. */
+data class ServerBudgetPlan(
+    val monthId: String,
+    val expectedIncomeMinor: Long,
+    val plannedSavingsMinor: Long,
+    val limitsByCategoryId: Map<String, Long>,
+    val gapMinor: Long,
+    val revision: Int,
 )
 
 /** A manual action before the server assigns its final id/revision. */
@@ -108,6 +139,39 @@ interface ServerFinanceRepository {
     val isEnabled: Boolean
 
     suspend fun categories(ownerId: String): Outcome<List<ServerCategory>>
+
+    suspend fun createCategory(ownerId: String, draft: CategoryDraft): Outcome<ServerCategory> =
+        Outcome.Failure(AppError.Configuration("backend_category_write_not_supported"))
+
+    suspend fun updateCategoryMeta(
+        ownerId: String,
+        categoryId: String,
+        patch: CategoryPatch,
+    ): Outcome<ServerCategory> =
+        Outcome.Failure(AppError.Configuration("backend_category_write_not_supported"))
+
+    /** Deletes a custom category; [reassignTo] moves rows first, empty means reject when in use. */
+    suspend fun deleteCategory(
+        ownerId: String,
+        categoryId: String,
+        reassignTo: String? = null,
+    ): Outcome<Unit> = Outcome.Failure(AppError.Configuration("backend_category_write_not_supported"))
+
+    suspend fun budgetPlan(ownerId: String, month: JakartaMonth): Outcome<ServerBudgetPlan> =
+        Outcome.Failure(AppError.Configuration("backend_budget_not_supported"))
+
+    suspend fun saveBudgetPlan(
+        ownerId: String,
+        month: JakartaMonth,
+        expectedIncomeMinor: Long,
+        plannedSavingsMinor: Long,
+        limitsByCategoryId: Map<String, Long>,
+        revision: Int,
+    ): Outcome<ServerBudgetPlan> =
+        Outcome.Failure(AppError.Configuration("backend_budget_not_supported"))
+
+    suspend fun deleteBudgetPlan(ownerId: String, month: JakartaMonth): Outcome<Unit> =
+        Outcome.Failure(AppError.Configuration("backend_budget_not_supported"))
 
     suspend fun createManual(
         ownerId: String,
