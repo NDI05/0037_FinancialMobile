@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.result.SafeLogger
+import com.pam.recap.data.attachment.AttachmentRules
 import com.pam.recap.data.attachment.PrivateAttachmentStore
 import com.pam.recap.domain.repository.AttachmentDraft
+import com.pam.recap.domain.repository.AttachmentPatch
 import com.pam.recap.domain.repository.ServerAttachment
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.SessionRepository
@@ -33,6 +35,10 @@ data class AttachmentUiState(
     val validationRule: String? = null,
     val notice: String? = null,
     val conflict: Boolean = false,
+    /** Server-side file-name search; blank means "all attachments". */
+    val query: String = "",
+    /** Canonical [com.pam.recap.data.attachment.AttachmentRules] rule id when a rename is invalid. */
+    val renameError: String? = null,
 ) {
     val canLoadMore: Boolean get() = nextCursor != null
 }
@@ -67,7 +73,8 @@ class AttachmentViewModel @Inject constructor(
             }
             val ownerId = ownerId() ?: return@launch
             val cursor = if (loadMore) _state.value.nextCursor else null
-            when (val result = server.attachments(ownerId, transactionId, cursor = cursor)) {
+            val query = _state.value.query
+            when (val result = server.attachments(ownerId, transactionId, query = query, cursor = cursor)) {
                 is Outcome.Success -> _state.update {
                     val merged = if (loadMore) it.attachments + result.value.items else result.value.items
                     it.copy(
@@ -81,6 +88,64 @@ class AttachmentViewModel @Inject constructor(
                     SafeLogger.warning(TAG, "attachment_load_failed", result.error)
                     _state.update {
                         it.copy(isLoading = false, serverEnabled = true, error = result.error)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Searches the server by file name. The query resets pagination: the previous page is dropped so
+     * a stale result can never be appended to a different search, and a blank query restores page one.
+     */
+    fun search(rawQuery: String) {
+        val query = rawQuery.trim()
+        _state.update {
+            it.copy(
+                query = query,
+                attachments = emptyList(),
+                nextCursor = null,
+                renameError = null,
+            )
+        }
+        load()
+    }
+
+    /**
+     * Renames an attachment's metadata with revision CAS. The name goes through the same canonical
+     * rule as import, a stale revision surfaces the conflict copy instead of overwriting, and a
+     * successful save reloads the list so the UI cannot keep a stale row.
+     */
+    fun rename(attachment: ServerAttachment, rawFileName: String) {
+        val fileName = rawFileName.trim()
+        val rule = attachmentFileNameRule(fileName)
+        if (rule != null) {
+            _state.update { it.copy(renameError = rule) }
+            return
+        }
+        viewModelScope.launch {
+            val ownerId = ownerId() ?: return@launch
+            _state.update {
+                it.copy(busy = true, error = null, conflict = false, notice = null, renameError = null)
+            }
+            val result = server.patchAttachment(
+                ownerId,
+                attachment.id,
+                AttachmentPatch(revision = attachment.revision, fileName = fileName),
+            )
+            when (result) {
+                is Outcome.Success -> {
+                    _state.update { it.copy(busy = false, notice = "attachment_renamed") }
+                    load()
+                }
+                is Outcome.Failure -> {
+                    SafeLogger.warning(TAG, "attachment_rename_failed", result.error)
+                    _state.update {
+                        it.copy(
+                            busy = false,
+                            error = result.error,
+                            conflict = result.error is AppError.Conflict,
+                        )
                     }
                 }
             }
@@ -163,5 +228,13 @@ class AttachmentViewModel @Inject constructor(
         return owner
     }
 }
+
+/**
+ * The canonical attachment file-name rule. Import applies it to the displayed name; rename applies it
+ * to the trimmed name through the same [AttachmentRules.validate] so the two paths cannot drift.
+ * Mime type and size are neutral here: only the file-name rules can fail for a rename.
+ */
+internal fun attachmentFileNameRule(fileName: String): String? =
+    AttachmentRules.validate(fileName, AttachmentRules.MIME_TYPES.first(), 1)
 
 private const val TAG = "AttachmentVM"

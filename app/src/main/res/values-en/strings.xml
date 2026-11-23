@@ -576,4 +576,10 @@
     <string name="attachments_error_generic">The attachment could not be processed.</string>
     <string name="attachments_picker_missing">The file cannot be read.</string>
     <string name="attachments_only_local">This file stays on the device; only metadata is synced.</string>
+    <string name="attachments_search_hint">Search attachment name</string>
+    <string name="attachments_search_empty">No attachments match this search.</string>
+    <string name="attachments_rename_action">Rename attachment</string>
+    <string name="attachments_rename_field">File name</string>
+    <string name="attachments_rename_invalid">File name is invalid: it cannot be blank, must be at most 255 characters, and cannot contain slashes or control characters.</string>
+    <string name="attachments_renamed">Attachment renamed.</string>
 </resources>

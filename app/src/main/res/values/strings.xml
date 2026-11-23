@@ -598,4 +598,10 @@
     <string name="attachments_error_generic">Lampiran belum bisa diproses.</string>
     <string name="attachments_picker_missing">Berkas tidak bisa dibaca.</string>
     <string name="attachments_only_local">Berkas ini tetap di perangkat; hanya metadata yang disinkronkan.</string>
+    <string name="attachments_search_hint">Cari nama lampiran</string>
+    <string name="attachments_search_empty">Tidak ada lampiran yang cocok dengan pencarian.</string>
+    <string name="attachments_rename_action">Ubah nama lampiran</string>
+    <string name="attachments_rename_field">Nama berkas</string>
+    <string name="attachments_rename_invalid">Nama berkas tidak valid: tidak boleh kosong, maksimal 255 karakter, tanpa garis miring atau karakter kontrol.</string>
+    <string name="attachments_renamed">Nama lampiran diperbarui.</string>
 </resources>

@@ -4,11 +4,13 @@ import androidx.lifecycle.SavedStateHandle
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.time.JakartaMonth
+import com.pam.recap.data.attachment.AttachmentRules
 import com.pam.recap.data.attachment.PrivateAttachmentStore
 import com.pam.recap.domain.model.MonthlySummary
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.repository.AttachmentDraft
+import com.pam.recap.domain.repository.AttachmentPatch
 import com.pam.recap.domain.repository.CategoryDraft
 import com.pam.recap.domain.repository.ManualTransactionDraft
 import com.pam.recap.domain.repository.ServerAttachment
@@ -142,15 +144,93 @@ class AttachmentViewModelTest {
         assertEquals(row.id, conflicted.attachments.single().id)
     }
 
+
+    @Test
+    fun `a query resets the cursor and sends the search term to the server`() = runTest {
+        val server = FakeAttachments()
+        server.rows += seededRow("att_1", "kwitansi.png")
+        server.rows += seededRow("att_2", "catatan.txt")
+        val model = vm(server)
+        val first = model.state.first { !it.isLoading }
+        assertEquals("c2", first.nextCursor)
+        assertEquals(1, first.attachments.size)
+
+        model.search("kwitansi")
+        val searched = model.state.first { it.query == "kwitansi" && !it.isLoading }
+
+        assertEquals("kwitansi", server.attachmentCalls.last().query)
+        assertNull("a new search starts from page one", server.attachmentCalls.last().cursor)
+        assertNull(searched.nextCursor)
+        assertEquals(listOf("att_1"), searched.attachments.map { it.id })
+
+        model.search("   ")
+        val cleared = model.state.first { it.query.isEmpty() && !it.isLoading }
+        assertEquals("", server.attachmentCalls.last().query)
+        assertNull("clearing goes back to page one", server.attachmentCalls.last().cursor)
+        assertEquals(listOf("att_1"), cleared.attachments.map { it.id })
+        assertEquals("c2", cleared.nextCursor)
+    }
+
+    @Test
+    fun `a rename sends the loaded revision and reloads the renamed row`() = runTest {
+        val server = FakeAttachments(seed = true)
+        val model = vm(server)
+        val row = model.state.first { !it.isLoading }.attachments.single()
+
+        model.rename(row, "  laporan-final.pdf  ")
+        val saved = model.state.first { it.notice == "attachment_renamed" }
+
+        val patch = server.patches.single()
+        assertEquals("laporan-final.pdf", patch.fileName)
+        assertEquals(row.revision, patch.revision)
+        assertEquals(row.id, server.lastPatchedAttachmentId)
+        assertEquals("laporan-final.pdf", saved.attachments.single().fileName)
+    }
+
+    @Test
+    fun `a conflicting rename surfaces the conflict and keeps the old row`() = runTest {
+        val server = FakeAttachments(seed = true, patchFailure = AppError.Conflict("revision_conflict"))
+        val model = vm(server)
+        val row = model.state.first { !it.isLoading }.attachments.single()
+
+        model.rename(row, "laporan-final.pdf")
+        val conflicted = model.state.first { it.conflict }
+
+        assertTrue(conflicted.error is AppError.Conflict)
+        assertEquals(listOf("seed.pdf"), conflicted.attachments.map { it.fileName })
+    }
+
+    @Test
+    fun `a blank or oversized rename is rejected before any server request`() = runTest {
+        val server = FakeAttachments(seed = true)
+        val model = vm(server)
+        val row = model.state.first { !it.isLoading }.attachments.single()
+
+        model.rename(row, "   ")
+        val blank = model.state.first { it.renameError != null }
+        assertEquals(AttachmentRules.RULE_NAME, blank.renameError)
+
+        model.rename(row, "a".repeat(AttachmentRules.MAX_FILE_NAME + 1))
+        val tooLong = model.state.first { it.renameError != null }
+        assertEquals(AttachmentRules.RULE_NAME, tooLong.renameError)
+
+        assertTrue(server.patches.isEmpty())
+        assertEquals(row.revision, model.state.value.attachments.single().revision)
+    }
+
     private class FakeAttachments(
         private val createFailure: AppError? = null,
         private val deleteFailure: AppError? = null,
+        private val patchFailure: AppError? = null,
         seed: Boolean = false,
     ) : ServerFinanceRepository {
         override val isEnabled = true
         val drafts = mutableListOf<AttachmentDraft>()
         var lastDeleteRevision: Int? = null
-        private val rows = mutableListOf<ServerAttachment>()
+        val attachmentCalls = mutableListOf<AttachmentCall>()
+        val patches = mutableListOf<AttachmentPatch>()
+        var lastPatchedAttachmentId: String? = null
+        val rows = mutableListOf<ServerAttachment>()
 
         init {
             if (seed) {
@@ -174,7 +254,35 @@ class AttachmentViewModelTest {
             query: String,
             limit: Int,
             cursor: String?,
-        ) = Outcome.Success(ServerAttachmentPage(rows.filter { it.transactionId == transactionId }))
+        ): Outcome<ServerAttachmentPage> {
+            attachmentCalls += AttachmentCall(query, cursor)
+            val filtered = rows.filter {
+                it.transactionId == transactionId &&
+                    (query.isBlank() || it.fileName.contains(query, ignoreCase = true))
+            }
+            // One row per page so the tests can prove the cursor is reset by a new search.
+            val page = if (cursor == null) filtered.take(1) else filtered.drop(1)
+            val next = if (cursor == null && filtered.size > 1) "c2" else null
+            return Outcome.Success(ServerAttachmentPage(page, next))
+        }
+
+        override suspend fun patchAttachment(
+            ownerId: String,
+            attachmentId: String,
+            patch: AttachmentPatch,
+        ): Outcome<ServerAttachment> {
+            patchFailure?.let { return Outcome.Failure(it) }
+            patches += patch
+            lastPatchedAttachmentId = attachmentId
+            val index = rows.indexOfFirst { it.id == attachmentId }
+            if (index < 0) return Outcome.Failure(AppError.NotFound("attachment"))
+            val updated = rows[index].copy(
+                fileName = patch.fileName ?: rows[index].fileName,
+                revision = rows[index].revision + 1,
+            )
+            rows[index] = updated
+            return Outcome.Success(updated)
+        }
 
         override suspend fun createAttachment(ownerId: String, draft: AttachmentDraft): Outcome<ServerAttachment> {
             createFailure?.let { return Outcome.Failure(it) }
@@ -227,3 +335,16 @@ class AttachmentViewModelTest {
             Outcome.Failure(AppError.NotFound("unused"))
     }
 }
+
+private data class AttachmentCall(val query: String, val cursor: String?)
+
+private fun seededRow(id: String, fileName: String) = ServerAttachment(
+    id = id,
+    transactionId = "tx_1",
+    fileName = fileName,
+    mimeType = "application/pdf",
+    sizeBytes = 2048,
+    sha256 = "b".repeat(64),
+    storageRef = "attachments/u_1/tx_1/$fileName",
+    revision = 2,
+)

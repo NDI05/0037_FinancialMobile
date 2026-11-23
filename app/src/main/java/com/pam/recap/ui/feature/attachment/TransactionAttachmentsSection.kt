@@ -7,17 +7,25 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -59,6 +68,8 @@ fun TransactionAttachmentsSection(
         onAddClick = { picker.launch(AttachmentRules.MIME_TYPES.toTypedArray()) },
         onDelete = viewModel::remove,
         onLoadMore = { viewModel.load(loadMore = true) },
+        onSearch = viewModel::search,
+        onRename = viewModel::rename,
         modifier = modifier,
     )
 }
@@ -71,8 +82,21 @@ fun TransactionAttachmentsContent(
     onDelete: (ServerAttachment) -> Unit,
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
+    onSearch: (String) -> Unit = {},
+    onRename: (ServerAttachment, String) -> Unit = { _, _ -> },
 ) {
     var pendingDelete by remember { mutableStateOf<ServerAttachment?>(null) }
+    var editingRename by remember { mutableStateOf<ServerAttachment?>(null) }
+    var renameDraft by remember { mutableStateOf("") }
+    var renameInvalid by remember { mutableStateOf(false) }
+    var renameSubmitted by remember { mutableStateOf(false) }
+    // Close only after the server confirmed the rename; a conflict keeps the editor open.
+    LaunchedEffect(state.notice) {
+        if (renameSubmitted && state.notice == "attachment_renamed") {
+            editingRename = null
+            renameSubmitted = false
+        }
+    }
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -96,12 +120,34 @@ fun TransactionAttachmentsContent(
             )
             return@Column
         }
+        var searchText by remember(state.query) { mutableStateOf(state.query) }
+        OutlinedTextField(
+            value = searchText,
+            onValueChange = { searchText = it },
+            placeholder = { Text(stringResource(R.string.attachments_search_hint)) },
+            trailingIcon = {
+                IconButton(onClick = { onSearch(searchText) }) {
+                    Icon(
+                        Icons.Filled.Search,
+                        contentDescription = stringResource(R.string.action_search),
+                    )
+                }
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onSearch(searchText) }),
+            modifier = Modifier.fillMaxWidth(),
+        )
         if (state.busy) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
             Text(stringResource(R.string.attachments_uploading), style = MaterialTheme.typography.bodySmall)
         }
         if (state.notice != null) {
-            Text(stringResource(R.string.attachments_saved), style = MaterialTheme.typography.bodySmall)
+            val notice = when (state.notice) {
+                "attachment_renamed" -> R.string.attachments_renamed
+                else -> R.string.attachments_saved
+            }
+            Text(stringResource(notice), style = MaterialTheme.typography.bodySmall)
         }
         if (state.conflict) {
             Text(
@@ -117,31 +163,97 @@ fun TransactionAttachmentsContent(
             )
         }
         if (state.attachments.isEmpty() && !state.isLoading) {
-            Text(stringResource(R.string.attachments_empty), style = MaterialTheme.typography.bodySmall)
+            val empty = if (state.query.isNotBlank()) {
+                R.string.attachments_search_empty
+            } else {
+                R.string.attachments_empty
+            }
+            Text(stringResource(empty), style = MaterialTheme.typography.bodySmall)
         }
         state.attachments.forEach { attachment ->
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = attachment.fileName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = "${attachment.mimeType} · ${formatAttachmentSize(attachment.sizeBytes)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                IconButton(onClick = { pendingDelete = attachment }, enabled = !state.busy) {
-                    Icon(
-                        Icons.Filled.Delete,
-                        contentDescription = stringResource(R.string.attachments_delete_confirm),
-                    )
+                val editing = editingRename?.id == attachment.id
+                if (editing) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = renameDraft,
+                            onValueChange = {
+                                renameDraft = it
+                                renameInvalid = false
+                            },
+                            label = { Text(stringResource(R.string.attachments_rename_field)) },
+                            singleLine = true,
+                            isError = renameInvalid || state.renameError != null,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (renameInvalid || state.renameError != null) {
+                            Text(
+                                text = stringResource(R.string.attachments_rename_invalid),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                    IconButton(
+                        enabled = !state.busy,
+                        onClick = {
+                            val trimmed = renameDraft.trim()
+                            if (attachmentFileNameRule(trimmed) != null) {
+                                renameInvalid = true
+                            } else {
+                                renameSubmitted = true
+                                onRename(attachment, trimmed)
+                            }
+                        },
+                    ) {
+                        Icon(
+                            Icons.Filled.Check,
+                            contentDescription = stringResource(R.string.action_save),
+                        )
+                    }
+                    IconButton(onClick = { editingRename = null }) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.action_cancel),
+                        )
+                    }
+                } else {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = attachment.fileName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = "${attachment.mimeType} · ${formatAttachmentSize(attachment.sizeBytes)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            editingRename = attachment
+                            renameDraft = attachment.fileName
+                            renameInvalid = false
+                            renameSubmitted = false
+                        },
+                        enabled = !state.busy,
+                    ) {
+                        Icon(
+                            Icons.Filled.Edit,
+                            contentDescription = stringResource(R.string.attachments_rename_action),
+                        )
+                    }
+                    IconButton(onClick = { pendingDelete = attachment }, enabled = !state.busy) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = stringResource(R.string.attachments_delete_confirm),
+                        )
+                    }
                 }
             }
         }
