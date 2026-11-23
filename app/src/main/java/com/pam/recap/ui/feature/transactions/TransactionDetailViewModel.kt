@@ -189,7 +189,7 @@ class TransactionDetailViewModel @Inject constructor(
                 refundCandidates = candidates,
                 descriptionDraft = draft.description,
                 merchantDraft = draft.merchant,
-                merchantIsReference = transaction != null && isReferenceMerchantLabel(transaction.merchantLabel),
+                merchantIsReference = storedMerchantIsReference(transaction),
                 noteDraft = draft.note,
                 attributeFields = draft.attributes,
                 // An unresolved conflict is still shown as the typed error until the user resolves it,
@@ -526,3 +526,11 @@ class TransactionDetailViewModel @Inject constructor(
         FinanceRefreshBus.notify(ownerId, month.id())
     }
 }
+
+/**
+ * Detail-screen flag for the stored (not draft) merchant label: a reference/account number must
+ * not be presented as if it were a merchant name, so the screen shows the neutral reference
+ * notice instead. A readable name, a null/blank label or a locally created row has no notice.
+ */
+internal fun storedMerchantIsReference(transaction: Transaction?): Boolean =
+    transaction != null && isReferenceMerchantLabel(transaction.merchantLabel)

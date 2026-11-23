@@ -29,7 +29,7 @@ diklaim PASS**.
 | # | Lapis | Gejala | Bukti | Perbaikan |
 |---|---|---|---|---|
 | R1 | Data/parser (data-limited) | Email Livin jenis tagihan menaruh **nomor referensi/biller** di slot "Merchant"; 47/47 baris owner `merchantLabel` berupa **19 digit angka**, 27 digit-set berbeda. Tidak ada nama merchant manusia di DB (`description` hanya teks template "Pembayaran", `attributes` kosong). | Inspeksi read-only kolom tersegel (hanya bentuk/panjang/jumlah, nilai mentah tidak dicatat); import job COMPLETE 2026-11-22 matched/imported 47, template v1; job import hari ini EMPTY (0 matched) sehingga email sumber tidak bisa diprobe ulang. | Tidak ada perubahan parser karena **tidak dapat dibuktikan** email sumber memuat nama merchant (probe email mentah **NOT RUN**, Gmail link saat ini tidak menghasilkan email). Tidak mengarang nama. |
-| R2 | Go — sanitasi merchant | `categoryllm.SanitizeMerchant` menolak label >8 digit (`digits_gt8`), dan handler memetakan **semua** kegagalan sanitasi ke satu kode generik `unsafe_merchant`. | 5 job owner `NEEDS_REVIEW` + `reason_code=unsafe_merchant`; 0 baris cache; 0 percobaan provider owner. | `handlers_category.go`: klasifikasi alasan spesifik — `merchant_missing` (label kosong), `merchant_not_identifiable` (hanya angka/pemisah), `unsafe_merchant` (kasus sanitasi lain). Semua tetap `NEEDS_REVIEW` + `uncategorized`, **0 panggilan provider**. Aturan sanitasi digit **tidak** dilonggarkan. |
+| R2 | Go — sanitasi merchant | `categoryllm.SanitizeMerchant` menolak label dengan >8 digit dan mengembalikan `ErrInvalidInput` (tanpa kode alasan internal; `internal/categoryllm/classifier.go`), dan handler memetakan **semua** kegagalan sanitasi ke satu kode generik `unsafe_merchant`. | 5 job owner `NEEDS_REVIEW` + `reason_code=unsafe_merchant`; 0 baris cache; 0 percobaan provider owner. | `handlers_category.go`: klasifikasi alasan spesifik — `merchant_missing` (label kosong), `merchant_not_identifiable` (hanya angka/pemisah), `unsafe_merchant` (kasus sanitasi lain). Semua tetap `NEEDS_REVIEW` + `uncategorized`, **0 panggilan provider**. Aturan sanitasi digit **tidak** dilonggarkan. |
 | R3 | Android — tampilan | Layar Transaksi hanya menampilkan counter `classified=0 needsReview=5 failed=0`; alasan dari API (`reasonCode`) dibuang. Detail menampilkan nomor referensi di kolom "Merchant" seolah nama merchant. | `TransactionsViewModel` hanya membangun string status; `ServerCategoryJob.reasonCode` sudah ada di kontrak tetapi tidak dipakai UI. | Mapping kode → kalimat Indonesia di banner daftar (`transactions_classify_review_*`) dan catatan netral di detail (`detail_merchant_reference_notice`); nilai mentah tetap bisa diedit, kode teknis tidak pernah ditampilkan. |
 
 ## 3. Baseline owner (pra-perbaikan) vs sesudah perbaikan
@@ -76,6 +76,11 @@ log stub: `assets/category_livin_2026-11-23/isolated_provider_stub_hits.log`.
 
 Catatan: ini bukti **pipeline & kontrak**, bukan akurasi model dan bukan data owner.
 
+Tradeoff produk yang disengaja: **semua** label merchant yang hanya berisi angka/pemisah —
+termasuk yang ≤8 digit dan dulu mungkin diteruskan ke provider — sekarang menjadi
+`NEEDS_REVIEW` tanpa panggilan provider. Ini dipilih agar aplikasi tidak mengarang kategori dari
+nomor referensi/biller; konsekuensinya baris seperti itu selalu butuh kategori manual.
+
 ## 5. Perubahan Android (dan mengapa cukup di lapisan tampilan)
 
 - `TransactionsViewModel.kt`: `classificationReviewReasons` di state; `reviewReasonCodes(jobs)`
@@ -89,7 +94,8 @@ Catatan: ini bukti **pipeline & kontrak**, bukan akurasi model dan bukan data ow
   manual." Nilai mentah tetap tampil dan dapat diedit; tidak ada nama merchant palsu.
 - String Indonesia baru di `res/values/strings.xml` (7 kunci).
 - Kategori pilihan user tidak disentuh: filter klasifikasi Android tetap mengecualikan
-  `categoryOrigin == USER`, dan tes Go `TestUserCategoryNotOverwritten` tetap lulus.
+  `categoryOrigin == USER`, dan assertion Go yang sama tetap lulus di
+  `TestCacheIgnoresPreMappingVersionRows` (`category_pipeline_test.go:735` dan `:794`).
 
 ## 6. Guard yang dipertahankan (tidak berubah)
 
@@ -120,12 +126,14 @@ Catatan: ini bukti **pipeline & kontrak**, bukan akurasi model dan bukan data ow
 | `go test -count=1 ./...` (backend-go) | **PASS** — semua paket (internal/httpapi 17.0s) |
 | `go vet ./...` | **PASS** |
 | `go build ./...` | **PASS** |
-| `:app:testDebugUnitTest` | **PASS** — 498 tes, 0 gagal, 0 skip (+5 tes baru) |
+| `:app:testDebugUnitTest` | **PASS** — 499 tes, 0 gagal, 0 skip (+6 tes baru) |
 
 Regresi Go baru: `TestReferenceMerchantNeedsReviewWithoutProviderCall` (19 digit, angka pendek,
 referensi berpemisah, kosong, label tidak aman → alasan tepat, 0 panggilan provider, kategori
 tidak berubah). Regresi Android baru: `ClassificationReviewReasonTest` (dedup/urut alasan,
-kode tak dikenal → generik, deteksi label referensi vs nama asli).
+kode tak dikenal → generik, deteksi label referensi vs nama asli, dan flag
+`storedMerchantIsReference` yang memicu catatan detail untuk label referensi tetapi tidak untuk
+nama terbaca).
 
 Rincian: `assets/category_livin_2026-11-23/test_results.txt`.
 Catatan lingkungan: worktree memerlukan symlink gitignored `.robolectric-deps` ke checkout utama
@@ -155,6 +163,10 @@ agar Robolectric offline bisa jalan (bukan bagian commit).
   test; verifikasi pada backend UAT nyata menunggu izin restart/deploy.
 - Alasan generik sengaja dipakai untuk kode kontrak baru agar UI tidak pernah menampilkan token
   teknis; bila backend menambah kode alasan, salinan Indonesia perlu ditambahkan.
+- Kode `errorCode` pada job **FAILED** (mis. `provider_transient`, `budget_exhausted`,
+  `input_too_large`) juga dipetakan ke salinan generik "Perlu tinjauan…" karena kamus alasan saat
+  ini hanya mencakup kode `reasonCode` ineligibility; belum ada copy khusus per kode error dan
+  belum ada tes UI yang membedakannya.
 
 ## 11. Artefak bukti
 

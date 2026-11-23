@@ -1,7 +1,15 @@
 package com.pam.recap.ui.feature.transactions
 
 import com.pam.recap.R
+import com.pam.recap.core.money.Money
+import com.pam.recap.domain.model.Category
+import com.pam.recap.domain.model.CategoryOrigin
+import com.pam.recap.domain.model.Direction
+import com.pam.recap.domain.model.ParseStatus
+import com.pam.recap.domain.model.Transaction
+import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.ServerCategoryJob
+import kotlin.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -96,5 +104,29 @@ class ClassificationReviewReasonTest {
         assertFalse(isReferenceMerchantLabel(null))
         assertFalse(isReferenceMerchantLabel(""))
         assertFalse(isReferenceMerchantLabel("   "))
+    }
+
+    private fun storedTransaction(merchantLabel: String?) = Transaction(
+        id = "tx_ref", ownerId = "u_test", direction = Direction.DEBIT,
+        source = TransactionSource.EMAIL, amount = Money(16_000), currency = "IDR",
+        eventAt = Instant.parse("2026-11-19T02:15:20Z"), receivedAt = null,
+        description = "Pembayaran", merchantLabel = merchantLabel, acquirer = null,
+        status = ParseStatus.POSTED, fingerprint = "f".repeat(32), parserVersion = "livin-bill-payment/v1",
+        parserConfidence = 0.9f, category = Category.UNCATEGORIZED, categoryOrigin = CategoryOrigin.IMPORTED,
+        categoryConfidence = null, categoryUpdatedAt = null, isInternalTransfer = false,
+        linkedRefundOf = null, note = null, importJobId = null, revision = 0,
+        createdAt = Instant.parse("2026-11-19T02:15:20Z"), updatedAt = Instant.parse("2026-11-19T02:15:20Z"),
+    )
+
+    @Test
+    fun `detail reference notice flag follows the stored merchant label`() {
+        // Shape only: synthetic values, not owner data.
+        assertTrue(storedMerchantIsReference(storedTransaction("9380147528123456789")))
+        assertTrue(storedMerchantIsReference(storedTransaction("938 014 7528")))
+
+        assertFalse(storedMerchantIsReference(storedTransaction("Indomaret")))
+        assertFalse(storedMerchantIsReference(storedTransaction("")))
+        assertFalse(storedMerchantIsReference(storedTransaction(null)))
+        assertFalse(storedMerchantIsReference(null))
     }
 }
