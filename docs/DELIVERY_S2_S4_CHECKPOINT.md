@@ -598,3 +598,82 @@ tidak disentuh.
 - **S2.5 budget/analysis remote + freshness**: belum diwire ke UI.
 - **S3 (C01–C15) dan S4 (C16–C25) tetap belum selesai**: belum ada layar CRUD kategori/anggaran,
   lampiran, atau admin; backend juga belum punya endpoint lampiran/admin.
+
+---
+
+## Integrasi final 23 November 2026 (malam) — `feat/c2-android` @ `99cb3df`
+
+Bagian ini menutup sprint S2–S4 pada branch kerja `feat/c2-android` (bukan merge ke
+`develop`/`main`; itu tetap keputusan pemilik). Semua paket di bawah sudah melewati
+review independen (peran Auditor/QA) sebelum digabung, dan gate dijalankan ulang pada
+hasil gabungan, bukan hanya pada branch tugas.
+
+### Paket yang diintegrasikan (urutan merge)
+
+| Commit | Isi | Audit |
+|---|---|---|
+| `e3eeb17` | Paket 5 — P1-1/P1-2 recovery: identitas run ditulis untuk semua jalur commit finansial (termasuk retry FR-21), snapshot pasca-commit dari `listByImportJob`, pemetaan kode status upload (`pending_snapshot_incomplete`) | Re-audit **LULUS DENGAN CATATAN**; P1-1/P1-2 CLOSED; sisa LOW P5-1 (watermark null sementara tanpa kehilangan data), P5-2 (journal nullable default, test-only) |
+| `94e2f37` (merge `f8a52c9`) | Paket 3 — acceptance Android: wiring C10 kategori search + C15 riwayat anggaran, generation guard/debounce, `totalLimitMinor`/`gapMinor`, decode `attributes:null`, bukti perangkat C04/C05/C10/C12/C15/C17/C18/C20, doc evidence | Re-audit **LULUS DENGAN CATATAN**; P3-1..P3-6 CLOSED; dry-run merge bersih; sisa LOW P3R-1 (sitasi, sudah diperbaiki `f8a52c9`), P3R-2/P3R-3/P3R-4 |
+| `99cb3df` (merge `4c317eb`) | Paket 4 — S4.4 varian `assessment`: pemisahan Room/SQLCipher/WorkManager ke source-set standard, adapters outbox + repository + durable state Keystore, dedupe global fingerprint, commit() dihormati, test kontrak dependensi | Re-audit **LULUS DENGAN CATATAN**, lalu patch P6-1/P6-2 **LULUS** dan CLOSED; P4-1/P4-2/P4-4/P4-5 CLOSED |
+
+### Gate fresh pada hasil gabungan (`99cb3df`)
+
+- `:app:testDebugUnitTest --rerun-tasks`: **463 tests / 63 classes / 0 failure / 0 error**.
+- `:app:testAssessmentUnitTest --rerun-tasks`: **473 tests / 64 classes / 0 failure / 0 error**.
+- `:app:lintDebug`: **0 error, 115 warning, 1 hint**; `:app:lintAssessment`: **0 error,
+  123 warning, 1 hint**; MissingTranslation 0.
+- `:app:assembleDebug` + `:app:assembleAssessment` sukses.
+- Go: `test -count=1 ./...` semua paket ok (httpapi 15.6 s, store 1.2 s), `go vet` bersih,
+  `go test -race ./internal/store ./internal/httpapi` ok (19.2 s / 173.5 s).
+- `assessmentRuntimeClasspath`: 0 entri `androidx.room|sqlcipher|androidx.work|androidx.sqlite`
+  (kontrol positif `debugRuntimeClasspath` memuat semuanya); APK assessment 17 dex, 0 string
+  terlarang, tanpa lib sqlcipher/sqlite.
+- UAT emulator `emulator-5554`, backend `/tmp/pam-be-merged` di `127.0.0.1:18090`
+  (`adb reverse`), akun sintetis `e2e.accept.c.6f6f536f@pam-uat.test`.
+
+### Artefak APK akhir (dibangun dari `99cb3df`)
+
+| Varian | Path | Ukuran | SHA-256 penuh | Konfigurasi |
+|---|---|---|---|---|
+| debug (standar, diuji perangkat) | `app/build/outputs/apk/debug/app-debug.apk` | 45.932.500 B | `24b768c9cf40a6d466d697baee0f96db95b46427e6d8ad145410b7512bc189c6` | `PAM_BACKEND_BASE_URL=http://127.0.0.1:18090`, `versionName=1.0.0`, package `com.pam.recap.debug` |
+| assessment | `app/build/outputs/apk/assessment/app-assessment.apk` | 23.567.872 B | `b5eec2acb7caa901fed789a19406bc4ce438e91826f85eb480ae7711d3a2021b` | `PAM_BACKEND_BASE_URL=http://127.0.0.1:18090`, package `com.pam.recap.debug` (tanpa suffix) |
+
+Catatan: APK debug di atas di-install ulang pada emulator dan smoke test berhasil memuat
+ringkasan server (Rp4.706,95 / 8 transaksi November) serta daftar transaksi halaman pertama
+(50 baris, footer "50 transaksi dimuat; masih ada halaman berikutnya."). APK yang dipakai
+worker C untuk walk perangkat penuh adalah `cc6eef95…` dari commit branch yang isinya kini
+sudah tergabung; angka sha di atas adalah artefak final hasil gabungan.
+
+### Bukti perangkat (ringkas; detail di evidence)
+
+`docs/evidence/UAT_S3_S4_DEVICE_2026-11-23.md` (baru): C04 delete 204 tanpa resurrect,
+C05 search + halaman kedua 85/86 baris, C10 kategori `q` menyempit 11→1, C12 realisasi vs
+rencana, C15 riwayat periode 200 + limit/selisih, C17 metadata setelah restart, C18 rename
+200, C20 search match/empty. C01 tetap PARTIAL (create terpanggil tetapi 400 karena field
+lama; tidak ada 201 di perangkat), C24/C25 tidak dijalankan di perangkat karena walk admin
+akan mencabut sesi bukti — tetap API/unit.
+
+### Branch cleanup (wajib, sudah diverifikasi di remote)
+
+Dihapus setelah integrasi + verifikasi remote: `work/se-recovery-fix`,
+`work/se-android-acceptance`, `work/se-assessment-variant` (lokal dan `origin`), termasuk
+worktree `pam-wt-recfix`, `pam-wt-accept`, `pam-wt-assess`, `pam-wt-audit`. `git ls-remote
+--heads origin` sekarang tidak memuat branch `work/*`; tersisa `feat/c2-android`,
+`feat/go-backend`, `develop`, `main`. Tidak ada force-push; `main` dikecualikan.
+
+### Masih terbuka (bukan lulus)
+
+- **C01 create manual di perangkat** belum terbukti (status PARTIAL).
+- **C24/C25 walk perangkat** belum; last-admin guard, filter status, cursor hanya API/unit.
+- **Temuan LOW audit yang diterima sebagai follow-up**: P5-1/P5-2 (recovery), P3R-2
+  (server `validateAttributes` masih menerima nilai non-string sementara decoder Android
+  strict), P3R-3 (list kategori non-search mengabaikan `nextCursor`), P3R-4 (hint truncation
+  belum ada bukti visual), P6-3/P6-4/P6-5 dan P4b-1/P4b-2 (consent hidrasi ownerId kosong,
+  jalur 401 belum dites, owner-index import diabaikan, `clear()`/`deleteAll()` belum
+  runCatching).
+- **Gate eksternal tetap**: mailbox nyata + email baru tiba, benchmark berlabel manusia,
+  36 email malformed, UAT pemilik, hosting/backup-restore, keputusan merge ke `develop`/`main`
+  dan deployment.
+- **S4.4 batas by-design**: sinkronisasi foreground-only (tanpa WorkManager/background sync),
+  tanpa `applicationIdSuffix` (tidak bisa coexist dengan build debug), tidak menyimpan data
+  finansial lokal (server-backed + encrypted outbox; consent/Gmail/import metadata durable).
