@@ -13,7 +13,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -29,6 +31,8 @@ import com.pam.recap.R
 import com.pam.recap.core.money.IdrFormatter
 import com.pam.recap.domain.model.BudgetComparisonRow
 import com.pam.recap.domain.model.Category
+import com.pam.recap.domain.model.CoverageStatus
+import com.pam.recap.domain.model.SummaryFreshness
 import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassCard
 import com.pam.recap.ui.components.GlassTopBar
@@ -38,6 +42,7 @@ import com.pam.recap.ui.components.MoneyTone
 import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
 import com.pam.recap.ui.components.PillButton
+import com.pam.recap.ui.components.PillButtonStyle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.WarningAmber
@@ -54,7 +59,9 @@ import com.pam.recap.ui.theme.PamSpacing
 import com.pam.recap.ui.theme.TitleM
 import com.pam.recap.ui.theme.WarningAmber
 import com.pam.recap.ui.util.appErrorRes
+import com.pam.recap.ui.util.PamDateFormat
 import com.pam.recap.ui.util.categoryLabelRes
+import kotlin.time.Instant
 
 /**
  * §8 Budget plan: expected income, planned savings and per-category limits seeded from historical
@@ -93,6 +100,21 @@ fun BudgetPlanScreen(
                 style = DisplayM,
                 color = OnInk,
             )
+            if (state.isServerMode) {
+                // S2.5: say whether these numbers came from the server and are still current.
+                Text(
+                    text = when (state.freshness) {
+                        PlanFreshness.CURRENT -> stringResource(
+                            R.string.budget_plan_freshness_current,
+                            state.revision,
+                        )
+                        PlanFreshness.UNSAVED -> stringResource(R.string.budget_plan_freshness_unsaved)
+                        PlanFreshness.STALE -> stringResource(R.string.budget_plan_freshness_stale)
+                    },
+                    style = LabelM,
+                    color = OnInkMuted,
+                )
+            }
             if (state.isSeededFromHistory) {
                 // F4: chip above the sentence so a 200 % font scale wraps instead of squeezing.
                 Column(verticalArrangement = Arrangement.spacedBy(PamSpacing.xxs)) {
@@ -137,6 +159,81 @@ fun BudgetPlanScreen(
                 icon = if (gap.isShortfall) Icons.Rounded.WarningAmber else Icons.Rounded.CheckCircle,
             )
 
+            if (state.isServerMode) {
+                // Coverage/freshness travel with the server summary the comparison is computed from;
+                // showing them next to the gap keeps the plan and the actuals on the same footing.
+                Column(verticalArrangement = Arrangement.spacedBy(PamSpacing.xs)) {
+                    state.summaryCoverage?.let { summaryCoverage ->
+                        Text(
+                            text = stringResource(
+                                when (summaryCoverage) {
+                                    CoverageStatus.COMPLETE -> R.string.budget_summary_coverage_complete
+                                    CoverageStatus.PARTIAL -> R.string.budget_summary_coverage_partial
+                                    CoverageStatus.EMPTY -> R.string.budget_summary_coverage_empty
+                                    CoverageStatus.FAILED -> R.string.budget_summary_coverage_failed
+                                },
+                            ),
+                            style = LabelM,
+                            color = OnInkFaint,
+                        )
+                    }
+                    state.summaryGeneratedAt?.let { generatedAt ->
+                        Text(
+                            text = stringResource(
+                                R.string.budget_summary_generated,
+                                PamDateFormat.dateTime(Instant.fromEpochMilliseconds(generatedAt)),
+                            ),
+                            style = LabelM,
+                            color = OnInkFaint,
+                        )
+                    }
+                    if (state.summaryIsOutdated) {
+                        Text(
+                            text = stringResource(R.string.budget_summary_outdated),
+                            style = LabelM,
+                            color = WarningAmber,
+                        )
+                    }
+                    // The summary's own freshness is the honest signal for whether the actuals are
+                    // current; STALE and HISTORICAL are never shown as plain, current numbers.
+                    when (state.summaryFreshness) {
+                        SummaryFreshness.CURRENT -> Text(
+                            text = stringResource(R.string.budget_summary_freshness_current),
+                            style = LabelM,
+                            color = OnInkFaint,
+                        )
+
+                        SummaryFreshness.STALE -> NoticeBanner(
+                            text = stringResource(R.string.budget_summary_freshness_stale),
+                            tone = MoneyTone.Expense,
+                            icon = Icons.Rounded.WarningAmber,
+                        )
+
+                        SummaryFreshness.HISTORICAL -> NoticeBanner(
+                            text = stringResource(R.string.budget_summary_freshness_historical),
+                            tone = MoneyTone.Expense,
+                            icon = Icons.Rounded.WarningAmber,
+                        )
+
+                        null -> Unit
+                    }
+                    if (state.summaryRefreshFailed) {
+                        NoticeBanner(
+                            text = stringResource(R.string.budget_summary_refresh_failed),
+                            tone = MoneyTone.Expense,
+                            icon = Icons.Rounded.WarningAmber,
+                        )
+                    }
+                    PillButton(
+                        text = stringResource(R.string.budget_summary_refresh),
+                        onClick = viewModel::refreshSummary,
+                        style = PillButtonStyle.Secondary,
+                        loading = state.isRefreshingSummary,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 EyebrowText(text = stringResource(R.string.budget_limits_eyebrow))
                 Spacer(modifier = Modifier.height(PamSpacing.xs))
@@ -152,6 +249,18 @@ fun BudgetPlanScreen(
             if (state.error != null) {
                 NoticeBanner(text = stringResource(appErrorRes(requireNotNull(state.error))))
             }
+            if (state.conflict) {
+                NoticeBanner(
+                    text = stringResource(R.string.budget_conflict_message),
+                    tone = MoneyTone.Expense,
+                )
+                PillButton(
+                    text = stringResource(R.string.budget_reload_latest),
+                    onClick = viewModel::reload,
+                    style = PillButtonStyle.Secondary,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             PillButton(
                 text = stringResource(R.string.budget_save),
@@ -164,6 +273,23 @@ fun BudgetPlanScreen(
                 style = LabelM,
                 color = OnInkFaint,
             )
+
+            if (state.isServerMode) {
+                if (state.planDeleted) {
+                    NoticeBanner(
+                        text = stringResource(R.string.budget_plan_deleted),
+                        tone = MoneyTone.Income,
+                        icon = Icons.Rounded.CheckCircle,
+                    )
+                }
+                PillButton(
+                    text = stringResource(R.string.budget_delete_plan),
+                    onClick = viewModel::requestDelete,
+                    style = PillButtonStyle.Secondary,
+                    loading = state.isDeleting,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             val comparison = state.comparison
             if (comparison != null) {
@@ -193,6 +319,24 @@ fun BudgetPlanScreen(
                 }
             }
         }
+    }
+
+    if (state.deleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = viewModel::cancelDelete,
+            title = { Text(stringResource(R.string.budget_delete_title)) },
+            text = { Text(stringResource(R.string.budget_delete_body)) },
+            confirmButton = {
+                TextButton(onClick = viewModel::confirmDelete, enabled = !state.isDeleting) {
+                    Text(stringResource(R.string.action_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::cancelDelete, enabled = !state.isDeleting) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
     }
 }
 
