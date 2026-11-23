@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,8 +80,10 @@ fun TransactionDetailScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val transaction = state.transaction
-    var noteDraft by remember(transaction?.id, transaction?.note) {
-        mutableStateOf(transaction?.note.orEmpty())
+
+    // The server confirmed the delete; leaving the now-stale detail is the only sane next step.
+    LaunchedEffect(state.isDeleted) {
+        if (state.isDeleted) onBack()
     }
     var showRefundSheet by remember { mutableStateOf(false) }
 
@@ -154,8 +157,14 @@ fun TransactionDetailScreen(
                 }
             }
 
-            if (state.error != null) {
+            if (state.error != null && !state.conflict) {
                 NoticeBanner(text = stringResource(appErrorRes(requireNotNull(state.error))))
+            }
+            if (state.conflict) {
+                NoticeBanner(
+                    text = stringResource(R.string.detail_conflict_message),
+                    tone = MoneyTone.Expense,
+                )
             }
             if (!state.actionsEnabled) {
                 NoticeBanner(text = stringResource(R.string.detail_actions_server_partial))
@@ -272,22 +281,94 @@ fun TransactionDetailScreen(
                 }
             }
 
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                EyebrowText(text = stringResource(R.string.detail_note_eyebrow))
-                Spacer(modifier = Modifier.height(PamSpacing.xs))
-                LabelledField(
-                    label = stringResource(R.string.detail_note_label),
-                    value = noteDraft,
-                    onValueChange = { noteDraft = it },
-                    placeholder = stringResource(R.string.detail_note_placeholder),
-                )
-                Spacer(modifier = Modifier.height(PamSpacing.xs))
-                PillButton(
-                    text = stringResource(R.string.action_save),
-                    onClick = { viewModel.saveNote(noteDraft) },
-                    style = PillButtonStyle.Secondary,
-                    loading = state.isBusy,
-                )
+            if (state.metadataEditable) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    EyebrowText(text = stringResource(R.string.detail_edit_eyebrow))
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    LabelledField(
+                        label = stringResource(R.string.detail_description_label),
+                        value = state.descriptionDraft,
+                        onValueChange = viewModel::setDescription,
+                        placeholder = stringResource(R.string.detail_description_placeholder),
+                    )
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    LabelledField(
+                        label = stringResource(R.string.detail_merchant_label),
+                        value = state.merchantDraft,
+                        onValueChange = viewModel::setMerchantLabel,
+                        placeholder = stringResource(R.string.detail_merchant_placeholder),
+                    )
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    LabelledField(
+                        label = stringResource(R.string.detail_note_label),
+                        value = state.noteDraft,
+                        onValueChange = viewModel::setNote,
+                        placeholder = stringResource(R.string.detail_note_placeholder_edit),
+                    )
+                    state.fieldError?.let { error ->
+                        Spacer(modifier = Modifier.height(PamSpacing.xs))
+                        NoticeBanner(text = stringResource(fieldErrorRes(error)))
+                    }
+                    if (state.hasUnsavedChanges) {
+                        Spacer(modifier = Modifier.height(PamSpacing.xs))
+                        Text(
+                            text = stringResource(R.string.detail_unsaved_hint),
+                            style = LabelM,
+                            color = OnInkMuted,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    PillButton(
+                        text = stringResource(R.string.action_save),
+                        onClick = viewModel::saveMetadata,
+                        style = PillButtonStyle.Secondary,
+                        loading = state.isBusy,
+                    )
+                    if (state.canRetry) {
+                        Spacer(modifier = Modifier.height(PamSpacing.xs))
+                        PillButton(
+                            text = stringResource(R.string.action_retry),
+                            onClick = viewModel::retrySave,
+                            style = PillButtonStyle.Ghost,
+                        )
+                    }
+                }
+
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    EyebrowText(text = stringResource(R.string.detail_delete_eyebrow))
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    Text(
+                        text = stringResource(R.string.detail_delete_body),
+                        style = BodyM,
+                        color = OnInkMuted,
+                    )
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    PillButton(
+                        text = stringResource(R.string.action_delete),
+                        onClick = viewModel::requestDelete,
+                        style = PillButtonStyle.Ghost,
+                        enabled = !state.isBusy,
+                    )
+                }
+            } else {
+                // Offline mode: the Room note stays editable, the server-only edit form is not offered.
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    EyebrowText(text = stringResource(R.string.detail_note_eyebrow))
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    LabelledField(
+                        label = stringResource(R.string.detail_note_label),
+                        value = state.noteDraft,
+                        onValueChange = viewModel::setNote,
+                        placeholder = stringResource(R.string.detail_note_placeholder),
+                    )
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    PillButton(
+                        text = stringResource(R.string.action_save),
+                        onClick = viewModel::saveMetadata,
+                        style = PillButtonStyle.Secondary,
+                        loading = state.isBusy,
+                    )
+                }
             }
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -351,6 +432,45 @@ fun TransactionDetailScreen(
             )
         }
     }
+
+    // Deleting is destructive, so it always passes this explicit confirmation; cancelling keeps
+    // the row exactly as it was and no request is sent.
+    if (state.deleteConfirmation) {
+        SheetScaffold(onDismissRequest = viewModel::cancelDelete) {
+            Text(
+                text = stringResource(R.string.detail_delete_title),
+                style = com.pam.recap.ui.theme.HeadlineM,
+                color = OnInk,
+            )
+            Spacer(modifier = Modifier.height(PamSpacing.sm))
+            Text(
+                text = stringResource(R.string.detail_delete_confirm_body),
+                style = BodyM,
+                color = OnInkMuted,
+            )
+            Spacer(modifier = Modifier.height(PamSpacing.sm))
+            PillButton(
+                text = stringResource(R.string.action_delete),
+                onClick = viewModel::confirmDelete,
+                style = PillButtonStyle.Primary,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(PamSpacing.xs))
+            PillButton(
+                text = stringResource(R.string.action_cancel),
+                onClick = viewModel::cancelDelete,
+                style = PillButtonStyle.Ghost,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+private fun fieldErrorRes(error: TransactionFieldError): Int = when (error) {
+    TransactionFieldError.DESCRIPTION_REQUIRED -> R.string.detail_description_required
+    TransactionFieldError.DESCRIPTION_TOO_LONG -> R.string.detail_description_too_long
+    TransactionFieldError.MERCHANT_TOO_LONG -> R.string.detail_merchant_too_long
+    TransactionFieldError.NOTE_TOO_LONG -> R.string.detail_note_too_long
 }
 
 private fun originLabelRes(transaction: Transaction): Int = when {

@@ -12,24 +12,41 @@ import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.repository.FinanceRefreshBus
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.SessionRepository
+import com.pam.recap.domain.repository.TransactionPatch
 import com.pam.recap.domain.repository.TransactionRepository
 import com.pam.recap.domain.usecase.LinkRefundUseCase
 import com.pam.recap.domain.usecase.MarkInternalTransferUseCase
 import com.pam.recap.domain.usecase.UpdateTransactionCategoryUseCase
 import com.pam.recap.domain.usecase.UpdateTransactionNoteUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+
+/**
+ * Client-side bounds for the editable metadata. The Go handler does not publish limits yet (see
+ * the delivery report): these are the UI guard, not a substitute for server validation.
+ */
+object TransactionEditLimits {
+    const val DESCRIPTION = 200
+    const val MERCHANT_LABEL = 120
+    const val NOTE = 500
+}
+
+/** Field-level validation result, mapped to copy by the screen (no technical rule strings shown). */
+enum class TransactionFieldError {
+    DESCRIPTION_REQUIRED,
+    DESCRIPTION_TOO_LONG,
+    MERCHANT_TOO_LONG,
+    NOTE_TOO_LONG,
+}
 
 /** FR-24/FR-25 detail state: read-only money facts plus the editable metadata. */
 data class TransactionDetailUiState(
@@ -37,19 +54,34 @@ data class TransactionDetailUiState(
     val transaction: Transaction? = null,
     val refundCandidates: List<Transaction> = emptyList(),
     val noteDraft: String = "",
+    val descriptionDraft: String = "",
+    val merchantDraft: String = "",
     val isBusy: Boolean = false,
     val error: AppError? = null,
     val savedAt: Long? = null,
-    /** Server mode keeps non-category metadata read-only (no endpoint yet). */
+    /** Transfer/refund metadata is still local-only; category, note and the edit form are not. */
     val actionsEnabled: Boolean = true,
     /** Category correction is wired through the API in server mode and locally otherwise. */
     val categoryEditable: Boolean = true,
+    /** S2.4: description/merchant/note edit + delete are offered only against the server. */
+    val metadataEditable: Boolean = false,
+    /** 409: somebody else wrote first. The draft is kept and the row was reloaded. */
+    val conflict: Boolean = false,
+    /** Network failure: the draft is kept and the same save can be retried. */
+    val canRetry: Boolean = false,
+    val fieldError: TransactionFieldError? = null,
+    val hasUnsavedChanges: Boolean = false,
+    val deleteConfirmation: Boolean = false,
+    val isDeleted: Boolean = false,
 )
 
 /**
- * Transaction detail actions (FR-17/FR-25): category, transfer flag, refund link and private note.
- * Amount, direction and event time are never written here — the use cases only accept the editable
- * fields, so the UI cannot violate the read-only rule.
+ * Transaction detail actions (FR-17/FR-25): category, transfer flag, refund link, private note and
+ * — in server mode — the validated description/merchant/note edit plus delete (S2.4).
+ *
+ * Amount, direction and event time are never written here — the use cases and the server patch only
+ * accept the editable fields, so the UI cannot violate the read-only rule. No action reports
+ * success before [Outcome.Success]; a 409 reloads the row and keeps the user's draft.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -66,63 +98,276 @@ class TransactionDetailViewModel @Inject constructor(
 
     private val transactionId: String = savedStateHandle.get<String>("transactionId").orEmpty()
     private val refresh = MutableStateFlow(0L)
-    private val action = MutableStateFlow(ActionState())
 
-    private data class ActionState(
-        val isBusy: Boolean = false,
-        val error: AppError? = null,
-        val savedAt: Long? = null,
+    private val _state = MutableStateFlow(TransactionDetailUiState())
+    val state: StateFlow<TransactionDetailUiState> = _state.asStateFlow()
+
+    /** Unsaved edit; survives a reload after a conflict or a network failure. */
+    private data class Draft(
+        val transactionId: String? = null,
+        val description: String = "",
+        val merchant: String = "",
+        val note: String = "",
+        val dirty: Boolean = false,
     )
 
-    val state: StateFlow<TransactionDetailUiState> = combine(
-        sessions.observe().filterNotNull(),
-        refresh,
-        action,
-    ) { session, _, currentAction -> session.ownerId to currentAction }
-        .flatMapLatest { (ownerId, currentAction) ->
-            flow {
-                var loadError: AppError? = null
-                val transaction = if (server?.isEnabled == true) {
-                    when (val result = server.get(ownerId, transactionId)) {
-                        is Outcome.Success -> result.value
-                        is Outcome.Failure -> {
-                            loadError = result.error
-                            null
-                        }
-                    }
-                } else {
-                    transactions.get(ownerId, transactionId).also {
-                        if (it == null) loadError = AppError.NotFound("transaction_$transactionId")
-                    }
+    private var draft = Draft()
+
+    init {
+        viewModelScope.launch {
+            combine(sessions.observe().filterNotNull(), refresh) { session, _ -> session.ownerId }
+                .collectLatest { ownerId -> load(ownerId) }
+        }
+    }
+
+    private suspend fun load(ownerId: String) {
+        val hadRow = _state.value.transaction != null
+        // Keep an unresolved conflict visible while the newest row is fetched.
+        _state.update { it.copy(isLoading = !hadRow, error = if (it.conflict) it.error else null) }
+        var loadError: AppError? = null
+        val transaction = if (server?.isEnabled == true) {
+            when (val result = server.get(ownerId, transactionId)) {
+                is Outcome.Success -> result.value
+                is Outcome.Failure -> {
+                    loadError = result.error
+                    null
                 }
-                val candidates = if (transaction != null && transaction.direction == com.pam.recap.domain.model.Direction.CREDIT) {
-                    if (server?.isEnabled == true) {
-                        (server.listMonth(ownerId, JakartaMonth.of(transaction.eventAt)) as? Outcome.Success)
-                            ?.value?.items.orEmpty()
-                            .filter { it.direction == com.pam.recap.domain.model.Direction.DEBIT && !it.isInternalTransfer }
-                    } else {
-                        transactions.listMonth(ownerId, JakartaMonth.of(transaction.eventAt))
-                            .filter { it.direction == com.pam.recap.domain.model.Direction.DEBIT && !it.isInternalTransfer }
-                    }
-                } else {
-                    emptyList()
-                }
-                emit(
-                    TransactionDetailUiState(
-                        isLoading = false,
-                        transaction = transaction,
-                        refundCandidates = candidates,
-                        noteDraft = transaction?.note.orEmpty(),
-                        isBusy = currentAction.isBusy,
-                        error = currentAction.error ?: loadError,
-                        savedAt = currentAction.savedAt,
-                        actionsEnabled = server?.isEnabled != true,
-                        categoryEditable = transaction != null,
-                    ),
-                )
+            }
+        } else {
+            transactions.get(ownerId, transactionId).also {
+                if (it == null) loadError = AppError.NotFound("transaction_$transactionId")
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TransactionDetailUiState())
+        val candidates = if (transaction != null &&
+            transaction.direction == com.pam.recap.domain.model.Direction.CREDIT
+        ) {
+            if (server?.isEnabled == true) {
+                (server.listMonth(ownerId, JakartaMonth.of(transaction.eventAt)) as? Outcome.Success)
+                    ?.value?.items.orEmpty()
+                    .filter {
+                        it.direction == com.pam.recap.domain.model.Direction.DEBIT &&
+                            !it.isInternalTransfer
+                    }
+            } else {
+                transactions.listMonth(ownerId, JakartaMonth.of(transaction.eventAt))
+                    .filter {
+                        it.direction == com.pam.recap.domain.model.Direction.DEBIT &&
+                            !it.isInternalTransfer
+                    }
+            }
+        } else {
+            emptyList()
+        }
+
+        if (transaction != null && (!draft.dirty || draft.transactionId != transaction.id)) {
+            draft = Draft(
+                transactionId = transaction.id,
+                description = transaction.description,
+                merchant = transaction.merchantLabel.orEmpty(),
+                note = transaction.note.orEmpty(),
+                dirty = false,
+            )
+        }
+
+        _state.update {
+            it.copy(
+                isLoading = false,
+                transaction = transaction,
+                refundCandidates = candidates,
+                descriptionDraft = draft.description,
+                merchantDraft = draft.merchant,
+                noteDraft = draft.note,
+                // An unresolved conflict is still shown as the typed error until the user resolves it,
+                // so reloading the newest row does not hide what happened.
+                error = if (it.conflict) it.error ?: loadError else loadError,
+                actionsEnabled = server?.isEnabled != true,
+                categoryEditable = transaction != null,
+                metadataEditable = server?.isEnabled == true && transaction != null,
+                hasUnsavedChanges = draft.dirty,
+            )
+        }
+    }
+
+    fun setDescription(value: String) = editDraft { it.copy(description = value) }
+
+    fun setMerchantLabel(value: String) = editDraft { it.copy(merchant = value) }
+
+    fun setNote(value: String) = editDraft { it.copy(note = value) }
+
+    private fun editDraft(transform: (Draft) -> Draft) {
+        if (!_state.value.metadataEditable) return
+        draft = transform(draft).copy(dirty = true)
+        _state.update {
+            it.copy(
+                descriptionDraft = draft.description,
+                merchantDraft = draft.merchant,
+                noteDraft = draft.note,
+                hasUnsavedChanges = true,
+                fieldError = null,
+                conflict = false,
+                canRetry = false,
+            )
+        }
+    }
+
+    /**
+     * Saves the validated metadata. Server mode PATCHes description/merchant/note with the revision
+     * the row was loaded with; local mode keeps the note-only use case.
+     */
+    fun saveMetadata() {
+        val current = _state.value
+        val transaction = current.transaction ?: return
+        if (current.isBusy) return
+        val description = current.descriptionDraft.trim()
+        val merchant = current.merchantDraft.trim()
+        val note = current.noteDraft.trim()
+
+        val fieldError = when {
+            description.isEmpty() -> TransactionFieldError.DESCRIPTION_REQUIRED
+            description.length > TransactionEditLimits.DESCRIPTION ->
+                TransactionFieldError.DESCRIPTION_TOO_LONG
+            merchant.length > TransactionEditLimits.MERCHANT_LABEL ->
+                TransactionFieldError.MERCHANT_TOO_LONG
+            note.length > TransactionEditLimits.NOTE -> TransactionFieldError.NOTE_TOO_LONG
+            else -> null
+        }
+        if (fieldError != null) {
+            _state.update { it.copy(fieldError = fieldError, error = null) }
+            return
+        }
+
+        val remote = server
+        if (remote == null || !remote.isEnabled) {
+            // Legacy path: only the private note is writable locally.
+            saveNote(note)
+            return
+        }
+
+        _state.update {
+            it.copy(isBusy = true, error = null, conflict = false, canRetry = false, fieldError = null)
+        }
+        viewModelScope.launch {
+            val ownerId = sessions.current()?.ownerId
+            if (ownerId == null) {
+                _state.update {
+                    it.copy(
+                        isBusy = false,
+                        error = AppError.Validation(AppErrorRules.NOT_SIGNED_IN),
+                    )
+                }
+                return@launch
+            }
+            val patch = TransactionPatch(
+                revision = transaction.revision,
+                description = description,
+                // An empty string clears the field; `null` would mean "keep the current value".
+                merchantLabel = merchant,
+                note = note,
+            )
+            when (val result = remote.updateTransaction(ownerId, transactionId, patch)) {
+                is Outcome.Failure -> {
+                    val conflict = result.error is AppError.Conflict
+                    _state.update {
+                        it.copy(
+                            isBusy = false,
+                            // The typed error stays observable (callers/tests key off it); the screen
+                            // hides the generic banner when the dedicated conflict copy is shown.
+                            error = result.error,
+                            conflict = conflict,
+                            canRetry = result.error is AppError.Network,
+                        )
+                    }
+                    if (conflict) refresh.update { it + 1 }
+                }
+
+                is Outcome.Success -> {
+                    draft = draft.copy(dirty = false)
+                    _state.update {
+                        it.copy(
+                            isBusy = false,
+                            savedAt = System.currentTimeMillis(),
+                            conflict = false,
+                            canRetry = false,
+                            hasUnsavedChanges = false,
+                        )
+                    }
+                    publishInvalidation(ownerId, transaction)
+                    refresh.update { it + 1 }
+                }
+            }
+        }
+    }
+
+    /** Re-runs the failed save with the draft still in the fields. */
+    fun retrySave() = saveMetadata()
+
+    fun requestDelete() {
+        if (!_state.value.metadataEditable || _state.value.isDeleted) return
+        _state.update { it.copy(deleteConfirmation = true) }
+    }
+
+    fun cancelDelete() {
+        _state.update { it.copy(deleteConfirmation = false) }
+    }
+
+    /** Deletes only after the confirmation sheet was accepted; the row stays on failure. */
+    fun confirmDelete() {
+        val current = _state.value
+        if (!current.deleteConfirmation || current.isBusy) return
+        val transaction = current.transaction ?: return
+        val remote = server
+        if (remote == null || !remote.isEnabled) {
+            _state.update {
+                it.copy(
+                    deleteConfirmation = false,
+                    error = AppError.Configuration("server_delete_not_available"),
+                )
+            }
+            return
+        }
+        _state.update {
+            it.copy(isBusy = true, deleteConfirmation = false, error = null, conflict = false)
+        }
+        viewModelScope.launch {
+            val ownerId = sessions.current()?.ownerId
+            if (ownerId == null) {
+                _state.update {
+                    it.copy(isBusy = false, error = AppError.Validation(AppErrorRules.NOT_SIGNED_IN))
+                }
+                return@launch
+            }
+            when (val result = remote.deleteTransaction(ownerId, transactionId, transaction.revision)) {
+                is Outcome.Failure -> {
+                    val conflict = result.error is AppError.Conflict
+                    _state.update {
+                        it.copy(
+                            isBusy = false,
+                            error = result.error,
+                            conflict = conflict,
+                            canRetry = result.error is AppError.Network,
+                            // A network failure leaves the row untouched: keep the confirmation sheet
+                            // so the user can retry or cancel deliberately. A conflict reloads the
+                            // row, so the sheet closes and the new state is shown first.
+                            deleteConfirmation = !conflict,
+                        )
+                    }
+                    if (conflict) refresh.update { it + 1 }
+                }
+
+                is Outcome.Success -> {
+                    _state.update {
+                        it.copy(
+                            isBusy = false,
+                            isDeleted = true,
+                            deleteConfirmation = false,
+                            savedAt = System.currentTimeMillis(),
+                        )
+                    }
+                    publishInvalidation(ownerId, transaction)
+                }
+            }
+        }
+    }
 
     fun setCategory(category: Category) {
         val remote = server
@@ -134,39 +379,56 @@ class TransactionDetailViewModel @Inject constructor(
             }
             return
         }
-        if (action.value.isBusy) return
-        val current = state.value.transaction
+        if (_state.value.isBusy) return
+        val current = _state.value.transaction
         if (current == null) {
-            action.value = ActionState(error = AppError.NotFound("transaction_$transactionId"))
+            _state.update { it.copy(error = AppError.NotFound("transaction_$transactionId")) }
             return
         }
-        action.value = action.value.copy(isBusy = true, error = null)
+        _state.update { it.copy(isBusy = true, error = null, conflict = false) }
         viewModelScope.launch {
             val ownerId = sessions.current()?.ownerId
             if (ownerId == null) {
-                action.value = ActionState(error = AppError.Validation(AppErrorRules.NOT_SIGNED_IN))
+                _state.update {
+                    it.copy(
+                        isBusy = false,
+                        error = AppError.Validation(AppErrorRules.NOT_SIGNED_IN),
+                    )
+                }
                 return@launch
             }
             val target = when (val categories = remote.categories(ownerId)) {
                 is Outcome.Success -> categories.value.firstOrNull { it.code == category.code }
                 is Outcome.Failure -> {
-                    action.value = ActionState(error = categories.error)
+                    _state.update { it.copy(isBusy = false, error = categories.error) }
                     return@launch
                 }
             }
             if (target == null) {
-                action.value = ActionState(error = AppError.Validation("category_not_found"))
+                _state.update {
+                    it.copy(isBusy = false, error = AppError.Validation("category_not_found"))
+                }
                 return@launch
             }
             when (val result = remote.updateCategory(ownerId, transactionId, target.id, current.revision)) {
                 is Outcome.Failure -> {
-                    action.value = ActionState(error = result.error)
+                    val conflict = result.error is AppError.Conflict
+                    _state.update {
+                        it.copy(
+                            isBusy = false,
+                            error = result.error,
+                            conflict = conflict,
+                        )
+                    }
                     // 409: somebody else wrote first. Reload so the next tap uses the fresh revision
                     // instead of retrying a revision the server already rejected.
-                    if (result.error is AppError.Conflict) refresh.update { it + 1 }
+                    if (conflict) refresh.update { it + 1 }
                 }
+
                 is Outcome.Success -> {
-                    action.value = ActionState(savedAt = System.currentTimeMillis())
+                    _state.update {
+                        it.copy(isBusy = false, savedAt = System.currentTimeMillis(), conflict = false)
+                    }
                     publishInvalidation(ownerId, current)
                     refresh.update { it + 1 }
                 }
@@ -186,23 +448,32 @@ class TransactionDetailViewModel @Inject constructor(
         invalidateFinance: Boolean = false,
         block: suspend (ownerId: String) -> Outcome<Unit>,
     ) {
-        if (action.value.isBusy) return
+        if (_state.value.isBusy) return
         if (server?.isEnabled == true) {
-            action.value = ActionState(error = AppError.Configuration("server_edit_not_available"))
+            _state.update {
+                it.copy(error = AppError.Configuration("server_edit_not_available"))
+            }
             return
         }
-        action.value = action.value.copy(isBusy = true, error = null)
+        _state.update { it.copy(isBusy = true, error = null) }
         viewModelScope.launch {
             val ownerId = sessions.current()?.ownerId
             if (ownerId == null) {
-                action.value = ActionState(error = AppError.Validation(com.pam.recap.core.result.AppErrorRules.NOT_SIGNED_IN))
+                _state.update {
+                    it.copy(
+                        isBusy = false,
+                        error = AppError.Validation(AppErrorRules.NOT_SIGNED_IN),
+                    )
+                }
                 return@launch
             }
             when (val result = block(ownerId)) {
-                is Outcome.Failure -> action.value = ActionState(error = result.error)
+                is Outcome.Failure -> _state.update { it.copy(isBusy = false, error = result.error) }
                 is Outcome.Success -> {
-                    action.value = ActionState(savedAt = System.currentTimeMillis())
-                    if (invalidateFinance) publishInvalidation(ownerId, state.value.transaction)
+                    _state.update {
+                        it.copy(isBusy = false, savedAt = System.currentTimeMillis())
+                    }
+                    if (invalidateFinance) publishInvalidation(ownerId, _state.value.transaction)
                     refresh.update { it + 1 }
                 }
             }
