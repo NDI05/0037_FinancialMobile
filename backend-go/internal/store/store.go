@@ -142,9 +142,12 @@ func validateAttributes(attributes map[string]any) error {
 	if len(attributes) > 10 {
 		return fmt.Errorf("attributes must contain at most 10 key/value pairs")
 	}
-	for key := range attributes {
+	for key, value := range attributes {
 		if strings.TrimSpace(key) == "" || len(key) > 40 {
 			return fmt.Errorf("attribute key is invalid")
+		}
+		if text, ok := value.(string); ok && len([]rune(text)) > 200 {
+			return fmt.Errorf("attribute value exceeds 200 characters")
 		}
 	}
 	raw, err := json.Marshal(attributes)
