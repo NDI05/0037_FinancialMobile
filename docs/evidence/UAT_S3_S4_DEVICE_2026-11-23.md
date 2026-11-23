@@ -21,7 +21,8 @@ reinstalled after every code change; evidence below is from that APK.
   `BudgetPlanServerTest` — **32 tests, 0 failures**; includes the new generation-guard tests
   (fast-vs-slow response, reload invalidates in-flight search), debounce burst (single request,
   null cursor) and the C15 `totalLimitMinor`/`gapMinor` parse assertion.
-- Full Android suite last recorded on this branch: 452 tests / 63 classes / 0 failures (23 Nov).
+- Full Android suite on this branch HEAD (`3a0ff3b`): **462 tests / 63 classes / 0 failures**
+  (23 Nov; the earlier `452` figure was a stale pre-fix run).
 - Reviewer findings P3-1..P3-6 addressed in `f56020c`; P3-3 chose the truncation indicator over
   cursor append (documented in that commit) — the server cursor is still surfaced through
   `hasMore`, never silently dropped.
@@ -50,18 +51,31 @@ occurrences (`c04_after_delete_list.xml`) — no resurrection. Evidence: `c04_de
 `c04_delete_dialog.xml`.
 
 ### C05 search + next page — PASS (emulator)
-`q=UJIACC` on the seeded month: page 1 renders "50 transaksi" with footer "50 transaksi dimuat;
-masih ada halaman berikutnya." and a "Muat lebih banyak" control (`c05_p1.xml`, `c05_s4.xml`).
-Tapping it appends page 2 → "85 transaksi" and "Server memeriksa 86 transaksi."
-(`c05_p2.xml`). Changing the query resets the cursor (captured earlier in the same session as
-"0 transaksi"/"Server memeriksa 85 transaksi."); the page-2 request used the cursor from page 1
-only. Server log lines 16:52:37 / 16:53:36 / 16:54:40 show the matching GETs.
+`q=UJIACC` on the seeded month. Dump-to-dump mapping:
+- `c05_p1.xml`: page 1 shows "50 transaksi" and "Server memeriksa 51 transaksi."; no load-more label
+  is exposed in this dump.
+- `c05_s4.xml`: same page-1 counts **plus** the "Muat lebih banyak" control (this is the dump that
+  contains the load-more affordance).
+- `c05_p2.xml`: after tapping load-more, "85 transaksi" and "Server memeriksa 86 transaksi."
+  (page 2 appended; no "Muat lebih banyak" in this dump).
+- `c04_after_delete_list.xml`: the footer **"50 transaksi dimuat; masih ada halaman berikutnya."**
+  appears here (it is the post-delete list dump, not `c05_p1.xml`).
+
+The page-2 request used only the cursor from page 1. The prior-session query-change/cursor-reset
+observation ("0 transaksi"/"Server memeriksa 85 transaksi.") is narrative from that session, not a
+saved dump. Log evidence for the list is route-level only (the allow-list request log records
+`GET /v1/transactions` without the query string/cursor); matching GETs were at 16:52:37, 16:53:36,
+16:54:40.
 
 ### C10 category search — PASS (emulator, new live contract)
-Category screen loads 11 owner categories from `GET /v1/categories` (200, 17:26:54). Typing
-`mak` in "Cari kategori" sends `GET /v1/categories?limit=50&q=mak` → **200** at 17:26:59 and the
-grid narrows to "Makanan / food / Bawaan" with "1 kategori" (`c10_search.xml`). This also proves
-the debounced/owner-scoped search path end-to-end on the merged contract.
+Category screen loads with "11 kategori" and the "Makanan" row present (`c10_load.xml`, written
+17:27). Typing `mak` in "Cari kategori" narrows the grid to "1 kategori" with the
+"Makanan / food / Bawaan" row (`c10_search.xml`, written 17:27, contains the query text `mak`).
+Caveat on log precision: the backend allow-list request log records only the route
+`GET /v1/categories` (no query string), so the exact `?limit=50&q=mak` URL is **not** citable
+from the log — route-level 200s were observed around the dumps at 17:21:06/17:21:17/17:21:30/
+17:21:57 and later at 17:29:29/17:29:40. The dump itself is the evidence that the query narrowed
+the result to one row.
 
 ### C12 actual vs budget — PASS (emulator)
 Budget screen (server mode, "Rencana server · revisi 0") renders the budget card and the
@@ -73,8 +87,10 @@ Note: server amounts are minor units in the contract, so the synthetic plan seed
 remaining) is what C12 exercises and it is consistent with the stored plan.
 
 ### C15 plan period search — PASS (emulator, new live contract)
-Tapping "Muat riwayat rencana" calls `GET /v1/budget-plans?from=2025-12&to=2026-11` → **200** at
-17:29:02 (`c15_server_log.txt`). Card shows "1 rencana pada Desember 2025 sampai November 2026.",
+Tapping "Muat riwayat rencana" triggers the budget-plan history request; the allow-list log shows
+a route-level `GET /v1/budget-plans` → **200** at 17:29:02 (`c15_server_log.txt`), and the exact
+`from`/`to` query string is not recorded by that log. The rendered card states the period
+explicitly: "1 rencana pada Desember 2025 sampai November 2026."
 row "November 2026 · revisi 0", and — from this fix commit — "limit Rp46.000 · selisih Rp44.000"
 (`totalLimitMinor`/`gapMinor` now mapped and rendered; `c15_history_loaded.xml`). The truncation
 indicator is wired but correctly not triggered (1 stored plan). Opening a plan from history remains
