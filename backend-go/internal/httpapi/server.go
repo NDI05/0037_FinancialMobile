@@ -88,6 +88,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /v1/transactions/{id}", s.authed(s.deleteTransaction))
 	mux.Handle("PUT /v1/summaries/{monthID}", s.authed(s.putSummary))
 	mux.Handle("GET /v1/summaries/{monthID}", s.authed(s.getSummary))
+	mux.Handle("GET /v1/budget-plans", s.authed(s.listBudgets))
 	mux.Handle("GET /v1/budget-plans/{monthID}", s.authed(s.getBudget))
 	mux.Handle("PUT /v1/budget-plans/{monthID}", s.authed(s.putBudget))
 	mux.Handle("DELETE /v1/budget-plans/{monthID}", s.authed(s.deleteBudget))
@@ -164,6 +165,8 @@ func sanitizedRoute(path string) string {
 		return "/v1/category-jobs/{id}"
 	case strings.HasPrefix(path, "/v1/analyses/"):
 		return "/v1/analyses/{monthId}"
+	case path == "/v1/budget-plans":
+		return path
 	case strings.HasPrefix(path, "/v1/budget-plans/"):
 		return "/v1/budget-plans/{monthId}"
 	case strings.HasPrefix(path, "/v1/summaries/"):

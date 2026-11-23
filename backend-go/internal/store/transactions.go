@@ -189,6 +189,7 @@ func (s *Store) ListTransactions(ctx context.Context, ownerID, monthID, category
 	if limit > 100 {
 		limit = 100
 	}
+	q = NormalizeSearchTerm(q)
 	start, end, err := ParseMonth(monthID)
 	if err != nil {
 		return TransactionPage{}, err
@@ -487,7 +488,7 @@ func scanTransaction(ctx context.Context, scanner rowScanner, s *Store, ownerID 
 }
 
 func transactionMatches(t Transaction, q string) bool {
-	needle := strings.ToLower(q)
+	needle := strings.ToLower(NormalizeSearchTerm(q))
 	haystack := strings.ToLower(strings.Join([]string{
 		t.Sensitive.Description, t.Sensitive.MerchantLabel, t.Sensitive.Note,
 		t.CategoryCode, t.CategoryKind,

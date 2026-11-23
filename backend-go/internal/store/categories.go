@@ -31,19 +31,28 @@ type Category struct {
 type CategoryPage struct {
 	Items      []Category
 	NextCursor string
+	// Scanned is the number of owner rows examined to build this page. q/kind filter after
+	// decryption, so it tells the caller how much of the local list the search covered.
+	Scanned int
 }
 
 // ListCategories returns categories ordered by the stable (is_builtin DESC, code ASC, id ASC)
-// tuple. q filters the sealed label/code after decryption, so the cursor walks that same total
-// order instead of an index; a cursor is bound to owner+q and is rejected for another query.
-func (s *Store) ListCategories(ctx context.Context, ownerID, q string, limit int, cursor string) (CategoryPage, error) {
+// tuple. q filters the sealed label/code after decryption, and kind filters the plaintext kind, so
+// the cursor walks that same total order instead of an index; a cursor is bound to
+// owner+q+kind and is rejected for another query.
+func (s *Store) ListCategories(ctx context.Context, ownerID, q, kind string, limit int, cursor string) (CategoryPage, error) {
 	if limit <= 0 {
 		limit = 50
 	}
 	if limit > 100 {
 		limit = 100
 	}
-	scope := categoryCursorScope(ownerID, q)
+	q = NormalizeSearchTerm(q)
+	kind = strings.ToUpper(strings.TrimSpace(kind))
+	if kind != "" && !validKind(kind) {
+		return CategoryPage{}, fmt.Errorf("invalid kind filter")
+	}
+	scope := categoryCursorScope(ownerID, q, kind)
 	var after categoryCursor
 	haveAfter := false
 	if cursor != "" {
@@ -62,11 +71,16 @@ func (s *Store) ListCategories(ctx context.Context, ownerID, q string, limit int
 		return CategoryPage{}, err
 	}
 	defer rows.Close()
+	page := CategoryPage{}
 	var matches []Category
 	for rows.Next() {
 		category, err := scanCategory(ctx, rows, s, ownerID)
 		if err != nil {
 			return CategoryPage{}, err
+		}
+		page.Scanned++
+		if kind != "" && category.Kind != kind {
+			continue
 		}
 		if q != "" && !containsFold(category.Label, q) && !containsFold(category.Code, q) {
 			continue
@@ -75,11 +89,15 @@ func (s *Store) ListCategories(ctx context.Context, ownerID, q string, limit int
 			continue
 		}
 		matches = append(matches, category)
+		// The scan is ordered and the cursor is the last returned row, so one extra match is
+		// enough to know another page exists; no need to decrypt the rest of the owner's rows.
+		if len(matches) > limit {
+			break
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return CategoryPage{}, err
 	}
-	page := CategoryPage{}
 	if len(matches) > limit {
 		page.Items = matches[:limit]
 		last := page.Items[len(page.Items)-1]
@@ -97,8 +115,9 @@ type categoryCursor struct {
 	Scope   string `json:"s"`
 }
 
-func categoryCursorScope(ownerID, q string) string {
-	sum := sha256.Sum256([]byte(ownerID + "\x00" + strings.ToLower(strings.TrimSpace(q))))
+func categoryCursorScope(ownerID, q, kind string) string {
+	sum := sha256.Sum256([]byte(ownerID + "\x00" + strings.ToLower(NormalizeSearchTerm(q)) +
+		"\x00" + strings.ToUpper(strings.TrimSpace(kind))))
 	return hex.EncodeToString(sum[:8])
 }
 

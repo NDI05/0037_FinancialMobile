@@ -89,8 +89,14 @@ func (s *Server) listCategories(w http.ResponseWriter, r *http.Request) {
 	info, _ := authFrom(r)
 	query := r.URL.Query()
 	limit, _ := strconv.Atoi(query.Get("limit"))
+	kind := strings.ToUpper(strings.TrimSpace(query.Get("kind")))
+	if kind != "" && !validCategoryKind(kind) {
+		writeError(w, http.StatusBadRequest, "invalid_request",
+			"kind must be one of INCOME, EXPENSE, TRANSFER, UNCATEGORIZED", correlationOf(r))
+		return
+	}
 	// limit<=0 means the store default (50); >100 is clamped to 100.
-	page, err := s.Store.ListCategories(r.Context(), info.OwnerID, query.Get("q"), limit,
+	page, err := s.Store.ListCategories(r.Context(), info.OwnerID, query.Get("q"), kind, limit,
 		query.Get("cursor"))
 	if err != nil {
 		if errors.Is(err, store.ErrInvalidCursor) {
@@ -101,11 +107,22 @@ func (s *Server) listCategories(w http.ResponseWriter, r *http.Request) {
 		s.databaseOrInternal(w, r, err)
 		return
 	}
-	response := map[string]any{"categories": categoriesJSON(page.Items)}
+	response := map[string]any{
+		"categories": categoriesJSON(page.Items),
+		"search":     map[string]any{"scanned": page.Scanned, "truncated": false},
+	}
 	if page.NextCursor != "" {
 		response["nextCursor"] = page.NextCursor
 	}
 	writeJSON(w, http.StatusOK, response)
+}
+
+func validCategoryKind(kind string) bool {
+	switch kind {
+	case "INCOME", "EXPENSE", "TRANSFER", "UNCATEGORIZED":
+		return true
+	}
+	return false
 }
 
 func (s *Server) createCategory(w http.ResponseWriter, r *http.Request) {
@@ -483,6 +500,57 @@ type budgetRequest struct {
 	Attributes          map[string]any    `json:"attributes"`
 	Revision            int               `json:"revision"`
 	Plan                *budgetRequest    `json:"plan"`
+}
+
+// listBudgets implements the agreed period/metadata search contract for budget plans:
+//
+//	GET /v1/budget-plans?from=2026-09&to=2026-11&limit=50&cursor=...
+//	200 { "plans": [ budgetPlan ], "nextCursor": "..." | omitted }
+//
+// from/to are inclusive YYYY-MM months and must be supplied together; omitting both lists every
+// month. Plans are newest-first. The cursor is opaque and bound to owner+range, so replaying it
+// with another range is a clean 400 invalid_cursor instead of a wrong page.
+func (s *Server) listBudgets(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	from := strings.TrimSpace(query.Get("from"))
+	to := strings.TrimSpace(query.Get("to"))
+	if (from == "") != (to == "") {
+		writeError(w, http.StatusBadRequest, "invalid_request",
+			"from and to must be provided together", correlationOf(r))
+		return
+	}
+	for _, month := range []string{from, to} {
+		if month == "" {
+			continue
+		}
+		if _, _, err := store.ParseMonth(month); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_request",
+				"from and to must be YYYY-MM", correlationOf(r))
+			return
+		}
+	}
+	if from != "" && from > to {
+		writeError(w, http.StatusBadRequest, "invalid_request",
+			"from must be <= to", correlationOf(r))
+		return
+	}
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	info, _ := authFrom(r)
+	page, err := s.Store.ListBudgetPlans(r.Context(), info.OwnerID, from, to, limit,
+		query.Get("cursor"))
+	if err != nil {
+		s.mapWriteError(w, r, err)
+		return
+	}
+	plans := make([]map[string]any, 0, len(page.Plans))
+	for _, plan := range page.Plans {
+		plans = append(plans, budgetJSON(plan))
+	}
+	response := map[string]any{"plans": plans}
+	if page.NextCursor != "" {
+		response["nextCursor"] = page.NextCursor
+	}
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (s *Server) getBudget(w http.ResponseWriter, r *http.Request) {

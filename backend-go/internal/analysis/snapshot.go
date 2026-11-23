@@ -106,7 +106,7 @@ func Build(ctx context.Context, s *store.Store, ownerID, monthID string) (Snapsh
 	var categories []store.Category
 	cursor := ""
 	for {
-		page, err := s.ListCategories(ctx, ownerID, "", 100, cursor)
+		page, err := s.ListCategories(ctx, ownerID, "", "", 100, cursor)
 		if err != nil {
 			return Snapshot{}, err
 		}
