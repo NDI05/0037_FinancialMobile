@@ -541,4 +541,19 @@
     <string name="dynamic_fields_hint">Maksimal 10 kolom, nama 40 karakter, isi 200 karakter. Tidak pernah dikirim ke model AI.</string>
     <string name="action_remove">Hapus</string>
     <string name="settings_categories_body">Atur kategori transaksi, termasuk kategori buatan sendiri.</string>
+
+    <string name="attachments_title">Lampiran</string>
+    <string name="attachments_add">Tambah lampiran</string>
+    <string name="attachments_empty">Belum ada lampiran.</string>
+    <string name="attachments_offline">Lampiran tersedia setelah masuk ke akun server.</string>
+    <string name="attachments_uploading">Menyimpan lampiran…</string>
+    <string name="attachments_saved">Lampiran tersimpan.</string>
+    <string name="attachments_load_more">Muat lampiran lain</string>
+    <string name="attachments_delete_title">Hapus lampiran?</string>
+    <string name="attachments_delete_body">Metadata lampiran dihapus dari server dan salinan lokal ikut dihapus. Berkas asli tidak pernah diunggah.</string>
+    <string name="attachments_delete_confirm">Hapus lampiran</string>
+    <string name="attachments_conflict">Lampiran sudah berubah. Muat ulang lalu coba lagi.</string>
+    <string name="attachments_error_generic">Lampiran belum bisa diproses.</string>
+    <string name="attachments_picker_missing">Berkas tidak bisa dibaca.</string>
+    <string name="attachments_only_local">Berkas ini tetap di perangkat; hanya metadata yang disinkronkan.</string>
 </resources>

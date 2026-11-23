@@ -390,7 +390,7 @@ class ScreenScreenshotsTest {
         )
 
         shot("03-transaction-detail") {
-            TransactionDetailScreen(onBack = {}, viewModel = viewModel)
+            TransactionDetailScreen(onBack = {}, viewModel = viewModel, attachments = {})
         }
     }
 
