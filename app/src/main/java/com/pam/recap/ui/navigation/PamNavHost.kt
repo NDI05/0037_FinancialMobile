@@ -44,6 +44,7 @@ import com.pam.recap.ui.feature.overview.OverviewScreen
 import com.pam.recap.ui.feature.settings.ConsentHistoryScreen
 import com.pam.recap.ui.feature.settings.DataDeletionScreen
 import com.pam.recap.ui.feature.settings.SettingsScreen
+import com.pam.recap.ui.feature.admin.AdminScreenRoot
 import com.pam.recap.ui.feature.transactions.TransactionDetailScreen
 import com.pam.recap.ui.feature.transactions.TransactionsScreen
 import com.pam.recap.ui.feature.account.AccountMode
@@ -194,12 +195,17 @@ fun PamNavHost(modifier: Modifier = Modifier) {
                     onOpenBudget = { navController.navigate(PamDestination.BudgetPlan()) },
                     onOpenCategories = { navController.navigate(PamDestination.CategoryManagement) },
                     onOpenDeletion = { navController.navigate(PamDestination.DataDeletion) },
+                    onOpenAdmin = { navController.navigate(PamDestination.Admin) },
                     onSignedOut = { navController.replaceWith(PamDestination.Welcome) },
                 )
             }
 
             composable<PamDestination.CategoryManagement> {
                 CategoryManagementScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable<PamDestination.Admin> {
+                AdminScreenRoot(onBack = { navController.popBackStack() })
             }
 
             composable<PamDestination.ConsentHistory> {

@@ -631,4 +631,5 @@
     <string name="admin_audit_meta">by %1$s → %2$s</string>
     <string name="admin_audit_empty">No audit record yet.</string>
     <string name="admin_audit_load_more">Load more audit</string>
+    <string name="settings_admin_row">Manage invitations, roles and account status.</string>
 </resources>

@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Logout
+import androidx.compose.material.icons.rounded.ManageAccounts
 import androidx.compose.material.icons.rounded.MailOutline
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Shield
@@ -67,6 +68,7 @@ fun SettingsScreen(
     onOpenBudget: () -> Unit,
     onOpenCategories: () -> Unit,
     onOpenDeletion: () -> Unit,
+    onOpenAdmin: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -239,6 +241,12 @@ fun SettingsScreen(
                 )
             }
 
+            SettingsRow(
+                icon = Icons.Rounded.ManageAccounts,
+                title = stringResource(R.string.admin_title),
+                subtitle = stringResource(R.string.settings_admin_row),
+                onClick = onOpenAdmin,
+            )
             SettingsRow(
                 icon = Icons.Rounded.DeleteOutline,
                 title = stringResource(R.string.settings_delete),

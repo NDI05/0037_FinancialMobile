@@ -487,6 +487,7 @@ class ScreenScreenshotsTest {
                 onOpenBudget = {},
                 onOpenCategories = {},
                 onOpenDeletion = {},
+                onOpenAdmin = {},
                 onSignedOut = {},
                 viewModel = viewModel,
             )
@@ -523,6 +524,7 @@ class ScreenScreenshotsTest {
                 onOpenBudget = {},
                 onOpenCategories = {},
                 onOpenDeletion = {},
+                onOpenAdmin = {},
                 onSignedOut = {},
                 viewModel = viewModel,
             )
