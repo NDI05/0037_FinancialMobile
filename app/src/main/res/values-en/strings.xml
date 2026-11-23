@@ -229,6 +229,7 @@
     <string name="detail_description_required">Description is required.</string>
     <string name="detail_description_too_long">Description is limited to 200 characters.</string>
     <string name="detail_merchant_too_long">Merchant name is limited to 120 characters.</string>
+    <string name="detail_merchant_reference_notice">This value is a reference number from the email, not a merchant name. Pick a category manually.</string>
     <string name="detail_note_too_long">Note is limited to 500 characters.</string>
     <string name="detail_audit_eyebrow">Audit trail</string>
     <string name="detail_created_at">Created</string>
@@ -451,6 +452,12 @@
     <string name="transactions_classify_ai">Categorize with AI</string>
     <string name="transactions_classify_none">No eligible uncategorized transactions.</string>
     <string name="transactions_classify_result">Categorization result: %1$s</string>
+    <string name="transactions_classify_review_merchant_not_identifiable">Needs review: the email only contains a reference number, not a merchant name. Pick a category manually.</string>
+    <string name="transactions_classify_review_merchant_missing">Needs review: the email has no merchant name. Pick a category manually.</string>
+    <string name="transactions_classify_review_unsafe_merchant">Needs review: the merchant name is not safe to send to AI. Pick a category manually.</string>
+    <string name="transactions_classify_review_not_eligible">Needs review: the transaction already has a category or is not eligible.</string>
+    <string name="transactions_classify_review_not_eligible_personal_transfer">Needs review: personal transfers are not sent to AI.</string>
+    <string name="transactions_classify_review_generic">Needs review: AI could not decide a category. Pick a category manually.</string>
     <string name="origin_llm">Azure AI suggestion</string>
     <string name="status_ai_suggestion">AI suggestion</string>
     <string name="detail_actions_server_partial">Server mode: categories and transaction details are saved to the server. Internal transfer and refund links remain read-only.</string>
