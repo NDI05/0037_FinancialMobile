@@ -519,3 +519,64 @@ WorkManager + indikator/sheet + hidrasi status), semuanya di `feat/c2-android` d
   ambang review, bukan akurasi. 36 email event-time malformed tetap backlog parser terpisah.
 - **S2 tetap PARTIAL; S3/S4 tidak otomatis selesai.** Empat temuan review `a73bb38` tetap tertutup
   untuk cakupan regresi lokal.
+
+## Penutupan lane auto-sync — 23 November 2026 (lanjutan)
+
+Commit `f20b098`, `e033de3`, `82a1d22` pada `feat/c2-android` (masing-masing sudah dipush).
+Bagian ini menggantikan klaim status AS/BC/UX/OBS di atas bila berbeda; SRS v0.5 DOCX/PDF
+tidak disentuh.
+
+### Yang berubah dan buktinya
+- **Jendela kategori tidak lagi bisa dilewati recovery** (`f20b098`): migrasi `014` menambah
+  `category_jobs.due_at_unix`; recovery hanya mengklaim `PENDING` yang sudah jatuh tempo atau
+  `RUNNING` dengan lease kedaluwarsa. Worker server men-drain maksimal 4 owner jatuh tempo per
+  tick tanpa poll Android, lalu hanya memulihkan lease kedaluwarsa.
+  Bukti: `TestCategoryWindowIsNotSkippedByRecovery`, `TestCategoryWindowDrainsWithoutClientPoll`,
+  `TestCategoryWorkerFairAcrossOwners`, `TestCategoryEightyUniqueMerchantsStayBounded`,
+  `TestCategoryDuplicateMerchantsShareOneResult`, `TestMigrateTwiceAndLegacyRows`.
+- **Cursor hanya maju atas rentang lengkap** (`f20b098`): `SyncOutcome.Incomplete` menyimpan
+  cursor percobaan (bukan watermark) saat `PARTIAL`/`FAILED`/`PERMISSION_REQUIRED`/tanpa
+  watermark; `cursor.save()` yang gagal berhenti sebagai `Failed("storage_unavailable")` dan
+  tidak pernah tampil sebagai sukses. Bukti:
+  `a page two failure keeps the cursor and reports a partial range`,
+  `a cursor save failure is never shown as durable success`, `a deleted owner is never imported`.
+- **Uploader memakai snapshot run dan bulan transaksi sebenarnya** (`f20b098`): kandidat dibaca
+  dari `listByImportJob` (bukan query bulan), dikelompokkan per `JakartaMonth.of(eventAt)`,
+  kunci batch stabil, jurnal multi-bulan persisten; kegagalan menyimpan jurnal = storage error,
+  bukan progres. Bukti: `ServerImportUploaderTest` (email lintas bulan + decoy run lama,
+  crash antar-ack bulan, state akhir per bulan).
+- **Import manual berbagi satu koordinator** (`e033de3`): `ImportJobViewModel` memanggil
+  `IncrementalSyncUseCase.runManualMonth`/`resumeUpload`; gate single-flight, status holder dan
+  uploader sama dengan foreground/background. Bukti:
+  `a manual import cannot run beside a background sync`, `manual and background runs never import concurrently`.
+- **Status jujur** (`e033de3`): `SyncSnapshot`/`UpdateStatusUi` membawa `partial`, `savedCount`,
+  `duplicateCount`, `skippedCount`, `unresolvedCount`, `storageFailure`. Mapper memaksa
+  `NEEDS_ATTENTION` (tidak pernah "Terbaru") saat rentang belum selesai, cursor gagal disimpan,
+  atau ada email belum terbaca; sheet menampilkan hitungan dan alasan berkode. Bukti:
+  `a partial range never claims to be up to date`,
+  `an unwritable cursor and unresolved mail stay visible in the panel`,
+  `an unacknowledged upload is never shown as a completed sync`.
+- **Tick scheduler mengimpor email baru tanpa membuka layar Impor** (`82a1d22`):
+  baseline tick tanpa body fetch → email baru → tick 30 menit → delta fetch, simpan, upload,
+  status `SUCCEEDED`, `savedCount=1`; tick berikutnya tidak membaca body lagi. Bukti:
+  `the scheduled tick imports mail that arrived after the baseline without opening the screen`.
+
+### Cleanup / retirement (RETIREMENT_POLICY)
+| Artefak | Tindakan | Alasan |
+|---|---|---|
+| Jalur import/upload milik `ImportJobViewModel` (`ImportMonthUseCase`, `RetryImportUseCase`, `ImportUploader` di konstruktor) | DELETE (diganti `IncrementalSyncUseCase`) | Dua koordinator = risiko import ganda; regresi perilaku ditutup tes gate |
+| `TransactionDao.observeByImport`/query per bulan untuk uploader | REPLACE dengan `listByImportJob` | Email lintas bulan bisa salah bulan; tes cross-month mengunci perilaku |
+| Status "Terbaru" saat run parsial | REPLACE dengan `AttentionItem(partial_import)` | Label lama menyesatkan |
+| Dokumen klaim "jendela 2 jam tidak bisa dilewati" (bagian historis di atas) | KEEP + supersede oleh bagian ini | Jejak keputusan dipertahankan |
+| Tes lama drain 6/6 satu jendela | KEEP (diperbarui ke semantik due) | Masih mengunci batas 5 merchant/permintaan |
+
+### Masih terbuka (jangan dibaca sebagai lulus)
+- **E2E emulator "email benar-benar tiba" tetap belum ada**: tidak ada kredensial mailbox yang
+  bisa disuntik email baru. Bukti delta sekarang berlapis: unit test di atas + Go handler tests;
+  belum ada bukti perangkat dengan email nyata masuk.
+- **S2.4 pagination/filter/search server di UI**: backend mendukung `q`/`categoryId`/`cursor`,
+  tetapi `TransactionsViewModel` masih memuat halaman pertama (50) dan memfilter di memori;
+  dataset >100 di UI belum lulus.
+- **S2.5 budget/analysis remote + freshness**: belum diwire ke UI.
+- **S3 (C01–C15) dan S4 (C16–C25) tetap belum selesai**: belum ada layar CRUD kategori/anggaran,
+  lampiran, atau admin; backend juga belum punya endpoint lampiran/admin.
