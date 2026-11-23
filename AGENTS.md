@@ -22,6 +22,19 @@ Mandat gabungan S2–S4 berada di `docs/agent-prompts/MANDAT_S2_S4.md`.
 Living checkpoint berada di `docs/DELIVERY_S2_S4_CHECKPOINT.md`.
 Lanjutkan dari status repo/checkpoint terkini dan jaga perbedaan PASS/PARTIAL/NOT RUN.
 
+## Transparansi progres harian
+
+- Setiap penutupan pekerjaan memperbarui baris tanggal WIB yang sama pada
+  [log harian](docs/PROGRESS_DAILY.md) dan ringkasan tabel harian di README.
+- Gunakan satu baris per hari, diperbarui dengan hasil tambahan; detail evidence tetap
+  pada checkpoint. Tidak perlu membuat file progres baru setiap hari.
+- Cantumkan hasil, commit, scope test/evidence, serta gate FAIL/PARTIAL/NOT RUN berikut
+  tindak lanjut. Bedakan implementasi, WIP, hasil terlapor dan pengujian fresh.
+- Review yang menemukan kegagalan harus terlihat; jangan hanya mencatat keberhasilan,
+  menyebut commit sebagai bukti runtime, atau memberi persentase selesai tanpa acceptance.
+- Tanggal historis yang direkonstruksi dari Git harus diberi label rekonstruksi.
+  Pembaruan README/progres tidak mengubah SRS resmi atau mengotorisasi merge/deploy.
+
 ## Kerapian dan penghentian implementasi lama
 
 Mulai 23 November 2026, setiap perubahan yang menggantikan implementasi harus menyertakan
