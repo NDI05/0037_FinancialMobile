@@ -145,11 +145,18 @@ func TestAutoCategoryDrainHonoursIntervalBatchAndRemainder(t *testing.T) {
 	if stub.calls != 1 {
 		t.Fatalf("three merchants should coalesce into one provider batch, calls=%d", stub.calls)
 	}
-	if body["drained"].(float64) != 3 || body["pending"].(float64) != 3 {
+	// One window runs several bounded batches: the three duplicate-key jobs are finished from the
+	// cache in the same window instead of waiting another two hours.
+	if body["drained"].(float64) != 6 || body["pending"].(float64) != 0 {
 		t.Fatalf("batch/remainder wrong: %v", body)
 	}
 
-	// Inside the 2-hour window: not due, and no provider call even though 3 jobs are pending.
+	// A merchant enqueued after the window opened is NOT due yet: a poll inside the interval is a
+	// no-op and the provider is not called.
+	newID := h.queueTx(token, "z"+strings.Repeat("3", 31), "WARUNG BARU", "QRIS WARUNG BARU")
+	if status, body = h.request("POST", "/v1/category-jobs/enqueue", token, map[string]any{"transactionIds": []string{newID}}); status != 200 {
+		t.Fatalf("enqueue after window=%d %v", status, body)
+	}
 	status, body = h.request("POST", "/v1/category-jobs/drain", token, map[string]any{})
 	if status != 200 || body["state"] != "not_due" || stub.calls != 1 {
 		t.Fatalf("early drain=%d %v calls=%d", status, body, stub.calls)
@@ -158,7 +165,7 @@ func TestAutoCategoryDrainHonoursIntervalBatchAndRemainder(t *testing.T) {
 		t.Fatalf("not_due must report a due time: %v", body)
 	}
 
-	// After the interval the remainder drains from cache: still one provider call in total.
+	// After the interval the new merchant is classified once.
 	base := h.api.Now()
 	h.api.Now = func() time.Time { return base.Add(CategoryDrainInterval + time.Minute) }
 	// The access token was minted against the old clock; re-issue so the shift stays valid.
@@ -167,13 +174,14 @@ func TestAutoCategoryDrainHonoursIntervalBatchAndRemainder(t *testing.T) {
 	if status != 200 || body["state"] != "drained" || body["pending"].(float64) != 0 {
 		t.Fatalf("second drain=%d %v", status, body)
 	}
-	if stub.calls != 1 {
-		t.Fatalf("cache hit must not call the provider, calls=%d", stub.calls)
+	if stub.calls != 2 {
+		t.Fatalf("the new merchant needs exactly one more call, calls=%d", stub.calls)
 	}
 }
 
-// TestAutoCategoryDrainCapsUniqueMerchantsPerRequest keeps the batch at five even when ten distinct
-// merchants are queued: the rest stays PENDING for the next window.
+// TestAutoCategoryDrainCapsUniqueMerchantsPerRequest keeps the provider request at five unique
+// merchants but lets one window run two bounded batches, so ten distinct merchants finish in the
+// same window with two calls instead of waiting two hours for the second half.
 func TestAutoCategoryDrainCapsUniqueMerchantsPerRequest(t *testing.T) {
 	stub := &stubCategory{}
 	h := newCategoryHarness(t, stub)
@@ -193,11 +201,11 @@ func TestAutoCategoryDrainCapsUniqueMerchantsPerRequest(t *testing.T) {
 	if status != 200 {
 		t.Fatalf("drain=%d %v", status, body)
 	}
-	if body["drained"].(float64) != float64(CategoryDrainBatch) || body["pending"].(float64) != 5 {
-		t.Fatalf("batch cap wrong: %v", body)
+	if body["drained"].(float64) != 10 || body["pending"].(float64) != 0 {
+		t.Fatalf("window batches wrong: %v", body)
 	}
-	if stub.calls != 1 {
-		t.Fatalf("one batch expected, calls=%d", stub.calls)
+	if stub.calls != 2 {
+		t.Fatalf("one call per five unique merchants expected, calls=%d", stub.calls)
 	}
 }
 

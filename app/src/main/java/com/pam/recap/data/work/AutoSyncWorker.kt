@@ -35,6 +35,8 @@ class AutoSyncWorker(
             .incrementalSync()
         return when (sync.run(SyncTrigger.PERIODIC)) {
             is SyncOutcome.Completed -> Result.success()
+            // The range was not finished; WorkManager backoff is the retry, not a fake success.
+            is SyncOutcome.Incomplete -> if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.success()
             // Another run already holds the gate: this period is covered by that run.
             SyncOutcome.AlreadyRunning -> Result.success()
             is SyncOutcome.Skipped -> Result.success()

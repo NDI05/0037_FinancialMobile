@@ -84,6 +84,10 @@ class FakeTransactionRepository(initial: List<Transaction> = emptyList()) : Tran
     override suspend fun listMonth(ownerId: String, month: JakartaMonth): List<Transaction> =
         rows.value.filter { it.ownerId == ownerId && month.contains(it.eventAt) }
 
+    override suspend fun listByImportJob(ownerId: String, importJobId: String): List<Transaction> =
+        rows.value.filter { it.ownerId == ownerId && it.importJobId == importJobId }
+            .sortedBy { it.eventAt }
+
     override suspend fun page(
         ownerId: String,
         filter: TransactionFilter,

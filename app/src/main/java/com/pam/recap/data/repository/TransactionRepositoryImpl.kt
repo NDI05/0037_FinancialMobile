@@ -72,6 +72,11 @@ class TransactionRepositoryImpl @Inject constructor(
             ).map { it.toDomain() }
         }
 
+    override suspend fun listByImportJob(ownerId: String, importJobId: String): List<Transaction> =
+        withContext(ioDispatcher) {
+            transactionDao.listByImportJob(ownerId, importJobId).map { it.toDomain() }
+        }
+
     override suspend fun page(
         ownerId: String,
         filter: TransactionFilter,

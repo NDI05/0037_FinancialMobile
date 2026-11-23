@@ -54,11 +54,32 @@ class ServerImportUploaderTest {
         val domain = FakeServer()
         val uploader = ServerImportUploader(domain, FakeTransactionRepository(listOf(row)))
         val result = uploader("u_1", job) as Outcome.Success
-        assertEquals("server-job", result.value)
+        assertEquals("server-job-2026-11", result.value)
         assertEquals(1, domain.batches)
         assertEquals("COMPLETE", domain.finalState)
         assertEquals("a".repeat(32), domain.candidates.single().fingerprint)
         assertEquals(17_500_000L, domain.candidates.single().amountMinor)
+    }
+
+    @Test
+    fun `only this run is uploaded and rows are grouped by their own transaction month`() = runTest {
+        // A late email arrives in November but carries a transaction date in October.
+        val late = row.copy(
+            id = "tx_late", eventAt = Instant.parse("2026-10-31T16:30:00Z"),
+            fingerprint = "b".repeat(32), amount = Money(42_000),
+        )
+        // A historical EMAIL row in the same month belongs to an earlier run and must not be resent.
+        val old = row.copy(id = "tx_old", importJobId = "job-old", fingerprint = "c".repeat(32))
+        val domain = FakeServer()
+        val uploader = ServerImportUploader(domain, FakeTransactionRepository(listOf(row, late, old)))
+        val result = uploader("u_1", job) as Outcome.Success
+
+        assertEquals(setOf("2026-10", "2026-11"), domain.createdMonths.toSet())
+        assertEquals(2, domain.batches)
+        assertEquals(setOf("a".repeat(32), "b".repeat(32)),
+            domain.candidatesByMonth.values.flatten().map { it.fingerprint }.toSet())
+        assertEquals(2, domain.finalized.size)
+        assertTrue(result.value.startsWith("server-job-"))
     }
 
     private class FakeServer : ServerFinanceRepository {
@@ -66,6 +87,9 @@ class ServerImportUploaderTest {
         var batches = 0
         var finalState = ""
         var candidates = emptyList<ServerImportCandidate>()
+        var candidatesByMonth = mutableMapOf<String, List<ServerImportCandidate>>()
+        val createdMonths = mutableListOf<String>()
+        val finalized = mutableListOf<String>()
         override suspend fun categories(ownerId: String) = Outcome.Success(
             listOf(ServerCategory("cat_food", "food", "Makanan", "EXPENSE")),
         )
@@ -83,17 +107,23 @@ class ServerImportUploaderTest {
         override suspend fun classifyTransactions(ownerId: String, transactionIds: List<String>) =
             Outcome.Success(emptyList<com.pam.recap.domain.repository.ServerCategoryJob>())
         override suspend fun createImportJob(ownerId: String, month: JakartaMonth, templateVersion: String) =
-            Outcome.Success(ServerImportJob("server-job", month.id(), "CREATED"))
+            Outcome.Success(ServerImportJob("server-job-${month.id()}", month.id(), "CREATED").also {
+                createdMonths += month.id()
+            })
         override suspend fun importBatch(
             ownerId: String, jobId: String, batchKey: String, pageOrdinal: Int,
             candidates: List<ServerImportCandidate>,
         ): Outcome<ServerImportCounts> {
             batches++
             this.candidates = candidates
+            candidatesByMonth[jobId] = candidates
             return Outcome.Success(ServerImportCounts(1, 1, 0, 0, 0, 1, "RUNNING"))
         }
         override suspend fun finalizeImportJob(ownerId: String, jobId: String, state: String, errorCode: String?) =
-            Outcome.Success(ServerImportJob("server-job", "2026-11", state).also { finalState = state })
+            Outcome.Success(ServerImportJob(jobId, "2026-11", state).also {
+                finalState = state
+                finalized += jobId
+            })
         override suspend fun enqueueCategories(ownerId: String, transactionIds: List<String>) =
             Outcome.Success(com.pam.recap.domain.repository.CategoryEnqueueResult(0, 0))
         override suspend fun drainCategories(ownerId: String) =

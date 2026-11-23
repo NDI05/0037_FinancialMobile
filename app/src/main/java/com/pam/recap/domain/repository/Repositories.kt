@@ -36,6 +36,12 @@ interface TransactionRepository {
 
     suspend fun listMonth(ownerId: String, month: JakartaMonth): List<Transaction>
 
+    /**
+     * Rows produced by one local import job, regardless of month. The uploader uploads exactly this
+     * immutable run snapshot: never every EMAIL row of a month, and never a row from an earlier run.
+     */
+    suspend fun listByImportJob(ownerId: String, importJobId: String): List<Transaction>
+
     /** Paged, filtered list used by the transactions screen and search (FR-27). */
     suspend fun page(ownerId: String, filter: TransactionFilter, offset: Int, limit: Int): TransactionPage
 

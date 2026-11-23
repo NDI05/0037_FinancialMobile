@@ -64,6 +64,15 @@ data class SyncSnapshot(
     val lastErrorCode: String? = null,
     val newTransactionsLastRun: Int = 0,
     val pendingUpload: Boolean = false,
+    /** The last run saved a partial range: the watermark did not move and more mail is pending. */
+    val partial: Boolean = false,
+    /** Per-run counters the sheet shows instead of vague "some rows". */
+    val savedCount: Int = 0,
+    val duplicateCount: Int = 0,
+    val skippedCount: Int = 0,
+    val unresolvedCount: Int = 0,
+    /** The durable cursor could not be written; progress is NOT durable and must say so. */
+    val storageFailure: Boolean = false,
     /** Set when a run finished after the user signed out/switched: it must not be shown as success. */
     val ownerId: String? = null,
 )

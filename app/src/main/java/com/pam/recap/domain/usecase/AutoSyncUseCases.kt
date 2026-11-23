@@ -5,6 +5,7 @@ import com.pam.recap.core.result.SafeLogger
 import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.AutoSyncConfig
+import com.pam.recap.domain.model.ImportState
 import com.pam.recap.domain.model.DeltaWindow
 import com.pam.recap.domain.model.SyncCursor
 import com.pam.recap.domain.model.SyncPhase
@@ -38,6 +39,18 @@ sealed interface SyncOutcome {
     data class Skipped(val reason: String) : SyncOutcome
 
     data class Failed(val code: String) : SyncOutcome
+
+    /**
+     * The server acknowledged what was imported, but the mailbox range is not finished
+     * (PARTIAL/FAILED/PERMISSION_REQUIRED or a missing watermark). The watermark deliberately did
+     * not move, so the next run retries the same range instead of skipping the rest.
+     */
+    data class Incomplete(
+        val imported: Int,
+        val duplicates: Int,
+        val state: String,
+        val unresolved: Int,
+    ) : SyncOutcome
 }
 
 /**
@@ -230,10 +243,56 @@ class IncrementalSyncUseCase @Inject constructor(
             return SyncOutcome.Skipped("owner_changed")
         }
 
-        // Server acknowledged: only now is the watermark worth keeping.
-        cursors.save(
+        // Outcome.Success(job) is NOT "every email in the window was handled": PARTIAL, FAILED and
+        // PERMISSION_REQUIRED all come back as Success. The watermark may only move when the whole
+        // captured range is safely processed, otherwise the next run would skip the missing tail.
+        val completeRange = job.state == ImportState.COMPLETE || job.state == ImportState.EMPTY
+        if (!completeRange || upTo == null) {
+            val saved = cursors.save(
+                cursor.copy(
+                    lastAttemptAt = startedAt,
+                    lastErrorCode = if (upTo == null) "watermark_unavailable" else "partial_import",
+                    consecutiveFailures = cursor.consecutiveFailures + 1,
+                    uploadPending = false,
+                ),
+            )
+            status.update {
+                it.copy(
+                    ownerId = ownerId,
+                    phase = SyncPhase.NEEDS_ATTENTION,
+                    isRunning = false,
+                    lastAttemptAt = startedAt,
+                    lastErrorCode = if (!saved) "storage_unavailable" else "partial_import",
+                    newTransactionsLastRun = job.importedCount,
+                    pendingUpload = false,
+                    partial = true,
+                    savedCount = job.importedCount,
+                    duplicateCount = job.duplicateCount,
+                    skippedCount = job.skippedCount,
+                    unresolvedCount = job.unresolvedCount,
+                    storageFailure = !saved,
+                )
+            }
+            SafeLogger.counts(
+                TAG,
+                "sync_incomplete",
+                "state" to job.state.ordinal,
+                "saved" to job.importedCount,
+                "unresolved" to job.unresolvedCount,
+                "cursorSaved" to if (saved) 1 else 0,
+            )
+            return SyncOutcome.Incomplete(
+                imported = job.importedCount,
+                duplicates = job.duplicateCount,
+                state = job.state.name,
+                unresolved = job.unresolvedCount,
+            )
+        }
+
+        // Server acknowledged a complete range: only now is the watermark worth keeping.
+        val saved = cursors.save(
             cursor.copy(
-                watermark = upTo ?: cursor.watermark,
+                watermark = upTo,
                 lastAttemptAt = startedAt,
                 lastSuccessAt = clock.now(),
                 lastErrorCode = null,
@@ -241,6 +300,12 @@ class IncrementalSyncUseCase @Inject constructor(
                 uploadPending = false,
             ),
         )
+        if (!saved) {
+            // The financial commit happened, but saying "terbaru" here would claim durable progress
+            // that does not exist. Keep the old watermark and report the storage failure.
+            recordFailure(ownerId, cursor, startedAt, "storage_unavailable")
+            return SyncOutcome.Failed("storage_unavailable")
+        }
         status.update {
             it.copy(
                 ownerId = ownerId,
@@ -251,6 +316,12 @@ class IncrementalSyncUseCase @Inject constructor(
                 lastErrorCode = null,
                 newTransactionsLastRun = job.importedCount,
                 pendingUpload = false,
+                partial = false,
+                savedCount = job.importedCount,
+                duplicateCount = job.duplicateCount,
+                skippedCount = job.skippedCount,
+                unresolvedCount = job.unresolvedCount,
+                storageFailure = false,
             )
         }
         SafeLogger.counts(TAG, "sync_done", "imported" to job.importedCount, "duplicates" to job.duplicateCount)
@@ -291,6 +362,7 @@ class IncrementalSyncUseCase @Inject constructor(
                 lastAttemptAt = startedAt,
                 lastErrorCode = code,
                 pendingUpload = uploadPending || it.pendingUpload,
+                storageFailure = code == "storage_unavailable",
             )
         }
     }

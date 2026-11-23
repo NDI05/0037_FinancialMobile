@@ -264,13 +264,16 @@ func (s *Store) ClaimCategoryJob(ctx context.Context, ownerID, id string, now ti
 	if err!=nil{return "",false,err}; if n,_:=res.RowsAffected(); n!=1{return "",false,nil}; return token,true,nil
 }
 
-// ClaimCategoryJobsForRecovery reclaims PENDING jobs and RUNNING jobs whose lease expired (the
-// worker that owned them died). Each reclaim is a conditional UPDATE, so a live worker with an
-// unexpired lease cannot lose its job to this sweep.
+// ClaimCategoryJobsForRecovery reclaims due PENDING jobs and RUNNING jobs whose lease expired (the
+// worker that owned them died). A PENDING job whose durable due time is still in the future is NOT
+// reclaimed: the queue window belongs to the row, so a recovery tick cannot shortcut the batching
+// target. Each reclaim is a conditional UPDATE, so a live worker with an unexpired lease cannot lose
+// its job to this sweep.
 func (s *Store) ClaimCategoryJobsForRecovery(ctx context.Context, now time.Time, lease time.Duration, limit int) ([]CategoryJob,error) {
 	rows,err:=s.DB.QueryContext(ctx,`SELECT owner_id,id FROM category_jobs
-		WHERE state='PENDING' OR (state='RUNNING' AND (lease_until_unix IS NULL OR lease_until_unix <= ?))
-		ORDER BY created_at LIMIT ?`,now.UnixMilli(),limit)
+		WHERE (state='PENDING' AND due_at_unix <= ?)
+		   OR (state='RUNNING' AND (lease_until_unix IS NULL OR lease_until_unix <= ?))
+		ORDER BY created_at LIMIT ?`,now.UnixMilli(),now.UnixMilli(),limit)
 	if err!=nil{return nil,err}
 	type ref struct{ owner,id string }
 	var refs []ref
@@ -280,8 +283,9 @@ func (s *Store) ClaimCategoryJobsForRecovery(ctx context.Context, now time.Time,
 	for _,r:=range refs {
 		token:=NewID("catlease")
 		res,err:=s.DB.ExecContext(ctx,`UPDATE category_jobs SET state='RUNNING',lease_token=?,lease_until=?,lease_until_unix=?,updated_at=?
-			WHERE owner_id=? AND id=? AND (state='PENDING' OR (state='RUNNING' AND (lease_until_unix IS NULL OR lease_until_unix <= ?)))`,
-			token,nowString(now.Add(lease)),now.Add(lease).UnixMilli(),nowString(now),r.owner,r.id,now.UnixMilli())
+			WHERE owner_id=? AND id=? AND ((state='PENDING' AND due_at_unix <= ?)
+			   OR (state='RUNNING' AND (lease_until_unix IS NULL OR lease_until_unix <= ?)))`,
+			token,nowString(now.Add(lease)),now.Add(lease).UnixMilli(),nowString(now),r.owner,r.id,now.UnixMilli(),now.UnixMilli())
 		if err!=nil{return out,err}
 		n,_:=res.RowsAffected(); if n!=1{continue}
 		job,err:=s.GetCategoryJob(ctx,r.owner,r.id); if err!=nil{return out,err}

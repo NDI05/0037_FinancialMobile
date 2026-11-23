@@ -35,6 +35,15 @@ interface TransactionDao {
     @Query(
         """
         SELECT * FROM transactions
+        WHERE ownerId = :ownerId AND importJobId = :importJobId
+        ORDER BY eventAt ASC
+        """,
+    )
+    suspend fun listByImportJob(ownerId: String, importJobId: String): List<TransactionEntity>
+
+    @Query(
+        """
+        SELECT * FROM transactions
         WHERE ownerId = :ownerId AND eventAt >= :startMillis AND eventAt < :endMillis
           AND (:categoryCode IS NULL OR category = :categoryCode)
           AND (:directionName IS NULL OR direction = :directionName)

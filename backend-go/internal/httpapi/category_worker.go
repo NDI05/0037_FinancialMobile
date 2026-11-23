@@ -8,12 +8,20 @@ import (
 	"github.com/pam/recap/backend-go/internal/store"
 )
 
-// CategoryWorker is the durable recovery loop for classification jobs. It reclaims PENDING jobs
-// and RUNNING jobs whose lease expired (the owning request/process died), runs them through the
-// same pipeline as the synchronous API path, and applies the bounded transient-retry policy:
-// a job that fails transiently while its retry_count is 0 is requeued exactly once; a second
-// transient failure finishes the job FAILED. Orphaned RESERVED reservations (process died between
-// reserve and settle) are swept back into the ledger so spend is never silently lost.
+// CategoryWorker is the durable scheduler and recovery loop for classification jobs. Two jobs:
+//
+//  1. It drains owners whose queue window is open, so an acknowledged backlog is processed without
+//     depending on the Android client polling /drain every two hours. The drain uses the same
+//     bounded window semantics as the HTTP endpoint (at most CategoryDrainBatch unique merchants per
+//     request, at most CategoryDrainMaxBatches requests per window, remainder deferred).
+//  2. It reclaims RUNNING jobs whose lease expired (the owning request/process died) and runs them
+//     through the same pipeline, applying the bounded transient-retry policy: a job that fails
+//     transiently while its retry_count is 0 is requeued exactly once; a second transient failure
+//     finishes the job FAILED. PENDING jobs with a future due time are never reclaimed — the window
+//     belongs to the row.
+//
+// Orphaned RESERVED reservations (process died between reserve and settle) are swept back into the
+// ledger so spend is never silently lost.
 type CategoryWorker struct {
 	server *Server
 	stop   chan struct{}
@@ -66,6 +74,24 @@ func (w *CategoryWorker) tick() {
 		}
 		w.swept = now
 	}
+	// Server-owned windows: drain owners whose due time has opened, bounded per tick so one owner
+	// with a large backlog cannot starve the others.
+	owners, err := s.Store.DueQueueOwners(ctx, now, 4)
+	if err != nil {
+		s.Log.Error("category worker due owners failed", "error", err.Error())
+	} else {
+		for _, ownerID := range owners {
+			out, derr := s.drainOwnerQueue(ctx, ownerID, now, true)
+			if derr != nil {
+				s.Log.Error("category worker drain failed", "error", derr.Error())
+				continue
+			}
+			if out.Drained > 0 || out.State != "drained" {
+				s.Log.Info("category worker window", "state", out.State, "drained", out.Drained, "pending", out.Pending)
+			}
+		}
+	}
+	// Expired leases only: PENDING rows are handled by the window above.
 	jobs, err := s.Store.ClaimCategoryJobsForRecovery(ctx, now, store.CategoryLeaseDuration, 8)
 	if err != nil {
 		s.Log.Error("category worker recovery claim failed", "error", err.Error())

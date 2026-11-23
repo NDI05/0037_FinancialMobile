@@ -26,8 +26,12 @@ func TestMigrateTwiceAndLegacyRows(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM schema_migrations`).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 13 {
-		t.Fatalf("migrations = %d", count)
+	embedded, err := LoadMigrations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != len(embedded) {
+		t.Fatalf("migrations applied = %d, embedded = %d", count, len(embedded))
 	}
 	// 012 is additive: existing rows get the empty mapping version and an empty lease token, which
 	// is exactly what makes them a cache miss and an invalid lease holder. 013 adds the automatic
@@ -36,6 +40,11 @@ func TestMigrateTwiceAndLegacyRows(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `SELECT COALESCE((SELECT mapping_version FROM category_cache LIMIT 1),''),
 		COALESCE((SELECT lease_token FROM category_jobs LIMIT 1),'')`).Scan(&legacyMapping, &legacyToken); err != nil {
 		t.Fatalf("012 columns missing: %v", err)
+	}
+	// 014 adds the durable due time: legacy rows must read as "due now", not as a skipped queue.
+	var legacyDue int64
+	if err := db.QueryRowContext(ctx, `SELECT COALESCE((SELECT due_at_unix FROM category_jobs LIMIT 1),-1)`).Scan(&legacyDue); err != nil {
+		t.Fatalf("014 column missing: %v", err)
 	}
 	var legacyQueueKey string
 	if err := db.QueryRowContext(ctx, `SELECT COALESCE((SELECT merchant_key FROM category_jobs LIMIT 1),'')`).Scan(&legacyQueueKey); err != nil {

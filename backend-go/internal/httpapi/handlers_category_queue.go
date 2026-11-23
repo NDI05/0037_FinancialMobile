@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -14,8 +15,18 @@ import (
 // polls, the server decides, and a poll that arrives early is answered without a provider call.
 const CategoryDrainInterval = 2 * time.Hour
 
-// CategoryDrainBatch is the maximum number of unique merchants one drain may classify.
+// CategoryDrainBatch is the maximum number of unique merchants one provider request may classify.
+// It is a per-request cap, not a per-window cap: one window may run several bounded batches while
+// attempts, tokens, budget and concurrency allow it.
 const CategoryDrainBatch = 5
+
+// CategoryDrainMaxBatches bounds how many provider requests one window may run, so a large backlog
+// cannot turn into an unbounded burst. Whatever is left is deferred to the next window.
+const CategoryDrainMaxBatches = 4
+
+// CategoryCacheFanoutLimit bounds the provider-free pass that applies an already-known merchant
+// result to every queued transaction sharing it.
+const CategoryCacheFanoutLimit = 50
 
 // maxEnqueueIDs bounds one enqueue request so a whole month cannot arrive as a single body.
 const maxEnqueueIDs = 50
@@ -42,6 +53,13 @@ func (s *Server) enqueueCategoryJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := s.Now()
+	// A job enqueued after a drain belongs to the next window; the due time is durable on the row
+	// so the recovery worker honours it too.
+	dueAt := now
+	if state, err := s.Store.CategoryQueueStateFor(r.Context(), info.OwnerID); err == nil &&
+		state.NextDrainAt != nil && state.NextDrainAt.After(now) {
+		dueAt = *state.NextDrainAt
+	}
 	seen := map[string]bool{}
 	queued := 0
 	for _, id := range body.TransactionIDs {
@@ -64,7 +82,7 @@ func (s *Server) enqueueCategoryJobs(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			continue
 		}
-		inserted, err := s.Store.EnqueueAutoCategoryJob(r.Context(), info.OwnerID, tx.ID, tx.Revision, key, now)
+		inserted, err := s.Store.EnqueueAutoCategoryJob(r.Context(), info.OwnerID, tx.ID, tx.Revision, key, dueAt, now)
 		if err != nil {
 			s.databaseOrInternal(w, r, err)
 			return
@@ -73,17 +91,139 @@ func (s *Server) enqueueCategoryJobs(w http.ResponseWriter, r *http.Request) {
 			queued++
 		}
 	}
+	// A merchant result the cache already knows is applied at once to every queued transaction that
+	// shares it: provider-free, and never a reason to wait for another window.
+	fanned, err := s.applyCachedQueuedJobs(r.Context(), info.OwnerID, now, CategoryCacheFanoutLimit)
+	if err != nil {
+		s.databaseOrInternal(w, r, err)
+		return
+	}
 	pending, err := s.Store.CountQueuedCategoryJobs(r.Context(), info.OwnerID)
 	if err != nil {
 		s.databaseOrInternal(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"queued": queued, "pending": pending})
+	writeJSON(w, http.StatusOK, map[string]any{"queued": queued, "cached": fanned, "pending": pending})
 }
 
-// drainCategoryQueue is the server-side scheduler: it answers early polls cheaply, classifies at
-// most CategoryDrainBatch unique merchants, carries the remainder over to the next due time, and
-// leaves the backlog intact when the budget is exhausted.
+// drainOwnerQueue is one bounded window of the category queue. It is shared by the HTTP endpoint
+// and the backend scheduler, so an owner whose client never polls still gets drained. Within the
+// window it runs up to CategoryDrainMaxBatches batches of at most CategoryDrainBatch unique
+// merchants, and the remainder is deferred to the next window.
+func (s *Server) drainOwnerQueue(ctx context.Context, ownerID string, now time.Time, ignoreDue bool) (drainOutcome, error) {
+	out := drainOutcome{State: "drained"}
+	pending, err := s.Store.CountQueuedCategoryJobs(ctx, ownerID)
+	if err != nil {
+		return out, err
+	}
+	state, err := s.Store.CategoryQueueStateFor(ctx, ownerID)
+	if err != nil {
+		return out, err
+	}
+	next := now.Add(CategoryDrainInterval)
+	if pending == 0 {
+		// An empty queue has no open window: the first transaction enqueued after it must be
+		// eligible at once rather than waiting for a spend window that never spent anything.
+		if err := s.Store.SaveCategoryQueueState(ctx, ownerID, nil, &now, "empty", now); err != nil {
+			return out, err
+		}
+		out.State = "empty"
+		return out, nil
+	}
+	if !ignoreDue && state.NextDrainAt != nil && now.Before(*state.NextDrainAt) {
+		out.State = "not_due"
+		out.Pending = pending
+		out.NextDue = state.NextDrainAt
+		return out, nil
+	}
+
+	var processed []store.CategoryJob
+	for batch := 0; batch < CategoryDrainMaxBatches; batch++ {
+		jobs, err := s.Store.ListQueuedCategoryJobs(ctx, ownerID, CategoryDrainBatch, now)
+		if err != nil {
+			return out, err
+		}
+		if len(jobs) == 0 {
+			break
+		}
+		var pendingPrepare []preparedCategory
+		before := len(processed)
+		for _, job := range jobs {
+			leaseToken, claimed, err := s.Store.ClaimCategoryJob(ctx, ownerID, job.ID, now, store.CategoryLeaseDuration)
+			if err != nil {
+				return out, err
+			}
+			if !claimed {
+				continue
+			}
+			job.LeaseToken = leaseToken
+			prepared, eligible, err := s.prepareForClassify(ctx, ownerID, job)
+			if err != nil {
+				return out, err
+			}
+			if !eligible {
+				processed = append(processed, prepared.job)
+				continue
+			}
+			pendingPrepare = append(pendingPrepare, prepared)
+		}
+		if len(pendingPrepare) > 0 {
+			classified, outcome, err := s.classifyGroupWith(ctx, ownerID, pendingPrepare, true)
+			if err != nil {
+				return out, err
+			}
+			processed = append(processed, classified...)
+			if outcome.budgetDenied && !outcome.sawSuccess {
+				out.State = "budget_exhausted"
+				break
+			}
+		}
+		// Fan the fresh merchant results out to every queued transaction that shares them: those
+		// rows are provider-free cache hits and must not consume the next window's budget.
+		if fanned, err := s.applyCachedQueuedJobs(ctx, ownerID, now, CategoryCacheFanoutLimit); err != nil {
+			return out, err
+		} else if fanned > 0 {
+			out.Cached += fanned
+		}
+		if len(processed) == before {
+			// Nothing could be claimed (another drain or a manual retry owns the rows), or every
+			// row was provider-free: if provider-free, loop again to pick up the duplicates that
+			// now hit the cache; if claimless, stop to avoid a tight spin.
+			if len(pendingPrepare) == 0 {
+				break
+			}
+		}
+	}
+	out.Drained = len(processed) + out.Cached
+	out.Jobs = processed
+	if err := s.Store.SaveCategoryQueueState(ctx, ownerID, &next, &now, out.State, now); err != nil {
+		return out, err
+	}
+	// Anything that did not fit this window is carried over, not retried seconds later by the
+	// recovery tick.
+	if _, err := s.Store.DeferQueuedCategoryJobs(ctx, ownerID, next); err != nil {
+		return out, err
+	}
+	remaining, err := s.Store.CountQueuedCategoryJobs(ctx, ownerID)
+	if err != nil {
+		return out, err
+	}
+	out.Pending = remaining
+	out.NextDue = &next
+	return out, nil
+}
+
+type drainOutcome struct {
+	State   string
+	Drained int
+	Cached  int
+	Pending int
+	NextDue *time.Time
+	Jobs    []store.CategoryJob
+}
+
+// drainCategoryQueue is the client-facing entry point: it answers an early poll cheaply and never
+// calls the provider for an empty or not-yet-due queue.
 func (s *Server) drainCategoryQueue(w http.ResponseWriter, r *http.Request) {
 	if !s.autoCategoryEnabled() {
 		writeError(w, http.StatusServiceUnavailable, "category_unavailable", "Category classifier is not enabled", correlationOf(r))
@@ -96,84 +236,77 @@ func (s *Server) drainCategoryQueue(w http.ResponseWriter, r *http.Request) {
 	}
 	ownerID := info.OwnerID
 	now := s.Now()
-	pending, err := s.Store.CountQueuedCategoryJobs(r.Context(), ownerID)
+	out, err := s.drainOwnerQueue(r.Context(), ownerID, now, false)
 	if err != nil {
 		s.databaseOrInternal(w, r, err)
 		return
 	}
-	state, err := s.Store.CategoryQueueStateFor(r.Context(), ownerID)
-	if err != nil {
-		s.databaseOrInternal(w, r, err)
-		return
-	}
-	// An empty queue is never a reason to look at a due time or call the provider.
-	if pending == 0 {
-		if err := s.Store.SaveCategoryQueueState(r.Context(), ownerID, nil, &now, "empty", now); err != nil {
-			s.databaseOrInternal(w, r, err)
-			return
-		}
-		writeJSON(w, http.StatusOK, drainResponse("empty", 0, 0, nil, nil))
-		return
-	}
-	if state.NextDrainAt != nil && now.Before(*state.NextDrainAt) {
-		writeJSON(w, http.StatusOK, drainResponse("not_due", 0, pending, state.NextDrainAt, nil))
-		return
-	}
+	writeJSON(w, http.StatusOK, drainResponse(out.State, out.Drained, out.Pending, out.NextDue, categoryJobsJSON(out.Jobs)))
+}
 
-	jobs, err := s.Store.ListQueuedCategoryJobs(r.Context(), ownerID, CategoryDrainBatch)
-	if err != nil {
-		s.databaseOrInternal(w, r, err)
-		return
+// applyCachedQueuedJobs finishes queued transactions whose merchant result is already cached. It
+// claims a job only after the cache answered, so a miss stays PENDING with its due time intact and
+// no retry budget is spent.
+func (s *Server) applyCachedQueuedJobs(ctx context.Context, ownerID string, now time.Time, limit int) (int, error) {
+	classifier := s.CategoryClassifier
+	if classifier == nil {
+		return 0, nil
 	}
-	var processed []store.CategoryJob
-	var pendingPrepare []preparedCategory
+	jobs, err := s.Store.ListAllQueuedCategoryJobs(ctx, ownerID, limit)
+	if err != nil {
+		return 0, err
+	}
+	applied := 0
 	for _, job := range jobs {
-		leaseToken, claimed, err := s.Store.ClaimCategoryJob(r.Context(), ownerID, job.ID, now, store.CategoryLeaseDuration)
+		tx, err := s.Store.GetTransaction(ctx, ownerID, job.TransactionID)
 		if err != nil {
-			s.databaseOrInternal(w, r, err)
-			return
+			continue
+		}
+		if !autoCategoryEligible(tx) {
+			continue
+		}
+		key, ok := merchantKeyFor(tx)
+		if !ok {
+			continue
+		}
+		method := "OTHER"
+		if strings.Contains(strings.ToUpper(tx.Sensitive.Description), "QRIS") {
+			method = "QRIS"
+		}
+		code, review, reason, err := s.Store.CategoryCacheGet(ctx, ownerID, key, tx.Direction, method,
+			categoryllm.TaxonomyVersion, classifier.Model(), categoryllm.PromptVersion, categoryllm.MappingVersion)
+		if err != nil || code == "" {
+			continue
+		}
+		// Claim only after the cache answered: a miss keeps the row PENDING with its due time and
+		// its retry budget untouched.
+		leaseToken, claimed, err := s.Store.ClaimCategoryJob(ctx, ownerID, job.ID, now, store.CategoryLeaseDuration)
+		if err != nil {
+			return applied, err
 		}
 		if !claimed {
-			// Another drain or a manual retry owns this job; it is not lost, just not ours.
 			continue
 		}
 		job.LeaseToken = leaseToken
-		prepared, eligible, err := s.prepareForClassify(r.Context(), ownerID, job)
+		prepared, eligible, err := s.prepareForClassify(ctx, ownerID, job)
 		if err != nil {
-			s.databaseOrInternal(w, r, err)
-			return
+			if errors.Is(err, store.ErrLeaseLost) || errors.Is(err, store.ErrNotFound) {
+				continue
+			}
+			return applied, err
 		}
 		if !eligible {
-			processed = append(processed, prepared.job)
 			continue
 		}
-		pendingPrepare = append(pendingPrepare, prepared)
-	}
-
-	result := "drained"
-	if len(pendingPrepare) > 0 {
-		classified, outcome, err := s.classifyGroupWith(r.Context(), ownerID, pendingPrepare, true)
-		if err != nil {
-			s.databaseOrInternal(w, r, err)
-			return
+		if _, err := s.applyAndFinish(ctx, ownerID, prepared, code, review, reason); err != nil {
+			if errors.Is(err, store.ErrLeaseLost) || errors.Is(err, store.ErrNotFound) {
+				continue
+			}
+			return applied, err
 		}
-		processed = append(processed, classified...)
-		if outcome.budgetDenied && !outcome.sawSuccess {
-			// Denied before any call: nothing was spent and the jobs stay PENDING as backlog.
-			result = "budget_exhausted"
-		}
+		applied++
 	}
-	next := now.Add(CategoryDrainInterval)
-	if err := s.Store.SaveCategoryQueueState(r.Context(), ownerID, &next, &now, result, now); err != nil {
-		s.databaseOrInternal(w, r, err)
-		return
-	}
-	remaining, err := s.Store.CountQueuedCategoryJobs(r.Context(), ownerID)
-	if err != nil {
-		s.databaseOrInternal(w, r, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, drainResponse(result, len(processed), remaining, &next, categoryJobsJSON(processed)))
+	return applied, nil
 }
 
 func drainResponse(state string, drained, pending int, next *time.Time, jobs []categoryJobJSON) map[string]any {

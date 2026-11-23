@@ -14,6 +14,7 @@ import com.pam.recap.domain.model.GmailConnectionState
 import com.pam.recap.domain.model.MailboxWatermark
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.model.SyncCursor
+import com.pam.recap.domain.model.SyncPhase
 import com.pam.recap.domain.repository.GmailMessageRef
 import com.pam.recap.domain.repository.GmailPage
 import com.pam.recap.domain.repository.GmailSource
@@ -37,6 +38,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -338,10 +340,47 @@ class IncrementalSyncUseCaseTest {
 
     // ---------------------------------------------------------------- doubles
 
+    @Test
+    fun `a page two failure keeps the cursor and reports a partial range`() = runTest {
+        repeat(5) { deliver("m-part-$it", clock.now().minus(1.minutes)) }
+        mailbox.pageLimit = 2
+        mailbox.failFromPage = 1
+
+        val first = sync.run(SyncTrigger.PERIODIC)
+        assertTrue(first is SyncOutcome.Incomplete)
+        assertEquals("PARTIAL", (first as SyncOutcome.Incomplete).state)
+        assertNull("no watermark after a partial range", cursors.read(ownerId)?.watermark)
+        assertEquals(SyncPhase.NEEDS_ATTENTION, status.snapshot.value.phase)
+        assertTrue(status.snapshot.value.partial)
+        assertEquals(2, status.snapshot.value.savedCount)
+        assertNotNull("the attempt is recorded", cursors.read(ownerId)?.lastAttemptAt)
+
+        // The next run retries from the same place and finishes the range.
+        mailbox.failFromPage = Int.MAX_VALUE
+        val retried = sync.run(SyncTrigger.PERIODIC)
+        assertTrue(retried is SyncOutcome.Completed)
+        assertEquals(MailboxWatermark(42L, 5L), cursors.read(ownerId)?.watermark)
+        assertEquals(false, status.snapshot.value.partial)
+    }
+
+    @Test
+    fun `a cursor save failure is never shown as durable success`() = runTest {
+        deliver("m-store", clock.now().minus(1.minutes))
+        cursors.failWrite = true
+
+        val result = sync.run(SyncTrigger.PERIODIC)
+        assertEquals("storage_unavailable", (result as SyncOutcome.Failed).code)
+        assertNull(cursors.read(ownerId)?.watermark)
+        assertFalse(status.snapshot.value.phase == SyncPhase.SUCCEEDED)
+        assertTrue(status.snapshot.value.storageFailure)
+    }
+
     private class InMemoryCursorStore : SyncCursorStore {
         private val rows = mutableMapOf<String, SyncCursor>()
+        var failWrite = false
         override fun read(ownerId: String): SyncCursor? = rows[ownerId]
         override fun save(cursor: SyncCursor): Boolean {
+            if (failWrite) return false
             rows[cursor.ownerId] = cursor
             return true
         }
@@ -361,6 +400,9 @@ class IncrementalSyncUseCaseTest {
         var uidValidity = 42L
         var deltaReads = 0
         var bodyFetches = 0
+        /** Small pages make a page-2 failure reachable without 100+ fixtures. */
+        var pageLimit = 100
+        var failFromPage = Int.MAX_VALUE
         private var pauseMillis = 0L
 
         fun deliver(raw: RawMessage): Long {
@@ -401,7 +443,7 @@ class IncrementalSyncUseCaseTest {
             if (pauseMillis > 0) kotlinx.coroutines.delay(pauseMillis)
             val floor = since?.takeIf { it.uidValidity == uidValidity }?.highestUid ?: 0L
             val ceiling = upTo?.takeIf { it.uidValidity == uidValidity }?.highestUid
-            val limit = query.pageSize
+            val limit = minOf(query.pageSize, pageLimit)
             val hits = messages.withIndex()
                 .filter { (index, raw) ->
                     val uid = (index + 1).toLong()
@@ -413,6 +455,9 @@ class IncrementalSyncUseCaseTest {
                 }
                 .sortedByDescending { it.index }
             val offset = pageToken?.substringAfter("offset:")?.toIntOrNull() ?: 0
+            if (offset > 0 && offset / limit >= failFromPage) {
+                return Outcome.Failure(AppError.Network("page_2_failed"))
+            }
             val page = hits.drop(offset).take(limit)
             return Outcome.Success(
                 GmailPage(
