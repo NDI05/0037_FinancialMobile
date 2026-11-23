@@ -12,6 +12,7 @@ import com.pam.recap.domain.model.AiPlanSummary
 import com.pam.recap.domain.model.AiPriorMonthTotals
 import com.pam.recap.domain.model.AnalysisStatus
 import com.pam.recap.domain.model.Category
+import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.CoverageStatus
 import com.pam.recap.domain.model.Observation
 import com.pam.recap.domain.model.Suggestion
@@ -19,6 +20,7 @@ import com.pam.recap.domain.model.SummaryFreshness
 import com.pam.recap.domain.repository.AnalysisEngine
 import com.pam.recap.domain.repository.AnalysisEngineConfiguration
 import com.pam.recap.domain.repository.AnalysisRequest
+import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.ServerAnalysis
 import com.pam.recap.domain.repository.ServerAnalysisRepository
 import com.pam.recap.domain.repository.ServerFinanceRepository
@@ -39,6 +41,7 @@ class ServerAnalysisRepositoryImpl @Inject constructor(
     private val finance: ServerFinanceRepository,
     @param:RemoteEngine private val remoteEngine: AnalysisEngine,
     private val remoteConfiguration: AnalysisEngineConfiguration,
+    private val consents: ConsentRepository,
 ) : ServerAnalysisRepository {
 
     override val isEnabled: Boolean
@@ -56,6 +59,18 @@ class ServerAnalysisRepositoryImpl @Inject constructor(
 
     override suspend fun generate(ownerId: String, month: JakartaMonth): Outcome<Unit> {
         if (!isEnabled) return Outcome.Failure(AppError.Configuration("analysis_backend_not_configured"))
+        // Same local gate as RequestAnalysisUseCase: never post an aggregate payload before the
+        // owner granted AI-processing consent. The UI disables the button and the backend also
+        // answers 403, but the repository must not rely on either for a side-effecting request.
+        val consent = consents.latest(ownerId, ConsentPurpose.AI_PROCESSING)
+        if (consent?.isGranted != true) {
+            val rule = if (consent?.isWithdrawn == true) {
+                AppErrorRules.AI_CONSENT_WITHDRAWN
+            } else {
+                AppErrorRules.CONSENT_REQUIRED
+            }
+            return Outcome.Failure(AppError.Validation(rule))
+        }
         val summary = when (val result = finance.summary(ownerId, month)) {
             is Outcome.Success -> result.value
             is Outcome.Failure -> return result
