@@ -12,7 +12,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,6 +24,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.pam.recap.R
+import com.pam.recap.domain.model.CategoryQueuePhase
+import com.pam.recap.ui.components.PillButton
+import com.pam.recap.ui.components.PillButtonStyle
 import com.pam.recap.ui.components.SheetScaffold
 import com.pam.recap.ui.theme.BodyM
 import com.pam.recap.ui.theme.BodyS
@@ -31,7 +36,9 @@ import com.pam.recap.ui.theme.OnInk
 import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.PamSpacing
 import com.pam.recap.ui.theme.TitleL
+import com.pam.recap.ui.theme.Violet
 import com.pam.recap.ui.util.PamDateFormat
+import com.pam.recap.ui.util.appErrorRes
 import kotlin.time.Instant
 
 /**
@@ -46,6 +53,7 @@ fun UpdateStatusSheet(
     status: UpdateStatusUi,
     now: Instant,
     onDismiss: () -> Unit,
+    onSyncNow: () -> Unit = {},
 ) {
     SheetScaffold(onDismissRequest = onDismiss) {
         Text(text = stringResource(R.string.update_status_title), style = TitleL, color = OnInk)
@@ -53,6 +61,9 @@ fun UpdateStatusSheet(
 
         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
             StatusSection(title = stringResource(R.string.update_status_section_data)) {
+                status.month?.let {
+                    BodyLine(stringResource(R.string.update_status_sync_period, it.label()))
+                }
                 StatusLine(
                     label = stringResource(R.string.update_status_last_attempt),
                     value = relative(status.lastAttemptAt, now),
@@ -65,23 +76,36 @@ fun UpdateStatusSheet(
                 if (status.pendingUpload) {
                     BodyLine(stringResource(R.string.update_status_pending_upload))
                 }
-                BodyLine(
-                    if (status.newTransactionsLastRun > 0) {
-                        stringResource(R.string.update_status_new_transactions, status.newTransactionsLastRun)
-                    } else {
-                        stringResource(R.string.update_status_no_new_transactions)
-                    },
+                SyncTrigger(
+                    status = status,
+                    onSyncNow = onSyncNow,
                 )
-                if (status.hasRunCounts) {
+                if (status.newTransactionsLastRun > 0) {
+                    BodyLine(
+                        stringResource(
+                            R.string.update_status_new_transactions,
+                            status.newTransactionsLastRun,
+                        ),
+                    )
+                } else if (status.hasEverSucceeded && !status.syncBusy) {
+                    BodyLine(stringResource(R.string.update_status_no_new_transactions))
+                }
+                status.lastJob?.let { job ->
+                    BodyLine(stringResource(R.string.update_status_matched, job.matchedCount))
+                    // Always print the outcome counters, even when all are zero: "nothing was
+                    // saved" is a result the user must be able to read, not an empty state.
                     BodyLine(
                         stringResource(
                             R.string.update_status_run_counts,
-                            status.savedCount,
-                            status.duplicateCount,
-                            status.skippedCount,
-                            status.unresolvedCount,
+                            job.importedCount,
+                            job.duplicateCount,
+                            job.skippedCount,
+                            job.unresolvedCount,
                         ),
                     )
+                }
+                if (status.partial) {
+                    BodyLine(stringResource(R.string.update_status_reason_partial))
                 }
             }
 
@@ -105,7 +129,7 @@ fun UpdateStatusSheet(
                 if (!status.online) {
                     BodyLine(stringResource(R.string.update_status_offline_body))
                 }
-                if (status.attention.isEmpty()) {
+                if (status.attention.isEmpty() && status.syncError == null) {
                     BodyLine(stringResource(R.string.update_status_no_attention))
                 } else {
                     status.attention.forEach { item ->
@@ -117,6 +141,69 @@ fun UpdateStatusSheet(
             Spacer(modifier = Modifier.height(PamSpacing.sm))
         }
     }
+}
+
+/**
+ * The single manual trigger. It is disabled while any pipeline run owns the flight, shows a real
+ * progress bar only when the pipeline reported a page total, and keeps the error's "Coba lagi"
+ * inline so recovery never requires reopening the sheet.
+ */
+@Composable
+private fun SyncTrigger(status: UpdateStatusUi, onSyncNow: () -> Unit) {
+    if (status.syncRunning || status.isActive) {
+        PillButton(
+            text = stringResource(R.string.update_status_sync_running),
+            onClick = {},
+            enabled = false,
+            loading = true,
+            modifier = Modifier.fillMaxWidth().padding(top = PamSpacing.xs),
+        )
+        BodyLine(stageLine(status))
+        if (status.hasDefiniteProgress) {
+            val expected = status.pagesExpected ?: 0
+            val fraction = (status.pagesProcessed.toFloat() / expected.toFloat()).coerceIn(0f, 1f)
+            LinearProgressIndicator(
+                progress = { fraction },
+                modifier = Modifier.fillMaxWidth().padding(vertical = PamSpacing.xxs),
+                color = Violet,
+            )
+            BodyLine(stringResource(R.string.update_status_sync_progress, status.pagesProcessed, expected))
+        } else {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth().padding(vertical = PamSpacing.xxs),
+                color = Violet,
+            )
+        }
+        return
+    }
+
+    if (status.syncConflict) {
+        BodyLine(stringResource(R.string.update_status_sync_conflict))
+    }
+    status.syncError?.let { error ->
+        BodyLine(stringResource(appErrorRes(error)))
+    }
+    PillButton(
+        text = if (status.syncError != null) {
+            stringResource(R.string.update_status_sync_retry)
+        } else {
+            stringResource(R.string.update_status_sync_now)
+        },
+        onClick = onSyncNow,
+        modifier = Modifier.fillMaxWidth().padding(top = PamSpacing.xs),
+        leadingIcon = Icons.Rounded.Refresh,
+        style = if (status.syncError != null) PillButtonStyle.Primary else PillButtonStyle.Secondary,
+    )
+}
+
+/** Stage copy comes from the pipeline's own phase, not from a timer or an optimistic guess. */
+@Composable
+private fun stageLine(status: UpdateStatusUi): String = when {
+    !status.online -> stringResource(R.string.update_status_stage_offline)
+    status.pendingUpload -> stringResource(R.string.update_status_stage_upload)
+    status.categoryPhase == CategoryQueuePhase.RUNNING ->
+        stringResource(R.string.update_status_stage_categorizing)
+    else -> stringResource(R.string.update_status_stage_checking)
 }
 
 @Composable

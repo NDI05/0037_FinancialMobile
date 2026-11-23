@@ -1,9 +1,14 @@
 package com.pam.recap.ui.feature.status
 
+import com.pam.recap.core.result.AppError
+import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.CategoryQueuePhase
 import com.pam.recap.domain.model.CategoryQueueSnapshot
 import com.pam.recap.domain.model.SyncPhase
+import com.pam.recap.domain.model.ImportJob
+import com.pam.recap.domain.model.ImportState
 import com.pam.recap.domain.model.SyncSnapshot
+import com.pam.recap.domain.usecase.SyncSessionState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -22,7 +27,8 @@ class UpdateStatusMapperTest {
         sync: SyncSnapshot = SyncSnapshot(),
         category: CategoryQueueSnapshot = CategoryQueueSnapshot(),
         online: Boolean = true,
-    ) = UpdateStatusMapper.map(sync = sync, category = category, online = online)
+        session: SyncSessionState = SyncSessionState(),
+    ) = UpdateStatusMapper.map(sync = sync, category = category, online = online, session = session)
 
     @Test
     fun `a finished healthy run is reported as succeeded with its own timestamp`() {
@@ -150,5 +156,80 @@ class UpdateStatusMapperTest {
         assertEquals(RelativeTime.Hours(3), RelativeTime.of(now - 3.hours, now))
         assertEquals(RelativeTime.Days(2), RelativeTime.of(now - 2.days, now))
         assertTrue(RelativeTime.of(now - 30.days, now) is RelativeTime.On)
+    }
+
+    @Test
+    fun `a running manual sync is shown with its real page progress`() {
+        val ui = map(
+            sync = SyncSnapshot(phase = SyncPhase.SYNCING),
+            session = SyncSessionState(
+                running = true,
+                month = JakartaMonth.of(now),
+                attempt = 3,
+                pagesProcessed = 2,
+                pagesExpected = 6,
+            ),
+        )
+
+        assertTrue(ui.syncBusy)
+        assertTrue(ui.isActive)
+        assertEquals(3L, ui.syncAttempt)
+        assertEquals(2, ui.pagesProcessed)
+        assertEquals(6, ui.pagesExpected)
+        assertTrue(ui.hasDefiniteProgress)
+    }
+
+    @Test
+    fun `an unknown page total keeps the sheet indeterminate instead of inventing a percentage`() {
+        val ui = map(
+            session = SyncSessionState(running = true, month = JakartaMonth.of(now), pagesProcessed = 1),
+        )
+
+        assertTrue(ui.syncBusy)
+        assertFalse(ui.hasDefiniteProgress)
+        assertEquals(null, ui.pagesExpected)
+    }
+
+    @Test
+    fun `a sync failure keeps its reason and is distinguishable from a conflict`() {
+        val failed = map(
+            session = SyncSessionState(
+                month = JakartaMonth.of(now),
+                error = AppError.Network("io"),
+            ),
+        )
+        assertEquals(AppError.Network("io"), failed.syncError)
+        assertFalse(failed.syncConflict)
+        assertFalse(failed.syncBusy)
+
+        val conflict = map(
+            session = SyncSessionState(month = JakartaMonth.of(now), conflict = true),
+        )
+        assertEquals(null, conflict.syncError)
+        assertTrue(conflict.syncConflict)
+    }
+
+    @Test
+    fun `the last run keeps the matched count separate from saved and categorised counts`() {
+        val job = ImportJob(
+            id = "job-9",
+            ownerId = "u",
+            month = JakartaMonth.of(now),
+            state = ImportState.COMPLETE,
+            pagesProcessed = 6,
+            pagesExpected = 6,
+            matchedCount = 9,
+            importedCount = 7,
+            duplicateCount = 1,
+            skippedCount = 1,
+            unresolvedCount = 0,
+            templateVersion = "v1",
+            startedAt = now,
+            finishedAt = now,
+        )
+        val ui = map(session = SyncSessionState(month = JakartaMonth.of(now), lastJob = job))
+
+        assertEquals(9, ui.lastJob?.matchedCount)
+        assertFalse(ui.syncBusy)
     }
 }

@@ -104,10 +104,8 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun OverviewScreen(
-    onOpenSettings: () -> Unit,
     onOpenTransactions: (categoryCode: String?, monthId: String?) -> Unit,
     onOpenTransaction: (String) -> Unit,
-    onOpenImport: (monthId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: OverviewViewModel = hiltViewModel(),
 ) {
@@ -122,12 +120,8 @@ fun OverviewScreen(
             GlassTopBar(
                 title = stringResource(R.string.overview_title),
                 actions = {
+                    // Settings lives in the bottom navigation; the only chrome here is status.
                     com.pam.recap.ui.feature.status.UpdateStatusTopBarAction()
-                    com.pam.recap.ui.components.CircularIconWell(
-                        icon = Icons.Rounded.Settings,
-                        contentDescription = stringResource(R.string.settings_title),
-                        onClick = onOpenSettings,
-                    )
                 },
             )
         },
@@ -207,15 +201,6 @@ fun OverviewScreen(
 
                 item { CompositionCard(summary = summary) }
 
-                if (summary.coverage != CoverageStatus.COMPLETE) {
-                    item {
-                        CoverageBanner(
-                            coverage = summary.coverage,
-                            onOpenImport = { onOpenImport(month.id()) },
-                        )
-                    }
-                }
-
                 if (summary.hasData) {
                     item {
                         CategoryBreakdown(
@@ -226,10 +211,7 @@ fun OverviewScreen(
                     }
                 } else {
                     item {
-                        EmptyMonthCard(
-                            coverage = summary.coverage,
-                            onOpenImport = { onOpenImport(month.id()) },
-                        )
+                        EmptyMonthCard(coverage = summary.coverage)
                     }
                 }
 
@@ -263,13 +245,6 @@ fun OverviewScreen(
                             modifier = Modifier.padding(horizontal = 0.dp),
                         )
                     }
-                }
-
-                item {
-                    ImportCta(
-                        lastImportAt = state.connection?.lastImportAt,
-                        onOpenImport = { onOpenImport(month.id()) },
-                    )
                 }
             } else if (state.error != null) {
                 item {
@@ -503,27 +478,6 @@ private fun ClassifiedRow(label: String, amount: Money, tone: MoneyTone) {
     }
 }
 
-@Composable
-private fun CoverageBanner(coverage: CoverageStatus, onOpenImport: () -> Unit) {
-    NoticeBanner(
-        text = stringResource(coverageBannerRes(coverage)),
-        tone = when (coverage) {
-            CoverageStatus.PARTIAL -> MoneyTone.Expense
-            CoverageStatus.FAILED -> MoneyTone.Expense
-            else -> MoneyTone.Neutral
-        },
-        icon = Icons.Rounded.Refresh,
-        action = {
-            Text(
-                text = stringResource(R.string.overview_import_now),
-                style = LabelM,
-                color = OnInk,
-                modifier = Modifier.clickable(onClick = onOpenImport),
-            )
-        },
-    )
-}
-
 /** Category breakdown: glyph, label, transaction count, amount and a share bar (FR-30/FR-32). */
 @Composable
 private fun CategoryBreakdown(
@@ -653,7 +607,9 @@ private fun RefundBadge() {
 }
 
 @Composable
-private fun EmptyMonthCard(coverage: CoverageStatus, onOpenImport: () -> Unit) {
+private fun EmptyMonthCard(coverage: CoverageStatus) {
+    // The month-empty state stays honest (absence of matching email is not "no spending"); the
+    // import CTA that used to live here moved into "Status pembaruan".
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         EyebrowText(text = stringResource(R.string.overview_empty_eyebrow))
         Spacer(modifier = Modifier.height(PamSpacing.xs))
@@ -662,38 +618,6 @@ private fun EmptyMonthCard(coverage: CoverageStatus, onOpenImport: () -> Unit) {
             style = BodyM,
             color = OnInkMuted,
         )
-        Spacer(modifier = Modifier.height(PamSpacing.sm))
-        PillButton(
-            text = stringResource(R.string.overview_import_now),
-            onClick = onOpenImport,
-            style = PillButtonStyle.Secondary,
-        )
-    }
-}
-
-@Composable
-private fun ImportCta(lastImportAt: kotlin.time.Instant?, onOpenImport: () -> Unit) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                EyebrowText(text = stringResource(R.string.overview_import_eyebrow))
-                Spacer(modifier = Modifier.height(PamSpacing.xxs))
-                Text(
-                    text = if (lastImportAt == null) {
-                        stringResource(R.string.overview_never_imported)
-                    } else {
-                        stringResource(R.string.overview_last_import, PamDateFormat.date(lastImportAt))
-                    },
-                    style = TitleS,
-                    color = OnInkMuted,
-                )
-            }
-            PillButton(
-                text = stringResource(R.string.overview_import_now),
-                onClick = onOpenImport,
-                leadingIcon = Icons.Rounded.Refresh,
-            )
-        }
     }
 }
 

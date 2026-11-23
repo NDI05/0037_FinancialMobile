@@ -1,5 +1,9 @@
 package com.pam.recap.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -17,12 +21,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -43,14 +52,18 @@ import com.pam.recap.ui.theme.PamSize
 import com.pam.recap.ui.theme.PamSpacing
 import com.pam.recap.ui.theme.Violet
 import com.pam.recap.ui.theme.WarningAmber
+import kotlinx.coroutines.delay
+
+/** How long the transient status word stays on screen after a change (2.5 s, inside the 2–3 s spec). */
+private const val LABEL_HOLD_MILLIS = 2_500L
 
 /**
  * Compact automatic-update indicator for a glass top bar.
  *
- * Icon + word, never colour alone. The animated ring appears only for work that is actually running
- * and is replaced by a static icon when the OS asks for reduced motion. The whole pill is the touch
- * target (>= 48 dp) and the accessible name repeats the state, so TalkBack does not depend on the
- * visual label alone.
+ * The icon is always present and is the whole >= 48 dp touch target; a short word fades in next to
+ * it only when the status actually changes, holds ~2.5 s, then fades out while the icon stays. The
+ * animation is keyed to the status token, so recomposition (scroll, font change, sheet open) never
+ * replays it. The accessible name always carries the current status, independent of the visual fade.
  */
 @Composable
 fun UpdateStatusPill(
@@ -59,16 +72,25 @@ fun UpdateStatusPill(
     modifier: Modifier = Modifier,
 ) {
     val reducedMotion = LocalReducedMotion.current
-    // At very large text the word no longer fits next to the screen title; the icon keeps the state
-    // visible and the content description keeps it audible.
-    val showLabel = LocalDensity.current.fontScale < 1.5f
+    // At very large text the transient word no longer fits next to the screen title; the icon keeps
+    // the state visible and the content description keeps it audible.
+    val showLabel = LocalDensity.current.fontScale < 1.5f && !reducedMotion
     val label = stringResource(status.headline.labelRes())
-    val spoken = stringResource(R.string.update_status_open) + ": " + label
+    val spoken = spokenStatus(status, label)
     val tint = status.headline.tint()
+    val token = "${status.headline}:${status.syncAttempt}:${status.attemptToken()}"
+
+    var labelVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(token) {
+        if (!showLabel) return@LaunchedEffect
+        labelVisible = true
+        delay(LABEL_HOLD_MILLIS)
+        labelVisible = false
+    }
 
     Row(
         modifier = modifier
-            .sizeIn(minHeight = PamSize.minTouch)
+            .sizeIn(minHeight = PamSize.minTouch, minWidth = PamSize.minTouch)
             .clip(RoundedCornerShape(PamRadius.pill))
             .clickable(onClick = onClick)
             .semantics {
@@ -79,6 +101,19 @@ fun UpdateStatusPill(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
     ) {
+        AnimatedVisibility(
+            visible = labelVisible,
+            enter = fadeIn(tween(220)),
+            exit = fadeOut(tween(420)),
+        ) {
+            Text(
+                text = label,
+                style = LabelM,
+                color = tint,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         if (status.isActive && !reducedMotion) {
             CircularProgressIndicator(
                 modifier = Modifier.size(16.dp),
@@ -93,17 +128,24 @@ fun UpdateStatusPill(
                 modifier = Modifier.size(20.dp),
             )
         }
-        if (showLabel) {
-            Text(
-                text = label,
-                style = LabelM,
-                color = tint,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
     }
 }
+
+/** The accessible name is a full sentence even after the visual word has faded. */
+@Composable
+private fun spokenStatus(status: UpdateStatusUi, label: String): String {
+    val open = stringResource(R.string.update_status_open)
+    val details = buildList {
+        if (!status.online) add(stringResource(R.string.update_status_indicator_offline))
+        if (status.pendingUpload) add(stringResource(R.string.update_status_cd_pending))
+        if (status.needsAttention) add(stringResource(R.string.update_status_cd_attention))
+    }
+    return if (details.isEmpty()) "$open: $label" else "$open: $label. ${details.joinToString(". ")}"
+}
+
+/** One value that changes when the status meaningfully changes; used only as an animation key. */
+private fun UpdateStatusUi.attemptToken(): Int =
+    headline.ordinal * 31 + (if (pendingUpload) 1 else 0) + (if (online) 0 else 2)
 
 private fun UpdateHeadline.labelRes(): Int = when (this) {
     UpdateHeadline.NEEDS_ATTENTION -> R.string.update_status_indicator_attention

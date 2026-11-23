@@ -110,7 +110,13 @@ fun AuroraBackdrop(modifier: Modifier = Modifier) {
 }
 
 /**
- * Centred title with circular wells on either side, matching the reference's quiet chrome.
+ * Title centred against the *screen* width, with circular wells overlaid on either side.
+ *
+ * Using an overlay Box instead of a weighted Row is deliberate: a Row centres the title in the
+ * space left over after the back well and the trailing actions, so the title drifts whenever a
+ * status icon appears, a back button is added, or a long title at 200 % font grows. Here the text
+ * always measures the full screen width and is centred on it; the side wells are drawn on top and
+ * never move it.
  */
 @Composable
 fun GlassTopBar(
@@ -120,26 +126,14 @@ fun GlassTopBar(
     subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    Row(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = PamSpacing.md, vertical = PamSpacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
+        contentAlignment = Alignment.Center,
     ) {
-        if (onBack != null) {
-            CircularIconWell(
-                icon = Icons.Rounded.ArrowBack,
-                contentDescription = stringResource(com.pam.recap.R.string.action_back),
-                onClick = onBack,
-            )
-        } else {
-            Spacer(modifier = Modifier.size(PamSize.iconButton))
-        }
-
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = PamSpacing.xs),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -149,6 +143,7 @@ fun GlassTopBar(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
             if (subtitle != null) {
                 Text(
@@ -158,11 +153,20 @@ fun GlassTopBar(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
-
+        if (onBack != null) {
+            CircularIconWell(
+                icon = Icons.Rounded.ArrowBack,
+                contentDescription = stringResource(com.pam.recap.R.string.action_back),
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.CenterStart),
+            )
+        }
         Row(
+            modifier = Modifier.align(Alignment.CenterEnd),
             horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
             verticalAlignment = Alignment.CenterVertically,
             content = actions,

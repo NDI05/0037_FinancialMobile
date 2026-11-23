@@ -8,9 +8,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.unit.Dp
+import org.junit.Assert.assertEquals
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.pam.recap.R
@@ -40,6 +42,54 @@ class UpdateStatusTopBarTest {
     private fun render(widthDp: Dp) {
         width.value = widthDp
         compose.waitForIdle()
+    }
+
+    @Test
+    fun `the title centre does not move when back and trailing controls appear`() {
+        val showChrome = mutableStateOf(false)
+        compose.setContent {
+            PamTheme {
+                Box(modifier = Modifier.width(width.value)) {
+                    GlassTopBar(
+                        title = "Ringkasan",
+                        onBack = if (showChrome.value) ({}) else null,
+                        actions = {
+                            if (showChrome.value) {
+                                UpdateStatusPill(
+                                    status = UpdateStatusUi(headline = UpdateHeadline.NEEDS_ATTENTION),
+                                    onClick = {},
+                                )
+                            }
+                        },
+                    )
+                }
+            }
+        }
+
+        listOf(360.dp, 393.dp, 412.dp).forEach { widthDp ->
+            render(widthDp)
+            val bare = compose.onNodeWithText("Ringkasan").getUnclippedBoundsInRoot()
+            showChrome.value = true
+            compose.waitForIdle()
+            val chromed = compose.onNodeWithText("Ringkasan").getUnclippedBoundsInRoot()
+
+            val bareCentre = (bare.left + bare.right) / 2
+            val chromedCentre = (chromed.left + chromed.right) / 2
+            val root = compose.onRoot().getUnclippedBoundsInRoot()
+            val screenCentre = (root.left + root.right) / 2
+            assertTrue(
+                "title centre must equal screen centre at $widthDp (bare=$bareCentre, chrome=$chromedCentre, root=$screenCentre)",
+                kotlin.math.abs((bareCentre - screenCentre).value) < 1f &&
+                    kotlin.math.abs((chromedCentre - screenCentre).value) < 1f,
+            )
+            assertEquals(
+                "adding chrome must not shift the title at $widthDp",
+                bareCentre,
+                chromedCentre,
+            )
+            showChrome.value = false
+            compose.waitForIdle()
+        }
     }
 
     @Test

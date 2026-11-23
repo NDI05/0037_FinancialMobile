@@ -1,7 +1,11 @@
 package com.pam.recap.ui.components
 
 import android.content.Context
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -61,6 +65,37 @@ class UpdateStatusPillTest {
             .performClick()
 
         assertTrue(opened)
+    }
+
+    @Test
+    fun `the transient word appears once and a recomposition does not replay it`() {
+        var other by mutableStateOf(0)
+        compose.setContent {
+            PamTheme {
+                CompositionLocalProvider(LocalDensity provides Density(density = 2.75f, fontScale = 1f)) {
+                    Column {
+                        androidx.compose.material3.Text("frame $other")
+                        UpdateStatusPill(
+                            status = UpdateStatusUi(headline = UpdateHeadline.NEEDS_ATTENTION),
+                            onClick = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        compose.onNodeWithText(label).assertExists()
+        // Run past the ~2.5 s hold: the icon stays, the word fades away.
+        compose.mainClock.advanceTimeBy(4_000)
+        compose.waitForIdle()
+        compose.onNodeWithText(label).assertDoesNotExist()
+        compose.onNodeWithContentDescription(spoken).assertExists()
+
+        // Any unrelated recomposition (here a text change beside it) must not restart the animation.
+        other = 1
+        compose.waitForIdle()
+        compose.onNodeWithText(label).assertDoesNotExist()
+        compose.onNodeWithContentDescription(spoken).assertExists()
     }
 
     @Test

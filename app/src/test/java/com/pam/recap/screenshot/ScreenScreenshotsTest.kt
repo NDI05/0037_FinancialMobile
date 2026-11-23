@@ -92,8 +92,6 @@ import com.pam.recap.ui.feature.entry.ManualEntryScreen
 import com.pam.recap.ui.feature.entry.ManualEntryViewModel
 import com.pam.recap.ui.feature.gmail.GmailConnectScreen
 import com.pam.recap.ui.feature.gmail.GmailConnectViewModel
-import com.pam.recap.ui.feature.importjob.ImportJobScreen
-import com.pam.recap.ui.feature.importjob.ImportJobViewModel
 import com.pam.recap.ui.feature.overview.OverviewScreen
 import com.pam.recap.ui.feature.overview.OverviewViewModel
 import com.pam.recap.ui.feature.settings.ConsentHistoryScreen
@@ -325,10 +323,8 @@ class ScreenScreenshotsTest {
 
         shot("01-overview") {
             OverviewScreen(
-                onOpenSettings = {},
                 onOpenTransactions = { _, _ -> },
                 onOpenTransaction = {},
-                onOpenImport = {},
                 viewModel = viewModel,
             )
         }
@@ -723,42 +719,6 @@ class ScreenScreenshotsTest {
 
         shot("12-manual-entry") {
             ManualEntryScreen(onBack = {}, onSaved = {}, viewModel = viewModel)
-        }
-    }
-
-    // ---------------------------------------------------------------------------------------
-    // 13 Import job: complete, and 13b the partial-page failure state worth seeing
-    // ---------------------------------------------------------------------------------------
-    @Test
-    fun importJob() {
-        runBlocking { gmail.authorize() }
-        val viewModel = ImportJobViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("monthId" to "2026-02")),
-            sessions = sessions,
-            imports = imports,
-            sync = sync,
-            resolveInitialMonth = resolveMonth,
-        )
-
-        shot("13-import-job") {
-            ImportJobScreen(onBack = {}, onOpenGmail = {}, viewModel = viewModel)
-        }
-    }
-
-    @Test
-    fun importJobPartial() {
-        runBlocking { gmail.authorize() }
-        gmail.setScenario(FixtureScenario.PARTIAL_FAILURE)
-        val viewModel = ImportJobViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("monthId" to "2026-02")),
-            sessions = sessions,
-            imports = imports,
-            sync = sync,
-            resolveInitialMonth = resolveMonth,
-        )
-
-        shot("13b-import-job-partial") {
-            ImportJobScreen(onBack = {}, onOpenGmail = {}, viewModel = viewModel)
         }
     }
 
