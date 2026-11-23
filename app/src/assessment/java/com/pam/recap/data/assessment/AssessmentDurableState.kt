@@ -42,8 +42,13 @@ class AssessmentDurableState @Inject constructor(
      */
     @Synchronized
     fun write(ownerId: String?, name: String, value: String): Boolean {
-        val wrapped = wrappedSecrets.wrap(value.encodeToByteArray())
-        return prefs.edit().putString(key(ownerId, name), wrapped).commit()
+        // Keystore providers can throw (e.g. KeyPermanentlyInvalidatedException) instead of
+        // returning a value; a durable-write helper must report failure, never crash a caller that
+        // is already handling `false` as "not persisted".
+        val wrapped = runCatching { wrappedSecrets.wrap(value.encodeToByteArray()) }.getOrNull()
+            ?: return false
+        return runCatching { prefs.edit().putString(key(ownerId, name), wrapped).commit() }
+            .getOrDefault(false)
     }
 
     /** Removes every owner-scoped value, keeping only the global job index (used on sign-out). */

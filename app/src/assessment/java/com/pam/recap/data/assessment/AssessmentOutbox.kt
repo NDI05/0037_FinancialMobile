@@ -290,8 +290,11 @@ class AssessmentOutbox @Inject constructor(
      * durable semantics (month revision) must not treat a `false` write as success.
      */
     private fun writeMeta(ownerId: String, name: String, value: String): Boolean {
-        val wrapped = wrappedSecrets.wrap(value.encodeToByteArray())
-        return prefs.edit().putString(metaPrefix(ownerId) + name, wrapped).commit()
+        val wrapped = runCatching { wrappedSecrets.wrap(value.encodeToByteArray()) }.getOrNull()
+            ?: return false
+        return runCatching {
+            prefs.edit().putString(metaPrefix(ownerId) + name, wrapped).commit()
+        }.getOrDefault(false)
     }
 
     private fun readBucket(key: String): List<StagedTransaction> {
@@ -304,10 +307,12 @@ class AssessmentOutbox @Inject constructor(
     /** Returns the durable outcome of the bucket write ([rows] empty means deletion). */
     private fun writeBucket(key: String, rows: List<StagedTransaction>): Boolean {
         if (rows.isEmpty()) {
-            return prefs.edit().remove(key).commit()
+            return runCatching { prefs.edit().remove(key).commit() }.getOrDefault(false)
         }
-        val wrapped = wrappedSecrets.wrap(json.encodeToString(rows).encodeToByteArray())
-        return prefs.edit().putString(key, wrapped).commit()
+        val wrapped = runCatching {
+            wrappedSecrets.wrap(json.encodeToString(rows).encodeToByteArray())
+        }.getOrNull() ?: return false
+        return runCatching { prefs.edit().putString(key, wrapped).commit() }.getOrDefault(false)
     }
 
     private fun unwrap(value: String): String? =

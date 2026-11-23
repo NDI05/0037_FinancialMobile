@@ -295,8 +295,40 @@ class AssessmentDurabilityTest {
         assertEquals(1, server.batches.size)
         assertEquals("COMPLETE", server.finalStates.single())
         assertNull("acknowledged run must clear the pending journal", journal.readPending(ownerId))
-        // A second call cannot re-send anything: the run is already acknowledged and cleared.
-        assertEquals(1, server.batches.size)
+
+        // The next lifecycle tick runs the same pipeline with a fresh (deduped-to-empty) local job.
+        // It must create/close an EMPTY server job but never resend the acknowledged rows.
+        val nextTick = uploader.upload(ownerId, importJob(id = "job-2"))
+        assertTrue("next tick must not fail, got $nextTick", nextTick is Outcome.Success)
+        assertEquals("acknowledged rows must not be re-sent on the next tick", 1, server.batches.size)
+        assertEquals(listOf("a".repeat(64), "b".repeat(64)), server.sentFingerprints.sorted())
+
+        // The explicit recovery entry point must also be a no-op once the run is acknowledged.
+        val resumed = uploader.resumePending(ownerId)
+        assertEquals(Outcome.Success("no_pending"), resumed)
+        assertEquals("recovery entry point must not resend", 1, server.batches.size)
+        assertNull(journal.readPending(ownerId))
+    }
+
+    @Test
+    fun `a throwing keystore wrapper is a durable write failure, not a crash`() = runTest {
+        val failingSecrets = ThrowingSecretStore()
+        val durable = AssessmentDurableState(context, failingSecrets)
+        assertFalse("wrap() failure must return false", durable.write(ownerId, "consent_ledger", "[]"))
+        assertNull(durable.read(ownerId, "consent_ledger"))
+
+        val outbox = AssessmentOutbox(context, failingSecrets)
+        val row = AssessmentOutbox.StagedTransaction.fromDomain(
+            transaction(id = "tx-1", fingerprint = "a".repeat(64), jobId = "job-1"),
+        )
+        assertEquals(0, outbox.insert(ownerId, listOf(row)).inserted)
+        assertFalse("replace must survive a throwing wrapper", outbox.replace(ownerId, row))
+        assertEquals(
+            "an unwritable revision must not advance",
+            0,
+            outbox.bumpMonthRevision(ownerId, month),
+        )
+        assertEquals(0, outbox.rows(ownerId).size)
     }
 
     @Test
@@ -556,6 +588,13 @@ class AssessmentDurabilityTest {
         override fun commit(): Boolean = false
 
         override fun apply() = Unit
+    }
+
+    /** Keystore stand-in whose wrap/unwrap always throw, like an invalidated key. */
+    private class ThrowingSecretStore : WrappedSecretStore {
+        override fun wrap(plain: ByteArray): String = throw IllegalStateException("keystore_invalidated")
+
+        override fun unwrap(wrapped: String): ByteArray = throw IllegalStateException("keystore_invalidated")
     }
 
     /** XOR + Base64 stand-in for the Keystore wrapper; asserts only that values are encrypted. */
