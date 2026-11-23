@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/pam/recap/backend-go/internal/crypto"
@@ -23,6 +24,7 @@ type BudgetPlan struct {
 	Attributes          map[string]any `json:"attributes,omitempty"`
 	Revision            int            `json:"revision"`
 	GapMinor            int64          `json:"gapMinor"`
+	TotalLimitMinor     int64          `json:"totalLimitMinor"`
 	CreatedAt           time.Time      `json:"createdAt"`
 	UpdatedAt           time.Time      `json:"updatedAt"`
 }
@@ -75,10 +77,10 @@ func (s *Store) GetBudgetPlan(ctx context.Context, ownerID, monthID string) (Bud
 	if err := rows.Err(); err != nil {
 		return BudgetPlan{}, err
 	}
-	plan.GapMinor = plan.ExpectedIncomeMinor - plan.PlannedSavingsMinor
 	for _, limit := range plan.Limits {
-		plan.GapMinor -= limit.AmountMinor
+		plan.TotalLimitMinor += limit.AmountMinor
 	}
+	plan.GapMinor = plan.ExpectedIncomeMinor - plan.PlannedSavingsMinor - plan.TotalLimitMinor
 	return plan, nil
 }
 
@@ -90,10 +92,15 @@ func (s *Store) PutBudgetPlan(ctx context.Context, ownerID, monthID string, inpu
 		input.PlannedSavingsMinor < 0 || input.PlannedSavingsMinor > 1_000_000_000_000_000 {
 		return BudgetPlan{}, ErrConflict
 	}
+	seenLimits := make(map[string]bool, len(input.Limits))
 	for _, limit := range input.Limits {
 		if limit.AmountMinor < 0 || limit.AmountMinor > 1_000_000_000_000_000 {
 			return BudgetPlan{}, ErrConflict
 		}
+		if seenLimits[limit.CategoryID] {
+			return BudgetPlan{}, fmt.Errorf("invalid budget: duplicate categoryId in limits")
+		}
+		seenLimits[limit.CategoryID] = true
 		if err := s.ensureCategory(ctx, ownerID, limit.CategoryID); err != nil {
 			return BudgetPlan{}, err
 		}

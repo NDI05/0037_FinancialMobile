@@ -116,11 +116,12 @@ func (s *Store) tryCreateIdempotent(ctx context.Context, ownerID, key, requestHa
 		 month_id, fingerprint, parser_version, parser_confidence, category_origin,
 		 sensitive_ciphertext, sensitive_iv, sensitive_tag, key_version,
 		 is_internal_transfer, linked_refund_of, revision, created_at, updated_at)
-		VALUES (?, ?, ?, ?, 'MANUAL', ?, ?, ?, ?, ?, NULL, 0, ?, ?, ?, ?, ?, ?, NULL, 0, ?, ?)`,
+		VALUES (?, ?, ?, ?, 'MANUAL', ?, ?, ?, ?, ?, NULL, 0, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
 		id, ownerID, nullableString(input.CategoryID), input.Direction, input.AmountMinor,
 		input.Currency, input.EventAt.UnixMilli(), monthIDFor(input.EventAt), fingerprint,
 		input.CategoryOrigin, sealed.Ciphertext, sealed.IV, sealed.Tag, s.KeyVersion,
-		boolInt(input.IsInternalTransfer), nowString(now), nowString(now))
+		boolInt(input.IsInternalTransfer), nullableString(input.LinkedRefundOf),
+		nowString(now), nowString(now))
 	if err != nil {
 		if isUnique(err.Error()) {
 			// Another writer may have committed the same key between our SELECT and INSERT.

@@ -2,7 +2,11 @@ package store
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -24,27 +28,114 @@ type Category struct {
 	UpdatedAt  time.Time
 }
 
-func (s *Store) ListCategories(ctx context.Context, ownerID string, q string) ([]Category, error) {
+type CategoryPage struct {
+	Items      []Category
+	NextCursor string
+}
+
+// ListCategories returns categories ordered by the stable (is_builtin DESC, code ASC, id ASC)
+// tuple. q filters the sealed label/code after decryption, so the cursor walks that same total
+// order instead of an index; a cursor is bound to owner+q and is rejected for another query.
+func (s *Store) ListCategories(ctx context.Context, ownerID, q string, limit int, cursor string) (CategoryPage, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	scope := categoryCursorScope(ownerID, q)
+	var after categoryCursor
+	haveAfter := false
+	if cursor != "" {
+		decoded, err := decodeCategoryCursor(cursor)
+		if err != nil || decoded.Scope != scope {
+			return CategoryPage{}, ErrInvalidCursor
+		}
+		after, haveAfter = decoded, true
+	}
 	rows, err := s.DB.QueryContext(ctx, `SELECT id, code, kind, label_ciphertext, label_iv, label_tag,
 		color, is_builtin, attributes_ciphertext, attributes_iv, attributes_tag, key_version,
 		revision, created_at, updated_at
 		FROM categories WHERE owner_id = ? AND deleted_at IS NULL
-		ORDER BY is_builtin DESC, code ASC`, ownerID)
+		ORDER BY is_builtin DESC, code ASC, id ASC`, ownerID)
 	if err != nil {
-		return nil, err
+		return CategoryPage{}, err
 	}
 	defer rows.Close()
-	var out []Category
+	var matches []Category
 	for rows.Next() {
 		category, err := scanCategory(ctx, rows, s, ownerID)
 		if err != nil {
-			return nil, err
+			return CategoryPage{}, err
 		}
-		if q == "" || containsFold(category.Label, q) || containsFold(category.Code, q) {
-			out = append(out, category)
+		if q != "" && !containsFold(category.Label, q) && !containsFold(category.Code, q) {
+			continue
 		}
+		if haveAfter && !categoryAfter(category, after) {
+			continue
+		}
+		matches = append(matches, category)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return CategoryPage{}, err
+	}
+	page := CategoryPage{}
+	if len(matches) > limit {
+		page.Items = matches[:limit]
+		last := page.Items[len(page.Items)-1]
+		page.NextCursor = encodeCategoryCursor(categoryCursorFor(last, scope))
+	} else {
+		page.Items = matches
+	}
+	return page, nil
+}
+
+type categoryCursor struct {
+	Builtin bool   `json:"b"`
+	Code    string `json:"c"`
+	ID      string `json:"i"`
+	Scope   string `json:"s"`
+}
+
+func categoryCursorScope(ownerID, q string) string {
+	sum := sha256.Sum256([]byte(ownerID + "\x00" + strings.ToLower(strings.TrimSpace(q))))
+	return hex.EncodeToString(sum[:8])
+}
+
+func categoryCursorFor(category Category, scope string) categoryCursor {
+	return categoryCursor{Builtin: category.IsBuiltin, Code: category.Code, ID: category.ID, Scope: scope}
+}
+
+func encodeCategoryCursor(cursor categoryCursor) string {
+	raw, _ := json.Marshal(cursor)
+	return base64.RawURLEncoding.EncodeToString(raw)
+}
+
+func decodeCategoryCursor(value string) (categoryCursor, error) {
+	raw, err := base64.RawURLEncoding.DecodeString(value)
+	if err != nil {
+		return categoryCursor{}, err
+	}
+	var cursor categoryCursor
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&cursor); err != nil || cursor.ID == "" || len(cursor.Scope) != 16 {
+		return categoryCursor{}, fmt.Errorf("invalid cursor")
+	}
+	return cursor, nil
+}
+
+// categoryAfter reports whether category sorts strictly after the cursor position in the
+// (built-in first, code, id) order.
+func categoryAfter(category Category, cursor categoryCursor) bool {
+	if category.IsBuiltin != cursor.Builtin {
+		// Built-in rows (rank 0) sort before custom rows (rank 1).
+		return !category.IsBuiltin
+	}
+	if category.Code != cursor.Code {
+		return category.Code > cursor.Code
+	}
+	return category.ID > cursor.ID
 }
 
 func (s *Store) GetCategory(ctx context.Context, ownerID, id string) (Category, error) {

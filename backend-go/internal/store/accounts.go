@@ -65,30 +65,43 @@ var builtinCategories = []builtinCategory{
 // CreateAccount inserts the account, its 11 built-in categories and the per-account fingerprint
 // key in one transaction. A duplicate email returns ErrEmailExists without leaking details.
 func (s *Store) CreateAccount(ctx context.Context, email, displayName string, digest PasswordDigest, now time.Time) (Account, error) {
-	ownerID := OwnerIDForEmail(email)
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return Account{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if _, err := s.insertAccountTx(ctx, tx, email, displayName, digest, "USER", now); err != nil {
+		return Account{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Account{}, err
+	}
+	return s.FindAccountByEmail(ctx, email)
+}
 
-	_, err = tx.ExecContext(ctx, `INSERT INTO users
+// insertAccountTx inserts the account, its 11 built-in categories and the per-account fingerprint
+// key. The caller owns the transaction so admin invitation acceptance can mark the invitation in
+// the same atomic step.
+func (s *Store) insertAccountTx(ctx context.Context, tx *sql.Tx, email, displayName string,
+	digest PasswordDigest, role string, now time.Time) (string, error) {
+	ownerID := OwnerIDForEmail(email)
+	_, err := tx.ExecContext(ctx, `INSERT INTO users
 		(owner_id, email, display_name, salt, password_hash, kdf, created_at, last_seen_at,
 		 role, status, auth_version, revision, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'USER', 'ACTIVE', 0, 0, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', 0, 0, ?)`,
 		ownerID, NormalizeEmail(email), nullString(displayName), digest.Salt, digest.Hash,
-		digest.KDF, nowString(now), nowString(now), nowString(now))
+		digest.KDF, nowString(now), nowString(now), role, nowString(now))
 	if err != nil {
 		if isUnique(err.Error()) {
-			return Account{}, ErrEmailExists
+			return "", ErrEmailExists
 		}
-		return Account{}, fmt.Errorf("insert account: %w", err)
+		return "", fmt.Errorf("insert account: %w", err)
 	}
 
 	for _, category := range builtinCategories {
 		label, err := crypto.SealJSON(category.Label, s.DataKey, s.KeyVersion, ownerID, "category_label")
 		if err != nil {
-			return Account{}, err
+			return "", err
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO categories
 			(id, owner_id, code, kind, label_ciphertext, label_iv, label_tag, color,
@@ -96,29 +109,25 @@ func (s *Store) CreateAccount(ctx context.Context, email, displayName string, di
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 0, ?, ?)`,
 			NewID("cat"), ownerID, category.Code, category.Kind, label.Ciphertext, label.IV,
 			label.Tag, category.Color, s.KeyVersion, nowString(now), nowString(now)); err != nil {
-			return Account{}, fmt.Errorf("seed category %s: %w", category.Code, err)
+			return "", fmt.Errorf("seed category %s: %w", category.Code, err)
 		}
 	}
 
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
-		return Account{}, err
+		return "", err
 	}
 	sealed, err := crypto.Seal(key, s.DataKey, s.KeyVersion, ownerID, "fingerprint")
 	if err != nil {
-		return Account{}, err
+		return "", err
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO account_keys
 		(owner_id, key_version, fingerprint_ciphertext, fingerprint_iv, fingerprint_tag, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)`,
 		ownerID, s.KeyVersion, sealed.Ciphertext, sealed.IV, sealed.Tag, nowString(now)); err != nil {
-		return Account{}, err
+		return "", err
 	}
-
-	if err := tx.Commit(); err != nil {
-		return Account{}, err
-	}
-	return s.FindAccountByEmail(ctx, email)
+	return ownerID, nil
 }
 
 func (s *Store) FindAccountByEmail(ctx context.Context, email string) (Account, error) {
