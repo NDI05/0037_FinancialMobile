@@ -1,7 +1,7 @@
 # Progres harian PAM
 
 Pembaruan dokumentasi: **23 November 2026** · Zona waktu: **Asia/Jakarta (WIB)**.
-Branch kerja: `feat/c2-android` · Snapshot source: `ce56d9c`; [review PM terbaru](reviews/PM_REVIEW_CE56D9C_SYNC_RECOVERY.md): scheduler PASS, P1 recovery upload OPEN.
+Branch kerja: `feat/c2-android` · Snapshot source: `402e1b0`; [review PM ce56d9c](reviews/PM_REVIEW_CE56D9C_SYNC_RECOVERY.md) menjadi dasar perbaikan P1 yang kini digabung (`f640f2e`, `329552b`) dan diuji ulang.
 
 [README utama](../README.md) · [Checkpoint detail](DELIVERY_S2_S4_CHECKPOINT.md) ·
 [Mandat delivery](agent-prompts/MANDAT_S2_S4.md)
@@ -25,7 +25,7 @@ Dokumen sebelum repository tidak direkonstruksi tanpa bukti.
 
 | Tanggal (WIB) | Hasil / perubahan | Bukti dan tingkat verifikasi | Gate tersisa / tindak lanjut | Referensi commit |
 |---|---|---|---|---|
-| **23 Nov 2026** | Classifier mapping/ledger/lease dan koreksi UI; incremental sync, snapshot uploader lintas bulan, due-window worker, shared coordinator dan status UI; README/log harian/cleanup; mandat paralel disiapkan (belum menjalankan worker) | Android 311 tests, lint/build dan E2E panel TERLAPOR SE. PM fresh race tests CategoryWindow/AutoCategory PASS; probe real import+uploader/fake server FAIL: upload gagal→run baru EMPTY→cursor maju, kandidat server 0 dari 1 | **P1 recovery upload OPEN; S2 PARTIAL**. Resume pending run durable dan buktikan server readback; lalu S2.4 pagination/search, S2.5 budget/analysis, S3/S4. Benchmark, mailbox/perangkat nyata dan parser tetap gate terpisah | `746b598`, `f20b098`, `e033de3`, `82a1d22`, `a12cfae`, `ce56d9c` |
+| **23 Nov 2026** | Lane paralel S2/S3/S4: P1 recovery upload (f640f2e/329552b) digabung; S2.4 paging/filter/search + edit/hapus transaksi, anggaran server S2.5, kategori remote S3; S4 lampiran (C16/C17/C19) dan admin S4.2 (C21–C24); dinamis 4 entitas (atribut transaksi/anggaran) di wire+UI; CLI `pam-admin`; dokumentasi evidence/acceptance | Android **452 tests/63 class/0 failure** `--rerun-tasks`, lint **0 error/109 warning**; Go `test -count=1 ./...` semua paket ok + vet bersih; UAT emulator: lampiran create/read-restart/delete PASS, admin invite/list/edit-konflik/deactivate/audit PASS, atribut transaksi round-trip `{"sumber":"kamera"}` dibaca ulang dari server | **S2.4 PARTIAL** (C05/halaman kedua, C10 search kategori), **S2.5 PARTIAL** (C12/C15, UI perangkat), **S3 belum lulus gate penuh** (lihat [matriks](../delivery/ACCEPTANCE_C01_C25.md)), **S4.1 PARTIAL** (rename/search perangkat), **S4.2 PASS runtime** kecuali guard last-admin via UAT; gate eksternal tetap: mailbox nyata, benchmark berlabel, 36 email malformed, UAT pemilik, hosting/backup | `f640f2e`, `329552b`, `2440f52`, `5ea2e7e`, `fe8e4fd`, `3c5921c`, `cbcc787`, `92a3001`, `771795a`, `11c8cff`, `bd2bd43`, `a2c5b15`, `75247c0`, `402e1b0` |
 | **22 Nov 2026** | Strict parser split date/time, impor Go, gate C2A, consent classifier, SRS v0.5, Azure setup/smoke, typed adapter, reservation/ledger dan recovery awal | Evidence smoke sintetis dan harga resmi tersedia. Hasil unit/integration berkembang per checkpoint; bukan benchmark akurasi atau penerimaan semua runtime | Runtime/Android E2E dan defect review diteruskan 23 Nov; S2 tetap parsial | `2d279da`, `c9d4a57`, `ceea14a`, `0d80b50`, `c95d9d4`, `db05257`, `22c0674`, `f4ffe6f` |
 | **21 Nov 2026** | Onboarding/Gmail decline, batas HTML/MIME; kontrak v0.4; implementasi Go, JWT/refresh, finance/import/deletion dan interop | C1 lokal, interop dan emulator subset terdokumentasi. Snapshot tes historis di dokumen migrasi/README lama; tidak dijalankan ulang pada restrukturisasi README | Integrasi Android C2, cloud/operasional dan kelengkapan penilaian saat itu belum selesai | `a75a534`, `9c287fc`, `36581dd`, `9e9695d`, `d1a7751`, `d714d09` |
 | **20 Nov 2026** | Perbaikan analisis, opsi model lokal, perubahan koneksi Gmail ke IMAP/App Password, diagnosis MIME, kajian pedoman dan rancangan migrasi | Commit implementasi/review tersedia; tidak mengubahnya menjadi klaim semua Gmail nyata atau cloud telah lulus | MIME/import dan rancangan kepatuhan dilanjutkan pada hari berikutnya | `87bb997`, `97881a0`, `07fc806`, `9ccde29`, `8d1640d`, `c10ca67` |
@@ -40,6 +40,9 @@ Dokumen sebelum repository tidak direkonstruksi tanpa bukti.
 | [Verifikasi harga Azure](evidence/azure_price_verification_2026-11-22.md) | Tarif untuk estimasi token, bukan invoice |
 | [Review PM ce56d9c](reviews/PM_REVIEW_CE56D9C_SYNC_RECOVERY.md) | Reproduksi P1 upload/retry dan acceptance perbaikannya |
 | [Rencana AS/BC/UX/OBS](plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md) | Target acceptance, bukan hasil test |
+| [UAT lampiran S4.1](evidence/UAT_S4_ATTACHMENTS_2026-11-23.md) | Create/read-after-restart/delete PASS di emulator; bug parsing ditemukan dan diperbaiki |
+| [UAT admin S4.2](evidence/UAT_S4_ADMIN_2026-11-23.md) | Invite, list/cari, edit+konflik CAS, deactivate, audit setelah restart; batas dicatat |
+| [Matriks C01–C25](delivery/ACCEPTANCE_C01_C25.md) | Pemetaan tiap aksi ke bukti nyata dan batasnya; bukan label PASS massal |
 | [Arsip README](archive/README_BEFORE_RESTRUCTURE_2026-11-23.md) | Snapshot historis sebelum restrukturisasi; klaim lama dapat sudah digantikan |
 
 Artefak lokal yang disebut checkpoint, seperti `build/e2e-status/`, laporan lint dan

@@ -79,7 +79,7 @@ bukan klaim setiap gate telah lulus pada tanggal tersebut.
 | 20 Nov 2026 | Jalur IMAP/App Password, MIME, perbaikan analisis dan kajian pedoman | Perbaikan/parser fixture tercatat di Git | Integrasi nyata dan migrasi kepatuhan |
 | 21 Nov 2026 | Onboarding, kontrak v0.4, migrasi Go dan baseline C1 | Backend lokal/interop dan emulator subset terdokumentasi | C2 Android dan kelengkapan CRUDS |
 | 22 Nov 2026 | Parser strict, impor Go, consent, SRS v0.5, setup/runtime Azure | Unit/integration dan smoke berkembang per checkpoint; bukan benchmark | Runtime recovery dan Android acceptance saat itu |
-| **23 Nov 2026** | Perbaikan classifier, koreksi Android, auto-sync/antrean/status UI; kebijakan cleanup; mandat sub-agent disiapkan | 311 tes Android/E2E status TERLAPOR; regresi scheduler PASS fresh PM, tetapi probe upload gagal→retry kehilangan kandidat server | **P1 recovery OPEN; S2 PARTIAL**, S3/S4, benchmark dan gate operasional |
+| **23 Nov 2026** | Lane paralel S2/S3/S4: P1 recovery upload, paging/search + edit/hapus transaksi, anggaran server, kategori remote, lampiran, admin, atribut dinamis; CLI ops | Android 452 tests/0 failure + lint 0 error, Go semua paket ok; UAT emulator lampiran & admin PASS, atribut transaksi round-trip terbaca dari server | **P1 fixed**; **S2.4/S2.5 PARTIAL; S3 belum gate penuh; S4.1 PARTIAL; S4.2 PASS runtime**; gate eksternal (mailbox nyata, benchmark, hosting) tetap |
 
 **[Buka log harian lengkap, commit, bukti, dan template pembaruan →](docs/PROGRESS_DAILY.md)**
 
