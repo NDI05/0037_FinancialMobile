@@ -465,16 +465,31 @@ WorkManager + indikator/sheet + hidrasi status), semuanya di `feat/c2-android` d
   `internal/httpapi/category_queue_test.go` (consent + idempotensi + USER override; jendela 2 jam,
   batch ≤5, sisa, cache; plafon 5 merchant; budget → backlog) dan
   `sanitized_route_test.go` (label route).
-- **Android unit:** **301 test, 0 gagal** (45 kelas), termasuk
+- **Android unit:** **304 test, 0 gagal** (47 kelas), termasuk
   `AutoCategoryUseCaseTest` (6: hanya kandidat layak; himpunan kosong = 0 enqueue + 1 drain;
   `not_due` = backlog + tanpa spinner; `budget_exhausted` = PAUSED; `Unauthorized` =
   NEEDS_ATTENTION; dua pemanggil paralel = 1 drain), `IncrementalSyncUseCaseTest` (11, termasuk
   hidrasi cursor dan tidak ada body download saat tidak ada email baru),
   `UpdateStatusMapperTest` (9), `UpdateStatusPillTest` (2: label 100% + target 48 dp, dan
-  200% menyembunyikan kata namun status tetap diumumkan), `WorkSchedulerTest` (3: periode
-  30 menit, periode 2 jam, constraint jaringan, cancel + schedule ulang).
+  200% menyembunyikan kata namun status tetap diumumkan), `UpdateStatusTopBarTest`
+  (judul + pil tetap muat di 360/393/412 dp), `AccountLifecycleCancellationTest` (2:
+  disconnect dan penghapusan membatalkan kedua scheduler, menghapus cursor, mereset holder),
+  `WorkSchedulerTest` (3: periode 30 menit, periode 2 jam, constraint jaringan, cancel +
+  schedule ulang).
 - **Lint:** `lintDebug` BUILD SUCCESSFUL, 0 error (88 warning lama, tidak ada di berkas baru).
-- **E2E emulator (fixture-only, tanpa tap "Impor"):** instal APK debug
+- **Cacat yang ditemukan dan diperbaiki saat verifikasi ini:** `RequestDeletionUseCase`
+  membatalkan worker dan mereset holder tetapi **tidak menghapus cursor durable**; setelah
+  login ulang dengan pemilik yang sama, watermark lama akan melewati email yang transaksinya
+  baru saja dihapus. Kini `syncCursors.clear(ownerId)` dijalankan sebelum baris dihapus
+  (commit `00d7693`), dengan tes regresi.
+- **E2E emulator otomatis (fixture-only, tanpa tap "Impor"):**
+  `scripts/qa/e2e_update_status.py` menjalankan seluruh alur tanpa langkah manual: force-stop,
+  cold start, tunggu status akhir, baca counter route dari log backend, buka sheet, tegaskan
+  tiga bagian + pemisahan "percobaan terakhir"/"terakhir berhasil", lalu memastikan jumlah
+  request **tidak bertambah** karena sheet dibuka. Output run terakhir:
+  `PASS: automated status E2E (no import tap)` (tersimpan di `build/e2e-status-run.txt`,
+  tangkapan layar `build/e2e-status/01-pill.png` dan `02-sheet.png`).
+  Rincian run manual sebelumnya: instal APK debug
   (`PAM_BACKEND_BASE_URL=http://127.0.0.1:18090`, `adb reverse`), login sesi UAT, lalu buka app.
   Log backend: `POST /v1/category-jobs/enqueue` 200 (148 ms) dan `POST /v1/category-jobs/drain`
   200 (244 ms) tanpa satu pun panggilan provider — jendela 2 jam server menahan drain dan
@@ -494,6 +509,9 @@ WorkManager + indikator/sheet + hidrasi status), semuanya di `feat/c2-android` d
   pergantian bulan). Yang dijalankan di emulator adalah klien antrean kategori + status UI.
 - **Interval 30 menit tidak ditunggu secara nyata:** yang diverifikasi adalah request WorkManager
   (periode, constraint, keunikan, cancel), bukan eksekusi 30 menit dinding jam.
+- **"Data tetap terlihat selama refresh" belum diuji dengan run yang sengaja diperlambat:**
+  daftar tidak dikosongkan saat sinkron (tidak ada kode yang melakukannya dan `OverviewScreen`
+  membaca aliran lokal), tetapi tidak ada bukti E2E dengan delta lambat.
 - **Drain dengan panggilan Azure nyata tidak diulang di run ini** demi biaya; batch/cache/backlog/
   budget dibuktikan di Go integration test dengan classifier palsu, dan jalur Azure nyata sudah
   dibuktikan pada E2E 23 November sebelumnya (satu BAKSO, 2 panggilan provider).

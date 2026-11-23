@@ -105,11 +105,23 @@ class Driver:
             self.wait_text(lambda t: any(x in PILL_LABELS for x in t), "the status pill"),
             "the top bar never showed a known status word",
         )
+        # The first run is asynchronous: let it settle so the counters below describe a finished
+        # attempt instead of a race with the spinner.
+        self.wait_text(
+            lambda t: any(x in {"Terbaru", "Menunggu", "Offline", "Perlu perhatian", "Belum diperbarui"} for x in t),
+            "the first check to finish",
+            seconds=45,
+        )
         self.snap("01-pill")
         labels = [x for x in self.texts() if x in PILL_LABELS]
         print(f"pill: {labels[0] if labels else 'none'}")
 
         after_start = count_routes(log_path)
+        for _ in range(10):
+            if after_start["enqueue"] > baseline["enqueue"] and after_start["drain"] > baseline["drain"]:
+                break
+            time.sleep(1.5)
+            after_start = count_routes(log_path)
         print(
             "after cold start: "
             f"enqueue={after_start['enqueue']} drain={after_start['drain']}"
