@@ -170,6 +170,8 @@ dependencies {
     implementation(libs.androidx.sqlite.ktx)
 
     implementation(libs.androidx.datastore.preferences)
+    // Auto-sync scheduling: OS-owned periodic work, never a permanent foreground service.
+    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.coil.compose)
 
     implementation(libs.kotlinx.datetime)
@@ -191,6 +193,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.androidx.work.testing)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

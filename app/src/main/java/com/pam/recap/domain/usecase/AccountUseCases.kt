@@ -14,6 +14,8 @@ import com.pam.recap.domain.model.GmailConnection
 import com.pam.recap.domain.model.GmailConnectionState
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.AnalysisRepository
+import com.pam.recap.domain.repository.AutoSyncScheduler
+import com.pam.recap.domain.repository.SyncCursorStore
 import com.pam.recap.data.security.DeletionReceiptStore
 import com.pam.recap.domain.repository.BackendDeletionAck
 import com.pam.recap.domain.repository.BackendDeletionSync
@@ -44,6 +46,7 @@ class SignInUseCase @Inject constructor(
     private val sessions: SessionRepository,
     private val demoData: DemoDataPort,
     private val clock: ClockProvider,
+    private val autoSync: AutoSyncScheduler? = null,
 ) {
 
     /**
@@ -72,6 +75,8 @@ class SignInUseCase @Inject constructor(
         if (seedDemo) {
             runCatching { demoData.seedIfNeeded(session.ownerId) }
         }
+        // The background check is per owner: signing in starts it, signing out cancels it.
+        runCatching { autoSync?.ensureScheduled(session.ownerId) }
         return Outcome.Success(session)
     }
 }
@@ -92,6 +97,10 @@ class SignOutUseCase @Inject constructor(
     private val backendSessions: BackendSessionRepository,
     private val appPasswordVault: AppPasswordVault,
     private val clock: ClockProvider,
+    /** Optional so existing tests/doubles keep compiling; the app always binds real ones. */
+    private val autoSync: AutoSyncScheduler? = null,
+    private val syncCursors: SyncCursorStore? = null,
+    private val syncStatus: SyncStatusHolder? = null,
 ) {
 
     suspend operator fun invoke(ownerId: String): Outcome<Unit> {
@@ -111,6 +120,11 @@ class SignOutUseCase @Inject constructor(
         analyses.deleteAll(ownerId)
         budgets.deleteAll(ownerId)
         imports.deleteAll(ownerId)
+        // Durable sync state is per owner: cancel queued work, drop the cursor and clear the status
+        // so nothing from this session can be reported as a success for the next one.
+        runCatching { autoSync?.cancelAll() }
+        runCatching { syncCursors?.clear(ownerId) }
+        runCatching { syncStatus?.reset() }
         sessions.signOut()
         return Outcome.Success(Unit)
     }

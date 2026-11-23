@@ -5,6 +5,7 @@ import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.result.SafeLogger
 import com.pam.recap.domain.model.GmailConnectionState
+import com.pam.recap.domain.model.MailboxWatermark
 import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.GmailCredentialValidator
 import com.pam.recap.domain.repository.GmailMailboxLabelProvider
@@ -158,6 +159,74 @@ class ImapGmailSource @Inject constructor(
                 ),
             )
         }
+
+    /**
+     * Current mailbox high-water mark. `UIDNEXT - 1` is the highest uid the folder has issued, which
+     * is a folder-level integer: no message identity is retained.
+     */
+    override suspend fun watermark(): Outcome<MailboxWatermark> = withFolder { folder ->
+        val uidFolder = folder as? UIDFolder
+            ?: return@withFolder Outcome.Failure(AppError.Configuration("imap_no_uid_support"))
+        val next = runCatching { uidFolder.uidNext }.getOrDefault(-1L)
+        if (next <= 0) {
+            return@withFolder Outcome.Failure(AppError.NotFound("imap_no_uidnext"))
+        }
+        Outcome.Success(MailboxWatermark(uidFolder.uidValidity, next - 1))
+    }
+
+    /**
+     * References above [since] and at most [upTo]. The upper bound is the watermark captured before
+     * the run, so a message that lands mid-run is simply left for the next run instead of being
+     * half-processed. A mismatched UIDVALIDITY (folder recreated) invalidates the cursor: the delta
+     * then starts from the beginning of the query window rather than from a meaningless uid.
+     */
+    override suspend fun searchDelta(
+        query: LivinQuery,
+        since: MailboxWatermark?,
+        upTo: MailboxWatermark?,
+        pageToken: String?,
+    ): Outcome<GmailPage> = withFolder { folder ->
+        val uidFolder = folder as? UIDFolder
+            ?: return@withFolder Outcome.Failure(AppError.Configuration("imap_no_uid_support"))
+        val uidValidity = uidFolder.uidValidity
+        val floor = since?.takeIf { it.uidValidity == uidValidity }?.highestUid ?: 0L
+        val ceiling = upTo?.takeIf { it.uidValidity == uidValidity }?.highestUid
+        val limit = query.pageSize.coerceIn(1, LivinQuery.MAX_PAGE_SIZE)
+        val offset = parseOffset(pageToken)
+        val cacheKey = "delta|$uidValidity|$floor|$ceiling|" + query.cacheKey(limit)
+        val refs = cachedSearch?.takeIf { it.key == cacheKey }?.refs
+            ?: run {
+                val term = query.toSearchTerm()
+                val fetched = runCatching {
+                    uidFolder.getMessagesByUID(floor + 1, UIDFolder.LASTUID)
+                        .asSequence()
+                        .filter { message ->
+                            val uid = runCatching { uidFolder.getUID(message) }.getOrDefault(-1L)
+                            uid > floor && (ceiling == null || uid <= ceiling)
+                        }
+                        .filter { message -> runCatching { term.match(message) }.getOrDefault(false) }
+                        .sortedByDescending { it.receivedDate?.time ?: 0L }
+                        .toList()
+                }.getOrElse { return@withFolder Outcome.Failure(mapImapFailure(it)) }
+                fetched.mapNotNull { folder.toRef(it) }.also { cachedSearch = SearchHit(cacheKey, it) }
+            }
+        val window = refs.drop(offset).take(limit)
+        val nextOffset = offset + window.size
+        SafeLogger.counts(
+            TAG,
+            "imap_delta",
+            "floor" to floor.toInt(),
+            "window" to window.size,
+            "matches" to refs.size,
+        )
+        Outcome.Success(
+            GmailPage(
+                messages = window,
+                nextPageToken = if (nextOffset < refs.size) "offset:$nextOffset" else null,
+                resultSizeEstimate = refs.size,
+            ),
+        )
+    }
 
     override suspend fun fetchMessage(id: String): Outcome<RawMessage> = withFolder { folder ->
         val uidFolder = folder as? UIDFolder

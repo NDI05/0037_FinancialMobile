@@ -12,6 +12,7 @@ import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.core.util.IdGenerator
 import com.pam.recap.domain.model.CategoryOrigin
+import com.pam.recap.domain.model.DeltaWindow
 import com.pam.recap.domain.model.ImportJob
 import com.pam.recap.domain.model.ImportState
 import com.pam.recap.domain.model.ParseResult
@@ -61,10 +62,16 @@ class ImportMonthUseCase @Inject constructor(
     private val idGenerator: IdGenerator,
 ) {
 
+    /**
+     * @param delta when set, this is an incremental run: it reads only [DeltaWindow.fromInclusive]
+     *   onward, asks the source for references above the durable watermark, and may route a late
+     *   email into one of [DeltaWindow.extraMonths]. Without it the run is the month backfill.
+     */
     suspend operator fun invoke(
         ownerId: String,
         month: JakartaMonth,
         templateVersion: String? = null,
+        delta: DeltaWindow? = null,
     ): Outcome<ImportJob> {
         if (deletion.active(ownerId) != null) {
             // FR-47: sync is blocked while a deletion request is in flight.
@@ -74,7 +81,14 @@ class ImportMonthUseCase @Inject constructor(
         val startedAt = clock.now()
         val jobId = idGenerator.newId()
         val window = month.searchRange()
-        val query = queryBuilder.build(window.startInclusive, window.endExclusive, templateVersion)
+        val query = if (delta != null) {
+            queryBuilder.build(delta.fromInclusive, delta.toExclusive, templateVersion)
+        } else {
+            queryBuilder.build(window.startInclusive, window.endExclusive, templateVersion)
+        }
+        // A delta may carry a late email whose event date sits in an earlier month; those months are
+        // explicit targets instead of being dropped as NOT_IN_MONTH.
+        val targetMonths = listOf(month) + delta?.extraMonths.orEmpty().filter { it != month }
 
         var job = ImportJob(
             id = jobId,
@@ -121,7 +135,11 @@ class ImportMonthUseCase @Inject constructor(
                 break@pageLoop
             }
             when (val page = withTimeoutOrNull(IMPORT_STALL_MILLIS.milliseconds) {
-                    gmailSource.search(query, pageToken)
+                    if (delta != null) {
+                        gmailSource.searchDelta(query, delta.since, delta.upTo, pageToken)
+                    } else {
+                        gmailSource.search(query, pageToken)
+                    }
                 }) {
                 null -> {
                     exhausted = true
@@ -184,7 +202,7 @@ class ImportMonthUseCase @Inject constructor(
                                     }
 
                                     is ParseResult.Parsed -> {
-                                        if (!month.contains(parsed.eventAt)) {
+                                        if (targetMonths.none { it.contains(parsed.eventAt) }) {
                                             // The search window is widened; membership is not (BR-01).
                                             SafeLogger.counts(
                                                 TAG,
@@ -294,8 +312,10 @@ class ImportMonthUseCase @Inject constructor(
 
         if (imported > 0) {
             // FR-22/FR-33: stored summaries and analyses no longer reflect the inputs.
-            summaries.markOutdated(ownerId, month)
-            analyses.markOutdated(ownerId, month.id())
+            for (target in targetMonths) {
+                summaries.markOutdated(ownerId, target)
+                analyses.markOutdated(ownerId, target.id())
+            }
         }
         if (finalState != ImportState.FAILED && finalState != ImportState.PERMISSION_REQUIRED) {
             runCatching { gmailConnection.touchLastImport(ownerId, finishedAt) }

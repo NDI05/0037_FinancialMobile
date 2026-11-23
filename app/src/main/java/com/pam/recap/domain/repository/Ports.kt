@@ -1,10 +1,12 @@
 package com.pam.recap.domain.repository
 
+import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.AccountIdentity
 import com.pam.recap.domain.model.AiAggregatePayload
 import com.pam.recap.domain.model.BudgetPlan
 import com.pam.recap.domain.model.GmailConnectionState
+import com.pam.recap.domain.model.MailboxWatermark
 import com.pam.recap.domain.model.MonthlySummary
 import com.pam.recap.domain.model.ParseResult
 import com.pam.recap.domain.model.RawAnalysis
@@ -32,6 +34,25 @@ interface GmailSource {
 
     /** Local disconnect: clears tokens and revokes where the platform supports it (FR-46). */
     suspend fun disconnect(): Outcome<Unit>
+
+    /**
+     * Mailbox-level watermark for incremental sync. A source that cannot expose one says so instead
+     * of pretending: the caller then falls back to a bounded overlap rescan.
+     */
+    suspend fun watermark(): Outcome<MailboxWatermark> =
+        Outcome.Failure(AppError.Configuration("incremental_sync_unsupported"))
+
+    /**
+     * Fetches only references above [since] (inclusive of everything newer), still honouring the
+     * allow-listed [LivinQuery]. A null/expired [since] means "from the beginning of the window",
+     * which is what a first run and a UIDVALIDITY change must do.
+     */
+    suspend fun searchDelta(
+        query: LivinQuery,
+        since: MailboxWatermark?,
+        upTo: MailboxWatermark? = null,
+        pageToken: String? = null,
+    ): Outcome<GmailPage> = search(query, pageToken)
 }
 
 /**

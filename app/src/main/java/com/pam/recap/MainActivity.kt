@@ -15,7 +15,13 @@ import com.pam.recap.ui.navigation.PamNavHost
 import com.pam.recap.ui.theme.Ink
 import com.pam.recap.BuildConfig
 import com.pam.recap.ui.theme.PamTheme
+import androidx.lifecycle.lifecycleScope
+import com.pam.recap.domain.repository.AutoSyncScheduler
+import com.pam.recap.domain.repository.SessionRepository
+import com.pam.recap.domain.usecase.IncrementalSyncUseCase
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 /**
  * Single-activity host for the Compose navigation graph.
@@ -26,6 +32,15 @@ import dagger.hilt.android.AndroidEntryPoint
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var sessions: SessionRepository
+
+    @Inject
+    lateinit var autoSync: AutoSyncScheduler
+
+    @Inject
+    lateinit var incrementalSync: IncrementalSyncUseCase
 
     /**
      * The only activity. Its base context is created from the system configuration, so the
@@ -53,6 +68,21 @@ class MainActivity : ComponentActivity() {
                     PamNavHost()
                 }
             }
+        }
+    }
+
+    /**
+     * Foreground freshness check: on every return to the app, if the last attempt is older than the
+     * cooldown, run one delta. It shares the single-flight gate with the worker, so a background run
+     * in progress makes this a no-op instead of a second import.
+     */
+    override fun onStart() {
+        super.onStart()
+        lifecycleScope.launch {
+            val ownerId = sessions.current()?.ownerId ?: return@launch
+            // Idempotent; also covers an install that was already signed in before this feature.
+            runCatching { autoSync.ensureScheduled(ownerId) }
+            runCatching { incrementalSync.runIfStale() }
         }
     }
 }

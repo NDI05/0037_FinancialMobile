@@ -3,6 +3,7 @@ package com.pam.recap.data.gmail
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.GmailConnectionState
+import com.pam.recap.domain.model.MailboxWatermark
 import com.pam.recap.data.backend.BackendEndpoints
 import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.GmailMailboxLabelProvider
@@ -63,6 +64,18 @@ class RoutingGmailSource @Inject constructor(
 
     override suspend fun fetchMessage(id: String): Outcome<RawMessage> =
         active()?.fetchMessage(id) ?: Outcome.Failure(AppError.Configuration(NO_MAILBOX))
+
+    override suspend fun watermark(): Outcome<MailboxWatermark> =
+        active()?.watermark() ?: Outcome.Failure(AppError.Configuration(NO_MAILBOX))
+
+    override suspend fun searchDelta(
+        query: LivinQuery,
+        since: MailboxWatermark?,
+        upTo: MailboxWatermark?,
+        pageToken: String?,
+    ): Outcome<GmailPage> =
+        active()?.searchDelta(query, since, upTo, pageToken)
+            ?: Outcome.Failure(AppError.Configuration(NO_MAILBOX))
 
     override suspend fun disconnect(): Outcome<Unit> {
         val owner = ownerId()
