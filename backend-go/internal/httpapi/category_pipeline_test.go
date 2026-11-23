@@ -794,3 +794,54 @@ func TestCacheIgnoresPreMappingVersionRows(t *testing.T) {
 		t.Fatalf("USER category overwritten: %q", got)
 	}
 }
+
+// A merchant label that only carries a numeric reference (Livin bill-payment emails store a
+// biller/transaction ID in the "Merchant" slot) can never be mapped to a taxonomy category. It
+// must end NEEDS_REVIEW with a reason the app can show, and it must never reach the provider:
+// fabricating a category would be wrong and long reference numbers must stay on the server.
+func TestReferenceMerchantNeedsReviewWithoutProviderCall(t *testing.T) {
+	cases := []struct {
+		name       string
+		merchant   string
+		wantReason string
+	}{
+		{"nineteen_digit_reference", "9380147528123456789", "merchant_not_identifiable"},
+		{"short_numeric", "12345", "merchant_not_identifiable"},
+		{"separated_reference", "938-014-7528", "merchant_not_identifiable"},
+		{"missing_label", "", "merchant_missing"},
+		{"unsafe_label", "toko@example.test", "unsafe_merchant"},
+	}
+	for i, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			stub := &failingCategory{}
+			h := newCategoryHarness(t, stub)
+			email := tc.name + "@example.test"
+			h.register(email)
+			token, _ := h.login(email)
+			grantConsent(t, h, token)
+			txID := classifyBody(t, h, token, tc.merchant, "Pembayaran",
+				strings.Repeat(string(rune('f'+i)), 32))
+			status, body := h.request("POST", "/v1/category-jobs", token,
+				map[string]any{"transactionIds": []string{txID}})
+			if status != 200 {
+				t.Fatalf("status=%d body=%v", status, body)
+			}
+			job := body["jobs"].([]any)[0].(map[string]any)
+			if job["state"] != "NEEDS_REVIEW" {
+				t.Fatalf("job=%v want NEEDS_REVIEW", job)
+			}
+			if job["reasonCode"] != tc.wantReason {
+				t.Fatalf("reasonCode=%v want %q", job["reasonCode"], tc.wantReason)
+			}
+			if job["categoryCode"] != "uncategorized" {
+				t.Fatalf("categoryCode=%v want uncategorized (no fabricated category)", job["categoryCode"])
+			}
+			if stub.count() != 0 {
+				t.Fatalf("reference merchant sent to provider %d times", stub.count())
+			}
+			if got := txCategoryCode(t, h, token, txID); got != "" && got != "uncategorized" {
+				t.Fatalf("transaction category changed to %q", got)
+			}
+		})
+	}
+}

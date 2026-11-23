@@ -1,0 +1,51 @@
+{
+  "captured_at": "2026-11-23T22:27:00+07:00",
+  "environment": "Real UAT backend 127.0.0.1:18090 (pre-fix binary, not restarted) + real Turso DB pam-real-uat; owner account role ADMIN; read-only SQL inspection only",
+  "owner": "real owner account, id withheld",
+  "app_action": {
+    "tap": "Kategorikan dengan AI on Transaksi screen",
+    "route": "POST /v1/category-jobs",
+    "http_status": 200,
+    "correlation_id": "req_c90c2f9b357ecb9b0940175b90a7c3a1",
+    "ui_banner": "Hasil kategorisasi: classified=0 needsReview=5 failed=0",
+    "rows_remained": "Belum berkategori"
+  },
+  "transactions": {
+    "total_rows": 47,
+    "category_origin": "IMPORTED",
+    "classifier_origin": null,
+    "all_uncategorized": true,
+    "user_chosen_categories": 0
+  },
+  "import_jobs": {
+    "complete_historical": {"rows": 1, "matched": 47, "imported": 47, "template_version": "v1", "finished_at": "2026-11-22T09:04:55Z"},
+    "jobs_today": {"state": "EMPTY", "matched": 0, "note": "Gmail link currently yields no matching emails for re-import"}
+  },
+  "category_jobs": {
+    "total_rows": 5,
+    "state_counts": {"NEEDS_REVIEW": 5},
+    "reason_counts": {"unsafe_merchant": 5},
+    "created_at_first_last": ["2026-11-23T14:16:30Z", "2026-11-23T14:16:32Z"],
+    "replayed_not_new": true,
+    "note": "The 22:27 tap re-submitted the same 5 transaction ids; jobs were replayed from 14:16, no new job rows and no duplicate provider attempts/charges"
+  },
+  "category_cache_rows": 0,
+  "provider_usage": {
+    "owner_attempts": 0,
+    "global_attempts": 2,
+    "global_actual_usd": 0.0002118,
+    "global_scope_owner": "unrelated synthetic/test owner, not this owner"
+  },
+  "merchant_label_stats": {
+    "rows": 47,
+    "rows_with_human_readable_merchant_name": 0,
+    "numeric_only_rows": 47,
+    "numeric_length": 19,
+    "distinct_digit_sets": 27,
+    "sanitizer_rejection": "digits_gt8 (47/47)",
+    "description": "constant 'Pembayaran' template text; no merchant/biller name stored",
+    "attributes_present": 0,
+    "raw_values": "not recorded; counts/shapes only"
+  },
+  "classification_precision": "NOT RUN - owner data has zero classifiable merchant-name rows and no ground-truth labels"
+}

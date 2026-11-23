@@ -148,6 +148,12 @@ fun TransactionsScreen(
                     tone = if (state.classificationError != null) MoneyTone.Expense else MoneyTone.Neutral,
                 )
             }
+            state.classificationReviewReasons.forEach { reason ->
+                NoticeBanner(
+                    text = stringResource(classificationReasonRes(reason)),
+                    tone = MoneyTone.Neutral,
+                )
+            }
             state.classificationError?.let { error ->
                 NoticeBanner(
                     text = stringResource(com.pam.recap.ui.util.appErrorRes(error)),
@@ -353,4 +359,18 @@ private fun CategoryFilterRow(
     }
 }
 
-
+/**
+ * Localized copy for a category-job reason code. The API returns stable codes
+ * ("merchant_not_identifiable", "merchant_missing", "unsafe_merchant", ...); the app explains them
+ * in plain Indonesian and never shows the raw code. Unknown/new codes fall back to a generic
+ * "needs review" message so a contract addition can never render a technical token or crash.
+ */
+@androidx.annotation.StringRes
+internal fun classificationReasonRes(code: String): Int = when (code) {
+    "merchant_not_identifiable" -> R.string.transactions_classify_review_merchant_not_identifiable
+    "merchant_missing" -> R.string.transactions_classify_review_merchant_missing
+    "unsafe_merchant" -> R.string.transactions_classify_review_unsafe_merchant
+    "not_eligible" -> R.string.transactions_classify_review_not_eligible
+    "not_eligible_personal_transfer" -> R.string.transactions_classify_review_not_eligible_personal_transfer
+    else -> R.string.transactions_classify_review_generic
+}

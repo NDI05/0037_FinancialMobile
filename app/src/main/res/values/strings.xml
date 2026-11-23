@@ -512,6 +512,13 @@
     <string name="transactions_classify_ai">Kategorikan dengan AI</string>
     <string name="transactions_classify_none">Tidak ada transaksi uncategorized yang bisa diproses.</string>
     <string name="transactions_classify_result">Hasil kategorisasi: %1$s</string>
+    <string name="transactions_classify_review_merchant_not_identifiable">Perlu tinjauan: email hanya memuat nomor referensi, bukan nama merchant. Pilih kategori secara manual.</string>
+    <string name="transactions_classify_review_merchant_missing">Perlu tinjauan: email tidak memuat nama merchant. Pilih kategori secara manual.</string>
+    <string name="transactions_classify_review_unsafe_merchant">Perlu tinjauan: nama merchant tidak aman dikirim ke AI. Pilih kategori secara manual.</string>
+    <string name="transactions_classify_review_not_eligible">Perlu tinjauan: transaksi sudah punya kategori atau tidak memenuhi syarat.</string>
+    <string name="transactions_classify_review_not_eligible_personal_transfer">Perlu tinjauan: transaksi pribadi/transfer tidak dikirim ke AI.</string>
+    <string name="transactions_classify_review_generic">Perlu tinjauan: AI belum bisa menentukan kategori. Pilih kategori secara manual.</string>
+    <string name="detail_merchant_reference_notice">Nilai ini adalah nomor referensi dari email, bukan nama merchant. Pilih kategori secara manual.</string>
     <string name="origin_llm">Saran Azure AI</string>
     <string name="update_status_title">Status pembaruan</string>
     <string name="update_status_open">Buka status pembaruan</string>

@@ -300,6 +300,10 @@ fun TransactionDetailScreen(
                         onValueChange = viewModel::setMerchantLabel,
                         placeholder = stringResource(R.string.detail_merchant_placeholder),
                     )
+                    if (state.merchantIsReference) {
+                        Spacer(modifier = Modifier.height(PamSpacing.xxs))
+                        NoticeBanner(text = stringResource(R.string.detail_merchant_reference_notice))
+                    }
                     Spacer(modifier = Modifier.height(PamSpacing.xs))
                     LabelledField(
                         label = stringResource(R.string.detail_note_label),

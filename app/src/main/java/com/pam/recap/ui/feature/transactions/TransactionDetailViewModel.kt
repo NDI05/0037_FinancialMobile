@@ -58,6 +58,11 @@ data class TransactionDetailUiState(
     val noteDraft: String = "",
     val descriptionDraft: String = "",
     val merchantDraft: String = "",
+    /**
+     * True when the stored merchant label is only a reference number (Livin bill-payment emails),
+     * not a merchant name. The screen then explains the value instead of presenting it as a name.
+     */
+    val merchantIsReference: Boolean = false,
     val isBusy: Boolean = false,
     val error: AppError? = null,
     val savedAt: Long? = null,
@@ -184,6 +189,7 @@ class TransactionDetailViewModel @Inject constructor(
                 refundCandidates = candidates,
                 descriptionDraft = draft.description,
                 merchantDraft = draft.merchant,
+                merchantIsReference = transaction != null && isReferenceMerchantLabel(transaction.merchantLabel),
                 noteDraft = draft.note,
                 attributeFields = draft.attributes,
                 // An unresolved conflict is still shown as the typed error until the user resolves it,

@@ -11,6 +11,7 @@ import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionFilter
 import com.pam.recap.domain.repository.FinanceRefreshBus
+import com.pam.recap.domain.repository.ServerCategoryJob
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.repository.TransactionRepository
@@ -53,6 +54,12 @@ data class TransactionsUiState(
     val isClassifying: Boolean = false,
     val classificationStatus: String? = null,
     val classificationError: AppError? = null,
+    /**
+     * Stable reason codes returned by the category-job API for rows that ended NEEDS_REVIEW or
+     * FAILED ("merchant_not_identifiable", "merchant_missing", "unsafe_merchant", ...). The screen
+     * maps each code to localized copy; the codes themselves are never shown to the owner.
+     */
+    val classificationReviewReasons: List<String> = emptyList(),
     /** Server mode pages the month instead of reading one local snapshot (S2.4). */
     val isServerMode: Boolean = false,
     val isLoadingMore: Boolean = false,
@@ -164,6 +171,7 @@ class TransactionsViewModel @Inject constructor(
                         isClassifying = classifier.isRunning,
                         classificationStatus = classifier.status,
                         classificationError = classifier.error,
+                        classificationReviewReasons = classifier.reviewReasons,
                     )
                 }
             }
@@ -252,6 +260,7 @@ class TransactionsViewModel @Inject constructor(
             isClassifying = classifier.isRunning,
             classificationStatus = classifier.status,
             classificationError = classifier.error,
+            classificationReviewReasons = classifier.reviewReasons,
         )
     }
 
@@ -455,6 +464,7 @@ class TransactionsViewModel @Inject constructor(
             isClassifying = classifier.isRunning,
             classificationStatus = classifier.status,
             classificationError = classifier.error,
+            classificationReviewReasons = classifier.reviewReasons,
             isServerMode = true,
             isLoadingMore = isLoadingMore,
             hasMore = hasMore,
@@ -506,7 +516,10 @@ class TransactionsViewModel @Inject constructor(
                     val needsReview = result.value.count { it.state == "NEEDS_REVIEW" }
                     val failed = result.value.count { it.state == "FAILED" }
                     val classified = result.value.count { it.state == "CLASSIFIED" }
-                    ClassificationState(status = "classified=$classified needsReview=$needsReview failed=$failed")
+                    ClassificationState(
+                        status = "classified=$classified needsReview=$needsReview failed=$failed",
+                        reviewReasons = reviewReasonCodes(result.value),
+                    )
                 }
             }
         }
@@ -516,6 +529,7 @@ class TransactionsViewModel @Inject constructor(
         val isRunning: Boolean = false,
         val status: String? = null,
         val error: AppError? = null,
+        val reviewReasons: List<String> = emptyList(),
     )
 
     fun previousMonth() = month.updateValue { it?.previous() }
@@ -579,4 +593,36 @@ class TransactionsViewModel @Inject constructor(
 
     private fun SavedStateHandle.dayArgument(): LocalDate? =
         get<String>("dayIso")?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+}
+
+/**
+ * Distinct API reason codes that explain why category jobs could not become a category. The list
+ * is sorted so the same result always renders the same way; blank codes (older servers) are
+ * dropped and the screen falls back to the plain classified/needsReview/failed counter.
+ */
+internal fun reviewReasonCodes(jobs: List<ServerCategoryJob>): List<String> =
+    jobs.asSequence()
+        .filter { it.state == "NEEDS_REVIEW" || it.state == "FAILED" }
+        .mapNotNull { job -> job.reasonCode?.takeIf { it.isNotBlank() } ?: job.errorCode?.takeIf { it.isNotBlank() } }
+        .distinct()
+        .sorted()
+        .toList()
+
+/**
+ * True when a stored merchant label only carries a reference/account number (digits plus
+ * separators) instead of a merchant name. Livin bill-payment emails put a reference number in
+ * their "Merchant" slot, so the app must not present that value as if it were a merchant name.
+ */
+internal fun isReferenceMerchantLabel(raw: String?): Boolean {
+    val trimmed = raw?.trim().orEmpty()
+    if (trimmed.isEmpty()) return false
+    var digits = 0
+    for (c in trimmed) {
+        when {
+            c in '0'..'9' -> digits++
+            c == ' ' || c == '-' || c == '.' || c == '/' -> Unit
+            else -> return false
+        }
+    }
+    return digits > 0
 }
