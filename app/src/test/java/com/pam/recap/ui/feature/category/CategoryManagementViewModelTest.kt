@@ -10,6 +10,7 @@ import com.pam.recap.domain.repository.CategoryDraft
 import com.pam.recap.domain.repository.CategoryPatch
 import com.pam.recap.domain.repository.ManualTransactionDraft
 import com.pam.recap.domain.repository.ServerCategory
+import com.pam.recap.domain.repository.ServerCategoryPage
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.ServerTransactionPage
 import com.pam.recap.testing.FakeSessionRepository
@@ -72,6 +73,21 @@ class CategoryManagementViewModelTest {
         assertTrue(model.state.value.visible.isEmpty())
         model.onQueryChange("")
         assertEquals(2, model.state.value.visible.size)
+    }
+
+    @Test
+    fun `C10 query is answered by the owner-scoped server search envelope`() = runTest {
+        val server = FakeCategories()
+        val model = vm(server)
+        model.state.first { !it.isLoading }
+
+        model.onQueryChange("kopi")
+
+        assertEquals(listOf("kopi"), server.searches)
+        val state = model.state.value
+        assertTrue(state.searchedOnServer)
+        assertEquals(2, state.serverScanned)
+        assertEquals(listOf("kopi_lama"), state.visible.map { it.code })
     }
 
     @Test
@@ -153,7 +169,23 @@ class CategoryManagementViewModelTest {
             ServerCategory("cat_custom", "kopi_lama", "Kopi Lama", "EXPENSE", revision = 2),
         )
 
+        val searches = mutableListOf<String>()
+
         override suspend fun categories(ownerId: String) = Outcome.Success(rows.toList())
+
+        override suspend fun searchCategories(
+            ownerId: String,
+            query: String,
+            kind: String?,
+            limit: Int,
+            cursor: String?,
+        ): Outcome<ServerCategoryPage> {
+            searches += query
+            val filtered = rows.filter {
+                it.code.contains(query, ignoreCase = true) || it.label.contains(query, ignoreCase = true)
+            }
+            return Outcome.Success(ServerCategoryPage(filtered, scanned = rows.size))
+        }
 
         override suspend fun createCategory(ownerId: String, draft: CategoryDraft): Outcome<ServerCategory> {
             drafts += draft

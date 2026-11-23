@@ -45,6 +45,10 @@ data class CategoryManagementUiState(
     val serverEnabled: Boolean = false,
     val categories: List<ServerCategory> = emptyList(),
     val query: String = "",
+    /** Rows the server examined for the active search; 0 when no server search ran yet. */
+    val serverScanned: Int = 0,
+    /** True once the visible rows come from the server `q` search rather than the loaded page. */
+    val searchedOnServer: Boolean = false,
     val editor: CategoryEditor? = null,
     val pendingDelete: ServerCategory? = null,
     val deleteNeedsReassign: Boolean = false,
@@ -83,7 +87,9 @@ class CategoryManagementViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update {
+                it.copy(isLoading = true, error = null, serverScanned = 0, searchedOnServer = false)
+            }
             if (!server.isEnabled) {
                 _state.update { it.copy(isLoading = false, serverEnabled = false) }
                 return@launch
@@ -103,7 +109,39 @@ class CategoryManagementViewModel @Inject constructor(
         }
     }
 
-    fun onQueryChange(query: String) = _state.update { it.copy(query = query) }
+    private var searchGeneration = 0
+
+    /**
+     * C10: once a backend search envelope is available the query is answered by the server, and a
+     * late response for an older query is dropped instead of overwriting newer rows.
+     */
+    fun onQueryChange(query: String) {
+        _state.update { it.copy(query = query) }
+        if (!_state.value.serverEnabled) return
+        val generation = ++searchGeneration
+        viewModelScope.launch {
+            val ownerId = ownerId() ?: return@launch
+            when (val result = server.searchCategories(ownerId, query.trim())) {
+                is Outcome.Success -> if (generation == searchGeneration) {
+                    _state.update {
+                        it.copy(
+                            categories = result.value.items,
+                            serverScanned = result.value.scanned,
+                            searchedOnServer = true,
+                        )
+                    }
+                }
+
+                is Outcome.Failure -> if (generation == searchGeneration &&
+                    result.error !is AppError.Configuration
+                ) {
+                    // Configuration means this backend predates the envelope: the owner-scoped page
+                    // already loaded stays visible and the local filter keeps working.
+                    _state.update { it.copy(error = result.error) }
+                }
+            }
+        }
+    }
 
     fun startCreate() = _state.update {
         it.copy(editor = CategoryEditor(), error = null, validationRule = null)

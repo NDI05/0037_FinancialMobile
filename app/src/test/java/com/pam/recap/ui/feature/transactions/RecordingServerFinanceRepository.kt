@@ -14,6 +14,7 @@ import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.CategoryDrainResult
 import com.pam.recap.domain.repository.CategoryEnqueueResult
 import com.pam.recap.domain.repository.ManualTransactionDraft
+import com.pam.recap.domain.repository.ServerBudgetPlanPage
 import com.pam.recap.domain.repository.ServerCategory
 import com.pam.recap.domain.repository.ServerCategoryJob
 import com.pam.recap.domain.repository.ServerFinanceRepository
@@ -67,6 +68,9 @@ internal open class RecordingServerFinanceRepository : ServerFinanceRepository {
     var savePlanOutcome: ((ServerBudgetPlan) -> Outcome<ServerBudgetPlan>)? = null
     val savedPlans = mutableListOf<ServerBudgetPlan>()
     var deletePlanOutcome: Outcome<Unit>? = null
+    /** C15: period-search response and the windows the editor asked for. */
+    var budgetPlansOutcome: Outcome<ServerBudgetPlanPage>? = null
+    val budgetPlanQueries = mutableListOf<Triple<String, String, Int>>()
     val deletedPlanMonths = mutableListOf<String>()
     var summaryOutcome: Outcome<MonthlySummary>? = null
 
@@ -190,6 +194,17 @@ internal open class RecordingServerFinanceRepository : ServerFinanceRepository {
     override suspend fun deleteBudgetPlan(ownerId: String, month: JakartaMonth): Outcome<Unit> {
         deletedPlanMonths += month.id()
         return deletePlanOutcome ?: Outcome.Success(Unit)
+    }
+
+    override suspend fun budgetPlans(
+        ownerId: String,
+        from: JakartaMonth,
+        to: JakartaMonth,
+        limit: Int,
+        cursor: String?,
+    ): Outcome<ServerBudgetPlanPage> {
+        budgetPlanQueries += Triple(from.id(), to.id(), limit)
+        return budgetPlansOutcome ?: Outcome.Success(ServerBudgetPlanPage(emptyList()))
     }
 
     override suspend fun createManual(

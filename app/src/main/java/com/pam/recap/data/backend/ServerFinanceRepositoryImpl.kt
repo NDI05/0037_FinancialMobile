@@ -24,7 +24,9 @@ import com.pam.recap.domain.repository.CategoryPatch
 import com.pam.recap.domain.repository.ServerAttachment
 import com.pam.recap.domain.repository.ServerAttachmentPage
 import com.pam.recap.domain.repository.ServerBudgetPlan
+import com.pam.recap.domain.repository.ServerBudgetPlanPage
 import com.pam.recap.domain.repository.ServerCategory
+import com.pam.recap.domain.repository.ServerCategoryPage
 import com.pam.recap.domain.repository.ServerImportCandidate
 import com.pam.recap.domain.repository.ServerImportCounts
 import com.pam.recap.domain.repository.ServerCategoryJob
@@ -67,6 +69,25 @@ class ServerFinanceRepositoryImpl @Inject constructor(
                 is Outcome.Failure -> result
             }
         }
+
+    override suspend fun searchCategories(
+        ownerId: String,
+        query: String,
+        kind: String?,
+        limit: Int,
+        cursor: String?,
+    ): Outcome<ServerCategoryPage> = when (
+        val result = api.categories(ownerId, query, kind, limit, cursor)
+    ) {
+        is Outcome.Success -> Outcome.Success(
+            ServerCategoryPage(
+                items = result.value.categories.map { it.toServer() },
+                nextCursor = result.value.nextCursor,
+                scanned = result.value.search?.scanned ?: result.value.categories.size,
+            ),
+        )
+        is Outcome.Failure -> result
+    }
 
     override suspend fun createCategory(
         ownerId: String,
@@ -137,6 +158,24 @@ class ServerFinanceRepositoryImpl @Inject constructor(
 
     override suspend fun deleteBudgetPlan(ownerId: String, month: JakartaMonth): Outcome<Unit> =
         api.deleteBudget(ownerId, month.id())
+
+    override suspend fun budgetPlans(
+        ownerId: String,
+        from: JakartaMonth,
+        to: JakartaMonth,
+        limit: Int,
+        cursor: String?,
+    ): Outcome<ServerBudgetPlanPage> = when (
+        val result = api.budgetPlans(ownerId, from.id(), to.id(), limit, cursor)
+    ) {
+        is Outcome.Success -> Outcome.Success(
+            ServerBudgetPlanPage(
+                items = result.value.plans.map { it.toServer() },
+                nextCursor = result.value.nextCursor,
+            ),
+        )
+        is Outcome.Failure -> result
+    }
 
     private fun RemoteCategoryItem.toServer() = ServerCategory(
         id = id,

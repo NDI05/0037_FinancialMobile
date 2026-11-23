@@ -40,8 +40,30 @@ class PamApiClient @Inject constructor(
     suspend fun summary(ownerId: String, monthId: String): Outcome<RemoteSummary> =
         get(ownerId, "/v1/summaries/$monthId", RemoteSummary.serializer())
 
-    suspend fun categories(ownerId: String): Outcome<RemoteCategoriesResponse> =
-        get(ownerId, "/v1/categories", RemoteCategoriesResponse.serializer())
+    /**
+     * C10 owner-scoped category list/search. `q` matches code or label case-insensitively on the
+     * server; `kind` narrows the taxonomy kind; the search envelope reports how many rows were
+     * scanned before the page was cut.
+     */
+    suspend fun categories(
+        ownerId: String,
+        query: String = "",
+        kind: String? = null,
+        limit: Int = 50,
+        cursor: String? = null,
+    ): Outcome<RemoteCategoriesResponse> {
+        val base = config.endpoint("/v1/categories")
+            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
+        val url = base.toHttpUrl().newBuilder()
+            .addQueryParameter("limit", limit.coerceIn(1, 100).toString())
+            .apply {
+                query.trim().takeIf { it.isNotEmpty() }?.let { addQueryParameter("q", it) }
+                kind?.takeIf { it.isNotBlank() }?.let { addQueryParameter("kind", it) }
+                cursor?.takeIf { it.isNotBlank() }?.let { addQueryParameter("cursor", it) }
+            }
+            .build()
+        return request(ownerId, Request.Builder().url(url).get(), RemoteCategoriesResponse.serializer())
+    }
 
     suspend fun getTransaction(ownerId: String, transactionId: String): Outcome<RemoteTransaction> =
         get(ownerId, "/v1/transactions/$transactionId", RemoteTransaction.serializer())
@@ -226,6 +248,25 @@ class PamApiClient @Inject constructor(
         val encoded = json.encodeToString(RemoteBudgetWrite.serializer(), body)
         return send(ownerId, "PUT", "/v1/budget-plans/$monthId", encoded, null,
             RemoteBudgetPlan.serializer())
+    }
+
+    /** C15 inclusive period search over stored plans, newest first. */
+    suspend fun budgetPlans(
+        ownerId: String,
+        from: String,
+        to: String,
+        limit: Int = 50,
+        cursor: String? = null,
+    ): Outcome<RemoteBudgetPlanPage> {
+        val base = config.endpoint("/v1/budget-plans")
+            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
+        val url = base.toHttpUrl().newBuilder()
+            .addQueryParameter("from", from)
+            .addQueryParameter("to", to)
+            .addQueryParameter("limit", limit.coerceIn(1, 100).toString())
+            .apply { cursor?.takeIf { it.isNotBlank() }?.let { addQueryParameter("cursor", it) } }
+            .build()
+        return request(ownerId, Request.Builder().url(url).get(), RemoteBudgetPlanPage.serializer())
     }
 
     suspend fun latestAnalysis(ownerId: String, monthId: String): Outcome<RemoteAnalysis> =
@@ -590,7 +631,11 @@ data class RemoteSummary(
 )
 
 @Serializable
-data class RemoteCategoriesResponse(val categories: List<RemoteCategoryItem> = emptyList())
+data class RemoteCategoriesResponse(
+    val categories: List<RemoteCategoryItem> = emptyList(),
+    val nextCursor: String? = null,
+    val search: RemoteSearchMeta? = null,
+)
 
 @Serializable
 data class RemoteCategoryItem(
@@ -758,6 +803,12 @@ data class RemoteBudgetPlan(
 
 @Serializable
 data class RemoteBudgetLimit(val categoryId: String, val amountMinor: Long)
+
+@Serializable
+data class RemoteBudgetPlanPage(
+    val plans: List<RemoteBudgetPlan> = emptyList(),
+    val nextCursor: String? = null,
+)
 
 @Serializable
 data class RemoteBudgetWrite(

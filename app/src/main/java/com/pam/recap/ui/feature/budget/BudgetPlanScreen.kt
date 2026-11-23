@@ -29,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pam.recap.R
 import com.pam.recap.core.money.IdrFormatter
+import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.BudgetComparisonRow
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.CoverageStatus
@@ -307,6 +308,62 @@ fun BudgetPlanScreen(
                     loading = state.isDeleting,
                     modifier = Modifier.fillMaxWidth(),
                 )
+            }
+
+            if (state.isServerMode) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    EyebrowText(text = stringResource(R.string.budget_history_eyebrow))
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    val from = state.historyFrom
+                    val to = state.historyTo
+                    if (state.planHistory.isEmpty()) {
+                        Text(
+                            text = if (from != null && to != null) {
+                                stringResource(R.string.budget_history_empty, from.label(), to.label())
+                            } else {
+                                stringResource(R.string.budget_history_load)
+                            },
+                            style = LabelM,
+                            color = OnInkFaint,
+                        )
+                    } else {
+                        if (from != null && to != null) {
+                            Text(
+                                text = stringResource(
+                                    R.string.budget_history_body,
+                                    state.planHistory.size,
+                                    from.label(),
+                                    to.label(),
+                                ),
+                                style = LabelM,
+                                color = OnInkFaint,
+                            )
+                        }
+                        state.planHistory.forEach { plan ->
+                            JakartaMonth.parse(plan.monthId)?.let { month ->
+                                Text(
+                                    text = stringResource(
+                                        R.string.budget_history_item,
+                                        month.label(),
+                                        plan.revision,
+                                    ),
+                                    style = BodyM,
+                                    color = OnInk,
+                                )
+                            }
+                        }
+                    }
+                    state.historyError?.let { error ->
+                        NoticeBanner(text = stringResource(appErrorRes(error)))
+                    }
+                    PillButton(
+                        text = stringResource(R.string.budget_history_load),
+                        onClick = { viewModel.loadPlanHistory() },
+                        style = PillButtonStyle.Secondary,
+                        loading = state.isHistoryLoading,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
 
             val comparison = state.comparison
