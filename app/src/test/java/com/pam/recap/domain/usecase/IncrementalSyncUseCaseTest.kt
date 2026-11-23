@@ -281,6 +281,32 @@ class IncrementalSyncUseCaseTest {
     }
 
     @Test
+    fun `the scheduled tick imports mail that arrived after the baseline without opening the screen`() = runTest {
+        // Baseline: the background tick finds nothing and must not call the provider body reader.
+        assertTrue(sync.runIfStale(SyncTrigger.PERIODIC) is SyncOutcome.Completed)
+        assertEquals(0, transactions.all().size)
+        assertEquals(0, mailbox.bodyFetches)
+
+        // A new email lands while the app is idle; only the 30-minute scheduler ticks, no UI action.
+        deliver("m-after-baseline", clock.now().minus(2.minutes))
+        clock.instant = clock.now().plus(31.minutes)
+        val uploadsBefore = uploads
+        val tick = sync.runIfStale(SyncTrigger.PERIODIC)
+
+        assertTrue(tick is SyncOutcome.Completed)
+        assertEquals(SyncPhase.SUCCEEDED, status.snapshot.value.phase)
+        assertEquals(1, transactions.all().size)
+        assertEquals("the delta was uploaded to the server, not just kept locally", uploadsBefore + 1, uploads)
+        assertEquals(1, status.snapshot.value.savedCount)
+
+        // The next tick has nothing new, so it reads no bodies and reports its own run.
+        val bodies = mailbox.bodyFetches
+        clock.instant = clock.now().plus(31.minutes)
+        assertTrue(sync.runIfStale(SyncTrigger.PERIODIC) is SyncOutcome.Completed)
+        assertEquals(bodies, mailbox.bodyFetches)
+    }
+
+    @Test
     fun `a pending upload ignores the cooldown so the queue can drain`() = runTest {
         deliver("m-1", clock.now().minus(1.minutes))
         failUpload = AppError.Network("offline")
