@@ -237,6 +237,13 @@ type budgetOutcome struct {
 // applied atomically (consent/deletion/revision guarded) and every job ends terminal
 // (CLASSIFIED/NEEDS_REVIEW/FAILED) or is durably requeued to PENDING for one bounded retry.
 func (s *Server) classifyGroup(ctx context.Context, ownerID string, pending []preparedCategory) ([]store.CategoryJob, budgetOutcome, error) {
+	return s.classifyGroupWith(ctx, ownerID, pending, false)
+}
+
+// classifyGroupWith is classifyGroup plus the budget-denial policy. A manual request fails the jobs
+// so the user sees a terminal state and can retry explicitly; the automatic drain requeues them to
+// PENDING instead, because a spent daily budget must delay the backlog, never discard it.
+func (s *Server) classifyGroupWith(ctx context.Context, ownerID string, pending []preparedCategory, requeueOnBudget bool) ([]store.CategoryJob, budgetOutcome, error) {
 	classifier := s.CategoryClassifier
 	var out []store.CategoryJob
 	var outcome budgetOutcome
@@ -298,6 +305,14 @@ func (s *Server) classifyGroup(ctx context.Context, ownerID string, pending []pr
 			outcome.budgetDenied = true
 			for _, si := range shares {
 				for _, p := range byKey[keyOrder[si]] {
+					if requeueOnBudget {
+						rj, err := s.Store.RequeueCategoryJob(ctx, ownerID, p.job.ID, p.job.LeaseToken, s.Now())
+						if err != nil {
+							return out, outcome, err
+						}
+						out = append(out, rj)
+						continue
+					}
 					fj, err := s.finishJob(ctx, ownerID, p.job, "FAILED", "", "", "budget_exhausted", 0)
 					if err != nil {
 						return out, outcome, err

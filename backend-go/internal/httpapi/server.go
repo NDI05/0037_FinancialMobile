@@ -86,6 +86,10 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PATCH /v1/import-jobs/{id}", s.authed(s.finalizeImportJob))
 	mux.Handle("POST /v1/category-jobs", s.authed(s.createCategoryJobs))
 	mux.Handle("GET /v1/category-jobs/{id}", s.authed(s.getCategoryJob))
+	// Automatic category queue: enqueue is provider-free, drain owns the 2-hour target and the
+	// per-request limit, so a client poll can never become an unbounded Azure call.
+	mux.Handle("POST /v1/category-jobs/enqueue", s.authed(s.enqueueCategoryJobs))
+	mux.Handle("POST /v1/category-jobs/drain", s.authed(s.drainCategoryQueue))
 	mux.Handle("POST /v1/analyses", s.authed(s.createAnalysis))
 	mux.Handle("GET /v1/analyses/{monthID}", s.authed(s.getAnalysis))
 	mux.Handle("POST /v1/deletion-requests", s.authed(s.createDeletion))
@@ -155,7 +159,8 @@ func sanitizedRoute(path string) string {
 	switch path {
 	case "/v1/accounts", "/v1/sessions", "/v1/sessions/refresh", "/v1/consents",
 		"/v1/me", "/v1/me/fingerprint-key", "/v1/transactions", "/v1/categories",
-		"/v1/import-jobs", "/v1/category-jobs", "/v1/analyses", "/v1/deletion-requests":
+		"/v1/import-jobs", "/v1/category-jobs", "/v1/category-jobs/enqueue",
+		"/v1/category-jobs/drain", "/v1/analyses", "/v1/deletion-requests":
 		return path
 	}
 	return "{unknown}"
