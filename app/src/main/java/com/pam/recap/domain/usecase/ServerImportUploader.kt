@@ -56,7 +56,16 @@ class ServerImportUploader @Inject constructor(
 
     suspend operator fun invoke(ownerId: String, job: ImportJob): Outcome<String> {
         SafeLogger.event("ServerImportUploader", "upload_start")
-        if (!server.isEnabled) return Outcome.Success(job.id)
+        if (!server.isEnabled) {
+            // A build without a backend cannot acknowledge anything. Reporting success here used to
+            // let the caller clear the pending record and advance the watermark over rows that never
+            // reached a server; an honest configuration failure keeps the work recoverable.
+            return if (journal == null) {
+                Outcome.Success(job.id)
+            } else {
+                Outcome.Failure(AppError.Configuration("backend_not_configured"))
+            }
+        }
 
         // Never acknowledge an older unreconciled run through a newer (possibly EMPTY) job: Room
         // dedupe keeps the old rows on the old importJobId, so an empty new snapshot says nothing
@@ -79,9 +88,9 @@ class ServerImportUploader @Inject constructor(
         val pending = journal?.readPending(ownerId) ?: return Outcome.Success("no_pending")
         SafeLogger.event("ServerImportUploader", "pending_resume")
         if (!server.isEnabled) {
-            // Local-only build: there is no server acknowledgement to wait for.
-            journal?.clearPending(ownerId)
-            return Outcome.Success("no_server")
+            // Never drop recorded work just because this build has no backend address. The record
+            // stays durable and the caller reports a configuration failure instead of advancing.
+            return Outcome.Failure(AppError.Configuration("backend_not_configured"))
         }
         val run = pending.toRunOrNull()
             ?: return Outcome.Failure(AppError.Storage("pending_journal_corrupt"))
@@ -89,7 +98,13 @@ class ServerImportUploader @Inject constructor(
     }
 
     private suspend fun uploadRun(ownerId: String, run: Run): Outcome<String> {
-        if (!server.isEnabled) return Outcome.Success(run.localJobId)
+        if (!server.isEnabled) {
+            return if (journal == null) {
+                Outcome.Success(run.localJobId)
+            } else {
+                Outcome.Failure(AppError.Configuration("backend_not_configured"))
+            }
+        }
         val snapshot = transactions.listByImportJob(ownerId, run.localJobId)
             .filter { it.source == TransactionSource.EMAIL }
             .sortedBy { it.fingerprint }
@@ -97,10 +112,13 @@ class ServerImportUploader @Inject constructor(
         var pending = run.pending
 
         // The durable pending record is authoritative for "which months exist", because an EMPTY
-        // run has no rows but still has a primary month to close. Without it, fall back to the
-        // snapshot's own months (legacy path used by ServerImportUploaderTest).
+        // run has no rows but still has a primary month to close. A pre-commit intent records only
+        // the primary month, so the snapshot's own months (late emails routed backwards) are added;
+        // otherwise their rows would be acked by association and never sent. Without any pending
+        // record, fall back to the snapshot's months (legacy path used by ServerImportUploaderTest).
         val monthIds = when {
-            pending != null && pending.months.isNotEmpty() -> pending.months.keys.sorted()
+            pending != null && pending.months.isNotEmpty() ->
+                (pending.months.keys + byMonth.keys).sorted()
             byMonth.isNotEmpty() -> byMonth.keys.sorted()
             else -> listOf(run.month.id())
         }
@@ -127,6 +145,18 @@ class ServerImportUploader @Inject constructor(
             }
 
             val month = JakartaMonth.parse(monthId) ?: run.month
+            // A pending record promises an exact candidate set. If those rows are no longer in the
+            // local snapshot, uploading whatever remains (or nothing at all) would let the ack clear
+            // the record and the cursor skip candidates that never reached the server. Refuse, keep
+            // the record, and let a retry rebuild the snapshot instead of inventing an EMPTY success.
+            val promised = pendingMonth?.fingerprints.orEmpty().toSet()
+            if (promised.isNotEmpty()) {
+                val actual = byMonth[monthId].orEmpty().map { it.fingerprint }.toSet()
+                if (!actual.containsAll(promised)) {
+                    SafeLogger.event("ServerImportUploader", "pending_snapshot_incomplete")
+                    return Outcome.Failure(AppError.Storage("pending_snapshot_incomplete"))
+                }
+            }
             val monthRows = byMonth[monthId].orEmpty().filter { transaction ->
                 pendingMonth == null ||
                     pendingMonth.fingerprints.isEmpty() ||

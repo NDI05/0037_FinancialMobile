@@ -66,12 +66,18 @@ class ImportMonthUseCase @Inject constructor(
      * @param delta when set, this is an incremental run: it reads only [DeltaWindow.fromInclusive]
      *   onward, asks the source for references above the durable watermark, and may route a late
      *   email into one of [DeltaWindow.extraMonths]. Without it the run is the month backfill.
+     * @param onJobCreated called with the durable job record BEFORE any mailbox page is fetched or
+     *   any transaction row is inserted. Returning `false` fails the job without committing a single
+     *   row. The sync layer uses it to persist the pending-run identity first: a crash right after
+     *   the financial commit would otherwise leave rows attached to a job id no durable record
+     *   names, and a deduped retry could never find them again.
      */
     suspend operator fun invoke(
         ownerId: String,
         month: JakartaMonth,
         templateVersion: String? = null,
         delta: DeltaWindow? = null,
+        onJobCreated: (suspend (ImportJob) -> Boolean)? = null,
     ): Outcome<ImportJob> {
         if (deletion.active(ownerId) != null) {
             // FR-47: sync is blocked while a deletion request is in flight.
@@ -108,6 +114,18 @@ class ImportMonthUseCase @Inject constructor(
             errorCode = null,
         )
         imports.create(job)
+        // Durable run identity before the first financial commit. A crash between the insert batch
+        // and the post-commit journal update would leave these rows attached to a job id no durable
+        // record names. Refusing to import is the only safe answer: never commit unrecoverable work.
+        if (onJobCreated != null && !onJobCreated(job)) {
+            job = job.copy(
+                state = ImportState.FAILED,
+                finishedAt = clock.now(),
+                errorCode = PENDING_JOURNAL_NOT_SAVED,
+            )
+            imports.update(job)
+            return Outcome.Failure(AppError.Storage(PENDING_JOURNAL_NOT_SAVED))
+        }
         job = job.copy(state = ImportState.RUNNING)
         imports.update(job)
 
@@ -418,3 +436,6 @@ class RetryImportUseCase @Inject constructor(
 /** NFR-08: no progress for this long ends the job; the source's watchdog bounds each operation. */
 private const val IMPORT_STALL_MILLIS = 90_000L
 private const val IMPORT_DEADLINE_CODE = "deadline_exceeded"
+
+/** Durable run identity could not be written before the commit; see `onJobCreated`. */
+internal const val PENDING_JOURNAL_NOT_SAVED = "pending_journal_not_saved"

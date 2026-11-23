@@ -374,9 +374,104 @@ class PendingUploadRecoveryTest {
         val journal: ImportUploadJournal,
     )
 
+    @Test
+    fun `a keystore failure after the local commit cannot strand the run before the cursor advances`() = runTest {
+        val event = Instant.parse("2026-11-19T02:15:20Z")
+        deliver(ownerA, "m-1", event)
+
+        // Call 1 writes the pre-commit intent; calls 2+ fail. That is the real crash window: the row
+        // is committed, but the exact-snapshot pending update and the uploader's journal write both
+        // fail. A retry that only looked at a fresh (deduped-to-empty) job would upload nothing.
+        val first = newProcess(FailingWrapStore(failFromCall = 2))
+        assertEquals(SyncOutcome.Failed("storage"), first.sync.run(SyncTrigger.PERIODIC))
+
+        val fingerprint = fingerprintAt(ownerA, event)
+        assertEquals(0, server.candidates.size)
+        assertNull(cursors.read(ownerA)?.watermark)
+        // The durable identity exists BEFORE the commit, so the committed row is named even though
+        // the snapshot update failed. Its fingerprint list is still empty (the pre-commit intent).
+        val intent = first.journal.readPending(ownerA)!!
+        assertEquals(transactions.all().single().importJobId, intent.localJobId)
+        assertTrue(intent.months.getValue("2026-11").fingerprints.isEmpty())
+
+        // Restart over the same bytes with a healthy keystore: the intent is the only lead, and the
+        // rows are re-derived from Room by the recorded importJobId before anything is acknowledged.
+        val second = newProcess()
+        assertTrue(second.sync.resumeUpload(JakartaMonth(2026, 11)) is Outcome.Success)
+        assertEquals(1, server.countByFingerprint()[fingerprint])
+        assertNull(second.journal.readPending(ownerA))
+        assertNull(
+            "a recovered run cannot prove its range was complete, so the watermark must stay put",
+            cursors.read(ownerA)?.watermark,
+        )
+
+        // Only the next tick may publish the watermark — and it must not send the row a second time.
+        clock.instant = clock.instant.plus(31.minutes)
+        assertTrue(second.sync.run(SyncTrigger.PERIODIC) is SyncOutcome.Completed)
+        assertEquals("the server saw the committed row exactly once", 1, server.countByFingerprint()[fingerprint])
+        assertEquals(listOf(fingerprint), server.candidateFingerprints())
+        assertNotNull(cursors.read(ownerA)?.watermark)
+        assertEquals(1, transactionCount(ownerA))
+    }
+
+    @Test
+    fun `a build without a backend keeps the pending run instead of dropping it`() = runTest {
+        val event = Instant.parse("2026-11-19T02:15:20Z")
+        deliver(ownerA, "m-1", event)
+        server.failBatches = true
+
+        val first = newProcess()
+        assertEquals(SyncOutcome.Failed("network"), first.sync.run(SyncTrigger.PERIODIC))
+        val fingerprint = fingerprintAt(ownerA, event)
+        server.failBatches = false
+        // The backend address is gone (misconfigured build, URL removed). Disabled must never mean
+        // "acknowledged": the record stays and the cursor does not move.
+        server.isEnabled = false
+
+        clock.instant = clock.instant.plus(31.minutes)
+        val second = newProcess()
+        assertEquals(SyncOutcome.Failed("configuration"), second.sync.run(SyncTrigger.PERIODIC))
+        assertNull(cursors.read(ownerA)?.watermark)
+        assertNotNull("the record must survive a build with no backend", second.journal.readPending(ownerA))
+        assertEquals(0, server.candidates.size)
+
+        // Restoring the address recovers the same run exactly once.
+        server.isEnabled = true
+        clock.instant = clock.instant.plus(31.minutes)
+        val third = newProcess()
+        assertTrue(third.sync.run(SyncTrigger.PERIODIC) is SyncOutcome.Completed)
+        assertEquals(1, server.countByFingerprint()[fingerprint])
+        assertNotNull(cursors.read(ownerA)?.watermark)
+        assertEquals(1, transactionCount(ownerA))
+    }
+
+    @Test
+    fun `a pending snapshot that no longer matches the local rows is never acknowledged as EMPTY`() = runTest {
+        val event = Instant.parse("2026-11-19T02:15:20Z")
+        deliver(ownerA, "m-1", event)
+        server.failBatches = true
+
+        val first = newProcess()
+        assertEquals(SyncOutcome.Failed("network"), first.sync.run(SyncTrigger.PERIODIC))
+        assertEquals(1, first.journal.readPending(ownerA)!!.months.getValue("2026-11").fingerprints.size)
+
+        // The committed row disappeared from the local snapshot (eviction/corruption) while the
+        // durable record still promises it. An EMPTY acknowledgement would clear the record and let
+        // the cursor skip it forever, so the uploader must refuse instead.
+        transactions.replaceAll(emptyList())
+        server.failBatches = false
+        clock.instant = clock.instant.plus(31.minutes)
+        val second = newProcess()
+        assertEquals(SyncOutcome.Failed("storage"), second.sync.run(SyncTrigger.PERIODIC))
+
+        assertNotNull(second.journal.readPending(ownerA))
+        assertNull(cursors.read(ownerA)?.watermark)
+        assertEquals(0, server.candidates.size)
+    }
+
     /** A fresh "process": durable stores are shared, every in-memory collaborator is new. */
-    private fun newProcess(): Process {
-        val journal = ImportUploadJournal(context, XorStore())
+    private fun newProcess(store: WrappedSecretStore = XorStore()): Process {
+        val journal = ImportUploadJournal(context, store)
         val uploader = ServerImportUploader(server, transactions, journal)
         val importMonth = ImportMonthUseCase(
             gmailSource = mailbox,
@@ -437,6 +532,24 @@ class PendingUploadRecoveryTest {
 
         override fun unwrap(wrapped: String): ByteArray = Base64.decode(wrapped, Base64.NO_WRAP)
             .map { (it.toInt() xor 0x21).toByte() }.toByteArray()
+    }
+
+    /**
+     * Keystore double that dies on a chosen write, like a locked/invalidated Keystore entry. Reads
+     * keep working, so the tests can inspect the durable bytes the previous "process" left behind.
+     */
+    private class FailingWrapStore(private val failFromCall: Int) : WrappedSecretStore {
+        private val delegate = XorStore()
+        var calls = 0
+            private set
+
+        override fun wrap(plainSecret: ByteArray): String {
+            calls++
+            if (calls >= failFromCall) throw IllegalStateException("keystore unavailable")
+            return delegate.wrap(plainSecret)
+        }
+
+        override fun unwrap(wrapped: String): ByteArray = delegate.unwrap(wrapped)
     }
 
     /**
@@ -542,7 +655,7 @@ class PendingUploadRecoveryTest {
      * batch key/body are stable and that an acknowledged month is never resent.
      */
     private class RecordingServer : ServerFinanceRepository {
-        override val isEnabled = true
+        override var isEnabled = true
 
         var failBatches = false
         var loseNextBatchResponse = false

@@ -175,9 +175,19 @@ class IncrementalSyncUseCase @Inject constructor(
                 status.update { it.copy(phase = SyncPhase.SUCCEEDED, isRunning = false, lastSuccessAt = clock.now()) }
                 return Outcome.Success(previous)
             }
-            val job = when (val result = importMonth(ownerId, month, previous?.templateVersion)) {
+            val job = when (
+                val result = importMonth(
+                    ownerId,
+                    month,
+                    previous?.templateVersion,
+                    onJobCreated = { created ->
+                        persistPendingIntent(ownerId, created, upTo = null, startedAt = startedAt)
+                    },
+                )
+            ) {
                 is Outcome.Failure -> {
-                    recordFailure(ownerId, cursors.read(ownerId) ?: SyncCursor(ownerId), startedAt, result.error.kind.name.lowercase())
+                    val code = syncCode(result.error)
+                    recordFailure(ownerId, cursors.read(ownerId) ?: SyncCursor(ownerId), startedAt, code)
                     return result
                 }
                 is Outcome.Success -> result.value
@@ -185,7 +195,16 @@ class IncrementalSyncUseCase @Inject constructor(
             if (sessions.current()?.ownerId != ownerId) {
                 return Outcome.Failure(AppError.Conflict("owner_changed"))
             }
-            persistPendingRun(ownerId, job, upTo = null, startedAt = startedAt)
+            if (!persistPendingRun(ownerId, job, upTo = null, startedAt = startedAt)) {
+                recordFailure(
+                    ownerId,
+                    cursors.read(ownerId) ?: SyncCursor(ownerId),
+                    startedAt,
+                    "storage_unavailable",
+                    uploadPending = true,
+                )
+                return Outcome.Failure(AppError.Storage("storage_unavailable"))
+            }
             when (val upload = uploader.upload(ownerId, job)) {
                 is Outcome.Failure -> {
                     recordFailure(ownerId, cursors.read(ownerId) ?: SyncCursor(ownerId), startedAt,
@@ -389,11 +408,18 @@ class IncrementalSyncUseCase @Inject constructor(
                     upTo = upTo,
                     extraMonths = extraMonths,
                 ),
+                // The durable identity of the run is written BEFORE a single row is committed, so a
+                // crash right after the financial commit cannot strand rows under a job id that no
+                // later tick knows. A failed write aborts the import before it touches the mailbox.
+                onJobCreated = { created ->
+                    persistPendingIntent(ownerId, created, upTo, startedAt)
+                },
             )
         ) {
             is Outcome.Failure -> {
-                recordFailure(ownerId, cursor, startedAt, result.error.kind.name.lowercase())
-                return SyncOutcome.Failed(result.error.kind.name.lowercase())
+                val code = syncCode(result.error)
+                recordFailure(ownerId, cursor, startedAt, code)
+                return SyncOutcome.Failed(code)
             }
 
             is Outcome.Success -> result.value
@@ -405,10 +431,15 @@ class IncrementalSyncUseCase @Inject constructor(
             return SyncOutcome.Skipped("owner_changed")
         }
 
-        // Durable run identity BEFORE the first upload attempt. Room's INSERT OR IGNORE keeps these
-        // rows on THIS importJobId, so a later run's snapshot would be empty; without this record
-        // the next tick could never find them again.
-        persistPendingRun(ownerId, job, upTo, startedAt)
+        // The exact candidate snapshot and its watermark, still BEFORE the first upload attempt.
+        // Room's INSERT OR IGNORE keeps these rows on THIS importJobId, so a later run's snapshot
+        // would be empty; without this record the next tick could never find them again.
+        if (!persistPendingRun(ownerId, job, upTo, startedAt)) {
+            // The pre-commit intent is gone too: the run has no durable identity at all. Sending it
+            // anyway would advance the cursor over rows no retry can find.
+            recordFailure(ownerId, cursor, startedAt, "storage_unavailable", uploadPending = true)
+            return SyncOutcome.Failed("storage_unavailable")
+        }
 
         when (val upload = uploader.upload(ownerId, job)) {
             is Outcome.Failure -> {
@@ -537,9 +568,32 @@ class IncrementalSyncUseCase @Inject constructor(
      */
     private suspend fun recoverPendingRun(ownerId: String, startedAt: Instant): PendingRecovery {
         val store = journal ?: return PendingRecovery.None
-        val pending = store.readPending(ownerId) ?: return PendingRecovery.None
+        var pending = store.readPending(ownerId) ?: return PendingRecovery.None
         SafeLogger.event(TAG, "pending_recovery_start")
         status.update { it.copy(pendingUpload = true) }
+
+        // The pre-commit intent names the job but not the committed fingerprints. Rebuild them from
+        // the rows Room keeps attached to that importJobId, so an EXACT snapshot reaches the server
+        // and a deduped retry never looks empty. Only months whose rows actually exist locally are
+        // derived; an unreadable local snapshot is a failure, never an EMPTY acknowledgement.
+        if (pending.months.values.all { it.fingerprints.isEmpty() && !it.acknowledged }) {
+            val rows = transactions?.listByImportJob(ownerId, pending.localJobId)
+                ?.filter { it.source == TransactionSource.EMAIL }
+                .orEmpty()
+            if (rows.isNotEmpty()) {
+                val byMonth = rows.groupBy { JakartaMonth.of(it.eventAt).id() }
+                val rebuilt = pending.copy(
+                    months = byMonth.mapValues { (monthId, monthRows) ->
+                        PendingUploadMonth(monthId, monthRows.map { it.fingerprint }.sorted())
+                    },
+                )
+                if (!store.savePending(rebuilt)) {
+                    return PendingRecovery.Failed(AppError.Storage("pending_journal_not_saved"))
+                }
+                pending = rebuilt
+            }
+        }
+
         when (val resumed = uploader.resumePending(ownerId)) {
             is Outcome.Failure -> return PendingRecovery.Failed(resumed.error)
             is Outcome.Success -> Unit
@@ -571,18 +625,47 @@ class IncrementalSyncUseCase @Inject constructor(
     }
 
     /**
+     * Writes the durable identity of a run BEFORE a single row is committed. The record names the
+     * local job id, its month and template so the uploader can resume it after process death; the
+     * fingerprints are filled in by [persistPendingRun] once the rows exist.
+     */
+    private suspend fun persistPendingIntent(
+        ownerId: String,
+        job: ImportJob,
+        upTo: MailboxWatermark?,
+        startedAt: Instant,
+    ): Boolean {
+        val store = journal ?: return true
+        val intent = PendingUploadRun(
+            ownerId = ownerId,
+            localJobId = job.id,
+            primaryMonthId = job.month.id(),
+            localState = ImportState.RUNNING.name,
+            templateVersion = job.templateVersion,
+            errorCode = null,
+            watermark = upTo,
+            startedAtEpochMillis = startedAt.toEpochMilliseconds(),
+            months = mapOf(job.month.id() to PendingUploadMonth(job.month.id(), emptyList())),
+        )
+        return store.savePending(intent)
+    }
+
+    /**
      * Writes the durable identity of a just-committed local run BEFORE the first upload attempt.
      * The fingerprint list is the exact candidate set, so a later tick can send it even though Room
      * dedupe keeps the rows attached to this (older) `importJobId`.
+     *
+     * @return true when a durable record names [job]; false means the run has no recoverable
+     *   identity and must not be uploaded/acknowledged.
      */
     private suspend fun persistPendingRun(
         ownerId: String,
         job: ImportJob,
         upTo: MailboxWatermark?,
         startedAt: Instant,
-    ) {
-        val store = journal ?: return
-        val repository = transactions ?: return
+    ): Boolean {
+        val store = journal ?: return true
+        val repository = transactions ?: return true
         val rows = repository.listByImportJob(ownerId, job.id)
             .filter { it.source == TransactionSource.EMAIL }
         val byMonth = rows.groupBy { JakartaMonth.of(it.eventAt).id() }
@@ -605,11 +688,12 @@ class IncrementalSyncUseCase @Inject constructor(
             startedAtEpochMillis = startedAt.toEpochMilliseconds(),
             months = months,
         )
-        if (!store.savePending(pending)) {
-            // Do not fail the run: the in-memory snapshot is still uploadable. The missing record
-            // only means a later tick cannot resume it, which is logged as a technical event.
-            SafeLogger.event(TAG, "pending_journal_not_saved")
-        }
+        // Two attempts: a transient keystore/write failure must not downgrade a committed run from
+        // "recoverable snapshot" to "recoverable only by re-deriving rows". The fallback below is
+        // still durable (the pre-commit intent), but the exact fingerprint set is stronger.
+        repeat(2) { if (store.savePending(pending)) return true }
+        SafeLogger.event(TAG, "pending_journal_update_failed")
+        return store.readPending(ownerId)?.localJobId == job.id
     }
 
     /**
@@ -623,7 +707,10 @@ class IncrementalSyncUseCase @Inject constructor(
     }
 
     private fun syncCode(error: AppError): String =
-        if (error is AppError.Storage && error.debugDetail == "storage_unavailable") {
+        if (error is AppError.Storage &&
+            (error.debugDetail == "storage_unavailable" ||
+                error.debugDetail == PENDING_JOURNAL_NOT_SAVED)
+        ) {
             "storage_unavailable"
         } else {
             error.kind.name.lowercase()
