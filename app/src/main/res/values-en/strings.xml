@@ -479,5 +479,9 @@
     <string name="update_status_reason_timeout">The server is not responding. Updates retry automatically.</string>
     <string name="update_status_reason_budget">The categorization budget is reached. The queue is kept until the limit resets.</string>
     <string name="update_status_reason_rate_limited">Too many requests. Waiting for the next slot.</string>
+    <string name="update_status_reason_partial">This email range is not finished yet. Saved data stays safe; the next check continues the rest.</string>
+    <string name="update_status_reason_storage">The check status could not be saved permanently, so progress is not recorded. Try again when device storage is available.</string>
+    <string name="update_status_reason_unresolved">Some emails could not be read and are not counted as transactions.</string>
+    <string name="update_status_run_counts">Saved %1$d, duplicates %2$d, skipped %3$d, unread %4$d.</string>
     <string name="update_status_reason_unknown">The last update failed. Try again later.</string>
 </resources>
