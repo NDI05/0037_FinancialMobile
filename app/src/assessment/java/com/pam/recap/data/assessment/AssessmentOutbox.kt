@@ -174,18 +174,25 @@ class AssessmentOutbox @Inject constructor(
         rows(ownerId).firstOrNull { it.id == id }
 
     /**
-     * Fingerprint-deduped insert, mirroring the Room contract: rows whose `(ownerId, fingerprint)`
-     * already exists are ignored. A batch lands in the bucket of its own `importJobId`.
+     * Fingerprint-deduped insert, mirroring Room's unique index on `(ownerId, fingerprint)` — that
+     * index is **global per owner**, not per import job. The dedupe set is therefore built from
+     * [rows] (every bucket of [ownerId]): a retried import, a manual entry that matches an email
+     * row, or a row arriving through another job must be ignored instead of being staged twice,
+     * otherwise `monthTotals`/`listMonth`/duplicate counts double-count after a re-fetch.
+     *
+     * A batch lands in the bucket of its own `importJobId`. The result reports only rows whose
+     * durable bucket write actually committed: a failed `commit()` must not be reported as a
+     * successful insert.
      */
     @Synchronized
     fun insert(ownerId: String, rows: List<StagedTransaction>): InsertResult {
+        val known = rows(ownerId).mapTo(mutableSetOf()) { it.fingerprint }
         val byBucket = rows.filter { it.ownerId == ownerId }.groupBy { it.importJobId }
         var inserted = 0
         var ignored = 0
         for ((jobId, batch) in byBucket) {
             val key = bucketKey(ownerId, jobId)
             val existing = readBucket(key)
-            val known = existing.map { it.fingerprint }.toMutableSet()
             val accepted = mutableListOf<StagedTransaction>()
             for (row in batch) {
                 if (known.add(row.fingerprint)) {
@@ -194,15 +201,23 @@ class AssessmentOutbox @Inject constructor(
                     ignored++
                 }
             }
-            inserted += accepted.size
-            if (accepted.isNotEmpty()) writeBucket(key, existing + accepted)
+            if (accepted.isEmpty()) continue
+            if (writeBucket(key, existing + accepted)) {
+                inserted += accepted.size
+            } else {
+                // Not durable: do not claim it was inserted, and keep the fingerprints unclaimed so
+                // a retry through this process is not silently deduped against phantom rows.
+                accepted.forEach { known.remove(it.fingerprint) }
+                ignored += accepted.size
+            }
         }
         if (inserted > 0) _changes.value += 1
         return InsertResult(inserted, ignored)
     }
 
+    /** Replaces one row; returns `false` when the durable write did not commit. */
     @Synchronized
-    fun replace(ownerId: String, row: StagedTransaction) {
+    fun replace(ownerId: String, row: StagedTransaction): Boolean {
         val key = bucketKey(ownerId, row.importJobId)
         val existing = readBucket(key)
         val index = existing.indexOfFirst { it.id == row.id }
@@ -210,8 +225,9 @@ class AssessmentOutbox @Inject constructor(
             index >= 0 -> existing.toMutableList().apply { set(index, row) }
             else -> (existing + row).toMutableList()
         }
-        writeBucket(key, next)
-        _changes.value += 1
+        val saved = writeBucket(key, next)
+        if (saved) _changes.value += 1
+        return saved
     }
 
     @Synchronized
@@ -250,9 +266,11 @@ class AssessmentOutbox @Inject constructor(
 
     @Synchronized
     fun bumpMonthRevision(ownerId: String, month: JakartaMonth): Int {
-        val next = monthRevision(ownerId, month) + 1
-        writeMeta(ownerId, "rev|${month.id()}", next.toString())
-        return next
+        val current = monthRevision(ownerId, month)
+        // Only advance when the wrapped counter actually committed, so a failed write cannot make
+        // dependent observers believe a revision was bumped.
+        if (!writeMeta(ownerId, "rev|${month.id()}", (current + 1).toString())) return current
+        return current + 1
     }
 
     // ---------------------------------------------------------------- storage
@@ -267,9 +285,13 @@ class AssessmentOutbox @Inject constructor(
     private fun readMeta(ownerId: String, name: String): String? =
         prefs.getString(metaPrefix(ownerId) + name, null)?.let { unwrap(it) }
 
-    private fun writeMeta(ownerId: String, name: String, value: String) {
+    /**
+     * Writes the wrapped owner metadata. Returns the actual `commit()` result; callers that need
+     * durable semantics (month revision) must not treat a `false` write as success.
+     */
+    private fun writeMeta(ownerId: String, name: String, value: String): Boolean {
         val wrapped = wrappedSecrets.wrap(value.encodeToByteArray())
-        prefs.edit().putString(metaPrefix(ownerId) + name, wrapped).commit()
+        return prefs.edit().putString(metaPrefix(ownerId) + name, wrapped).commit()
     }
 
     private fun readBucket(key: String): List<StagedTransaction> {
@@ -279,13 +301,13 @@ class AssessmentOutbox @Inject constructor(
             .getOrDefault(emptyList())
     }
 
-    private fun writeBucket(key: String, rows: List<StagedTransaction>) {
+    /** Returns the durable outcome of the bucket write ([rows] empty means deletion). */
+    private fun writeBucket(key: String, rows: List<StagedTransaction>): Boolean {
         if (rows.isEmpty()) {
-            prefs.edit().remove(key).commit()
-            return
+            return prefs.edit().remove(key).commit()
         }
         val wrapped = wrappedSecrets.wrap(json.encodeToString(rows).encodeToByteArray())
-        prefs.edit().putString(key, wrapped).commit()
+        return prefs.edit().putString(key, wrapped).commit()
     }
 
     private fun unwrap(value: String): String? =

@@ -83,6 +83,13 @@ class AssessmentVariantTest {
             "androidx.room.Room",
             "androidx.room.RoomDatabase",
             "net.zetetic.database.sqlcipher.SQLiteDatabase",
+            // androidx.sqlite is the base layer Room builds on; its absence is the second,
+            // independent proof that no Room-linked library leaked into this variant.
+            "androidx.sqlite.db.SupportSQLiteDatabase",
+            "androidx.sqlite.SQLiteDatabase",
+            // androidx.work links Room's WorkDatabase, so it must not be linked here either.
+            "androidx.work.WorkManager",
+            "androidx.work.impl.WorkDatabase",
             "com.pam.recap.data.local.PamDatabase",
             "com.pam.recap.data.local.TransactionEntity",
             "com.pam.recap.core.security.DatabasePassphraseProvider",
