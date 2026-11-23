@@ -33,12 +33,16 @@ type attachmentPatch struct {
 }
 
 func attachmentJSON(attachment store.Attachment) map[string]any {
+	attributes := attachment.Attributes
+	if attributes == nil {
+		attributes = map[string]any{}
+	}
 	return map[string]any{
 		"id": attachment.ID, "transactionId": attachment.TransactionID,
 		"fileName": attachment.FileName, "mimeType": attachment.Mime,
 		"sizeBytes": attachment.SizeBytes, "sha256": attachment.Sha256,
 		"storageRef": attachment.StorageRef, "deviceRef": nullString(attachment.DeviceRef),
-		"localFileId": nullString(attachment.LocalFileID), "attributes": attachment.Attributes,
+		"localFileId": nullString(attachment.LocalFileID), "attributes": attributes,
 		"revision": attachment.Revision, "createdAt": attachment.CreatedAt,
 		"updatedAt": attachment.UpdatedAt,
 	}

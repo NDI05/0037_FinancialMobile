@@ -582,7 +582,8 @@ data class RemoteAttachment(
     val storageRef: String,
     val deviceRef: String? = null,
     val localFileId: String? = null,
-    val attributes: Map<String, String> = emptyMap(),
+    /** Older servers may serialize an empty metadata map as JSON null. */
+    val attributes: Map<String, String>? = null,
     val revision: Int = 0,
     val createdAt: String? = null,
     val updatedAt: String? = null,

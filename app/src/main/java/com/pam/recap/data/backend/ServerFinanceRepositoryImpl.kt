@@ -141,7 +141,7 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         kind = kind,
         isBuiltin = isBuiltin,
         color = color,
-        attributes = attributes,
+        attributes = attributes.orEmpty(),
         revision = revision,
     )
 
@@ -247,7 +247,7 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         storageRef = storageRef,
         deviceRef = deviceRef,
         localFileId = localFileId,
-        attributes = attributes,
+        attributes = attributes.orEmpty(),
         revision = revision,
         createdAt = createdAt?.let { runCatching { Instant.parse(it) }.getOrNull() },
         updatedAt = updatedAt?.let { runCatching { Instant.parse(it) }.getOrNull() },

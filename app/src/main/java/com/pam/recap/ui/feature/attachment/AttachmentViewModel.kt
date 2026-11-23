@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
+import com.pam.recap.core.result.SafeLogger
 import com.pam.recap.data.attachment.PrivateAttachmentStore
 import com.pam.recap.domain.repository.AttachmentDraft
 import com.pam.recap.domain.repository.ServerAttachment
@@ -76,8 +77,11 @@ class AttachmentViewModel @Inject constructor(
                         nextCursor = result.value.nextCursor,
                     )
                 }
-                is Outcome.Failure -> _state.update {
-                    it.copy(isLoading = false, serverEnabled = true, error = result.error)
+                is Outcome.Failure -> {
+                    SafeLogger.warning(TAG, "attachment_load_failed", result.error)
+                    _state.update {
+                        it.copy(isLoading = false, serverEnabled = true, error = result.error)
+                    }
                 }
             }
         }
@@ -93,6 +97,7 @@ class AttachmentViewModel @Inject constructor(
             _state.update { it.copy(busy = true, error = null, validationRule = null, notice = null) }
             val imported = store.import(ownerId, transactionId, fileName, mimeType, source)
             if (imported is Outcome.Failure) {
+                SafeLogger.warning(TAG, "attachment_import_failed", imported.error)
                 _state.update { it.copy(busy = false, error = imported.error) }
                 return@launch
             }
@@ -116,6 +121,7 @@ class AttachmentViewModel @Inject constructor(
                     load()
                 }
                 is Outcome.Failure -> {
+                    SafeLogger.warning(TAG, "attachment_create_failed", result.error)
                     store.delete(file.storageRef)
                     _state.update { it.copy(busy = false, error = result.error) }
                 }
@@ -134,12 +140,15 @@ class AttachmentViewModel @Inject constructor(
                     store.delete(attachment.storageRef)
                     load()
                 }
-                is Outcome.Failure -> _state.update {
-                    it.copy(
-                        busy = false,
-                        error = result.error,
-                        conflict = result.error is AppError.Conflict,
-                    )
+                is Outcome.Failure -> {
+                    SafeLogger.warning(TAG, "attachment_delete_failed", result.error)
+                    _state.update {
+                        it.copy(
+                            busy = false,
+                            error = result.error,
+                            conflict = result.error is AppError.Conflict,
+                        )
+                    }
                 }
             }
         }
@@ -154,3 +163,5 @@ class AttachmentViewModel @Inject constructor(
         return owner
     }
 }
+
+private const val TAG = "AttachmentVM"
