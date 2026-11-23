@@ -1,0 +1,43 @@
+{
+ "categorizedCount": 7,
+ "categoryTotals": [
+  {
+   "categoryCode": "food",
+   "label": "Makanan",
+   "amountMinor": 16262500,
+   "count": 4
+  },
+  {
+   "categoryCode": "shopping",
+   "label": "Belanja",
+   "amountMinor": 800000,
+   "count": 1
+  },
+  {
+   "categoryCode": "transport",
+   "label": "Transportasi",
+   "amountMinor": 450000,
+   "count": 1
+  }
+ ],
+ "classifiedExpenseMinor": 17512500,
+ "classifiedIncomeMinor": 9000000,
+ "coverage": "EMPTY",
+ "currentRevision": 10,
+ "emailDerived": true,
+ "freshness": "CURRENT",
+ "generatedAt": "2026-11-23T13:51:36.537147Z",
+ "grossInflowMinor": 9000000,
+ "grossOutflowMinor": 42193500,
+ "inputRevision": 10,
+ "manualEntryCount": 8,
+ "monthId": "2026-11",
+ "netMinor": -33193500,
+ "refundCount": 0,
+ "refundMinor": 0,
+ "transactionCount": 8,
+ "transferCount": 0,
+ "transferInMinor": 0,
+ "transferOutMinor": 0,
+ "uncategorizedCount": 1
+}

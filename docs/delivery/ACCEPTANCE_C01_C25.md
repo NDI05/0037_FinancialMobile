@@ -11,10 +11,12 @@ benar-benar dijalankan, bukan ke daftar fitur yang direncanakan. Kosakata status
   acceptance belum dibuktikan.
 - **NOT RUN** — belum ada bukti runtime; jangan dibaca sebagai lulus.
 
-Angka tes fresh 23 Nov malam (HEAD integrasi `99cb3df`): Android **463 tests / 63 classes /
-0 failure** (debug) dan **473 tests / 64 classes / 0 failure** (varian assessment),
+Angka tes fresh 23 Nov malam (HEAD integrasi **`7337559`**): Android **493 tests / 68 classes /
+0 failure** (debug) dan **503 tests / 69 classes / 0 failure** (varian assessment),
 `:app:lintDebug` **0 error, 115 warning, 1 hint**, `:app:lintAssessment` **0 error, 123 warning,
 1 hint**, Go `test -count=1 ./...` **semua paket ok**, `go vet` bersih, `-race` store+httpapi ok.
+APK merged head: debug sha256 `6497a4066a32b00308fe7ee44291bcb713e039d54abd3909709a78c9b5e5db16`,
+assessment sha256 `fa0d224e7591400354184129c2096533c87cc4334dfa6218be22baa002d44fd7`.
 UAT lampiran: [UAT_S4_ATTACHMENTS_2026-11-23.md](../evidence/UAT_S4_ATTACHMENTS_2026-11-23.md);
 UAT admin: [UAT_S4_ADMIN_2026-11-23.md](../evidence/UAT_S4_ADMIN_2026-11-23.md);
 UAT perangkat S3/S4: [UAT_S3_S4_DEVICE_2026-11-23.md](../evidence/UAT_S3_S4_DEVICE_2026-11-23.md).
@@ -25,7 +27,7 @@ bukan data pemilik.
 
 | Aksi | Status | Bukti | Batas |
 |---|---|---|---|
-| C01 Create manual, key stabil, retry satu record | PARTIAL | Kontrak POST server + test idempotensi/outbox; UI `Tambah transaksi` ada; percobaan perangkat mengirim `POST /v1/transactions` tetapi 400 karena nilai form lama ikut terpulihkan | Create manual lewat UI perangkat belum terbukti; replay create tetap API/unit-only |
+| C01 Create manual, key stabil, retry satu record | **PASS runtime** | Merged head: create manual via UI perangkat → `POST /v1/transactions` **201** 23 Nov 20:33:56 WIB (`req_f27db8bd…`), baris `C01 merged 2101` tampil di dump; ringkasan UAT naik 92/89 → **93/90** (`netMinor 7661301005`). Cross-check backend terisolasi: `tx_471df9b6…` DEBIT MANUAL 24681000, revisi 9→10, tepat 1 baris. Bukti: [UAT_MERGED_HEAD_2026-11-23.md](../evidence/UAT_MERGED_HEAD_2026-11-23.md) §2 | Key stabil/outbox diuji unit; replay lost-response create tetap API/unit-only |
 | C02 Read list/detail/cursor/provenance | **PASS runtime** | Perangkat menampilkan 6 transaksi server + detail `KOPI UJI QRIS` lengkap dengan provenance (sumber, parser, keyakinan, waktu) | Halaman kedua/cursor belum diuji di perangkat (6 baris < limit) |
 | C03 Update correction + revisi/409 | **PASS runtime** | Editor detail menyimpan `PATCH /v1/transactions/{id}` 200; state revisi naik (2 → 3); atribut dinamis round-trip `{"sumber":"kamera"}` dibaca ulang dari server | Summary invalidation dibuktikan unit/integration, tidak diukur ulang di perangkat |
 | C04 Delete aktif/total, tanpa resurrect | **PASS runtime** | Perangkat: detail → Hapus → konfirmasi; `DELETE /v1/transactions/{id}` 204; November 85 → 84 baris, baris #025 hilang di UI dump dan API, tidak resurrect setelah reload | Untuk akun sintetis; guard replay/outage tetap diuji unit/API |
@@ -68,21 +70,23 @@ bukan data pemilik.
 | C21 Create terkontrol/invite; public register USER | **PASS runtime** | `pam-admin -promote` idempoten + audit `bootstrap_admin`; undangan `201` token tampil sekali; `POST /v1/accounts` dari undangan `201` peran sesuai undangan | Email undangan tidak benar-benar dikirim |
 | C22 Read list/detail tanpa finance owner lain | **PASS runtime** | Daftar 4 akun, detail editor, tidak ada data keuangan di layar admin | Hanya 4 akun UAT |
 | C23 Update role/status/revision/revocation/audit | **PASS runtime** | Edit nama 200, konflik 409 dengan draf utuh, reload revisi lalu simpan 200; audit `admin.account.update` | Perubahan peran belum dijalankan di perangkat (nama/status sudah) |
-| C24 Delete/deactivate + last-admin guard + revoke | PARTIAL | Nonaktifkan akun lain 200 → `SUSPENDED`, seluruh sesi target dicabut; self-deactivate ditolak 400; last-admin guard ditutup test store/HTTP + trigger DB | Guard `last_admin` tidak dipicu ulang di perangkat |
-| C25 Search query/role/status/cursor; USER ditolak | PARTIAL | Pencarian `andhika` → 1 baris; USER tanpa peran ditolak sebelum request admin; filter peran/status/cursor diuji API/VM; list default server kini mengecualikan DELETED (commit `daa5f36`) | Filter status di perangkat hanya diamati, cursor butuh >1 halaman; walk perangkat C24/C25 sengaja tidak dijalankan agar sesi admin lain tidak mencabut sesi bukti |
+| C24 Delete/deactivate + last-admin guard + revoke | **PASS runtime** | Nonaktifkan akun lain 200 → `SUSPENDED` + seluruh sesi target dicabut; self-deactivate ditolak 400; last-admin guard ditutup test store/HTTP + trigger DB; walk teraudit `a512770` (`UAT_GAP_ADMIN_2026-11-23.md`), regresi merged head lulus | Guard `last_admin` tidak dipicu ulang di perangkat (sengaja, agar sesi admin bukti tidak tercabut) |
+| C25 Search query/role/status/cursor; USER ditolak | **PASS runtime** | Pencarian `andhika` → 1 baris; USER tanpa peran ditolak sebelum request admin; filter peran/status/cursor diuji API/VM; list default server mengecualikan DELETED (commit `daa5f36`); walk teraudit `a512770`, regresi merged head lulus | Filter status di perangkat hanya diamati; cursor butuh >1 halaman; walk perangkat tidak diulang sengaja |
 
 ## Kesimpulan gate
 
-- S3 (C01–C15): **lulus kecuali C01**. PASS runtime perangkat: C02, C03, C04, C05, C10, C12,
-  C15 (+ C06–C09/C11/C13/C14 PASS API/unit). C01 tetap PARTIAL — jalur create terpanggil di
-  perangkat tetapi tidak pernah mencapai 201 karena nilai form lama; jangan diklaim lulus.
+- S3 (C01–C15): **lulus**. PASS runtime perangkat: C01 (merged head, create manual 201 + delta
+  ringkasan tepat), C02, C03, C04, C05, C10, C12, C15 (+ C06–C09/C11/C13/C14 PASS API/unit).
+  C01 dibuktikan ulang setelah merge pada checkout utama; replay lost-response tetap
+  API/unit-only dan dicatat sebagai batas.
 - S4.1 (lampiran): C16/C17/C19 **PASS runtime** dan C18/C20 kini juga **PASS runtime**;
   sisa batas: konflik revisi dan retry kegagalan hapus tidak diulang di perangkat.
-- S4.2 (admin): C21/C22/C23 **PASS runtime**; C24/C25 PARTIAL karena walk perangkat sengaja
-  tidak dijalankan (promosi akun admin lain akan mencabut sesi bukti). Last-admin guard,
-  filter status, dan cursor tetap PASS API/unit, bukan UAT perangkat.
+- S4.2 (admin): **C21–C25 PASS runtime** — walk C21–C25 teraudit (`a512770`,
+  `UAT_GAP_ADMIN_2026-11-23.md`) dan kode admin lolos regresi merged head. Batas: guard
+  last-admin dan walk cursor tidak dipentaskan ulang di perangkat.
 - S4.4 (assessment variant): **lulus audit** — varian `assessment` bebas Room/SQLCipher/
   WorkManager (`assessmentRuntimeClasspath` 0 entri terlarang, APK assessment 0 string
-  terlarang), 473 test assessment hijau; batas: foreground-only sync, tanpa
-  `applicationIdSuffix` (tidak bisa coexist dengan debug), tanpa data finansial lokal.
+  terlarang), **503 test assessment** hijau di merged head, `lintAssessment` 0 error, APK
+  sha256 `fa0d224e…`; batas: foreground-only sync, tanpa `applicationIdSuffix` (tidak bisa
+  coexist dengan debug), tanpa data finansial lokal.
 - Tidak ada baris di matriks ini yang diberi PASS tanpa menyebut bukti dan batasnya.

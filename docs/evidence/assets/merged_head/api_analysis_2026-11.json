@@ -1,0 +1,23 @@
+{
+ "completionTokens": null,
+ "createdAt": "2026-11-23T13:46:51.821576Z",
+ "currentRevision": 10,
+ "freshness": "STALE",
+ "inputRevision": 10,
+ "limitations": [
+  "Analisis memakai proyeksi agregat, bukan isi email atau catatan pribadi."
+ ],
+ "monthId": "2026-11",
+ "observations": [
+  {
+   "text": "Arus kas keluar bulan ini tercatat pada ringkasan.",
+   "metricKeys": [
+    "summary.grossOutflow"
+   ]
+  }
+ ],
+ "promptTokens": null,
+ "promptVersion": "analysis-v1",
+ "status": "AVAILABLE",
+ "suggestions": null
+}

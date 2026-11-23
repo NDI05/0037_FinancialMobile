@@ -677,3 +677,69 @@ worktree `pam-wt-recfix`, `pam-wt-accept`, `pam-wt-assess`, `pam-wt-audit`. `git
 - **S4.4 batas by-design**: sinkronisasi foreground-only (tanpa WorkManager/background sync),
   tanpa `applicationIdSuffix` (tidak bisa coexist dengan build debug), tidak menyimpan data
   finansial lokal (server-backed + encrypted outbox; consent/Gmail/import metadata durable).
+
+## Penutupan gap S2–S4 — merged `7337559` (23 November 2026, malam)
+
+Bagian ini menutup pekerjaan gap atas hasil integrasi `99cb3df`: tiga lane terakhir
+digabung ke `feat/c2-android`, diaudit independen, lalu diverifikasi ulang pada checkout
+utama dan perangkat. Tidak ada merge ke `develop`/`main` dan tidak ada deployment.
+
+### Paket gap yang diintegrasikan
+
+| Commit | Isi | Audit |
+|---|---|---|
+| `a512770` | Lane C24/C25 — admin: deaktivasi + pencabutan sesi, last-admin guard, pencarian/filter/paging/cursor, USER ditolak; evidence `UAT_GAP_ADMIN_2026-11-23.md` | Walk runtime teraudit; regression merged lulus |
+| `aa61a7b` (merge `03d29ab`) | Lane C01 — bukti create manual bersih + identitas retry lost-response (doc + test kontrak; tanpa ubah perilaku produksi) | Audit C01: LULUS DENGAN CATATAN (sitasi diperbaiki; replay tetap unit/API) |
+| `7337559` (merge `5fe623c` + `2bc5cb6`) | Lane S2.5 — analisis mode server: wiring ringkasan/analisis remote, freshness CURRENT/STALE/HISTORICAL, regenerasi, guard consent lokal, decode `suggestions:null` | Re-audit B: LULUS DENGAN CATATAN; B-RE-1/2/3 CLOSED |
+
+Urutan di atas bukan urutan merge kronologis lengkap; lane C digabung lebih dulu.
+
+### Gate fresh pada merged head `7337559`
+
+- `:app:testDebugUnitTest --rerun-tasks`: **493 tests / 68 classes / 0 failure / 0 error / 0 skip**.
+- `:app:testAssessmentUnitTest --rerun-tasks`: **503 tests / 69 classes / 0 failure / 0 error / 0 skip**.
+- `:app:lintDebug`: 0 error, 115 warning, 1 hint; `:app:lintAssessment`: 0 error, 123 warning, 1 hint.
+- `:app:assembleDebug -PPAM_BACKEND_BASE_URL=http://127.0.0.1:18090` + `:app:assembleAssessment` sukses.
+- Go: `test -count=1 ./...` ok, `go vet` bersih, `build` ok, `-race ./internal/store ./internal/httpapi` ok.
+
+### Artefak APK merged head
+
+| Varian | Ukuran | SHA-256 | Konfigurasi |
+|---|---|---|---|
+| debug | 46.709.962 B | `6497a4066a32b00308fe7ee44291bcb713e039d54abd3909709a78c9b5e5db16` | `PAM_BACKEND_BASE_URL=http://127.0.0.1:18090` |
+| assessment | 24.344.958 B | `fa0d224e7591400354184129c2096533c87cc4334dfa6218be22baa002d44fd7` | `PAM_BACKEND_BASE_URL=http://127.0.0.1:18090`, package sama tanpa suffix |
+
+### Acceptance merged head (ringkas)
+
+- **C01 PASS runtime** — create manual via UI UAT `18090` → `POST /v1/transactions` 201
+  (23 Nov 20:33:56 WIB), ringkasan 92/89 → 93/90; cross-check DB terisolasi `tx_471df9b6…`.
+- **S2.5 PASS runtime** — CURRENT → revision-STALE → regenerate → CURRENT →
+  dependency-STALE (pasca sync foreground menulis import-job EMPTY), dengan guard coverage
+  EMPTY yang memang dirancang. Detail dan batas lingkungan di
+  [UAT_MERGED_HEAD_2026-11-23.md](evidence/UAT_MERGED_HEAD_2026-11-23.md).
+- **C24/C25 PASS runtime** — walk teraudit + regresi merged; walk perangkat last-admin/cursor
+  tidak diulang (batas dicatat).
+- **S4.4 assessment** — 503 test hijau, APK sha `fa0d224e…`; batas by-design tetap
+  foreground-only sync, tanpa `applicationIdSuffix`, tanpa data finansial lokal.
+
+### Catatan tindak lanjut (bukan blocker merge ini)
+
+- **INFO**: sinkronisasi foreground tanpa mailbox Gmail terhubung menulis import-job `EMPTY`
+  yang mengubah dependency hash/coverage sehingga analisis tersimpan menjadi STALE dan
+  regenerasi berikutnya tertahan guard `MONTH_HAS_NO_DATA`. UI sudah menampilkan status
+  server dengan benar; pertanyaan desain (apakah job nol-halaman harus masuk dependency
+  hash/coverage) diserahkan sebagai keputusan backend lanjutan.
+- **LOW** yang tetap dibawa: P5-1/P5-2, P3R-2/P3R-3/P3R-4, P6-3/P6-4/P6-5, P4b-1/P4b-2,
+  sitasi aset C01 lama, idempotency replay unit/API-only, dan copy penyedia on-device pada
+  mode server.
+
+### Cleanup
+
+`git worktree list` hanya menyisakan checkout utama; branch `work/*` tidak ada lagi lokal
+maupun di `origin`; `origin/feat/c2-android == 7337559`. Tidak ada force-push; `main`
+dikecualikan.
+
+### S5 — gate eksternal yang tetap terbuka
+
+Mailbox nyata + email baru tiba, benchmark berlabel manusia, 36 email malformed, UAT pemilik
+di perangkat, hosting/backup-restore, serta keputusan merge/deploy ke `develop`/`main`.

@@ -1,0 +1,73 @@
+{
+ "categorizedCount": 78,
+ "categoryTotals": [
+  {
+   "categoryCode": "health",
+   "label": "Kesehatan",
+   "amountMinor": 56388,
+   "count": 8
+  },
+  {
+   "categoryCode": "other_expense",
+   "label": "Pengeluaran lain",
+   "amountMinor": 54477,
+   "count": 7
+  },
+  {
+   "categoryCode": "education",
+   "label": "Pendidikan",
+   "amountMinor": 52696,
+   "count": 7
+  },
+  {
+   "categoryCode": "shopping",
+   "label": "Belanja",
+   "amountMinor": 49408,
+   "count": 7
+  },
+  {
+   "categoryCode": "food",
+   "label": "Makanan",
+   "amountMinor": 47627,
+   "count": 7
+  },
+  {
+   "categoryCode": "housing",
+   "label": "Tempat tinggal",
+   "amountMinor": 46127,
+   "count": 6
+  },
+  {
+   "categoryCode": "utilities",
+   "label": "Utilitas",
+   "amountMinor": 42839,
+   "count": 6
+  },
+  {
+   "categoryCode": "transport",
+   "label": "Transportasi",
+   "amountMinor": 39688,
+   "count": 6
+  }
+ ],
+ "classifiedExpenseMinor": 389250,
+ "classifiedIncomeMinor": 7777453697,
+ "coverage": "EMPTY",
+ "currentRevision": 93,
+ "emailDerived": true,
+ "freshness": "CURRENT",
+ "generatedAt": "2026-11-23T13:52:22.613295Z",
+ "grossInflowMinor": 7777511585,
+ "grossOutflowMinor": 116210580,
+ "inputRevision": 93,
+ "manualEntryCount": 90,
+ "monthId": "2026-11",
+ "netMinor": 7661301005,
+ "refundCount": 0,
+ "refundMinor": 0,
+ "transactionCount": 90,
+ "transferCount": 0,
+ "transferInMinor": 0,
+ "transferOutMinor": 0,
+ "uncategorizedCount": 12
+}
