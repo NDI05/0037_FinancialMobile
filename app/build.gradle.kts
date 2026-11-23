@@ -79,6 +79,20 @@ android {
                 "proguard-rules.pro"
             )
         }
+        // S4.4 assessment variant: same debuggable build as `debug`, but Room/SQLCipher are not on
+        // its classpath. The finance/identity adapters are the server-backed ones in
+        // `src/assessment/java`; `src/standard/java` (Room + SQLCipher) is only compiled into
+        // debug/release. Task names stay `assembleDebug` / `testDebugUnitTest` for the standard
+        // candidate, so the existing delivery evidence keeps its meaning.
+        // No applicationIdSuffix: the shared Robolectric UI/screenshot tests resolve activities
+        // from the merged manifest package, and a suffixed id makes every one of them fail with
+        // "Unable to resolve activity". The assessment artifact is identified by this build type
+        // and its APK path, not by a second package name.
+        create("assessment") {
+            initWith(getByName("debug"))
+            matchingFallbacks += listOf("debug", "release")
+            isMinifyEnabled = false
+        }
     }
 
     signingConfigs {
@@ -110,6 +124,14 @@ android {
         // future migrations can be diffed.
         arg("room.schemaLocation", "$projectDir/schemas")
         arg("room.generateKotlin", "true")
+    }
+
+    sourceSets {
+        // `standard` = the Room/SQLCipher-backed adapters shared by debug and release. Keeping them
+        // out of `main` is what lets the assessment variant compile and package without Room.
+        getByName("debug").java.srcDir("src/standard/java")
+        getByName("release").java.srcDir("src/standard/java")
+        getByName("assessment").java.srcDir("src/assessment/java")
     }
 
     buildFeatures {
@@ -159,6 +181,11 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // The assessment variant is debuggable too, and its merged manifest needs the debug-only
+    // ComponentActivity that `createComposeRule()` launches; without it every Robolectric UI test
+    // fails to resolve the activity.
+    "assessmentImplementation"(libs.androidx.compose.ui.tooling)
+    "assessmentImplementation"(libs.androidx.compose.ui.test.manifest)
 
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
@@ -166,16 +193,26 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
+    // S4.4: Room/SQLCipher stay available for the standard (debug/release) variants only. The
+    // assessment variant must not link, bundle or initialize them at all.
+    "debugImplementation"(libs.androidx.room.runtime)
+    "debugImplementation"(libs.androidx.room.ktx)
+    "releaseImplementation"(libs.androidx.room.runtime)
+    "releaseImplementation"(libs.androidx.room.ktx)
+    "kspDebug"(libs.androidx.room.compiler)
+    "kspRelease"(libs.androidx.room.compiler)
 
-    implementation(libs.sqlcipher.android)
-    implementation(libs.androidx.sqlite.ktx)
+    "debugImplementation"(libs.sqlcipher.android)
+    "debugImplementation"(libs.androidx.sqlite.ktx)
+    "releaseImplementation"(libs.sqlcipher.android)
+    "releaseImplementation"(libs.androidx.sqlite.ktx)
 
     implementation(libs.androidx.datastore.preferences)
     // Auto-sync scheduling: OS-owned periodic work, never a permanent foreground service.
-    implementation(libs.androidx.work.runtime.ktx)
+    // S4.4: WorkManager is standard-only. Its WorkDatabase is Room-backed, so keeping it in the
+    // assessment variant would re-introduce Room on the classpath no matter what our own code does.
+    "debugImplementation"(libs.androidx.work.runtime.ktx)
+    "releaseImplementation"(libs.androidx.work.runtime.ktx)
     implementation(libs.coil.compose)
 
     implementation(libs.kotlinx.datetime)
@@ -196,8 +233,7 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
-    testImplementation(libs.androidx.room.testing)
-    testImplementation(libs.androidx.work.testing)
+    "testDebugImplementation"(libs.androidx.work.testing)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -16,31 +16,15 @@ import com.pam.recap.data.gmail.LivinQueryBuilder
 import com.pam.recap.data.gmail.LivinTemplateRegistry
 import com.pam.recap.data.prefs.SessionRepositoryImpl
 import com.pam.recap.data.prefs.pamSessionDataStore
-import com.pam.recap.data.repository.AnalysisRepositoryImpl
-import com.pam.recap.data.repository.BudgetRepositoryImpl
-import com.pam.recap.data.repository.ConsentRepositoryImpl
-import com.pam.recap.data.repository.DeletionRepositoryImpl
-import com.pam.recap.data.repository.GmailConnectionRepositoryImpl
-import com.pam.recap.data.repository.ImportRepositoryImpl
-import com.pam.recap.data.repository.SummaryRepositoryImpl
-import com.pam.recap.data.repository.TransactionRepositoryImpl
 import com.pam.recap.data.seed.DemoDataPurger
 import com.pam.recap.data.seed.DemoDataSeeder
 import com.pam.recap.domain.repository.AccountRepository
 import com.pam.recap.domain.repository.AiPayloadSource
-import com.pam.recap.domain.repository.AnalysisRepository
-import com.pam.recap.domain.repository.BudgetRepository
-import com.pam.recap.domain.repository.ConsentRepository
-import com.pam.recap.domain.repository.DeletionRepository
 import com.pam.recap.domain.repository.DemoDataMaintenance
 import com.pam.recap.domain.repository.DemoDataPort
-import com.pam.recap.domain.repository.GmailConnectionRepository
-import com.pam.recap.domain.repository.ImportRepository
 import com.pam.recap.domain.repository.LivinNotificationParser
 import com.pam.recap.domain.repository.LivinQueryFactory
 import com.pam.recap.domain.repository.SessionRepository
-import com.pam.recap.domain.repository.SummaryRepository
-import com.pam.recap.domain.repository.TransactionRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -49,37 +33,20 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-/** Port-to-adapter wiring: every domain port has exactly one implementation here. */
+/**
+ * Port-to-adapter wiring shared by every variant.
+ *
+ * S4.4: the owner-scoped finance/identity ports that were Room-backed moved to the variant-specific
+ * modules — [StandardRepositoryModule] (debug/release, Room/SQLCipher) and
+ * [AssessmentRepositoryModule] (assessment, server/outbox) — so the shared module never names a
+ * Room type.
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
 
     @Binds
-    abstract fun bindTransactionRepository(impl: TransactionRepositoryImpl): TransactionRepository
-
-    @Binds
-    abstract fun bindSummaryRepository(impl: SummaryRepositoryImpl): SummaryRepository
-
-    @Binds
-    abstract fun bindImportRepository(impl: ImportRepositoryImpl): ImportRepository
-
-    @Binds
-    abstract fun bindAnalysisRepository(impl: AnalysisRepositoryImpl): AnalysisRepository
-
-    @Binds
-    abstract fun bindBudgetRepository(impl: BudgetRepositoryImpl): BudgetRepository
-
-    @Binds
-    abstract fun bindConsentRepository(impl: ConsentRepositoryImpl): ConsentRepository
-
-    @Binds
-    abstract fun bindGmailConnectionRepository(impl: GmailConnectionRepositoryImpl): GmailConnectionRepository
-
-    @Binds
     abstract fun bindSessionRepository(impl: SessionRepositoryImpl): SessionRepository
-
-    @Binds
-    abstract fun bindDeletionRepository(impl: DeletionRepositoryImpl): DeletionRepository
 
     @Binds
     abstract fun bindDemoData(impl: DemoDataSeeder): DemoDataPort
