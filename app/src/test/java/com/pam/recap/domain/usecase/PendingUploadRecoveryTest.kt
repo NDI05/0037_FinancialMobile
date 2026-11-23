@@ -359,6 +359,41 @@ class PendingUploadRecoveryTest {
         assertEquals(2, transactionCount(ownerA))
     }
 
+    @Test
+    fun `a retry that commits rows cannot leave them unnameable for recovery`() = runTest {
+        val event = Instant.parse("2026-11-19T02:15:20Z")
+        deliver(ownerA, "m-1", event)
+
+        // FR-21 retry does not go through the sync layer, so only ImportMonthUseCase can persist
+        // the run identity. Call 1 is the pre-commit intent; every later journal write fails,
+        // reproducing a storage/crash failure immediately after the rows were committed.
+        val first = newProcess(FailingWrapStore(failFromCall = 2))
+        val retry = RetryImportUseCase(first.importMonth, imports)
+        val result = retry(ownerA, JakartaMonth(2026, 11))
+        assertTrue(result is Outcome.Success)
+
+        val committed = transactions.all().single()
+        val intent = first.journal.readPending(ownerA)!!
+        assertEquals(committed.importJobId, intent.localJobId)
+        assertEquals(1, transactionCount(ownerA))
+        assertEquals(0, server.candidates.size)
+
+        // Restart: recovery names the committed rows by the durable importJobId and uploads them
+        // exactly once. The watermark still waits for a delta tick that can prove its range.
+        val fingerprint = fingerprintAt(ownerA, event)
+        val second = newProcess()
+        assertTrue(second.sync.resumeUpload(JakartaMonth(2026, 11)) is Outcome.Success)
+        assertEquals(1, server.countByFingerprint()[fingerprint])
+        assertNull(second.journal.readPending(ownerA))
+        assertNull(cursors.read(ownerA)?.watermark)
+
+        clock.instant = clock.instant.plus(31.minutes)
+        assertTrue(second.sync.run(SyncTrigger.PERIODIC) is SyncOutcome.Completed)
+        assertEquals("the retried run reached the server exactly once", 1, server.countByFingerprint()[fingerprint])
+        assertNotNull(cursors.read(ownerA)?.watermark)
+        assertEquals(1, transactionCount(ownerA))
+    }
+
     // ---------------------------------------------------------------- fixtures
 
     private fun session(owner: String) = Session(
@@ -372,6 +407,7 @@ class PendingUploadRecoveryTest {
     private class Process(
         val sync: IncrementalSyncUseCase,
         val journal: ImportUploadJournal,
+        val importMonth: ImportMonthUseCase,
     )
 
     @Test
@@ -383,7 +419,7 @@ class PendingUploadRecoveryTest {
         // is committed, but the exact-snapshot pending update and the uploader's journal write both
         // fail. A retry that only looked at a fresh (deduped-to-empty) job would upload nothing.
         val first = newProcess(FailingWrapStore(failFromCall = 2))
-        assertEquals(SyncOutcome.Failed("storage"), first.sync.run(SyncTrigger.PERIODIC))
+        assertEquals(SyncOutcome.Failed("storage_unavailable"), first.sync.run(SyncTrigger.PERIODIC))
 
         val fingerprint = fingerprintAt(ownerA, event)
         assertEquals(0, server.candidates.size)
@@ -462,7 +498,7 @@ class PendingUploadRecoveryTest {
         server.failBatches = false
         clock.instant = clock.instant.plus(31.minutes)
         val second = newProcess()
-        assertEquals(SyncOutcome.Failed("storage"), second.sync.run(SyncTrigger.PERIODIC))
+        assertEquals(SyncOutcome.Failed("pending_snapshot_incomplete"), second.sync.run(SyncTrigger.PERIODIC))
 
         assertNotNull(second.journal.readPending(ownerA))
         assertNull(cursors.read(ownerA)?.watermark)
@@ -487,6 +523,7 @@ class PendingUploadRecoveryTest {
             deletion = deletion,
             clock = clock,
             idGenerator = ids,
+            journal = journal,
         )
         val status = SyncStatusHolder()
         val sync = IncrementalSyncUseCase(
@@ -503,7 +540,7 @@ class PendingUploadRecoveryTest {
             transactions = transactions,
             journal = journal,
         )
-        return Process(sync, journal)
+        return Process(sync, journal, importMonth)
     }
 
     /** Delivers one message to [owner] and pins the transaction date the parser reports. */
@@ -568,8 +605,29 @@ class PendingUploadRecoveryTest {
         override fun connectionState(): Flow<GmailConnectionState> = flowOf(GmailConnectionState.CONNECTED)
 
         override suspend fun search(query: LivinQuery, pageToken: String?): Outcome<GmailPage> {
+            // Backfill/FR-21 retry path: the same mailbox without the delta watermark window.
             fullScans++
-            return Outcome.Failure(AppError.Configuration("full_scan_forbidden_in_recovery_test"))
+            val owner = sessions.current()?.ownerId
+                ?: return Outcome.Failure(AppError.Configuration("not_signed_in"))
+            val folder = folders.getOrPut(owner) { Folder() }
+            val hits = folder.messages.withIndex().filter { (_, raw) ->
+                raw.internalDate != null &&
+                    raw.internalDate >= query.fromInclusive &&
+                    raw.internalDate < query.toExclusive
+            }.sortedByDescending { it.index }
+            val offset = pageToken?.substringAfter("offset:")?.toIntOrNull() ?: 0
+            val page = hits.drop(offset).take(query.pageSize)
+            return Outcome.Success(
+                GmailPage(
+                    messages = page.map { (index, raw) ->
+                        GmailMessageRef(
+                            id = "$owner|${index + 1}",
+                            internalDate = raw.internalDate,
+                        )
+                    },
+                    nextPageToken = (offset + page.size).takeIf { it < hits.size }?.let { "offset:$it" },
+                ),
+            )
         }
 
         override suspend fun fetchMessage(id: String): Outcome<RawMessage> {

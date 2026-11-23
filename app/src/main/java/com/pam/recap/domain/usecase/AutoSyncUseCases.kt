@@ -208,7 +208,7 @@ class IncrementalSyncUseCase @Inject constructor(
             when (val upload = uploader.upload(ownerId, job)) {
                 is Outcome.Failure -> {
                     recordFailure(ownerId, cursors.read(ownerId) ?: SyncCursor(ownerId), startedAt,
-                        upload.error.kind.name.lowercase(), uploadPending = true)
+                        syncCode(upload.error), uploadPending = true)
                     return Outcome.Failure(upload.error)
                 }
                 is Outcome.Success -> clearPendingIfSettled(ownerId, job.id)
@@ -276,7 +276,7 @@ class IncrementalSyncUseCase @Inject constructor(
             return when (val upload = uploader.upload(ownerId, job)) {
                 is Outcome.Failure -> {
                     recordFailure(ownerId, cursors.read(ownerId) ?: SyncCursor(ownerId), clock.now(),
-                        upload.error.kind.name.lowercase(), uploadPending = true)
+                        syncCode(upload.error), uploadPending = true)
                     Outcome.Failure(upload.error)
                 }
                 is Outcome.Success -> {
@@ -445,7 +445,7 @@ class IncrementalSyncUseCase @Inject constructor(
             is Outcome.Failure -> {
                 // The local commit stays; the cursor does not advance, so the next run retries the
                 // same delta and the server dedupes by fingerprint/batch key.
-                val code = upload.error.kind.name.lowercase()
+                val code = syncCode(upload.error)
                 recordFailure(ownerId, cursor, startedAt, code, uploadPending = true)
                 return SyncOutcome.Failed(code)
             }
@@ -706,15 +706,16 @@ class IncrementalSyncUseCase @Inject constructor(
         if (store.readPending(ownerId)?.localJobId == localJobId) store.clearPending(ownerId)
     }
 
-    private fun syncCode(error: AppError): String =
-        if (error is AppError.Storage &&
-            (error.debugDetail == "storage_unavailable" ||
-                error.debugDetail == PENDING_JOURNAL_NOT_SAVED)
-        ) {
-            "storage_unavailable"
-        } else {
-            error.kind.name.lowercase()
-        }
+    /**
+     * Maps an [AppError] to the machine code the status sheet understands. Storage failures get
+     * their storage code instead of the generic `"storage"` kind, and the incomplete-snapshot
+     * guard keeps its own code so the UI can explain why the run was not acknowledged.
+     */
+    private fun syncCode(error: AppError): String = when {
+        error !is AppError.Storage -> error.kind.name.lowercase()
+        error.debugDetail == "pending_snapshot_incomplete" -> "pending_snapshot_incomplete"
+        else -> "storage_unavailable"
+    }
 
     private fun recordFailure(
         ownerId: String,

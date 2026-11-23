@@ -11,12 +11,15 @@ import com.pam.recap.core.security.FingerprintInput
 import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.core.util.IdGenerator
+import com.pam.recap.data.security.ImportUploadJournal
 import com.pam.recap.domain.model.CategoryOrigin
 import com.pam.recap.domain.model.DeltaWindow
 import com.pam.recap.domain.model.ImportJob
 import com.pam.recap.domain.model.ImportState
 import com.pam.recap.domain.model.ParseResult
 import com.pam.recap.domain.model.ParseStatus
+import com.pam.recap.domain.model.PendingUploadMonth
+import com.pam.recap.domain.model.PendingUploadRun
 import com.pam.recap.domain.model.RedactionReason
 import com.pam.recap.domain.model.SkippedCandidate
 import com.pam.recap.domain.model.Transaction
@@ -60,6 +63,8 @@ class ImportMonthUseCase @Inject constructor(
     private val deletion: DeletionRepository,
     private val clock: ClockProvider,
     private val idGenerator: IdGenerator,
+    /** Durable run identity for paths that do not go through the sync layer (e.g. FR-21 retry). */
+    private val journal: ImportUploadJournal? = null,
 ) {
 
     /**
@@ -117,7 +122,25 @@ class ImportMonthUseCase @Inject constructor(
         // Durable run identity before the first financial commit. A crash between the insert batch
         // and the post-commit journal update would leave these rows attached to a job id no durable
         // record names. Refusing to import is the only safe answer: never commit unrecoverable work.
-        if (onJobCreated != null && !onJobCreated(job)) {
+        //
+        // EVERY path that can commit rows must reach this: the sync layer passes `onJobCreated` to
+        // enrich the record with its delta watermark, while a direct caller (FR-21 retry, tests)
+        // still gets the same guarantee through the journal. A retry without it could commit rows
+        // that a later deduped run can never find again.
+        val identitySaved = onJobCreated?.let { it(job) }
+            ?: journal?.savePending(
+                PendingUploadRun(
+                    ownerId = ownerId,
+                    localJobId = job.id,
+                    primaryMonthId = month.id(),
+                    localState = ImportState.RUNNING.name,
+                    templateVersion = job.templateVersion,
+                    startedAtEpochMillis = startedAt.toEpochMilliseconds(),
+                    months = mapOf(month.id() to PendingUploadMonth(month.id())),
+                ),
+            )
+            ?: true
+        if (!identitySaved) {
             job = job.copy(
                 state = ImportState.FAILED,
                 finishedAt = clock.now(),
@@ -328,6 +351,12 @@ class ImportMonthUseCase @Inject constructor(
         )
         imports.update(job)
 
+        // Post-commit snapshot: record exactly which fingerprints this run owns. Without it a
+        // retry that is deduped to an EMPTY page could be acknowledged as "nothing matched" even
+        // though committed rows never reached the server. The sync layer rewrites the same record
+        // enriched with its delta watermark.
+        persistRunSnapshot(ownerId, job, targetMonths)
+
         if (imported > 0) {
             // FR-22/FR-33: stored summaries and analyses no longer reflect the inputs.
             for (target in targetMonths) {
@@ -343,8 +372,44 @@ class ImportMonthUseCase @Inject constructor(
         return Outcome.Success(job)
     }
 
-    private fun ParseResult.Parsed.toTransaction(ownerId: String, jobId: String, now: Instant): Transaction {
-        val assignment = categoryRules.classify(description, merchantLabel)
+    /**
+     * Best-effort exact snapshot of the rows a committed run owns. The pre-commit identity alone is
+     * already enough for recovery (rows are re-derived by importJobId), so a failure here is logged
+     * rather than failing the run after its financial commit.
+     */
+    private suspend fun persistRunSnapshot(
+        ownerId: String,
+        job: ImportJob,
+        targetMonths: List<JakartaMonth>,
+    ) {
+        val store = journal ?: return
+        val rows = transactions.listByImportJob(ownerId, job.id)
+            .filter { it.source == TransactionSource.EMAIL }
+        if (rows.isEmpty()) return
+        val months = targetMonths
+            .associate { target -> target.id() to rows.filter { target.contains(it.eventAt) } }
+            .filterValues { it.isNotEmpty() }
+            .mapValues { (monthId, rowsInMonth) ->
+                PendingUploadMonth(monthId, rowsInMonth.map { it.fingerprint })
+            }
+            .toMutableMap()
+        months.getOrPut(job.month.id()) { PendingUploadMonth(job.month.id()) }
+        val saved = store.savePending(
+            PendingUploadRun(
+                ownerId = ownerId,
+                localJobId = job.id,
+                primaryMonthId = job.month.id(),
+                localState = job.state.name,
+                templateVersion = job.templateVersion,
+                errorCode = job.errorCode,
+                startedAtEpochMillis = job.startedAt.toEpochMilliseconds(),
+                months = months,
+            ),
+        )
+        if (!saved) SafeLogger.event(TAG, "pending_snapshot_after_commit_failed")
+    }
+
+    private fun ParseResult.Parsed.toTransaction(ownerId: String, jobId: String, now: Instant): Transaction {        val assignment = categoryRules.classify(description, merchantLabel)
         val fingerprint = fingerprints.fingerprint(
             ownerId = ownerId,
             input = FingerprintInput(

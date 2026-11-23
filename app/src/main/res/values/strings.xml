@@ -545,6 +545,7 @@
     <string name="update_status_reason_rate_limited">Terlalu banyak permintaan. Menunggu jeda berikutnya.</string>
     <string name="update_status_reason_partial">Rentang email belum selesai diproses. Data yang sudah masuk tetap aman; pemeriksaan berikutnya melanjutkan sisanya.</string>
     <string name="update_status_reason_storage">Status pemeriksaan tidak dapat disimpan permanen, jadi kemajuan belum tercatat. Coba lagi setelah penyimpanan perangkat tersedia.</string>
+    <string name="update_status_reason_pending_snapshot">Sebagian transaksi yang sudah tersimpan belum tercatat di server. Pengiriman diulang sebelum kemajuan dianggap selesai.</string>
     <string name="update_status_reason_unresolved">Sebagian email belum bisa dibaca dan belum dihitung sebagai transaksi.</string>
     <string name="update_status_run_counts">Tersimpan %1$d, duplikat %2$d, dilewati %3$d, belum terbaca %4$d.</string>
     <string name="update_status_reason_unknown">Pembaruan terakhir gagal. Coba lagi nanti.</string>

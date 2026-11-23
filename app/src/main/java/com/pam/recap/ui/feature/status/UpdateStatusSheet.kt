@@ -200,6 +200,7 @@ private fun reasonFor(code: String): String = stringResource(
         "rate_limited" -> R.string.update_status_reason_rate_limited
         "partial_import" -> R.string.update_status_reason_partial
         "storage_unavailable" -> R.string.update_status_reason_storage
+        "pending_snapshot_incomplete" -> R.string.update_status_reason_pending_snapshot
         "unresolved_items" -> R.string.update_status_reason_unresolved
         else -> R.string.update_status_reason_unknown
     },
