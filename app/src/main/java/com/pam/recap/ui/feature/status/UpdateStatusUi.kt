@@ -43,7 +43,14 @@ data class UpdateStatusUi(
     val lastSuccessAt: Instant? = null,
     /** True when rows are committed locally but the server has not acknowledged them yet. */
     val pendingUpload: Boolean = false,
+    /** The last run stopped before the end of the range; "Terbaru" would be a lie. */
+    val partial: Boolean = false,
+    val storageFailure: Boolean = false,
     val newTransactionsLastRun: Int = 0,
+    val savedCount: Int = 0,
+    val duplicateCount: Int = 0,
+    val skippedCount: Int = 0,
+    val unresolvedCount: Int = 0,
     val categoryPhase: CategoryQueuePhase = CategoryQueuePhase.IDLE,
     val categoryPending: Int = 0,
     val categoryNextDueAt: Instant? = null,
@@ -55,6 +62,8 @@ data class UpdateStatusUi(
     val isActive: Boolean get() = headline.isActive
     val hasBacklog: Boolean get() = categoryPending > 0
     val needsAttention: Boolean get() = attention.isNotEmpty()
+    /** Any per-run count worth a line in the panel; zero everywhere is a clean run. */
+    val hasRunCounts: Boolean get() = savedCount > 0 || duplicateCount > 0 || skippedCount > 0 || unresolvedCount > 0
 }
 
 /**
@@ -74,8 +83,13 @@ object UpdateStatusMapper {
     ): UpdateStatusUi {
         val attention = buildList {
             sync.lastErrorCode?.let { add(AttentionItem(it, AttentionItem.Scope.TRANSACTIONS)) }
+            // These are separate facts from lastErrorCode: a partial run or an unwritable cursor must
+            // stay visible even after a later attempt cleared the error code.
+            if (sync.storageFailure) add(AttentionItem("storage_unavailable", AttentionItem.Scope.TRANSACTIONS))
+            if (sync.partial) add(AttentionItem("partial_import", AttentionItem.Scope.TRANSACTIONS))
+            if (sync.unresolvedCount > 0) add(AttentionItem("unresolved_items", AttentionItem.Scope.TRANSACTIONS))
             category.errorCode?.let { add(AttentionItem(it, AttentionItem.Scope.CATEGORIES)) }
-        }
+        }.distinctBy { it.scope to it.code }
         val headline = headline(sync, category, online, attention)
         return UpdateStatusUi(
             headline = headline,
@@ -83,7 +97,13 @@ object UpdateStatusMapper {
             lastAttemptAt = sync.lastAttemptAt,
             lastSuccessAt = sync.lastSuccessAt,
             pendingUpload = sync.pendingUpload,
+            partial = sync.partial,
+            storageFailure = sync.storageFailure,
             newTransactionsLastRun = sync.newTransactionsLastRun,
+            savedCount = sync.savedCount,
+            duplicateCount = sync.duplicateCount,
+            skippedCount = sync.skippedCount,
+            unresolvedCount = sync.unresolvedCount,
             categoryPhase = category.phase,
             categoryPending = category.pending,
             categoryNextDueAt = category.nextDueAt,

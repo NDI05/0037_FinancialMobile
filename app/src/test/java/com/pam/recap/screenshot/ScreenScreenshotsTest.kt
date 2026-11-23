@@ -45,6 +45,7 @@ import com.pam.recap.domain.usecase.ComputeMonthlySummaryUseCase
 import com.pam.recap.domain.usecase.ConnectGmailUseCase
 import com.pam.recap.domain.usecase.DisconnectGmailUseCase
 import com.pam.recap.domain.usecase.ImportMonthUseCase
+import com.pam.recap.domain.usecase.IncrementalSyncUseCase
 import com.pam.recap.domain.usecase.LinkRefundUseCase
 import com.pam.recap.domain.usecase.MarkInternalTransferUseCase
 import com.pam.recap.domain.usecase.MerchantCategoryRules
@@ -209,6 +210,19 @@ class ScreenScreenshotsTest {
         deletion = deletion,
         clock = clock,
         idGenerator = ids,
+    )
+
+    private val sync = IncrementalSyncUseCase(
+        sessions = sessions,
+        gmail = gmail,
+        importMonth = importMonth,
+        uploader = com.pam.recap.domain.usecase.ImportUploader { _, _ ->
+            com.pam.recap.core.result.Outcome.Success("screenshot")
+        },
+        cursors = com.pam.recap.testing.FakeSyncCursorStore(),
+        deletion = deletion,
+        clock = clock,
+        status = com.pam.recap.domain.usecase.SyncStatusHolder(),
     )
 
     private val requestAnalysis = RequestAnalysisUseCase(
@@ -714,12 +728,8 @@ class ScreenScreenshotsTest {
             savedStateHandle = SavedStateHandle(mapOf("monthId" to "2026-02")),
             sessions = sessions,
             imports = imports,
-            importMonth = importMonth,
-            retryImport = RetryImportUseCase(importMonth, imports),
+            sync = sync,
             resolveInitialMonth = resolveMonth,
-            serverUploader = com.pam.recap.domain.usecase.ImportUploader { _, _ ->
-                com.pam.recap.core.result.Outcome.Success("screenshot")
-            },
         )
 
         shot("13-import-job") {
@@ -735,12 +745,8 @@ class ScreenScreenshotsTest {
             savedStateHandle = SavedStateHandle(mapOf("monthId" to "2026-02")),
             sessions = sessions,
             imports = imports,
-            importMonth = importMonth,
-            retryImport = RetryImportUseCase(importMonth, imports),
+            sync = sync,
             resolveInitialMonth = resolveMonth,
-            serverUploader = com.pam.recap.domain.usecase.ImportUploader { _, _ ->
-                com.pam.recap.core.result.Outcome.Success("screenshot")
-            },
         )
 
         shot("13b-import-job-partial") {

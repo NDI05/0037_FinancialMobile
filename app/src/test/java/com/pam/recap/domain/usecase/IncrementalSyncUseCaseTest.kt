@@ -341,6 +341,17 @@ class IncrementalSyncUseCaseTest {
     // ---------------------------------------------------------------- doubles
 
     @Test
+    fun `a manual import cannot run beside a background sync`() = runTest {
+        deliver("m-gate", clock.now().minus(1.minutes))
+        mailbox.pauseInDelta(200)
+        val background = launch { sync.run(SyncTrigger.PERIODIC) }
+        while (!sync.isRunning) kotlinx.coroutines.yield()
+        val manual = sync.runManualMonth(JakartaMonth.of(clock.now()))
+        assertEquals("sync_in_progress", (manual as Outcome.Failure).error.debugDetail)
+        background.join()
+    }
+
+    @Test
     fun `a page two failure keeps the cursor and reports a partial range`() = runTest {
         repeat(5) { deliver("m-part-$it", clock.now().minus(1.minutes)) }
         mailbox.pageLimit = 2

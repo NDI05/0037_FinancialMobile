@@ -11,10 +11,8 @@ import com.pam.recap.domain.model.ImportState
 import com.pam.recap.domain.model.RedactionReason
 import com.pam.recap.domain.repository.ImportRepository
 import com.pam.recap.domain.repository.SessionRepository
-import com.pam.recap.domain.usecase.ImportMonthUseCase
+import com.pam.recap.domain.usecase.IncrementalSyncUseCase
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
-import com.pam.recap.domain.usecase.RetryImportUseCase
-import com.pam.recap.domain.usecase.ImportUploader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,10 +54,8 @@ class ImportJobViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val sessions: SessionRepository,
     private val imports: ImportRepository,
-    private val importMonth: ImportMonthUseCase,
-    private val retryImport: RetryImportUseCase,
+    private val sync: IncrementalSyncUseCase,
     private val resolveInitialMonth: ResolveInitialMonthUseCase,
-    private val serverUploader: ImportUploader,
 ) : ViewModel() {
 
     private val month = MutableStateFlow<JakartaMonth?>(null)
@@ -128,12 +124,12 @@ class ImportJobViewModel @Inject constructor(
                     uploadPending.value = false
                     error.value = AppError.NotFound("import_job")
                 } else {
-                    val upload = serverUploader.upload(ownerId, job)
+                    val upload = sync.resumeUpload(selectedMonth)
                     error.value = (upload as? Outcome.Failure)?.error
                     uploadPending.value = upload is Outcome.Failure
                 }
             } else {
-                val result = retryImport(ownerId, selectedMonth)
+                val result = sync.runManualMonth(selectedMonth)
                 error.value = (result as? Outcome.Failure)?.error
             }
             action.value = false
@@ -143,15 +139,10 @@ class ImportJobViewModel @Inject constructor(
     private suspend fun start(ownerId: String, selectedMonth: JakartaMonth) {
         action.value = true
         error.value = null
-        val result = importMonth(ownerId, selectedMonth)
-        error.value = when (result) {
-            is Outcome.Failure -> result.error
-            is Outcome.Success -> when (val upload = serverUploader.upload(ownerId, result.value)) {
-                is Outcome.Failure -> upload.error
-                else -> null
-            }
-        }
-        uploadPending.value = result is Outcome.Success && error.value != null
+        // One coordinator for manual, foreground and WorkManager: never a second import path.
+        val result = sync.runManualMonth(selectedMonth)
+        error.value = (result as? Outcome.Failure)?.error
+        uploadPending.value = false
         action.value = false
     }
 }

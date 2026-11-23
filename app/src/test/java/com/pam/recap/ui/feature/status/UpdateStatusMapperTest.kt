@@ -57,6 +57,46 @@ class UpdateStatusMapperTest {
     }
 
     @Test
+    fun `a partial range never claims to be up to date`() {
+        val ui = map(
+            sync = SyncSnapshot(
+                phase = SyncPhase.SUCCEEDED,
+                lastSuccessAt = success,
+                lastErrorCode = "partial_import",
+                partial = true,
+                savedCount = 2,
+                unresolvedCount = 0,
+            ),
+        )
+
+        assertEquals(UpdateHeadline.NEEDS_ATTENTION, ui.headline)
+        assertTrue(ui.partial)
+        assertTrue(ui.needsAttention)
+        assertEquals(listOf("partial_import"), ui.attention.map { it.code })
+        assertEquals(2, ui.savedCount)
+    }
+
+    @Test
+    fun `an unwritable cursor and unresolved mail stay visible in the panel`() {
+        val ui = map(
+            sync = SyncSnapshot(
+                phase = SyncPhase.PAUSED,
+                storageFailure = true,
+                skippedCount = 3,
+                unresolvedCount = 5,
+            ),
+        )
+
+        assertEquals(UpdateHeadline.NEEDS_ATTENTION, ui.headline)
+        assertEquals(
+            setOf("storage_unavailable", "unresolved_items"),
+            ui.attention.map { it.code }.toSet(),
+        )
+        assertEquals(5, ui.unresolvedCount)
+        assertEquals(3, ui.skippedCount)
+    }
+
+    @Test
     fun `a category failure is attributed to categories, not to gmail`() {
         val ui = map(category = CategoryQueueSnapshot(phase = CategoryQueuePhase.NEEDS_ATTENTION, errorCode = "budget_exhausted"))
 

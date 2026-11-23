@@ -72,6 +72,17 @@ fun UpdateStatusSheet(
                         stringResource(R.string.update_status_no_new_transactions)
                     },
                 )
+                if (status.hasRunCounts) {
+                    BodyLine(
+                        stringResource(
+                            R.string.update_status_run_counts,
+                            status.savedCount,
+                            status.duplicateCount,
+                            status.skippedCount,
+                            status.unresolvedCount,
+                        ),
+                    )
+                }
             }
 
             StatusSection(title = stringResource(R.string.update_status_section_categories)) {
@@ -187,6 +198,9 @@ private fun reasonFor(code: String): String = stringResource(
         "timeout" -> R.string.update_status_reason_timeout
         "budget_exhausted" -> R.string.update_status_reason_budget
         "rate_limited" -> R.string.update_status_reason_rate_limited
+        "partial_import" -> R.string.update_status_reason_partial
+        "storage_unavailable" -> R.string.update_status_reason_storage
+        "unresolved_items" -> R.string.update_status_reason_unresolved
         else -> R.string.update_status_reason_unknown
     },
 )

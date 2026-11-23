@@ -565,3 +565,17 @@ class FakeDemoDataPort : DemoDataPort {
         return true
     }
 }
+
+
+/** In-memory cursor store for UI/screenshot harnesses. */
+class FakeSyncCursorStore : com.pam.recap.domain.repository.SyncCursorStore {
+    private val rows = mutableMapOf<String, com.pam.recap.domain.model.SyncCursor>()
+    override fun read(ownerId: String) = rows[ownerId]
+    override fun save(cursor: com.pam.recap.domain.model.SyncCursor): Boolean {
+        rows[cursor.ownerId] = cursor
+        return true
+    }
+    override fun clear(ownerId: String) {
+        rows.remove(ownerId)
+    }
+}

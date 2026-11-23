@@ -1,5 +1,7 @@
 package com.pam.recap.domain.usecase
 
+import com.pam.recap.core.result.AppError
+import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.result.SafeLogger
 import com.pam.recap.core.time.ClockProvider
@@ -11,7 +13,9 @@ import com.pam.recap.domain.model.SyncCursor
 import com.pam.recap.domain.model.SyncPhase
 import com.pam.recap.domain.model.SyncSnapshot
 import com.pam.recap.domain.repository.DeletionRepository
+import com.pam.recap.domain.model.ImportJob
 import com.pam.recap.domain.repository.GmailSource
+import com.pam.recap.domain.repository.ImportRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.repository.SyncCursorStore
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,6 +94,11 @@ class IncrementalSyncUseCase @Inject constructor(
     private val gmail: GmailSource,
     private val importMonth: ImportMonthUseCase,
     private val uploader: ImportUploader,
+    /**
+     * Optional in tests; production binds the Room repository. It lets the manual import path reuse
+     * the "nothing to retry when COMPLETE" decision without duplicating RetryImportUseCase.
+     */
+    private val imports: ImportRepository? = null,
     private val cursors: SyncCursorStore,
     private val deletion: DeletionRepository,
     private val clock: ClockProvider,
@@ -110,6 +119,98 @@ class IncrementalSyncUseCase @Inject constructor(
 
     /** True while a run holds the gate; the UI uses this to show a spinner only for real work. */
     val isRunning: Boolean get() = running.get()
+
+    /**
+     * Manual "Impor" / repair path. It deliberately runs through the same gate, status holder and
+     * uploader as foreground/background, so tapping the button while a periodic run is active can
+     * never import the same window twice or leave two writers on one cursor.
+     */
+    suspend fun runManualMonth(month: JakartaMonth): Outcome<ImportJob> {
+        val ownerId = sessions.current()?.ownerId
+            ?: return Outcome.Failure(AppError.Configuration("not_signed_in"))
+        if (deletion.active(ownerId) != null) {
+            return Outcome.Failure(AppError.Validation(AppErrorRules.DELETION_IN_PROGRESS))
+        }
+        if (!gate.tryLock()) return Outcome.Failure(AppError.Conflict("sync_in_progress"))
+        val startedAt = clock.now()
+        status.update {
+            it.copy(ownerId = ownerId, phase = SyncPhase.SYNCING, isRunning = true, lastAttemptAt = startedAt)
+        }
+        try {
+            val previous = imports?.latestForMonth(ownerId, month)
+            if (previous != null && previous.state == ImportState.COMPLETE) {
+                // Nothing to repair: a re-run would only re-read the same month.
+                status.update { it.copy(phase = SyncPhase.SUCCEEDED, isRunning = false, lastSuccessAt = clock.now()) }
+                return Outcome.Success(previous)
+            }
+            val job = when (val result = importMonth(ownerId, month, previous?.templateVersion)) {
+                is Outcome.Failure -> {
+                    recordFailure(ownerId, cursors.read(ownerId) ?: SyncCursor(ownerId), startedAt, result.error.kind.name.lowercase())
+                    return result
+                }
+                is Outcome.Success -> result.value
+            }
+            if (sessions.current()?.ownerId != ownerId) {
+                return Outcome.Failure(AppError.Conflict("owner_changed"))
+            }
+            when (val upload = uploader.upload(ownerId, job)) {
+                is Outcome.Failure -> {
+                    recordFailure(ownerId, cursors.read(ownerId) ?: SyncCursor(ownerId), startedAt,
+                        upload.error.kind.name.lowercase(), uploadPending = true)
+                    return Outcome.Failure(upload.error)
+                }
+                is Outcome.Success -> Unit
+            }
+            val complete = job.state == ImportState.COMPLETE || job.state == ImportState.EMPTY
+            status.update {
+                it.copy(
+                    ownerId = ownerId,
+                    phase = if (complete) SyncPhase.SUCCEEDED else SyncPhase.NEEDS_ATTENTION,
+                    isRunning = false,
+                    lastAttemptAt = startedAt,
+                    lastSuccessAt = if (complete) clock.now() else it.lastSuccessAt,
+                    lastErrorCode = if (complete) null else "partial_import",
+                    pendingUpload = false,
+                    partial = !complete,
+                    savedCount = job.importedCount,
+                    duplicateCount = job.duplicateCount,
+                    skippedCount = job.skippedCount,
+                    unresolvedCount = job.unresolvedCount,
+                    storageFailure = false,
+                )
+            }
+            return Outcome.Success(job)
+        } finally {
+            gate.unlock()
+        }
+    }
+
+    /**
+     * Re-uploads the latest local job after a storage/network failure without re-reading IMAP. Same
+     * gate, same idempotent batch keys and journal as the automatic path.
+     */
+    suspend fun resumeUpload(month: JakartaMonth): Outcome<ImportJob> {
+        val ownerId = sessions.current()?.ownerId
+            ?: return Outcome.Failure(AppError.Configuration("not_signed_in"))
+        if (!gate.tryLock()) return Outcome.Failure(AppError.Conflict("sync_in_progress"))
+        try {
+            val job = imports?.latestForMonth(ownerId, month)
+                ?: return Outcome.Failure(AppError.NotFound("import_job"))
+            return when (val upload = uploader.upload(ownerId, job)) {
+                is Outcome.Failure -> {
+                    recordFailure(ownerId, cursors.read(ownerId) ?: SyncCursor(ownerId), clock.now(),
+                        upload.error.kind.name.lowercase(), uploadPending = true)
+                    Outcome.Failure(upload.error)
+                }
+                is Outcome.Success -> {
+                    status.update { it.copy(phase = SyncPhase.SUCCEEDED, pendingUpload = false, lastErrorCode = null) }
+                    Outcome.Success(job)
+                }
+            }
+        } finally {
+            gate.unlock()
+        }
+    }
 
     /**
      * Foreground freshness check: run only when the last successful sync is older than the
