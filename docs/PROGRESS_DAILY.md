@@ -1,7 +1,7 @@
 # Progres harian PAM
 
 Pembaruan dokumentasi: **23 November 2026** · Zona waktu: **Asia/Jakarta (WIB)**.
-Branch kerja: `feat/c2-android` · Snapshot acceptance: checkpoint `a17e749` + review PM; update source terbaru: `f20b098` (acceptance belum ditinjau).
+Branch kerja: `feat/c2-android` · Snapshot source: `ce56d9c`; [review PM terbaru](reviews/PM_REVIEW_CE56D9C_SYNC_RECOVERY.md): scheduler PASS, P1 recovery upload OPEN.
 
 [README utama](../README.md) · [Checkpoint detail](DELIVERY_S2_S4_CHECKPOINT.md) ·
 [Mandat delivery](agent-prompts/MANDAT_S2_S4.md)
@@ -25,7 +25,7 @@ Dokumen sebelum repository tidak direkonstruksi tanpa bukti.
 
 | Tanggal (WIB) | Hasil / perubahan | Bukti dan tingkat verifikasi | Gate tersisa / tindak lanjut | Referensi commit |
 |---|---|---|---|---|
-| **23 Nov 2026** | CaseId mapping/cache version, orphan sweep atomik, lease fencing, koreksi kategori Android; incremental IMAP, antrean kategori dan pil/sheet; rencana CR-005 serta aturan cleanup | Regresi classifier terkait PASS pada review PM; emulator correction/conflict dan 304 Android tests TERLAPOR di checkpoint. Cold-start/panel E2E TERLAPOR. Tes antrean existing PASS lokal, tetapi regresi PM membuktikan recovery bypass jendela 2 jam | **S2 PARTIAL**: perbaiki recovery/due time, watermark saat partial/failed, upload delta lintas bulan, pemeriksaan cursor save, shared single-flight dan status partial. Patch `f20b098` tersedia saat update dokumentasi, acceptance menunggu review; WIP lanjutan belum dihitung selesai. Benchmark, 36 email malformed, S3/S4/S5 tetap terbuka | `a73bb38`, `490ab14`, `746b598`, `f3e00ed`, `7ff5e7f`, `7d6a2de`, `00d7693`, `a17e749`, `7a924fa`, `f20b098` |
+| **23 Nov 2026** | Classifier mapping/ledger/lease dan koreksi UI; incremental sync, snapshot uploader lintas bulan, due-window worker, shared coordinator dan status UI; README/log harian/cleanup | Android 311 tests, lint/build dan E2E panel TERLAPOR SE. PM fresh race tests CategoryWindow/AutoCategory PASS; probe real import+uploader/fake server FAIL: upload gagal→run baru EMPTY→cursor maju, kandidat server 0 dari 1 | **P1 recovery upload OPEN; S2 PARTIAL**. Resume pending run durable dan buktikan server readback; lalu S2.4 pagination/search, S2.5 budget/analysis, S3/S4. Benchmark, mailbox/perangkat nyata dan parser tetap gate terpisah | `746b598`, `f20b098`, `e033de3`, `82a1d22`, `a12cfae`, `ce56d9c` |
 | **22 Nov 2026** | Strict parser split date/time, impor Go, gate C2A, consent classifier, SRS v0.5, Azure setup/smoke, typed adapter, reservation/ledger dan recovery awal | Evidence smoke sintetis dan harga resmi tersedia. Hasil unit/integration berkembang per checkpoint; bukan benchmark akurasi atau penerimaan semua runtime | Runtime/Android E2E dan defect review diteruskan 23 Nov; S2 tetap parsial | `2d279da`, `c9d4a57`, `ceea14a`, `0d80b50`, `c95d9d4`, `db05257`, `22c0674`, `f4ffe6f` |
 | **21 Nov 2026** | Onboarding/Gmail decline, batas HTML/MIME; kontrak v0.4; implementasi Go, JWT/refresh, finance/import/deletion dan interop | C1 lokal, interop dan emulator subset terdokumentasi. Snapshot tes historis di dokumen migrasi/README lama; tidak dijalankan ulang pada restrukturisasi README | Integrasi Android C2, cloud/operasional dan kelengkapan penilaian saat itu belum selesai | `a75a534`, `9c287fc`, `36581dd`, `9e9695d`, `d1a7751`, `d714d09` |
 | **20 Nov 2026** | Perbaikan analisis, opsi model lokal, perubahan koneksi Gmail ke IMAP/App Password, diagnosis MIME, kajian pedoman dan rancangan migrasi | Commit implementasi/review tersedia; tidak mengubahnya menjadi klaim semua Gmail nyata atau cloud telah lulus | MIME/import dan rancangan kepatuhan dilanjutkan pada hari berikutnya | `87bb997`, `97881a0`, `07fc806`, `9ccde29`, `8d1640d`, `c10ca67` |
@@ -38,6 +38,7 @@ Dokumen sebelum repository tidak direkonstruksi tanpa bukti.
 | [Checkpoint](DELIVERY_S2_S4_CHECKPOINT.md) | Rangkaian laporan historis; baca bagian terbaru dan koreksi sesudahnya |
 | [Smoke Azure terbaru](evidence/azure_classification_synthetic_smoke_latest.json) | Satu request sintetis dan usage; bukan held-out benchmark |
 | [Verifikasi harga Azure](evidence/azure_price_verification_2026-11-22.md) | Tarif untuk estimasi token, bukan invoice |
+| [Review PM ce56d9c](reviews/PM_REVIEW_CE56D9C_SYNC_RECOVERY.md) | Reproduksi P1 upload/retry dan acceptance perbaikannya |
 | [Rencana AS/BC/UX/OBS](plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md) | Target acceptance, bukan hasil test |
 | [Arsip README](archive/README_BEFORE_RESTRUCTURE_2026-11-23.md) | Snapshot historis sebelum restrukturisasi; klaim lama dapat sudah digantikan |
 
@@ -45,7 +46,7 @@ Artefak lokal yang disebut checkpoint, seperti `build/e2e-status/`, laporan lint
 screenshot, belum tentu dilacak Git. Cantumkan path dan cara reproduksi jika mengandalkannya;
 jangan menganggap path lokal yang hilang sebagai bukti yang masih dapat diperiksa.
 
-### Koreksi review yang wajib dibawa ke baris 23 November
+### Riwayat koreksi review pada 23 November
 
 1. Tes regresi PM sintetis: endpoint drain `not_due`, lalu recovery worker menambah calls
    dari 1 menjadi 2. Ini FAIL integrasi jendela; tes endpoint antrean yang hijau belum cukup.
@@ -56,9 +57,11 @@ jangan menganggap path lokal yang hilang sebagai bukti yang masih dapat diperiks
 4. Batas lima merchant/request tidak sama dengan lima merchant/dua jam. Kapasitas drain,
    remainder/cache, budget dan jadwal recovery harus diuji sebagai satu sistem.
 
-Butir ini menjadi temuan terbuka pada snapshot, bukan klaim patch WIP SE pasti masih salah.
-Tutup dengan commit+regression/evidence yang sesuai setelah verifikasi, tanpa menghapus
-riwayat temuan atau menggunakan hasil test lama sebagai hasil run baru.
+Butir 1–4 di atas adalah riwayat review snapshot sebelumnya. Patch f20b098/e033de3
+menambahkan perbaikan terkait; PM mengulang regresi jadwal dengan hasil PASS. Pada
+ce56d9c ditemukan P1 baru pada kombinasi upload gagal dan retry lintas run, terdokumentasi
+di review terbaru. Lane belum diterima penuh. Pertahankan histori dan bedakan hasil fresh
+dari hasil TERLAPOR; jangan memakai hasil lama sebagai run baru.
 
 ## Aturan pemeliharaan harian
 

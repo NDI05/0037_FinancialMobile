@@ -10,9 +10,9 @@ Azure, dan mengakses analisis serta perencanaan anggaran sesuai consent masing-m
 
 > README ini adalah pintu masuk proyek. Riwayat pekerjaan, hasil tes, dan gate yang belum
 > lulus dibedakan; commit atau jumlah tes tidak otomatis membuktikan fitur selesai.
-> Snapshot acceptance mengacu pada checkpoint `a17e749` dan review PM sesudahnya.
-> Patch `f20b098` baru tersedia saat restrukturisasi; acceptance patch itu belum ditinjau
-> di sini. WIP SE yang belum terverifikasi tidak dihitung sebagai PASS.
+> Snapshot terbaru: `ce56d9c` dan [review recovery PM](docs/reviews/PM_REVIEW_CE56D9C_SYNC_RECOVERY.md).
+> Regresi scheduler terkait PASS; satu P1 recovery upload masih OPEN. Hasil TERLAPOR SE
+> dan WIP yang belum diverifikasi tidak dihitung sebagai acceptance penuh.
 
 ## Daftar isi
 
@@ -57,9 +57,9 @@ harus tampil sebagai keadaan berbeda.
 | Area | Yang sudah tersedia | Yang masih perlu dibuktikan/diselesaikan |
 |---|---|---|
 | Auth dan data server | Go, JWT/refresh, transaksi/list/detail/summary, consent dan koreksi kategori | Acceptance gabungan, seluruh CRUDS dan lifecycle sesuai mandat |
-| Gmail/Livin | IMAP read-only, MIME/parser strict, incremental sync dan cursor | Recovery partial, delta lintas bulan, koordinasi manual/auto dan backlog parser |
+| Gmail/Livin | IMAP read-only, MIME/parser strict, incremental sync dan cursor | P1 retry otomatis lintas run: local commit belum terunggah dapat terlewat; backlog parser tetap terbuka |
 | Azure classifier | Adapter, ledger/budget, cache, lease/recovery, caseId mapping dan USER override | Benchmark akurasi berlabel manusia; gate integrasi auto-queue |
-| Auto-sync / batch | WorkManager 30 menit, antrean target 2 jam, endpoint enqueue/drain | Review PM menemukan recovery bypass jendela; patch `f20b098` tersedia, acceptance menunggu review |
+| Auto-sync / batch | WorkManager 30 menit, antrean target 2 jam, endpoint enqueue/drain | Due window/server worker diuji ulang PASS; penutupan lane tertahan P1 recovery upload |
 | Status UI | Pil top bar dan sheet; screenshot/layout dan cold-start E2E terlapor | Email baru sampai server/UI tanpa tap; partial/storage error dan refresh lambat |
 | Kelengkapan penilaian | Kontrak 25 aksi dan empat entitas tersedia | S3/S4, lampiran/admin, dynamic fields dan audit Room/SQLCipher |
 
@@ -79,7 +79,7 @@ bukan klaim setiap gate telah lulus pada tanggal tersebut.
 | 20 Nov 2026 | Jalur IMAP/App Password, MIME, perbaikan analisis dan kajian pedoman | Perbaikan/parser fixture tercatat di Git | Integrasi nyata dan migrasi kepatuhan |
 | 21 Nov 2026 | Onboarding, kontrak v0.4, migrasi Go dan baseline C1 | Backend lokal/interop dan emulator subset terdokumentasi | C2 Android dan kelengkapan CRUDS |
 | 22 Nov 2026 | Parser strict, impor Go, consent, SRS v0.5, setup/runtime Azure | Unit/integration dan smoke berkembang per checkpoint; bukan benchmark | Runtime recovery dan Android acceptance saat itu |
-| **23 Nov 2026** | Perbaikan classifier, koreksi Android, auto-sync/antrean/status UI; kebijakan cleanup | Regresi lokal dan E2E subset terlapor; temuan jadwal/cursor/lintas bulan memiliki patch `f20b098`, acceptance belum ditinjau | **S2 PARTIAL**, S3/S4, benchmark dan gate operasional |
+| **23 Nov 2026** | Perbaikan classifier, koreksi Android, auto-sync/antrean/status UI; kebijakan cleanup | 311 tes Android/E2E status TERLAPOR; regresi scheduler PASS fresh PM, tetapi probe upload gagal→retry kehilangan kandidat server | **P1 recovery OPEN; S2 PARTIAL**, S3/S4, benchmark dan gate operasional |
 
 **[Buka log harian lengkap, commit, bukti, dan template pembaruan →](docs/PROGRESS_DAILY.md)**
 
