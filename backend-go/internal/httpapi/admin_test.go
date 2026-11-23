@@ -62,10 +62,10 @@ func TestAdminAuthorizationAndAccountListing(t *testing.T) {
 	}
 
 	status, body := h.request("GET", "/v1/admin/accounts?q=admin", adminToken, nil)
-	if status != 200 || len(body["accounts"].([]any)) != 1 {
+	if status != 200 || len(body["items"].([]any)) != 1 {
 		t.Fatalf("admin account search: %d %#v", status, body)
 	}
-	account := body["accounts"].([]any)[0].(map[string]any)
+	account := body["items"].([]any)[0].(map[string]any)
 	if account["email"] != "admin@example.test" || account["role"] != "ADMIN" ||
 		account["status"] != "ACTIVE" {
 		t.Fatalf("account view: %#v", account)
@@ -78,7 +78,7 @@ func TestAdminAuthorizationAndAccountListing(t *testing.T) {
 
 	// Listing is paginated with a cursor bound to the filter scope.
 	status, pageOne := h.request("GET", "/v1/admin/accounts?limit=1", adminToken, nil)
-	if status != 200 || len(pageOne["accounts"].([]any)) != 1 {
+	if status != 200 || len(pageOne["items"].([]any)) != 1 {
 		t.Fatalf("account page one: %d %#v", status, pageOne)
 	}
 	seen := map[string]bool{}
@@ -92,7 +92,7 @@ func TestAdminAuthorizationAndAccountListing(t *testing.T) {
 		if status != 200 {
 			t.Fatalf("account page %d: %d %#v", i, status, page)
 		}
-		for _, raw := range page["accounts"].([]any) {
+		for _, raw := range page["items"].([]any) {
 			id := raw.(map[string]any)["ownerId"].(string)
 			if seen[id] {
 				t.Fatalf("duplicate account %s", id)
@@ -175,7 +175,7 @@ func TestAdminInvitationIsOneTimeAndControlled(t *testing.T) {
 	}
 
 	status, audit := h.request("GET", "/v1/admin/audit?action=admin.invitation.create", adminToken, nil)
-	if status != 200 || len(audit["entries"].([]any)) < 2 {
+	if status != 200 || len(audit["items"].([]any)) < 2 {
 		t.Fatalf("invitation audit: %d %#v", status, audit)
 	}
 }
@@ -187,10 +187,10 @@ func TestAdminAccountUpdateRevisionLastAdminAndDeactivation(t *testing.T) {
 	adminToken := promoteAdmin(t, h, "boss@example.test")
 	staffToken, staffRefresh := h.login("staff@example.test")
 	status, staff := h.request("GET", "/v1/admin/accounts?q=staff", adminToken, nil)
-	if status != 200 || len(staff["accounts"].([]any)) != 1 {
+	if status != 200 || len(staff["items"].([]any)) != 1 {
 		t.Fatalf("find staff: %d %#v", status, staff)
 	}
-	staffID := staff["accounts"].([]any)[0].(map[string]any)["ownerId"].(string)
+	staffID := staff["items"].([]any)[0].(map[string]any)["ownerId"].(string)
 
 	status, updated := h.request("PATCH", "/v1/admin/accounts/"+staffID, adminToken, map[string]any{
 		"displayName": "Staff Baru", "revision": 0,
@@ -251,7 +251,7 @@ func TestAdminAccountUpdateRevisionLastAdminAndDeactivation(t *testing.T) {
 	if status != 200 {
 		t.Fatalf("find gone: %d", status)
 	}
-	goneID := listed["accounts"].([]any)[0].(map[string]any)["ownerId"].(string)
+	goneID := listed["items"].([]any)[0].(map[string]any)["ownerId"].(string)
 	goneToken, _ := h.login("gone@example.test")
 	status, deleted := h.request("DELETE", "/v1/admin/accounts/"+goneID, adminToken, nil)
 	if status != 200 || deleted["status"] != "SUSPENDED" {
@@ -271,12 +271,12 @@ func TestAdminAccountUpdateRevisionLastAdminAndDeactivation(t *testing.T) {
 	if status != 200 {
 		t.Fatalf("find boss: %d", status)
 	}
-	bossID := self["accounts"].([]any)[0].(map[string]any)["ownerId"].(string)
+	bossID := self["items"].([]any)[0].(map[string]any)["ownerId"].(string)
 	if status, body := h.request("DELETE", "/v1/admin/accounts/"+bossID, adminToken, nil); status != 400 ||
 		body["code"] != "invalid_request" {
 		t.Fatalf("self deactivation: %d %#v", status, body)
 	}
-	bossRevision := self["accounts"].([]any)[0].(map[string]any)["revision"].(float64)
+	bossRevision := self["items"].([]any)[0].(map[string]any)["revision"].(float64)
 	status, body := h.request("PATCH", "/v1/admin/accounts/"+bossID, adminToken,
 		map[string]any{"role": "USER", "revision": int(bossRevision)})
 	if status != 409 || body["code"] != "last_admin" {
@@ -284,10 +284,10 @@ func TestAdminAccountUpdateRevisionLastAdminAndDeactivation(t *testing.T) {
 	}
 
 	status, audit := h.request("GET", "/v1/admin/audit?action=admin.account.deactivate", adminToken, nil)
-	if status != 200 || len(audit["entries"].([]any)) == 0 {
+	if status != 200 || len(audit["items"].([]any)) == 0 {
 		t.Fatalf("deactivation audit: %d %#v", status, audit)
 	}
-	raw := strings.ToLower(audit["entries"].([]any)[0].(map[string]any)["action"].(string))
+	raw := strings.ToLower(audit["items"].([]any)[0].(map[string]any)["action"].(string))
 	if strings.Contains(raw, "password") || strings.Contains(raw, "token") {
 		t.Fatalf("audit action leaked sensitive data: %s", raw)
 	}

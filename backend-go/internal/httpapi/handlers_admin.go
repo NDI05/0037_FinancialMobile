@@ -70,7 +70,7 @@ func (s *Server) listAdminAccounts(w http.ResponseWriter, r *http.Request) {
 	for _, account := range page.Items {
 		items = append(items, adminAccountJSON(account))
 	}
-	response := map[string]any{"accounts": items}
+	response := map[string]any{"items": items}
 	if page.NextCursor != "" {
 		response["nextCursor"] = page.NextCursor
 	}
@@ -143,7 +143,7 @@ func (s *Server) listAudit(w http.ResponseWriter, r *http.Request) {
 			"action": entry.Action, "metadata": entry.Metadata, "createdAt": entry.CreatedAt,
 		})
 	}
-	response := map[string]any{"entries": items}
+	response := map[string]any{"items": items}
 	if page.NextCursor != "" {
 		response["nextCursor"] = page.NextCursor
 	}
