@@ -23,6 +23,8 @@ import com.pam.recap.testing.FakeSessionRepository
 import com.pam.recap.testing.FakeSummaryRepository
 import com.pam.recap.testing.FakeTransactionRepository
 import com.pam.recap.testing.fixedClock
+import com.pam.recap.ui.components.DynamicField
+import com.pam.recap.ui.components.DynamicFieldRules
 import com.pam.recap.ui.feature.transactions.RecordingServerFinanceRepository
 import com.pam.recap.ui.feature.transactions.testMonth
 import com.pam.recap.ui.feature.transactions.testNow
@@ -338,5 +340,60 @@ class BudgetPlanServerTest {
         assertFalse(state.isDeleting)
         assertEquals(2, state.revision)
         assertEquals(PlanFreshness.CURRENT, state.freshness)
+    }
+
+    @Test
+    fun `attributes round-trip from the GET through the editor into the PUT readback`() = runTest {
+        val server = RecordingServerFinanceRepository().apply {
+            budgetPlanOutcome = Outcome.Success(storedPlan.copy(attributes = mapOf("sumber" to "kamera")))
+        }
+        val vm = viewModel(server)
+
+        val loaded = vm.state.first { !it.isLoading }
+        assertEquals(listOf(DynamicField("sumber", "kamera")), loaded.attributeFields)
+
+        vm.setAttributeFields(
+            listOf(
+                DynamicField(),
+                DynamicField("sumber", "kamera"),
+                DynamicField("catatan", "bulanan"),
+            ),
+        )
+        vm.save()
+        val saved = vm.state.first { it.savedAt != null }
+
+        // Blank rows are never written; the editor's authoritative map is what the PUT carries.
+        assertEquals(
+            mapOf("sumber" to "kamera", "catatan" to "bulanan"),
+            server.savedPlans.single().attributes,
+        )
+        // The saved fields come from the PUT response readback, not just from the typed draft.
+        assertEquals(
+            listOf(DynamicField("sumber", "kamera"), DynamicField("catatan", "bulanan")),
+            saved.attributeFields,
+        )
+        assertEquals(PlanFreshness.CURRENT, saved.freshness)
+        assertNull(saved.attributeRule)
+    }
+
+    @Test
+    fun `an invalid attribute blocks the PUT`() = runTest {
+        val server = RecordingServerFinanceRepository().apply {
+            budgetPlanOutcome = Outcome.Success(storedPlan)
+        }
+        val vm = viewModel(server)
+        vm.state.first { !it.isLoading }
+
+        vm.setAttributeFields(
+            listOf(DynamicField("sama", "a"), DynamicField("sama", "b")),
+        )
+        vm.save()
+
+        assertEquals(
+            DynamicFieldRules.RULE_DUPLICATE,
+            vm.state.first { it.attributeRule != null }.attributeRule,
+        )
+        assertTrue(server.savedPlans.isEmpty())
+        assertNull(vm.state.value.savedAt)
     }
 }

@@ -27,6 +27,8 @@ import com.pam.recap.domain.usecase.ComparePlanToActualUseCase
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
 import com.pam.recap.domain.usecase.SaveBudgetPlanUseCase
 import com.pam.recap.domain.usecase.SuggestBudgetPlanUseCase
+import com.pam.recap.ui.components.DynamicField
+import com.pam.recap.ui.components.DynamicFieldRules
 import com.pam.recap.ui.util.MoneyInput
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,6 +81,10 @@ data class BudgetPlanUiState(
     val deleteConfirmation: Boolean = false,
     val isDeleting: Boolean = false,
     val planDeleted: Boolean = false,
+    /** S3 dynamic fields: prefilled from the server plan and written back with the same PUT. */
+    val attributeFields: List<DynamicField> = listOf(DynamicField()),
+    /** Rule id from [DynamicFieldRules.validate]; the screen maps it to localized copy. */
+    val attributeRule: String? = null,
 ) {
     val expectedIncome: Money get() = MoneyInput.parse(expectedIncomeText) ?: Money.ZERO
     val plannedSavings: Money get() = MoneyInput.parse(plannedSavingsText) ?: Money.ZERO
@@ -203,7 +209,16 @@ class BudgetPlanViewModel @Inject constructor(
         when (val suggestion = suggestPlan(ownerId, month)) {
             is Outcome.Success -> {
                 applyPlan(suggestion.value)
-                _state.update { it.copy(freshness = PlanFreshness.UNSAVED, error = error) }
+                // A freshly seeded draft has no stored attributes yet; a later save writes none
+                // unless the owner adds them.
+                _state.update {
+                    it.copy(
+                        freshness = PlanFreshness.UNSAVED,
+                        error = error,
+                        attributeFields = listOf(DynamicField()),
+                        attributeRule = null,
+                    )
+                }
             }
 
             is Outcome.Failure -> _state.update {
@@ -234,6 +249,10 @@ class BudgetPlanViewModel @Inject constructor(
                 freshness = PlanFreshness.CURRENT,
                 conflict = false,
                 error = null,
+                // A successful save reloads from the server response, so the editor shows exactly
+                // the attributes the server persisted (including a server-side normalization).
+                attributeFields = DynamicFieldRules.fromMap(plan.attributes),
+                attributeRule = null,
             )
         }
     }
@@ -251,6 +270,11 @@ class BudgetPlanViewModel @Inject constructor(
         it.copy(limitTexts = it.limitTexts + (category to MoneyInput.sanitize(text)))
     }
 
+    /** S3: attribute rows are part of the same draft as the money fields. */
+    fun setAttributeFields(fields: List<DynamicField>) = onDraftEdited {
+        it.copy(attributeFields = fields, attributeRule = null)
+    }
+
     /**
      * Any keystroke means the draft no longer matches the server copy. Keeping a "saved/current"
      * label after an edit would claim a durability that does not exist yet.
@@ -266,7 +290,15 @@ class BudgetPlanViewModel @Inject constructor(
         val current = _state.value
         val month = current.month ?: return
         if (current.isSaving) return
-        _state.update { it.copy(isSaving = true, error = null, conflict = false) }
+        if (current.isServerMode) {
+            // S3 limits are shared with categories; a rule violation blocks the PUT so the server
+            // never stores a payload the Android editor cannot represent.
+            DynamicFieldRules.validate(current.attributeFields)?.let { rule ->
+                _state.update { it.copy(attributeRule = rule, error = null) }
+                return
+            }
+        }
+        _state.update { it.copy(isSaving = true, error = null, conflict = false, attributeRule = null) }
         viewModelScope.launch {
             val owner = sessions.current()?.ownerId
             if (owner == null) {
@@ -330,6 +362,7 @@ class BudgetPlanViewModel @Inject constructor(
                 plannedSavingsMinor = current.plannedSavings.minor,
                 limitsByCategoryId = limitsByCategoryId,
                 revision = current.revision,
+                attributes = DynamicFieldRules.toMap(current.attributeFields),
             )
         ) {
             is Outcome.Failure -> {

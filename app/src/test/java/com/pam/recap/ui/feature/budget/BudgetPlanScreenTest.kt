@@ -3,6 +3,7 @@ package com.pam.recap.ui.feature.budget
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -215,7 +216,8 @@ class BudgetPlanScreenTest {
 
         composeRule.onNodeWithText("Hapus rencana").performScrollTo().performClick()
         awaitText("Hapus rencana anggaran ini?")
-        composeRule.onNodeWithText("Hapus").performClick()
+        // The dynamic-fields editor also has a "Hapus" remove button; the dialog confirm is last.
+        composeRule.onAllNodesWithText("Hapus").onLast().performClick()
         composeRule.waitUntil(5_000) { vm.state.value.planDeleted }
 
         org.junit.Assert.assertEquals(listOf(testMonth.id()), server.deletedPlanMonths)
@@ -223,5 +225,35 @@ class BudgetPlanScreenTest {
             .onNodeWithText("Rencana di server sudah dihapus. Nilai di bawah adalah usulan yang belum disimpan.")
             .performScrollTo()
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun `server attributes are prefilled and survive the save readback`() {
+        val server = RecordingServerFinanceRepository().apply {
+            budgetPlanOutcome = Outcome.Success(storedPlan.copy(attributes = mapOf("sumber" to "kamera")))
+        }
+        val vm = viewModel(server)
+        setContent(vm)
+        composeRule.waitUntil(5_000) { !vm.state.value.isLoading }
+
+        composeRule.onNodeWithText("kamera").performScrollTo().assertIsDisplayed()
+
+        vm.setAttributeFields(
+            listOf(
+                com.pam.recap.ui.components.DynamicField("sumber", "kamera"),
+                com.pam.recap.ui.components.DynamicField("catatan", "bulanan"),
+            ),
+        )
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Simpan rencana").performScrollTo().performClick()
+        composeRule.waitUntil(5_000) { vm.state.value.savedAt != null }
+        composeRule.waitForIdle()
+
+        // The PUT response is applied back into the editor, so the saved row is what is shown.
+        org.junit.Assert.assertEquals(
+            mapOf("sumber" to "kamera", "catatan" to "bulanan"),
+            server.savedPlans.single().attributes,
+        )
+        composeRule.onNodeWithText("bulanan").performScrollTo().assertIsDisplayed()
     }
 }

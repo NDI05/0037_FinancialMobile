@@ -33,6 +33,7 @@ import com.pam.recap.domain.model.BudgetComparisonRow
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.CoverageStatus
 import com.pam.recap.domain.model.SummaryFreshness
+import com.pam.recap.ui.components.DynamicFieldsEditor
 import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassCard
 import com.pam.recap.ui.components.GlassTopBar
@@ -43,6 +44,7 @@ import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
 import com.pam.recap.ui.components.PillButton
 import com.pam.recap.ui.components.PillButtonStyle
+import com.pam.recap.ui.components.dynamicFieldRuleRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.WarningAmber
@@ -243,6 +245,22 @@ fun BudgetPlanScreen(
                         value = state.limitTexts[category].orEmpty(),
                         onValueChange = { viewModel.setLimit(category, it) },
                     )
+                }
+            }
+
+            // S3 attributes are stored on the server plan; the local Room fallback has no place for
+            // them, so the editor is offered only in server mode rather than dropping typed values.
+            if (state.isServerMode) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    DynamicFieldsEditor(
+                        fields = state.attributeFields,
+                        onFieldsChange = viewModel::setAttributeFields,
+                        enabled = !state.isSaving,
+                    )
+                    state.attributeRule?.let { rule ->
+                        Spacer(modifier = Modifier.height(PamSpacing.xs))
+                        NoticeBanner(text = stringResource(dynamicFieldRuleRes(rule)))
+                    }
                 }
             }
 
