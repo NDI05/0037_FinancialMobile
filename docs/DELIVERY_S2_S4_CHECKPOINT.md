@@ -795,7 +795,7 @@ kategori diberi addendum pasca-merge.
 ### Cleanup
 
 Worktree lane dan branch `work/*` dihapus setelah integrasi terverifikasi; hanya checkout
-utama yang tersisa; `origin/feat/c2-android == a310067`.
+utama yang tersisa; `origin/feat/c2-android == 718eaf7` (verifikasi via `git ls-remote`); branch `work/*` dan worktree-nya sudah dihapus lokal+remote, `main` tetap `c10ca67`.
 
 ### S5 tetap terbuka
 
