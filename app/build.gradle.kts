@@ -134,6 +134,10 @@ android {
                 // not writable in this workspace.
                 test.systemProperty("robolectric.dependency.dir", rootProject.layout.projectDirectory.dir(".robolectric-deps").asFile.absolutePath)
                 test.systemProperty("robolectric.offline", "false")
+                // Compose-based Robolectric screens (dialogs in particular) keep several
+                // activity/window graphs alive per test; the default worker heap OOMs once a
+                // class renders more than a handful of compositions.
+                test.maxHeapSize = "2g"
             }
         }
     }
