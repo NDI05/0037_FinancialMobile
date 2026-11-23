@@ -43,9 +43,26 @@ data class ServerBudgetPlan(
     val plannedSavingsMinor: Long,
     val limitsByCategoryId: Map<String, Long>,
     val gapMinor: Long,
+    /** Sum of the per-category limits; the list endpoint reports it, older servers omit it. */
+    val totalLimitMinor: Long = 0,
     val revision: Int,
     /** Owner-defined string attributes (S3 dynamic fields); absent on older servers. */
     val attributes: Map<String, String> = emptyMap(),
+)
+
+/** One page of the C10 category search envelope; [scanned] counts rows before the page cut. */
+data class ServerCategoryPage(
+    val items: List<ServerCategory>,
+    val nextCursor: String? = null,
+    val scanned: Int = 0,
+    /** The server scan hit its cap; some matches may be beyond the page even without a cursor. */
+    val truncated: Boolean = false,
+)
+
+/** One page of the C15 budget-plan period search, newest month first. */
+data class ServerBudgetPlanPage(
+    val items: List<ServerBudgetPlan>,
+    val nextCursor: String? = null,
 )
 
 /** A manual action before the server assigns its final id/revision. */
@@ -197,6 +214,29 @@ interface ServerFinanceRepository {
 
     suspend fun budgetPlan(ownerId: String, month: JakartaMonth): Outcome<ServerBudgetPlan> =
         Outcome.Failure(AppError.Configuration("backend_budget_not_supported"))
+
+    /**
+     * C10 owner-scoped category search. The server applies `q` to code and label; a backend without
+     * the search envelope reports [AppError.Configuration] so callers keep the local fallback.
+     */
+    suspend fun searchCategories(
+        ownerId: String,
+        query: String = "",
+        kind: String? = null,
+        limit: Int = 50,
+        cursor: String? = null,
+    ): Outcome<ServerCategoryPage> =
+        Outcome.Failure(AppError.Configuration("backend_category_search_not_supported"))
+
+    /** C15 inclusive period search over the owner's stored plans, newest first. */
+    suspend fun budgetPlans(
+        ownerId: String,
+        from: JakartaMonth,
+        to: JakartaMonth,
+        limit: Int = 50,
+        cursor: String? = null,
+    ): Outcome<ServerBudgetPlanPage> =
+        Outcome.Failure(AppError.Configuration("backend_budget_search_not_supported"))
 
     suspend fun saveBudgetPlan(
         ownerId: String,

@@ -113,6 +113,42 @@ class PamApiClientTest {
         assertTrue(body.contains("synthetic-password"))
     }
 
+    @Test
+    fun `category search sends the owner-scoped query and reads the envelope`() = runTest {
+        server.enqueue(
+            json(
+                200,
+                """{"categories":[{"id":"cat_food","code":"food","label":"Makanan","kind":"EXPENSE","revision":2,"attributes":null}],
+                   "search":{"scanned":3,"truncated":false},"nextCursor":"cat:next"}""",
+            ),
+        )
+        val result = client.categories("u_1", query = "mak", kind = "EXPENSE", limit = 25) as Outcome.Success
+        val request = server.takeRequest()
+        assertEquals("/v1/categories?limit=25&q=mak&kind=EXPENSE", request.path)
+        assertEquals(3, result.value.search?.scanned)
+        assertEquals("cat:next", result.value.nextCursor)
+        assertEquals("food", result.value.categories.single().code)
+    }
+
+    @Test
+    fun `budget period search sends the inclusive window and parses plans`() = runTest {
+        server.enqueue(
+            json(
+                200,
+                """{"plans":[{"monthId":"2026-11","expectedIncomeMinor":1000,
+                   "plannedSavingsMinor":0,"limits":[],"revision":2,
+                   "totalLimitMinor":700,"gapMinor":300}]}""",
+            ),
+        )
+        val result = client.budgetPlans("u_1", "2025-12", "2026-11", limit = 12) as Outcome.Success
+        val request = server.takeRequest()
+        assertEquals("/v1/budget-plans?from=2025-12&to=2026-11&limit=12", request.path)
+        assertEquals("2026-11", result.value.plans.single().monthId)
+        // P3-6: the period-search row carries the summed limit and gap the history card renders.
+        assertEquals(700L, result.value.plans.single().totalLimitMinor)
+        assertEquals(300L, result.value.plans.single().gapMinor)
+    }
+
     private fun json(code: Int, body: String) = MockResponse()
         .setResponseCode(code)
         .setHeader("content-type", "application/json")

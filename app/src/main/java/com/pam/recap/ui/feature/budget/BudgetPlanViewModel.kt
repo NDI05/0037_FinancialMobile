@@ -75,6 +75,14 @@ data class BudgetPlanUiState(
     /** S2.5: CURRENT / STALE / HISTORICAL as reported for the summary behind the comparison. */
     val summaryFreshness: SummaryFreshness? = null,
     val isRefreshingSummary: Boolean = false,
+    /** C15: plans found by the inclusive period search; the newest month comes first. */
+    val planHistory: List<ServerBudgetPlan> = emptyList(),
+    val historyFrom: JakartaMonth? = null,
+    val historyTo: JakartaMonth? = null,
+    val isHistoryLoading: Boolean = false,
+    val historyError: AppError? = null,
+    /** More stored plans exist beyond this page; the list is capped by the server page size. */
+    val hasMoreHistory: Boolean = false,
     /** The last refresh attempt failed; the old numbers stay visible but are marked unknown. */
     val summaryRefreshFailed: Boolean = false,
     /** Explicit delete of the server plan: confirm first, then fall back to an unsaved suggestion. */
@@ -154,6 +162,36 @@ class BudgetPlanViewModel @Inject constructor(
                 }
                 if (current.comparison != null) {
                     _state.update { it.copy(summaryFreshness = SummaryFreshness.STALE) }
+                }
+            }
+        }
+    }
+
+    /**
+     * C15: asks the server for the stored plans inside an inclusive month window ending at the
+     * edited month. The window is reported back in the state so the screen can name the range.
+     */
+    fun loadPlanHistory(windowMonths: Int = 12) {
+        val remote = server ?: return
+        if (!_state.value.isServerMode) return
+        val to = _state.value.month ?: return
+        val from = to.minusMonths((windowMonths - 1).coerceAtLeast(0))
+        viewModelScope.launch {
+            val owner = ownerId.ifBlank { sessions.current()?.ownerId ?: return@launch }
+            ownerId = owner
+            _state.update { it.copy(isHistoryLoading = true, historyError = null) }
+            when (val result = remote.budgetPlans(owner, from, to)) {
+                is Outcome.Success -> _state.update {
+                    it.copy(
+                        isHistoryLoading = false,
+                        planHistory = result.value.items,
+                        historyFrom = from,
+                        historyTo = to,
+                        hasMoreHistory = result.value.nextCursor != null,
+                    )
+                }
+                is Outcome.Failure -> _state.update {
+                    it.copy(isHistoryLoading = false, historyError = result.error)
                 }
             }
         }

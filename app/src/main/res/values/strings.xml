@@ -351,6 +351,14 @@
     <string name="budget_delete_plan">Hapus rencana</string>
     <string name="budget_delete_title">Hapus rencana anggaran ini?</string>
     <string name="budget_delete_body">Rencana di server akan dihapus dan editor kembali menampilkan usulan yang belum disimpan. Tindakan ini tidak memindahkan uang.</string>
+    <string name="budget_history_eyebrow">Rencana tersimpan</string>
+    <string name="budget_history_load">Muat riwayat rencana</string>
+    <string name="budget_history_body">%1$d rencana pada %2$s sampai %3$s.</string>
+    <string name="budget_history_empty">Belum ada rencana pada %1$s sampai %2$s.</string>
+    <string name="budget_history_item">%1$s · revisi %2$d</string>
+    <string name="budget_history_item_detail">limit %1$s · selisih %2$s</string>
+    <string name="budget_history_truncated">Menampilkan %1$d rencana terbaru; persempit rentang bulan untuk melihat sisanya.</string>
+    <string name="category_more_hint">Menampilkan %1$d kategori dari %2$d yang diperiksa; persempit pencarian untuk melihat sisanya.</string>
     <string name="budget_plan_deleted">Rencana di server sudah dihapus. Nilai di bawah adalah usulan yang belum disimpan.</string>
     <string name="budget_title">Rencana anggaran</string>
     <string name="budget_eyebrow">Rencana bulan depan</string>

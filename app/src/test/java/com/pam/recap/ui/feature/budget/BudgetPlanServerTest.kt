@@ -11,6 +11,7 @@ import com.pam.recap.domain.model.MonthlySummary
 import com.pam.recap.domain.model.SummaryFreshness
 import com.pam.recap.domain.repository.FinanceRefreshBus
 import com.pam.recap.domain.repository.ServerBudgetPlan
+import com.pam.recap.domain.repository.ServerBudgetPlanPage
 import com.pam.recap.domain.usecase.ComparePlanToActualUseCase
 import com.pam.recap.domain.usecase.ComputeMonthlySummaryUseCase
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
@@ -133,6 +134,26 @@ class BudgetPlanServerTest {
         assertFalse(state.conflict)
         assertEquals(PlanFreshness.CURRENT, state.freshness)
         assertEquals(3, state.revision)
+    }
+
+    @Test
+    fun `C15 period search asks for an inclusive window and lists the stored plans`() = runTest {
+        val older = storedPlan.copy(monthId = "2026-10", revision = 4)
+        val server = RecordingServerFinanceRepository().apply {
+            budgetPlanOutcome = Outcome.Success(storedPlan)
+            budgetPlansOutcome = Outcome.Success(ServerBudgetPlanPage(listOf(storedPlan, older)))
+        }
+        val vm = viewModel(server)
+        vm.state.first { !it.isLoading }
+
+        vm.loadPlanHistory()
+
+        val query = server.budgetPlanQueries.single()
+        assertEquals(testMonth.minusMonths(11).id(), query.first)
+        assertEquals(testMonth.id(), query.second)
+        val state = vm.state.first { !it.isHistoryLoading && it.historyTo != null }
+        assertEquals(listOf(testMonth.id(), "2026-10"), state.planHistory.map { it.monthId })
+        assertEquals(testMonth, state.historyTo)
     }
 
     @Test
