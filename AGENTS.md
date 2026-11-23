@@ -21,3 +21,28 @@ dan menginstruksikan: **setiap commit langsung dipush ke branch kerja yang sama*
 Mandat gabungan S2–S4 berada di `docs/agent-prompts/MANDAT_S2_S4.md`.
 Living checkpoint berada di `docs/DELIVERY_S2_S4_CHECKPOINT.md`.
 Lanjutkan dari status repo/checkpoint terkini dan jaga perbedaan PASS/PARTIAL/NOT RUN.
+
+## Kerapian dan penghentian implementasi lama
+
+Mulai 23 November 2026, setiap perubahan yang menggantikan implementasi harus menyertakan
+pemeriksaan cleanup sesuai [RETIREMENT_POLICY.md](docs/maintenance/RETIREMENT_POLICY.md).
+
+- Setelah pengganti terverifikasi, telusuri referensi/runtime/test/build/script sebelum
+  menghapus kode, dependency, konfigurasi atau aset yang sudah tidak dipakai. Perbarui
+  import, DI, README, perintah dan tautan yang terdampak dalam perubahan yang koheren.
+- Jangan menyimpan implementasi mati sebagai `old`, `backup`, `final2`, atau salinan baru
+  di jalur aktif. Kode yang benar-benar pensiun cukup dipertahankan melalui riwayat Git.
+- Dokumen historis yang masih diperlukan dapat dipindahkan ke `docs/archive/` dengan
+  penanda tanggal/status dan tautan penggantinya. Dokumen aktif harus mudah ditemukan.
+- Jangan menghapus migrasi database yang sudah diterapkan, regression tests yang masih
+  membuktikan perilaku, fixture interop yang dibutuhkan, data/credential pengguna, atau WIP
+  pihak lain. Build/cache bukan histori dokumen; jangan masukkan ke arsip/Git.
+- **SRS resmi DOCX/PDF tidak direvisi, dipindahkan atau dihapus sekarang**; tetap ikuti
+  instruksi pemilik untuk menyimpan perubahan kebutuhan sebagai draf sampai revisi diminta.
+- Backend Node adalah kandidat audit retirement, bukan perintah menghapusnya segera.
+  Pertahankan selama masih ada dependency interop/rollback yang dibuktikan; catat alasan,
+  kriteria keluar dan commit referensinya. Instruksi ini tidak mengotorisasi final cutover,
+  merge, deployment, penghapusan database atau migrasi data nyata.
+- Laporkan ringkas apa yang dihapus/diarsipkan/dipertahankan beserta alasan dan pemeriksaan
+  yang relevan. Cleanup masuk definition of done perubahan terkait, bukan alasan menunda
+  perbaikan kritis atau memulai refactor seluruh repository di tengah WIP aktif.

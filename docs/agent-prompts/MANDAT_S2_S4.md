@@ -1,5 +1,12 @@
 # Mandat tunggal SE — tuntaskan sisa Sprint 2, Sprint 3 dan Sprint 4 PAM
 
+> **Cleanup berkelanjutan — 23 November 2026:** setiap penggantian implementasi mengikuti
+> [kebijakan retirement](../maintenance/RETIREMENT_POLICY.md) dan AGENTS.md. Hapus kode/
+> dependency yang terbukti obsolete, arsipkan dokumen historis bila diperlukan, perbarui
+> referensi dan catat pengecualian. Backend Node tetap diaudit terhadap dependency interop
+> serta keputusan cutover existing; bukan instruksi menghapus sekarang. SRS resmi dan
+> WIP aktif dipertahankan. Cleanup menjadi bagian penutupan perubahan terkait.
+
 > **Perencanaan tambahan pemilik, 23 November 2026:** baca
 > [auto-sync/batch/status plan](../plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md) dan
 > [CR-005 DRAF SRS](../changes/CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md).
