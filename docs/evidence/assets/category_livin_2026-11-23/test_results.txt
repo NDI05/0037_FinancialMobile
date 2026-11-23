@@ -1,0 +1,23 @@
+Branch: work/category-livin (worktree pam-wt-cat)
+Date: 2026-11-23
+
+Backend (backend-go, Go 1.27.4 via scripts/go.sh):
+  go test -count=1 ./...   -> PASS (all packages; internal/httpapi 17.0s)
+  go vet ./...             -> PASS (no output, exit 0)
+  go build ./...           -> PASS (exit 0)
+  New regression: TestReferenceMerchantNeedsReviewWithoutProviderCall
+    - 19-digit reference -> NEEDS_REVIEW merchant_not_identifiable, 0 provider calls, category unchanged
+    - short numeric       -> NEEDS_REVIEW merchant_not_identifiable, 0 provider calls
+    - separated reference -> NEEDS_REVIEW merchant_not_identifiable, 0 provider calls
+    - empty label         -> NEEDS_REVIEW merchant_missing, 0 provider calls
+    - unsafe label        -> NEEDS_REVIEW unsafe_merchant, 0 provider calls
+
+Android (app, :app:testDebugUnitTest, JDK from Android Studio):
+  tests=499 failed=0 skipped=0 (69 result XML files)
+  Baseline before this change: 493 tests; +6 new in ClassificationReviewReasonTest
+  (reason dedup/mapping, reference-label detection, and the detail-screen
+  storedMerchantIsReference flag for numeric vs readable labels)
+  Note: worktree needed gitignored .robolectric-deps symlink to the main checkout for Robolectric
+        offline jars (environment-only, not committed; first run failed 134 tests with
+        "Path is not a file: .../.robolectric-deps/android-all-instrumented-14-robolectric-...jar"
+        and passed after linking).

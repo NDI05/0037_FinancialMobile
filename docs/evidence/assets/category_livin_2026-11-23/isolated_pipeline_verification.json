@@ -1,0 +1,54 @@
+{
+  "captured_at": "2026-11-23T22:36+07:00",
+  "purpose": "Runtime proof of the post-fix reason mapping on an isolated backend instance; NOT owner UAT data",
+  "environment": {
+    "binary": "worktree build of work/category-livin (post-fix)",
+    "listen": "127.0.0.1:18092",
+    "database": "isolated SQLite file /tmp/pam-cat-verify/pam.db (synthetic account only)",
+    "category_provider": "local Azure-compatible stub on 127.0.0.1:18093 (no Azure call, no cost)",
+    "app_traffic": "none; API-level verification"
+  },
+  "cases": [
+    {
+      "name": "reference_19_digit",
+      "merchant_shape": "19 numeric digits",
+      "job_state": "NEEDS_REVIEW",
+      "reason_code": "merchant_not_identifiable",
+      "category_code": "uncategorized",
+      "provider_calls": 0
+    },
+    {
+      "name": "reference_short_numeric",
+      "merchant_shape": "5 numeric digits",
+      "job_state": "NEEDS_REVIEW",
+      "reason_code": "merchant_not_identifiable",
+      "category_code": "uncategorized",
+      "provider_calls": 0
+    },
+    {
+      "name": "missing_label",
+      "merchant_shape": "empty",
+      "job_state": "NEEDS_REVIEW",
+      "reason_code": "merchant_missing",
+      "category_code": "uncategorized",
+      "provider_calls": 0
+    },
+    {
+      "name": "named_control",
+      "merchant_shape": "synthetic readable name",
+      "job_state": "CLASSIFIED",
+      "reason_code": "stub",
+      "category_code": "food",
+      "provider_calls": 1
+    }
+  ],
+  "provider_stub_hits": {
+    "total": 1,
+    "merchants_sent": [
+      "KOPI UJI"
+    ],
+    "note": "Only the readable synthetic control reached the provider; reference/empty labels never left the server"
+  },
+  "consent": "AI_CATEGORIZATION granted through the public consent endpoint before classification",
+  "session_artifacts": "synthetic account u_ff0a...; no owner credentials, tokens or raw owner data in this directory"
+}

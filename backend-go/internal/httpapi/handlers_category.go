@@ -204,6 +204,13 @@ func (s *Server) prepareForClassify(ctx context.Context, ownerID string, job sto
 		}
 		return preparedCategory{job: fj}, false, nil
 	}
+	if reason, ok := merchantReviewReason(tx.Sensitive.MerchantLabel); ok {
+		fj, ferr := s.finishJob(ctx, ownerID, job, "NEEDS_REVIEW", "uncategorized", reason, "", 0)
+		if ferr != nil {
+			return preparedCategory{}, false, ferr
+		}
+		return preparedCategory{job: fj}, false, nil
+	}
 	merchant, err := categoryllm.SanitizeMerchant(tx.Sensitive.MerchantLabel)
 	if err != nil {
 		fj, ferr := s.finishJob(ctx, ownerID, job, "NEEDS_REVIEW", "uncategorized", "unsafe_merchant", "", 0)
@@ -224,6 +231,41 @@ func (s *Server) prepareForClassify(ctx context.Context, ownerID string, job sto
 	}
 	candidate := categoryllm.Candidate{Merchant: merchant, Direction: tx.Direction, Method: method, Categories: allowed}
 	return preparedCategory{tx: tx, job: job, merchant: merchant, method: method, candidate: candidate}, true, nil
+}
+
+// merchantReviewReason names the reason a merchant label cannot become a provider candidate.
+// Every returned reason finishes NEEDS_REVIEW + "uncategorized" with zero provider calls, so the
+// reason is the only actionable signal the app can show: an absent label needs manual input
+// (merchant_missing) and a numeric reference is not a merchant name (merchant_not_identifiable).
+// Labels that are not a reference continue to the sanitizer and can still be classified.
+func merchantReviewReason(raw string) (string, bool) {
+	trimmed := strings.TrimSpace(raw)
+	switch {
+	case trimmed == "":
+		return "merchant_missing", true
+	case isReferenceIdentifier(trimmed):
+		return "merchant_not_identifiable", true
+	default:
+		return "", false
+	}
+}
+
+// isReferenceIdentifier reports whether a label only carries digits and separators — an account,
+// biller, invoice or transaction reference rather than a readable merchant name. Inferring a
+// taxonomy category from such an identifier would be guesswork, so the row is routed to manual
+// review instead of the provider (and long reference numbers never leave the backend).
+func isReferenceIdentifier(raw string) bool {
+	digits := 0
+	for _, r := range raw {
+		switch {
+		case r >= '0' && r <= '9':
+			digits++
+		case r == ' ' || r == '-' || r == '.' || r == '/':
+		default:
+			return false
+		}
+	}
+	return digits > 0
 }
 
 type budgetOutcome struct {

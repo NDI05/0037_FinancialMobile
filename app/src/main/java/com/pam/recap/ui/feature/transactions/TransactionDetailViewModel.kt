@@ -58,6 +58,11 @@ data class TransactionDetailUiState(
     val noteDraft: String = "",
     val descriptionDraft: String = "",
     val merchantDraft: String = "",
+    /**
+     * True when the stored merchant label is only a reference number (Livin bill-payment emails),
+     * not a merchant name. The screen then explains the value instead of presenting it as a name.
+     */
+    val merchantIsReference: Boolean = false,
     val isBusy: Boolean = false,
     val error: AppError? = null,
     val savedAt: Long? = null,
@@ -184,6 +189,7 @@ class TransactionDetailViewModel @Inject constructor(
                 refundCandidates = candidates,
                 descriptionDraft = draft.description,
                 merchantDraft = draft.merchant,
+                merchantIsReference = storedMerchantIsReference(transaction),
                 noteDraft = draft.note,
                 attributeFields = draft.attributes,
                 // An unresolved conflict is still shown as the typed error until the user resolves it,
@@ -520,3 +526,11 @@ class TransactionDetailViewModel @Inject constructor(
         FinanceRefreshBus.notify(ownerId, month.id())
     }
 }
+
+/**
+ * Detail-screen flag for the stored (not draft) merchant label: a reference/account number must
+ * not be presented as if it were a merchant name, so the screen shows the neutral reference
+ * notice instead. A readable name, a null/blank label or a locally created row has no notice.
+ */
+internal fun storedMerchantIsReference(transaction: Transaction?): Boolean =
+    transaction != null && isReferenceMerchantLabel(transaction.merchantLabel)
