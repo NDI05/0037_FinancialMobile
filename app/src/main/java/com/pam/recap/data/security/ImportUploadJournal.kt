@@ -89,6 +89,9 @@ class ImportUploadJournal @Inject constructor(
                     finalState = decodedFields[2].takeIf { it.isNotEmpty() },
                 )
             }?.associateBy { it.monthId }.orEmpty()
+            // Defense in depth: a record copied under another owner's key must never be replayed
+            // for that owner. The value is key-scoped already, so this is a consistency check.
+            require(values[1] == ownerId) { "pending journal owner mismatch" }
             PendingUploadRun(
                 ownerId = values[1],
                 localJobId = values[2],

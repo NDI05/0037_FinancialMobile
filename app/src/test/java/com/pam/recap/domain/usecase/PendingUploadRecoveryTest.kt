@@ -240,9 +240,11 @@ class PendingUploadRecoveryTest {
         assertEquals(novemberAttempts[0].batchKey, novemberAttempts[1].batchKey)
         assertEquals(novemberAttempts[0].fingerprints, novemberAttempts[1].fingerprints)
         assertEquals("COMPLETE", server.finalizedStates[novemberJob])
-        // Exactly-once for every candidate of the pack.
+        // Exactly-once for every candidate of the pack, and no extra server job was created for
+        // the already-acknowledged October month by re-sending it under the same batch key.
         assertEquals(1, server.countByFingerprint()[october])
         assertEquals(1, server.countByFingerprint()[november])
+        assertEquals(1, server.createdJobs.count { it.second == "2026-10" })
         assertNotNull(cursors.read(ownerA)?.watermark)
     }
 
