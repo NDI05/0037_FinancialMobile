@@ -127,9 +127,27 @@ gate C2A dan seluruh sisa S2–S4. Akun/perangkat nyata tidak dipakai untuk QA d
 - C21–C25 admin: **NOT DONE**.
 Tidak ada baris yang diberi PASS tanpa bukti.
 
+### Koreksi status per 23 November 2026 (malam)
+
+Matriks di atas adalah snapshot historis. Status sesudah lane paralel dan UAT emulator:
+
+| Area | Status sekarang | Bukti / batas |
+|---|---|---|
+| P1 recovery upload | **fixed + diuji** | `f640f2e` (durable run identity `329552b`): run belum diakui dipulihkan sebelum cursor maju; test store/worker hijau |
+| S2.4 paging/search + mutasi | **PARTIAL** | UI server paging/search ada; edit detail + atribut 200 di perangkat; halaman kedua/query C05 dan delete destruktif belum dijalankan |
+| S2.5 anggaran/freshness | **PARTIAL** | plan server read/save/delete + editor atribut; perbandingan aktual dari ringkasan; UI perangkat belum |
+| S3 kategori & anggaran remote | **PARTIAL/PASS API** | kategori CRUD + guard lulus test; C10 search kategori belum ada di port; lihat [matriks C01–C25](delivery/ACCEPTANCE_C01_C25.md) |
+| S3 atribut dinamis 4 entitas | **PASS wire + runtime transaksi** | PATCH transaksi `{"sumber":"kamera"}` 200, dibaca ulang dari server, UI prefill setelah buka ulang; editor anggaran ber-test |
+| S4.1 lampiran C16/C17/C19 | **PASS runtime** | [UAT lampiran](evidence/UAT_S4_ATTACHMENTS_2026-11-23.md): create, read setelah restart, delete; C18/C20 rename/search belum di perangkat |
+| S4.2 admin C21–C24 | **PASS runtime** | [UAT admin](evidence/UAT_S4_ADMIN_2026-11-23.md): invite, list/cari, edit + konflik 409, deactivate, audit setelah restart; C24 last-admin guard via test API/store, C25 cursor/filter peran lewat API/VM |
+| S4.4 Room keluar | **NOT DONE** | Room masih dependency varian |
+
+Tes fresh sesi ini: Android **452 tests / 63 class / 0 failure** (`--rerun-tasks`), lint
+**0 error / 109 warning / 1 hint**, Go semua paket `ok`, `go vet` bersih.
+
 ## Tes aktual
 
-- Android: **248 tes PASS**; `assembleDebug`; lint 0 error, 68 warning (termasuk unused string resource existing).
+- Android: **248 tes PASS** (snapshot lama); sesi 23 Nov malam: **452 tes PASS / 63 class**, `assembleDebug`, lint 0 error, 109 warning, 1 hint.
 - Go: 42 PASS (terakhir); backend tidak berubah pada R1.
 - Node: 124 (run sebelumnya); tidak dijalankan ulang.
 - Screenshot R1: `app/build/screenshots/01-overview.png`, `02-transactions.png`,
