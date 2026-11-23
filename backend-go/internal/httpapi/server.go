@@ -31,12 +31,12 @@ type authInfo struct {
 }
 
 type Server struct {
-	Store    *store.Store
-	Config   *config.Config
-	Issuer   *auth.Issuer
-	Log      *slog.Logger
-	Now      func() time.Time
-	Provider llm.Provider
+	Store              *store.Store
+	Config             *config.Config
+	Issuer             *auth.Issuer
+	Log                *slog.Logger
+	Now                func() time.Time
+	Provider           llm.Provider
 	CategoryClassifier categoryllm.Classifier
 	// providerSlots caps concurrent provider calls (inline requests and the recovery worker
 	// together) at 2: provider concurrency must never exceed the configured maximum.
@@ -67,6 +67,12 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /v1/consents", s.authed(s.appendConsent))
 	mux.Handle("GET /v1/categories", s.authed(s.listCategories))
 	mux.Handle("POST /v1/categories", s.authed(s.createCategory))
+	mux.Handle("POST /v1/admin/invitations", s.authed(requiresAdmin(s.createAdminInvitation)))
+	mux.Handle("GET /v1/admin/accounts", s.authed(requiresAdmin(s.listAdminAccounts)))
+	mux.Handle("GET /v1/admin/accounts/{ownerID}", s.authed(requiresAdmin(s.getAdminAccount)))
+	mux.Handle("PATCH /v1/admin/accounts/{ownerID}", s.authed(requiresAdmin(s.updateAdminAccount)))
+	mux.Handle("DELETE /v1/admin/accounts/{ownerID}", s.authed(requiresAdmin(s.deactivateAdminAccount)))
+	mux.Handle("GET /v1/admin/audit", s.authed(requiresAdmin(s.listAudit)))
 	mux.Handle("GET /v1/attachments", s.authed(s.listAttachments))
 	mux.Handle("POST /v1/attachments", s.authed(s.createAttachment))
 	mux.Handle("GET /v1/attachments/{id}", s.authed(s.getAttachment))

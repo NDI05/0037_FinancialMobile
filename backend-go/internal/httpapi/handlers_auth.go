@@ -68,11 +68,24 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "Unexpected error", correlationOf(r))
 		return
 	}
-	account, err := s.Store.CreateAccount(r.Context(), email, display,
-		store.PasswordDigest{Salt: digest.Salt, Hash: digest.Hash, KDF: digest.KDF}, s.Now())
+	var account store.Account
+	digestValue := store.PasswordDigest{Salt: digest.Salt, Hash: digest.Hash, KDF: digest.KDF}
+	if body.InvitationToken != "" {
+		// Controlled admin provisioning: the role comes from the one-time invitation, never from
+		// the request body. A public registration without a token always lands as USER.
+		account, err = s.Store.CreateAccountFromInvitation(r.Context(), body.InvitationToken,
+			email, display, digestValue, s.Now())
+	} else {
+		account, err = s.Store.CreateAccount(r.Context(), email, display, digestValue, s.Now())
+	}
 	if err != nil {
 		if errors.Is(err, store.ErrEmailExists) {
 			writeError(w, http.StatusConflict, "conflict", "Email is already registered", correlationOf(r))
+			return
+		}
+		if errors.Is(err, store.ErrInvitationUsed) || errors.Is(err, store.ErrInvitationExpired) ||
+			errors.Is(err, store.ErrInvitationInvalid) {
+			s.mapWriteError(w, r, err)
 			return
 		}
 		s.databaseOrInternal(w, r, err)

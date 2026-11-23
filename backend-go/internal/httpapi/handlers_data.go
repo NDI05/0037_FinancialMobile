@@ -360,12 +360,14 @@ func transactionJSON(t store.Transaction) map[string]any {
 		"amountMinor": t.AmountMinor, "currency": t.Currency, "eventAt": t.EventAt,
 		"monthId": t.MonthID, "fingerprint": t.Fingerprint, "parserVersion": t.ParserVersion,
 		"parserConfidence": t.ParserConfidence, "categoryOrigin": func() string {
-			if t.ClassifierOrigin != "" { return t.ClassifierOrigin }
+			if t.ClassifierOrigin != "" {
+				return t.ClassifierOrigin
+			}
 			return t.CategoryOrigin
 		}(), "categoryConfidence": t.CategoryConfidence,
 		"categoryRuleVersion": t.CategoryRuleVersion, "categoryReason": t.CategoryReason,
 		"categoryTaxonomyVersion": t.CategoryTaxonomyVersion,
-		"description": t.Sensitive.Description, "merchantLabel": t.Sensitive.MerchantLabel,
+		"description":             t.Sensitive.Description, "merchantLabel": t.Sensitive.MerchantLabel,
 		"note": t.Sensitive.Note, "attributes": t.Sensitive.Attributes,
 		"isInternalTransfer": t.IsInternalTransfer, "linkedRefundOf": nullString(t.LinkedRefundOf),
 		"revision": t.Revision, "createdAt": t.CreatedAt, "updatedAt": t.UpdatedAt,
@@ -434,7 +436,7 @@ func (s *Server) getSummary(w http.ResponseWriter, r *http.Request) {
 		"monthId": computed.MonthID, "inputRevision": computed.InputRevision,
 		"currentRevision": computed.InputRevision,
 		"coverage":        computed.Coverage, "freshness": freshness,
-		"grossInflowMinor": computed.GrossInflowMinor,
+		"grossInflowMinor":  computed.GrossInflowMinor,
 		"grossOutflowMinor": computed.GrossOutflowMinor, "netMinor": computed.NetMinor,
 		"classifiedIncomeMinor":  computed.ClassifiedIncomeMinor,
 		"classifiedExpenseMinor": computed.ClassifiedExpenseMinor,
@@ -538,7 +540,7 @@ func budgetJSON(plan store.BudgetPlan) map[string]any {
 		"plannedSavingsMinor": plan.PlannedSavingsMinor, "limits": plan.Limits,
 		"attributes": plan.Attributes, "revision": plan.Revision, "gapMinor": plan.GapMinor,
 		"totalLimitMinor": plan.TotalLimitMinor,
-		"createdAt": plan.CreatedAt, "updatedAt": plan.UpdatedAt,
+		"createdAt":       plan.CreatedAt, "updatedAt": plan.UpdatedAt,
 	}
 }
 
@@ -562,6 +564,16 @@ func (s *Server) mapWriteError(w http.ResponseWriter, r *http.Request, err error
 		writeError(w, http.StatusConflict, "deletion_in_progress", "A deletion request is in progress", correlationOf(r))
 	case errors.Is(err, store.ErrIdempotencyConflict):
 		writeError(w, http.StatusConflict, "idempotency_conflict", "This Idempotency-Key was already used with a different body", correlationOf(r))
+	case errors.Is(err, store.ErrLastAdmin):
+		writeError(w, http.StatusConflict, "last_admin", "The last active admin cannot be changed", correlationOf(r))
+	case errors.Is(err, store.ErrSelfAdminChange):
+		writeError(w, http.StatusBadRequest, "invalid_request", err.Error(), correlationOf(r))
+	case errors.Is(err, store.ErrInvitationUsed):
+		writeError(w, http.StatusConflict, "invitation_used", "Invitation was already used", correlationOf(r))
+	case errors.Is(err, store.ErrInvitationExpired):
+		writeError(w, http.StatusGone, "invitation_expired", "Invitation expired", correlationOf(r))
+	case errors.Is(err, store.ErrInvitationInvalid):
+		writeError(w, http.StatusBadRequest, "invalid_invitation", "Invitation is invalid", correlationOf(r))
 	case errors.Is(err, store.ErrInvalidCursor):
 		writeError(w, http.StatusBadRequest, "invalid_cursor",
 			"cursor was issued for a different query; restart from the first page", correlationOf(r))
