@@ -143,6 +143,10 @@ func sanitizedRoute(path string) string {
 			return "/v1/import-jobs/{id}/batches"
 		}
 		return "/v1/import-jobs/{id}"
+	case path == "/v1/category-jobs/enqueue" || path == "/v1/category-jobs/drain" ||
+		path == "/v1/category-jobs/":
+		// Queue endpoints have no id; folding them into {id} made automatic runs invisible.
+		return strings.TrimSuffix(path, "/")
 	case strings.HasPrefix(path, "/v1/category-jobs/"):
 		return "/v1/category-jobs/{id}"
 	case strings.HasPrefix(path, "/v1/analyses/"):

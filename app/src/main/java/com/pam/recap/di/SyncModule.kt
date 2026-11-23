@@ -1,9 +1,13 @@
 package com.pam.recap.di
 
+import com.pam.recap.data.network.AndroidNetworkMonitor
 import com.pam.recap.data.security.SyncCursorStoreImpl
+import com.pam.recap.data.work.WorkManagerAutoCategoryScheduler
 import com.pam.recap.data.work.WorkManagerAutoSyncScheduler
 import com.pam.recap.domain.model.AutoSyncConfig
+import com.pam.recap.domain.repository.AutoCategoryScheduler
 import com.pam.recap.domain.repository.AutoSyncScheduler
+import com.pam.recap.domain.repository.NetworkMonitor
 import com.pam.recap.domain.repository.SyncCursorStore
 import dagger.Binds
 import dagger.Module
@@ -29,6 +33,14 @@ abstract class SyncModule {
     @Binds
     @Singleton
     abstract fun bindAutoSyncScheduler(impl: WorkManagerAutoSyncScheduler): AutoSyncScheduler
+
+    @Binds
+    @Singleton
+    abstract fun bindAutoCategoryScheduler(impl: WorkManagerAutoCategoryScheduler): AutoCategoryScheduler
+
+    @Binds
+    @Singleton
+    abstract fun bindNetworkMonitor(impl: AndroidNetworkMonitor): NetworkMonitor
 
     companion object {
         @Provides

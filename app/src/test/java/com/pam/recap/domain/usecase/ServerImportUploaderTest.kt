@@ -94,5 +94,9 @@ class ServerImportUploaderTest {
         }
         override suspend fun finalizeImportJob(ownerId: String, jobId: String, state: String, errorCode: String?) =
             Outcome.Success(ServerImportJob("server-job", "2026-11", state).also { finalState = state })
+        override suspend fun enqueueCategories(ownerId: String, transactionIds: List<String>) =
+            Outcome.Success(com.pam.recap.domain.repository.CategoryEnqueueResult(0, 0))
+        override suspend fun drainCategories(ownerId: String) =
+            Outcome.Success(com.pam.recap.domain.repository.CategoryDrainResult("empty", 0, 0))
     }
 }

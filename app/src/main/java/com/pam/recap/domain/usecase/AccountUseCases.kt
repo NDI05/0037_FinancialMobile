@@ -14,6 +14,7 @@ import com.pam.recap.domain.model.GmailConnection
 import com.pam.recap.domain.model.GmailConnectionState
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.AnalysisRepository
+import com.pam.recap.domain.repository.AutoCategoryScheduler
 import com.pam.recap.domain.repository.AutoSyncScheduler
 import com.pam.recap.domain.repository.SyncCursorStore
 import com.pam.recap.data.security.DeletionReceiptStore
@@ -47,6 +48,7 @@ class SignInUseCase @Inject constructor(
     private val demoData: DemoDataPort,
     private val clock: ClockProvider,
     private val autoSync: AutoSyncScheduler? = null,
+    private val autoCategory: AutoCategoryScheduler? = null,
 ) {
 
     /**
@@ -75,8 +77,9 @@ class SignInUseCase @Inject constructor(
         if (seedDemo) {
             runCatching { demoData.seedIfNeeded(session.ownerId) }
         }
-        // The background check is per owner: signing in starts it, signing out cancels it.
+        // The background checks are per owner: signing in starts them, signing out cancels them.
         runCatching { autoSync?.ensureScheduled(session.ownerId) }
+        runCatching { autoCategory?.ensureScheduled(session.ownerId) }
         return Outcome.Success(session)
     }
 }
@@ -101,6 +104,8 @@ class SignOutUseCase @Inject constructor(
     private val autoSync: AutoSyncScheduler? = null,
     private val syncCursors: SyncCursorStore? = null,
     private val syncStatus: SyncStatusHolder? = null,
+    private val autoCategory: AutoCategoryScheduler? = null,
+    private val categoryStatus: CategoryStatusHolder? = null,
 ) {
 
     suspend operator fun invoke(ownerId: String): Outcome<Unit> {
@@ -125,6 +130,8 @@ class SignOutUseCase @Inject constructor(
         runCatching { autoSync?.cancelAll() }
         runCatching { syncCursors?.clear(ownerId) }
         runCatching { syncStatus?.reset() }
+        runCatching { autoCategory?.cancelAll() }
+        runCatching { categoryStatus?.reset() }
         sessions.signOut()
         return Outcome.Success(Unit)
     }
@@ -201,10 +208,23 @@ class DisconnectGmailUseCase @Inject constructor(
     private val sessions: SessionRepository,
     private val appPasswordVault: AppPasswordVault,
     private val clock: ClockProvider,
+    /** Optional so existing doubles keep compiling; the app always binds the real schedulers. */
+    private val autoSync: AutoSyncScheduler? = null,
+    private val autoCategory: AutoCategoryScheduler? = null,
+    private val syncCursors: SyncCursorStore? = null,
+    private val syncStatus: SyncStatusHolder? = null,
+    private val categoryStatus: CategoryStatusHolder? = null,
 ) {
 
     suspend operator fun invoke(ownerId: String): Outcome<Unit> {
         val revoke = gmailSource.disconnect()
+        // Without a mailbox a scheduled check has nothing to read: stop it before the credential
+        // disappears so no queued work runs against a vault entry that is already gone.
+        runCatching { autoSync?.cancelAll() }
+        runCatching { autoCategory?.cancelAll() }
+        runCatching { syncCursors?.clear(ownerId) }
+        runCatching { syncStatus?.reset() }
+        runCatching { categoryStatus?.reset() }
         // CR-003: explicit disconnect forgets only this owner's credential.
         runCatching { appPasswordVault.clear(ownerId) }
         val now = clock.now()
@@ -242,6 +262,10 @@ class RequestDeletionUseCase @Inject constructor(
     private val backendDeletion: BackendDeletionSync,
     private val appPasswordVault: AppPasswordVault,
     private val receiptStore: DeletionReceiptStore? = null,
+    private val autoSync: AutoSyncScheduler? = null,
+    private val autoCategory: AutoCategoryScheduler? = null,
+    private val syncStatus: SyncStatusHolder? = null,
+    private val categoryStatus: CategoryStatusHolder? = null,
 ) {
 
     suspend operator fun invoke(
@@ -282,6 +306,12 @@ class RequestDeletionUseCase @Inject constructor(
         serverAck?.receiptToken?.let { receiptStore?.save(ownerId, it) }
 
         return runCatching {
+            // Stop background work first: a deletion that clears stores while a worker is uploading
+            // would let the worker re-create rows for an owner who just left.
+            runCatching { autoSync?.cancelAll() }
+            runCatching { autoCategory?.cancelAll() }
+            runCatching { syncStatus?.reset() }
+            runCatching { categoryStatus?.reset() }
             transactions.deleteAll(ownerId)
             summaries.deleteAll(ownerId)
             analyses.deleteAll(ownerId)

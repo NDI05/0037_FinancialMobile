@@ -13,6 +13,8 @@ import com.pam.recap.domain.model.MonthlySummary
 import com.pam.recap.domain.model.ParseStatus
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionSource
+import com.pam.recap.domain.repository.CategoryDrainResult
+import com.pam.recap.domain.repository.CategoryEnqueueResult
 import com.pam.recap.domain.repository.ManualTransactionDraft
 import com.pam.recap.domain.repository.ServerCategory
 import com.pam.recap.domain.repository.ServerImportCandidate
@@ -113,6 +115,25 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         })
         is Outcome.Failure -> result
     }
+
+    override suspend fun enqueueCategories(
+        ownerId: String,
+        transactionIds: List<String>,
+    ): Outcome<CategoryEnqueueResult> = when (val result = api.enqueueCategoryJobs(ownerId, transactionIds)) {
+        is Outcome.Success -> Outcome.Success(CategoryEnqueueResult(result.value.queued, result.value.pending))
+        is Outcome.Failure -> result
+    }
+
+    override suspend fun drainCategories(ownerId: String): Outcome<CategoryDrainResult> =
+        when (val result = api.drainCategoryQueue(ownerId)) {
+            is Outcome.Success -> Outcome.Success(CategoryDrainResult(
+                state = result.value.state,
+                drained = result.value.drained,
+                pending = result.value.pending,
+                nextDueAt = result.value.nextDueAt?.let { runCatching { Instant.parse(it) }.getOrNull() },
+            ))
+            is Outcome.Failure -> result
+        }
 
     override suspend fun createImportJob(
         ownerId: String,

@@ -77,7 +77,11 @@ fun SettingsScreen(
 
     PamScaffold(
         modifier = modifier,
-        topBar = { GlassTopBar(title = stringResource(R.string.settings_title)) },
+        topBar = {
+            GlassTopBar(title = stringResource(R.string.settings_title)) {
+                com.pam.recap.ui.feature.status.UpdateStatusTopBarAction()
+            }
+        },
     ) { padding ->
         Column(
             modifier = Modifier

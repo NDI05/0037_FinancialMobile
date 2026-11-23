@@ -122,6 +122,7 @@ fun OverviewScreen(
             GlassTopBar(
                 title = stringResource(R.string.overview_title),
                 actions = {
+                    com.pam.recap.ui.feature.status.UpdateStatusTopBarAction()
                     com.pam.recap.ui.components.CircularIconWell(
                         icon = Icons.Rounded.Settings,
                         contentDescription = stringResource(R.string.settings_title),

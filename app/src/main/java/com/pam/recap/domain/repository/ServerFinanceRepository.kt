@@ -4,6 +4,7 @@ import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.MonthlySummary
 import com.pam.recap.domain.model.Transaction
+import kotlin.time.Instant
 
 /** Owner-scoped category identity returned by the v0.4 server. */
 data class ServerCategory(
@@ -21,6 +22,17 @@ data class ManualTransactionDraft(
     val categoryId: String?,
     val description: String,
     val note: String?,
+)
+
+/** Outcome of a queue enqueue: how many rows this call added and the total still waiting. */
+data class CategoryEnqueueResult(val queued: Int, val pending: Int)
+
+/** Outcome of one drain attempt: `state` is empty/not_due/drained/budget_exhausted. */
+data class CategoryDrainResult(
+    val state: String,
+    val drained: Int,
+    val pending: Int,
+    val nextDueAt: Instant? = null,
 )
 
 data class ServerTransactionPage(
@@ -114,6 +126,21 @@ interface ServerFinanceRepository {
         ownerId: String,
         transactionIds: List<String>,
     ): Outcome<List<ServerCategoryJob>>
+
+    /**
+     * Records eligible candidates for the automatic queue without spending classifier budget. Safe to
+     * repeat: the server is idempotent per transaction revision.
+     */
+    suspend fun enqueueCategories(
+        ownerId: String,
+        transactionIds: List<String>,
+    ): Outcome<CategoryEnqueueResult>
+
+    /**
+     * Asks the server to drain its queue. An early or empty drain returns without calling the
+     * provider, so this is the only call needed to learn the backlog and the next due time.
+     */
+    suspend fun drainCategories(ownerId: String): Outcome<CategoryDrainResult>
 
     suspend fun createImportJob(
         ownerId: String,

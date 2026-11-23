@@ -292,6 +292,39 @@ class IncrementalSyncUseCaseTest {
     }
 
     @Test
+    fun `hydrate restores the last real attempt instead of claiming never`() = runTest {
+        deliver("m-1", clock.now().minus(1.minutes))
+        assertTrue(sync.runIfStale() is SyncOutcome.Completed)
+        val succeededAt = status.snapshot.value.lastSuccessAt
+        val attemptedAt = status.snapshot.value.lastAttemptAt
+
+        // A fresh process starts from an empty holder, so the panel would say "never".
+        status.reset()
+        assertNull(status.snapshot.value.lastSuccessAt)
+
+        sync.hydrate(ownerId)
+
+        assertEquals(succeededAt, status.snapshot.value.lastSuccessAt)
+        assertEquals(attemptedAt, status.snapshot.value.lastAttemptAt)
+        assertNull(status.snapshot.value.lastErrorCode)
+        assertEquals(1, mailbox.deltaReads) // hydration never touches the mailbox
+    }
+
+    @Test
+    fun `hydrate keeps a recorded failure visible after a restart`() = runTest {
+        deliver("m-1", clock.now().minus(1.minutes))
+        failUpload = AppError.Network("offline")
+        assertTrue(sync.run(SyncTrigger.PERIODIC) is SyncOutcome.Failed)
+
+        status.reset()
+        sync.hydrate(ownerId)
+
+        assertEquals("network", status.snapshot.value.lastErrorCode)
+        assertTrue(status.snapshot.value.pendingUpload)
+        assertNull(status.snapshot.value.lastSuccessAt)
+    }
+
+    @Test
     fun `a result for an owner who signed out mid-run is discarded`() = runTest {
         deliver("m-1", clock.now().minus(1.minutes))
         ownerSwitchedOnUpload = true

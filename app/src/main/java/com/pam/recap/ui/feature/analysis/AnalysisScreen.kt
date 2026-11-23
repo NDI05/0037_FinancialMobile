@@ -100,7 +100,11 @@ fun AnalysisScreen(
     PamScaffold(
         modifier = modifier,
         showAurora = false,
-        topBar = { GlassTopBar(title = stringResource(R.string.analysis_title)) },
+        topBar = {
+            GlassTopBar(title = stringResource(R.string.analysis_title)) {
+                com.pam.recap.ui.feature.status.UpdateStatusTopBarAction()
+            }
+        },
     ) { padding ->
         if (month == null) {
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {

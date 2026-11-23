@@ -138,6 +138,17 @@ class PamApiClient @Inject constructor(
         return send(ownerId, "POST", "/v1/category-jobs", body, null, RemoteCategoryJobs.serializer())
     }
 
+    suspend fun enqueueCategoryJobs(ownerId: String, transactionIds: List<String>):
+        Outcome<RemoteCategoryEnqueue> {
+        val body = json.encodeToString(RemoteCategoryJobsRequest.serializer(), RemoteCategoryJobsRequest(transactionIds))
+        return send(ownerId, "POST", "/v1/category-jobs/enqueue", body, null, RemoteCategoryEnqueue.serializer())
+    }
+
+    suspend fun drainCategoryQueue(ownerId: String): Outcome<RemoteCategoryDrain> =
+        send(ownerId, "POST", "/v1/category-jobs/drain",
+            json.encodeToString(RemoteEmptyBody.serializer(), RemoteEmptyBody()), null,
+            RemoteCategoryDrain.serializer())
+
     suspend fun requestDeletion(
         ownerId: String,
         password: String,
@@ -479,6 +490,21 @@ data class RemoteCategoryJob(
 
 @Serializable
 data class RemoteCategoryJobs(val jobs: List<RemoteCategoryJob> = emptyList())
+
+@Serializable
+data class RemoteCategoryEnqueue(val queued: Int = 0, val pending: Int = 0)
+
+@Serializable
+data class RemoteCategoryDrain(
+    val state: String,
+    val drained: Int = 0,
+    val pending: Int = 0,
+    val nextDueAt: String? = null,
+)
+
+/** The drain endpoint takes no arguments but still needs a JSON body to pass the decoder. */
+@Serializable
+class RemoteEmptyBody
 
 @Serializable
 data class RemoteDeletionCreate(val password: String, val confirmation: String)

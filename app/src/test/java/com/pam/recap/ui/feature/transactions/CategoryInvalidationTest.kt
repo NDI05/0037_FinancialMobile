@@ -230,6 +230,17 @@ class CategoryInvalidationTest {
             idempotencyKey: String,
         ): Outcome<Transaction> = Outcome.Failure(AppError.NotFound("create"))
 
+        override suspend fun enqueueCategories(
+            ownerId: String,
+            transactionIds: List<String>,
+        ): Outcome<com.pam.recap.domain.repository.CategoryEnqueueResult> =
+            Outcome.Success(com.pam.recap.domain.repository.CategoryEnqueueResult(0, 0))
+
+        override suspend fun drainCategories(
+            ownerId: String,
+        ): Outcome<com.pam.recap.domain.repository.CategoryDrainResult> =
+            Outcome.Success(com.pam.recap.domain.repository.CategoryDrainResult("empty", 0, 0))
+
         override suspend fun classifyTransactions(
             ownerId: String,
             transactionIds: List<String>,

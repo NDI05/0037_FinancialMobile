@@ -75,6 +75,7 @@ fun TransactionsScreen(
                 title = stringResource(R.string.transactions_title),
                 onBack = onBack,
                 actions = {
+                    com.pam.recap.ui.feature.status.UpdateStatusTopBarAction()
                     com.pam.recap.ui.components.CircularIconWell(
                         icon = Icons.Rounded.Add,
                         contentDescription = stringResource(R.string.manual_title),

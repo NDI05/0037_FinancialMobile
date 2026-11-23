@@ -82,6 +82,12 @@ class IncrementalSyncUseCase @Inject constructor(
     private val clock: ClockProvider,
     private val status: SyncStatusHolder,
     private val config: AutoSyncConfig = AutoSyncConfig(),
+    /**
+     * Optional so existing tests keep compiling. After a server-acknowledged commit the freshly
+     * imported rows are offered to the category queue; the 2-hour drain window still belongs to the
+     * server, so this only avoids waiting a whole period for a candidate to become visible.
+     */
+    private val autoCategory: AutoCategoryUseCase? = null,
 ) {
 
     private val gate = Mutex()
@@ -106,6 +112,32 @@ class IncrementalSyncUseCase @Inject constructor(
             return SyncOutcome.Skipped("cooldown")
         }
         return run(trigger)
+    }
+
+    /**
+     * Seeds the observable status from the durable cursor after a process start.
+     *
+     * Without this the panel claims "never" even though the cursor remembers a successful sync, and
+     * "last attempt" would look different from what actually happened on disk. It reads local state
+     * only: no IMAP, no HTTP.
+     */
+    suspend fun hydrate(ownerId: String) {
+        val cursor = cursors.read(ownerId) ?: return
+        if (status.snapshot.value.lastAttemptAt != null) return
+        status.update {
+            it.copy(
+                ownerId = ownerId,
+                phase = when {
+                    cursor.lastErrorCode != null -> SyncPhase.PAUSED
+                    cursor.uploadPending -> SyncPhase.SUCCEEDED
+                    else -> SyncPhase.IDLE
+                },
+                lastAttemptAt = cursor.lastAttemptAt,
+                lastSuccessAt = cursor.lastSuccessAt,
+                lastErrorCode = cursor.lastErrorCode,
+                pendingUpload = cursor.uploadPending,
+            )
+        }
     }
 
     suspend fun run(trigger: SyncTrigger): SyncOutcome {
@@ -222,6 +254,11 @@ class IncrementalSyncUseCase @Inject constructor(
             )
         }
         SafeLogger.counts(TAG, "sync_done", "imported" to job.importedCount, "duplicates" to job.duplicateCount)
+        if (job.importedCount > 0) {
+            // Best effort: a queue failure must not downgrade a successful financial sync, and the
+            // worker retries it on its own schedule.
+            runCatching { autoCategory?.enqueueOnly(ownerId) }
+        }
         return SyncOutcome.Completed(job.importedCount, job.duplicateCount, job.state.name)
     }
 

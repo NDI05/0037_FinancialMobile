@@ -16,8 +16,10 @@ import com.pam.recap.ui.theme.Ink
 import com.pam.recap.BuildConfig
 import com.pam.recap.ui.theme.PamTheme
 import androidx.lifecycle.lifecycleScope
+import com.pam.recap.domain.repository.AutoCategoryScheduler
 import com.pam.recap.domain.repository.AutoSyncScheduler
 import com.pam.recap.domain.repository.SessionRepository
+import com.pam.recap.domain.usecase.AutoCategoryUseCase
 import com.pam.recap.domain.usecase.IncrementalSyncUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -37,10 +39,16 @@ class MainActivity : ComponentActivity() {
     lateinit var sessions: SessionRepository
 
     @Inject
+    lateinit var autoCategory: AutoCategoryScheduler
+
+    @Inject
     lateinit var autoSync: AutoSyncScheduler
 
     @Inject
     lateinit var incrementalSync: IncrementalSyncUseCase
+
+    @Inject
+    lateinit var autoCategoryRun: AutoCategoryUseCase
 
     /**
      * The only activity. Its base context is created from the system configuration, so the
@@ -64,8 +72,10 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             PamTheme {
-                Box(modifier = Modifier.fillMaxSize().background(Ink)) {
-                    PamNavHost()
+                com.pam.recap.ui.feature.status.UpdateStatusActionProvider {
+                    Box(modifier = Modifier.fillMaxSize().background(Ink)) {
+                        PamNavHost()
+                    }
                 }
             }
         }
@@ -82,7 +92,14 @@ class MainActivity : ComponentActivity() {
             val ownerId = sessions.current()?.ownerId ?: return@launch
             // Idempotent; also covers an install that was already signed in before this feature.
             runCatching { autoSync.ensureScheduled(ownerId) }
+            runCatching { incrementalSync.hydrate(ownerId) }
             runCatching { incrementalSync.runIfStale() }
+            // The drain itself is throttled by the server; a foreground visit just makes sure the
+            // schedule exists and the panel has a fresh backlog number.
+            runCatching { autoCategory.ensureScheduled(ownerId) }
+            // One bounded drain attempt: the server answers "not_due" without any provider call
+            // when its 2-hour window is closed, and this is what fills the status panel.
+            runCatching { autoCategoryRun.runIfConnected(ownerId) }
         }
     }
 }
