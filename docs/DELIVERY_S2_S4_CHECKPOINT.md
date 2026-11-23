@@ -414,6 +414,90 @@ regresi yang mengunci perilakunya.
   merespons 200 di 146 ms tanpa error worker.
 - Catatan build: Gradle native file-watcher (FSEvents) menggantung build di host ini sebelum
   satu task pun jalan; `org.gradle.vfs.watch=false` ditambahkan agar build deterministik.
-- **Masih TERBUKA:** benchmark akurasi berlabel manusia (gate terpisah, tidak diklaim),
+- **Masih TERBUKA (saat itu):** benchmark akurasi berlabel manusia (gate terpisah, tidak diklaim),
   36 email event-time malformed, S2 tetap PARTIAL. Auto-sync 30 menit / batch kategori 2 jam /
-  indikator top-bar BELUM diimplementasikan (rencana di `docs/plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md`).
+  indikator top-bar saat itu BELUM diimplementasikan; lihat bagian berikutnya.
+
+## Auto-sync inkremental, antrean kategori, dan status UI — 23 November 2026
+
+Rujukan: `docs/plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md`, `docs/changes/CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md`.
+Commit: `f3e00ed` (delta sync), `7ff5e7f` (antrean kategori server), `7d6a2de` (klien antrean +
+WorkManager + indikator/sheet + hidrasi status), semuanya di `feat/c2-android` dan sudah dipush.
+
+### Yang diimplementasikan
+- **Sinkronisasi inkremental (P1):** IMAP dan parser tetap di Android; cursor durable hanya
+  menyimpan `uidValidity` + satu `highestUid` per pemilik (dibungkus at rest, dibersihkan saat
+  logout/ganti pemilik/penghapusan). Delta dibatasi watermark yang diambil sebelum run, tidak ada
+  rescan sebulan penuh. Commit finansial lokal + ack server sebelum cursor maju; upload idempoten
+  per job/halaman (`ImportUploadJournal`); single-flight `Mutex` berbagi manual/foreground/background;
+  email terlambat dirutekan ke bulan transaksinya; perubahan `uidValidity` membatalkan cursor.
+- **Penjadwalan (P2/P3):** WorkManager periodik 30 menit untuk sync dan 2 jam untuk kategori,
+  constraint jaringan, `ExistingPeriodicWorkPolicy.UPDATE`, unique work per tag, backoff eksponensial
+  30 menit. Foreground hanya menjalankan satu delta bila cursor lebih tua dari cooldown 5 menit.
+  Tidak ada IMAP permanen maupun foreground service. `SignOut`, `DisconnectGmail` dan
+  `RequestDeletion` membatalkan kedua worker, menghapus cursor, dan mereset holder status;
+  hasil yang telat untuk pemilik lama tetap dibuang (guard sebelum/dan sesudah upload).
+- **Antrean kategori otomatis (P4):** kandidat hanya transaksi `uncategorized`, bukan origin USER,
+  bukan transfer internal; enqueue dipanggil setelah commit+ack (bila ada baris baru) dan oleh
+  worker 2 jam. Server yang menentukan jendela 2 jam (`category_queue_state.next_drain_at`),
+  maksimum 5 merchant unik per request, sisa tetap PENDING, cache/USER menang, dan penolakan
+  budget me-requeue alih-alih menggagalkan job. Antrean kosong dijawab `state:"empty"` tanpa
+  menyentuh provider; poll terlalu awal dijawab `not_due` tanpa provider. Plafon biaya tetap
+  USD0,10/hari dan USD2/bulan, 20 attempt/pemilik/hari, 100/instalasi/hari.
+- **Status UI (P5):** pil di top bar Ringkasan/Transaksi/Analisis/Pengaturan + sheet
+  "Status pembaruan" dengan tiga bagian (Data transaksi, Kategori, Perlu perhatian). Status
+  diturunkan dari holder durable, bukan timer: `Memeriksa/Mengambil/Menyimpan/Mengategorikan`
+  hanya menyala saat kerja nyata, `Terakhir berhasil` berbeda dari `Percobaan terakhir`, upload
+  yang belum di-ack tidak pernah dilaporkan sebagai sukses, dan masalah kategori tidak pernah
+  dilaporkan sebagai masalah Gmail. Membuka sheet tidak memulai impor maupun panggilan Azure;
+  ikon + kata (bukan warna saja), target ≥48 dp, `contentDescription` berisi status, dan pada
+  font ≥150% label disembunyikan sementara ikon/status suara tetap ada.
+- **Hidrasi status:** `IncrementalSyncUseCase.hydrate(ownerId)` mengisi holder dari cursor lokal
+  saat proses start, sehingga panel tidak lagi berkata "belum pernah" padahal cursor menyimpan
+  keberhasilan; hidrasi tidak menyentuh IMAP/HTTP.
+- **Observability:** `/v1/category-jobs/enqueue` dan `/v1/category-jobs/drain` tidak lagi
+  dilipat menjadi `/v1/category-jobs/{id}` di log request, sehingga run otomatis terlihat.
+
+### Bukti uji
+- **Go (dijalankan ulang 23 November 2026):** `test -race -count=1 ./...` exit 0 untuk
+  auth, categoryllm, config, crypto, finance, httpapi (93,6 s), store (15,3 s);
+  `go vet ./...` bersih; suite baru
+  `internal/httpapi/category_queue_test.go` (consent + idempotensi + USER override; jendela 2 jam,
+  batch ≤5, sisa, cache; plafon 5 merchant; budget → backlog) dan
+  `sanitized_route_test.go` (label route).
+- **Android unit:** **301 test, 0 gagal** (45 kelas), termasuk
+  `AutoCategoryUseCaseTest` (6: hanya kandidat layak; himpunan kosong = 0 enqueue + 1 drain;
+  `not_due` = backlog + tanpa spinner; `budget_exhausted` = PAUSED; `Unauthorized` =
+  NEEDS_ATTENTION; dua pemanggil paralel = 1 drain), `IncrementalSyncUseCaseTest` (11, termasuk
+  hidrasi cursor dan tidak ada body download saat tidak ada email baru),
+  `UpdateStatusMapperTest` (9), `UpdateStatusPillTest` (2: label 100% + target 48 dp, dan
+  200% menyembunyikan kata namun status tetap diumumkan), `WorkSchedulerTest` (3: periode
+  30 menit, periode 2 jam, constraint jaringan, cancel + schedule ulang).
+- **Lint:** `lintDebug` BUILD SUCCESSFUL, 0 error (88 warning lama, tidak ada di berkas baru).
+- **E2E emulator (fixture-only, tanpa tap "Impor"):** instal APK debug
+  (`PAM_BACKEND_BASE_URL=http://127.0.0.1:18090`, `adb reverse`), login sesi UAT, lalu buka app.
+  Log backend: `POST /v1/category-jobs/enqueue` 200 (148 ms) dan `POST /v1/category-jobs/drain`
+  200 (244 ms) tanpa satu pun panggilan provider — jendela 2 jam server menahan drain dan
+  antrean kosong tidak memanggil Azure. Pil top bar menampilkan `Terbaru`; sheet menampilkan
+  "Percobaan terakhir: baru saja", "Terakhir berhasil sinkron: baru saja", "Tidak ada transaksi
+  baru pada pemeriksaan terakhir", "Tidak ada kategori tertunda", dan "Tidak ada masalah yang
+  perlu tindakan". Bukti teks: dump uiautomator; gambar:
+  `app/build/screenshots/status/*.png` (8 status pil + 6 sheet, termasuk 200% font) via
+  `UpdateStatusScreenshotsTest` (`-Proborazzi.test.record=true`), plus
+  `/tmp/e2e/status_pill_ringkasan_2026-11-23.png` dan `/tmp/e2e/status_sheet_success_2026-11-23.png`
+  dari emulator.
+
+### Yang TIDAK diklaim (tetap terbuka)
+- **Tidak ada E2E "email baru benar-benar tiba" di emulator:** perangkat UAT tidak punya kredensial
+  IMAP Gmail nyata, jadi jalur delta dibuktikan dengan mailbox fixture + unit test (no-new-mail →
+  tanpa body download, crash sebelum/sesudah commit/upload, `uidValidity` berubah, email terlambat,
+  pergantian bulan). Yang dijalankan di emulator adalah klien antrean kategori + status UI.
+- **Interval 30 menit tidak ditunggu secara nyata:** yang diverifikasi adalah request WorkManager
+  (periode, constraint, keunikan, cancel), bukan eksekusi 30 menit dinding jam.
+- **Drain dengan panggilan Azure nyata tidak diulang di run ini** demi biaya; batch/cache/backlog/
+  budget dibuktikan di Go integration test dengan classifier palsu, dan jalur Azure nyata sudah
+  dibuktikan pada E2E 23 November sebelumnya (satu BAKSO, 2 panggilan provider).
+- **Benchmark akurasi (≥95% auto precision berlabel manusia) tetap TIDAK dilakukan**; 0,60 tetap
+  ambang review, bukan akurasi. 36 email event-time malformed tetap backlog parser terpisah.
+- **S2 tetap PARTIAL; S3/S4 tidak otomatis selesai.** Empat temuan review `a73bb38` tetap tertutup
+  untuk cakupan regresi lokal.
