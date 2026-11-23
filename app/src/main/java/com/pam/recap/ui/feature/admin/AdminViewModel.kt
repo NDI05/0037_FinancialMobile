@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
+import com.pam.recap.core.result.SafeLogger
 import com.pam.recap.domain.repository.AdminAccountPatch
 import com.pam.recap.domain.repository.AdminAuditEntry
 import com.pam.recap.domain.repository.AdminInvitation
@@ -139,6 +140,7 @@ class AdminViewModel @Inject constructor(
                         loadAudit(reset = true)
                     } else {
                         // Non-admin: stop before any admin call is made.
+                        SafeLogger.warning(TAG, "admin_role_not_admin", null)
                         _state.update {
                             it.copy(
                                 role = result.value,
@@ -152,12 +154,15 @@ class AdminViewModel @Inject constructor(
                     }
                 }
 
-                is Outcome.Failure -> _state.update {
-                    it.copy(
-                        checkingRole = false,
-                        loading = false,
-                        accountsError = result.error,
-                    )
+                is Outcome.Failure -> {
+                    SafeLogger.warning(TAG, "admin_role_check_failed", result.error)
+                    _state.update {
+                        it.copy(
+                            checkingRole = false,
+                            loading = false,
+                            accountsError = result.error,
+                        )
+                    }
                 }
             }
         }
@@ -615,3 +620,5 @@ class AdminViewModel @Inject constructor(
         val EMAIL_PATTERN = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
     }
 }
+
+private const val TAG = "AdminVM"
