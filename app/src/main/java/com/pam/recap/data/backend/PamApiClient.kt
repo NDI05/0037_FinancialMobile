@@ -299,14 +299,137 @@ class PamApiClient @Inject constructor(
         }
     }
 
+    // --- S4.2 admin surface (contract §6). Every method here reuses the one-refresh replay of the
+    // shared request helpers; only the HTTP → AppError mapping is admin-specific so the UI can tell
+    // `invalid_cursor`, `revision_conflict`, `last_admin` and `invitation_expired` apart.
+
+    suspend fun currentRole(ownerId: String): Outcome<RemoteAuthMe> =
+        get(ownerId, "/v1/me", RemoteAuthMe.serializer(), ::adminBackendError)
+
+    suspend fun adminAccounts(
+        ownerId: String,
+        q: String? = null,
+        role: String? = null,
+        status: String? = null,
+        limit: Int = 50,
+        cursor: String? = null,
+    ): Outcome<RemoteAdminAccountPage> {
+        val base = config.endpoint("/v1/admin/accounts")
+            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
+        val url = base.toHttpUrl().newBuilder()
+            .addQueryParameter("limit", limit.coerceIn(1, 100).toString())
+            .apply {
+                q?.trim()?.takeIf { it.isNotEmpty() }?.let { addQueryParameter("q", it) }
+                role?.takeIf { it.isNotBlank() }?.let { addQueryParameter("role", it.uppercase()) }
+                status?.takeIf { it.isNotBlank() }?.let { addQueryParameter("status", it.uppercase()) }
+                cursor?.takeIf { it.isNotBlank() }?.let { addQueryParameter("cursor", it) }
+            }
+            .build()
+        return request(ownerId, Request.Builder().url(url).get(),
+            RemoteAdminAccountPage.serializer(), ::adminBackendError)
+    }
+
+    suspend fun adminAccount(ownerId: String, targetId: String): Outcome<RemoteAdminAccount> =
+        get(ownerId, "/v1/admin/accounts/$targetId", RemoteAdminAccount.serializer(),
+            ::adminBackendError)
+
+    suspend fun adminInvite(
+        ownerId: String,
+        email: String,
+        role: String,
+        expiresInHours: Int = 72,
+    ): Outcome<RemoteAdminInvitationResult> {
+        val encoded = json.encodeToString(
+            RemoteAdminInvitationCreate.serializer(),
+            RemoteAdminInvitationCreate(email = email.trim(), role = role.uppercase(),
+                expiresInHours = expiresInHours),
+        )
+        return send(ownerId, "POST", "/v1/admin/invitations", encoded, null,
+            RemoteAdminInvitationResult.serializer(), ::adminBackendError)
+    }
+
+    suspend fun adminUpdateAccount(
+        ownerId: String,
+        targetId: String,
+        patch: RemoteAdminAccountPatch,
+    ): Outcome<RemoteAdminAccount> {
+        val encoded = json.encodeToString(RemoteAdminAccountPatch.serializer(), patch)
+        return send(ownerId, "PATCH", "/v1/admin/accounts/$targetId", encoded, null,
+            RemoteAdminAccount.serializer(), ::adminBackendError)
+    }
+
+    /**
+     * Soft-delete: the backend reads the expected revision from `?revision=` and, when present,
+     * from `If-Match`. Both are sent so a proxy that strips one header cannot turn the CAS into an
+     * unconditional write.
+     */
+    suspend fun adminDeactivateAccount(
+        ownerId: String,
+        targetId: String,
+        revision: Int,
+    ): Outcome<RemoteAdminAccount> {
+        val base = config.endpoint("/v1/admin/accounts/$targetId")
+            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
+        val url = base.toHttpUrl().newBuilder()
+            .addQueryParameter("revision", revision.toString())
+            .build()
+        val builder = Request.Builder()
+            .url(url)
+            .delete()
+            .header("If-Match", "\"$revision\"")
+        return request(ownerId, builder, RemoteAdminAccount.serializer(), ::adminBackendError)
+    }
+
+    suspend fun adminAudit(
+        ownerId: String,
+        targetOwnerId: String? = null,
+        action: String? = null,
+        limit: Int = 50,
+        cursor: String? = null,
+    ): Outcome<RemoteAdminAuditPage> {
+        val base = config.endpoint("/v1/admin/audit")
+            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
+        val url = base.toHttpUrl().newBuilder()
+            .addQueryParameter("limit", limit.coerceIn(1, 100).toString())
+            .apply {
+                targetOwnerId?.trim()?.takeIf { it.isNotEmpty() }
+                    ?.let { addQueryParameter("targetOwnerId", it) }
+                action?.trim()?.takeIf { it.isNotEmpty() }?.let { addQueryParameter("action", it) }
+                cursor?.takeIf { it.isNotBlank() }?.let { addQueryParameter("cursor", it) }
+            }
+            .build()
+        return request(ownerId, Request.Builder().url(url).get(),
+            RemoteAdminAuditPage.serializer(), ::adminBackendError)
+    }
+
+    /**
+     * Admin-specific taxonomy (contract §6): the machine `code` is preserved so the UI can reset a
+     * stale cursor, keep an edit draft on a revision conflict and name the last-admin guard. The
+     * `debugDetail` stays a technical identifier; messages and tokens are never logged.
+     */
+    private fun adminBackendError(status: Int, code: String?): AppError = when {
+        status == 401 -> AppError.Unauthorized("backend_401")
+        status == 403 -> AppError.Unauthorized(
+            code?.takeIf { it != "forbidden" } ?: "admin_required",
+        )
+        status == 404 -> AppError.NotFound("backend_404")
+        status == 400 && code == "invalid_cursor" -> AppError.Validation("invalid_cursor")
+        status == 400 -> AppError.Validation(code ?: "invalid_request")
+        status == 409 -> AppError.Conflict(code ?: "backend_409")
+        status == 410 -> AppError.Conflict(code ?: "invitation_expired")
+        status >= 500 -> AppError.Network("backend_$status")
+        else -> AppError.Network("backend_$status")
+    }
+
     private suspend fun <T> get(
         ownerId: String,
         path: String,
         deserializer: DeserializationStrategy<T>,
+        mapError: (Int, String?) -> AppError = ::backendError,
     ): Outcome<T> {
         val endpoint = config.endpoint(path)
             ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
-        return request(ownerId, Request.Builder().url(endpoint).get(), deserializer)
+        return request(ownerId, Request.Builder().url(endpoint).get(), deserializer, mapError)
     }
 
     private suspend fun <T> send(
@@ -316,6 +439,7 @@ class PamApiClient @Inject constructor(
         body: String,
         idempotencyKey: String?,
         deserializer: DeserializationStrategy<T>,
+        mapError: (Int, String?) -> AppError = ::backendError,
     ): Outcome<T> {
         val endpoint = config.endpoint(path)
             ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
@@ -325,13 +449,14 @@ class PamApiClient @Inject constructor(
             .header("content-type", JSON_MEDIA_TYPE.toString())
             .header("accept", JSON_MEDIA_TYPE.toString())
         idempotencyKey?.let { builder.header("Idempotency-Key", it) }
-        return request(ownerId, builder, deserializer)
+        return request(ownerId, builder, deserializer, mapError)
     }
 
     /** Same auth/refresh handling as [request], for endpoints that answer 204 without a body. */
     private suspend fun requestNoContent(
         ownerId: String,
         builder: Request.Builder,
+        mapError: (Int, String?) -> AppError = ::backendError,
     ): Outcome<Unit> = withContext(ioDispatcher) {
         var refreshed = false
         var rejectedToken: String? = null
@@ -359,7 +484,7 @@ class PamApiClient @Inject constructor(
                 val machine = runCatching {
                     json.decodeFromString(BackendErrorBody.serializer(), response.body).code
                 }.getOrNull()
-                return@withContext Outcome.Failure(backendError(response.code, machine))
+                return@withContext Outcome.Failure(mapError(response.code, machine))
             }
             return@withContext Outcome.Success(Unit)
         }
@@ -371,6 +496,7 @@ class PamApiClient @Inject constructor(
         ownerId: String,
         builder: Request.Builder,
         deserializer: DeserializationStrategy<T>,
+        mapError: (Int, String?) -> AppError = ::backendError,
     ): Outcome<T> = withContext(ioDispatcher) {
         var refreshed = false
         var rejectedToken: String? = null
@@ -401,7 +527,7 @@ class PamApiClient @Inject constructor(
                 val machine = runCatching {
                     json.decodeFromString(BackendErrorBody.serializer(), response.body).code
                 }.getOrNull()
-                return@withContext Outcome.Failure(backendError(response.code, machine))
+                return@withContext Outcome.Failure(mapError(response.code, machine))
             }
             val parsed = runCatching {
                 json.decodeFromString(deserializer, response.body)
