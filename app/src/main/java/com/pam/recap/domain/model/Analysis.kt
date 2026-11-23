@@ -191,11 +191,16 @@ enum class AnalysisLimitation {
  */
 fun Analysis.freshnessAgainst(summary: MonthlySummary?): SummaryFreshness {
     if (status == AnalysisStatus.HISTORICAL) return SummaryFreshness.HISTORICAL
+    // A server-stored analysis mapped from `freshness=STALE` (e.g. only the dependency hash moved
+    // without a revision bump) arrives as OUTDATED, so the server signal wins over the revision
+    // comparison below.
     if (status == AnalysisStatus.OUTDATED) return SummaryFreshness.STALE
-    if (summary == null) return SummaryFreshness.CURRENT
+    // B-3: without a canonical revision we cannot claim the report is current.
+    if (summary == null) return SummaryFreshness.UNKNOWN
     if (summary.freshness == SummaryFreshness.HISTORICAL) return SummaryFreshness.HISTORICAL
     if (summary.freshness == SummaryFreshness.STALE) return SummaryFreshness.STALE
-    if (isPublishable && inputRevision < summary.inputRevision) return SummaryFreshness.STALE
+    if (summary.freshness == SummaryFreshness.UNKNOWN) return SummaryFreshness.UNKNOWN
+    if (isPublishable && inputRevision < summary.currentRevision) return SummaryFreshness.STALE
     return SummaryFreshness.CURRENT
 }
 
@@ -208,5 +213,6 @@ fun Analysis.displayStatus(summary: MonthlySummary?): AnalysisStatus =
     when (freshnessAgainst(summary)) {
         SummaryFreshness.STALE -> AnalysisStatus.OUTDATED
         SummaryFreshness.HISTORICAL -> AnalysisStatus.HISTORICAL
+        SummaryFreshness.UNKNOWN -> AnalysisStatus.UNAVAILABLE
         SummaryFreshness.CURRENT -> status
     }

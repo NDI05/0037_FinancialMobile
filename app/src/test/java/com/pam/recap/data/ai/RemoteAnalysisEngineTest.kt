@@ -126,6 +126,27 @@ class RemoteAnalysisEngineTest {
         assertEquals(180, result.value.usage?.completionTokens)
     }
 
+    @Test
+    fun `explicitly null response lists still decode as a successful analysis`() = runTest {
+        // The live backend serialises absent lists as JSON null; a strict decode used to turn the
+        // successful POST into AppError.Network("backend_invalid_response") and the UI showed
+        // "Tidak dapat terhubung" right after a regeneration that actually succeeded.
+        server.enqueue(
+            jsonResponse(
+                200,
+                """{"promptVersion":"analysis-v1","promptTokens":null,"completionTokens":null,
+                    "observations":[{"text":"Arus kas keluar tercatat.","metricKeys":["summary.grossOutflow"]}],
+                    "suggestions":null,"limitations":null}""",
+            ),
+        )
+
+        val result = engine().analyze(request) as Outcome.Success
+
+        assertEquals(1, result.value.observations.size)
+        assertEquals(emptyList<Any>(), result.value.suggestions)
+        assertEquals(emptyList<Any>(), result.value.limitations)
+    }
+
     // ---- E5.3: 401 handling ---------------------------------------------------------------
     @Test
     fun `a 401 clears the session and retries once, then succeeds`() = runTest {

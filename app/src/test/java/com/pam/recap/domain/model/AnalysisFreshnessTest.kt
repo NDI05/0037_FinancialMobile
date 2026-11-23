@@ -109,10 +109,31 @@ class AnalysisFreshnessTest {
     }
 
     @Test
-    fun `a missing summary does not invent staleness`() {
+    fun `a missing summary is unknown instead of current`() {
+        // B-3: without the canonical revision the screen must not claim the report is current.
         val stored = analysis(revision = 3)
 
-        assertEquals(SummaryFreshness.CURRENT, stored.freshnessAgainst(null))
+        assertEquals(SummaryFreshness.UNKNOWN, stored.freshnessAgainst(null))
+        assertEquals(AnalysisStatus.UNAVAILABLE, stored.displayStatus(null))
+    }
+
+    @Test
+    fun `a dependency-hash stale server report is stale even without a revision bump`() {
+        // B-2: the backend may flip freshness to STALE when only the dependency hash moved (prior
+        // month, category or budget edits). The mapped status carries that signal.
+        val stored = analysis(revision = 4, status = AnalysisStatus.OUTDATED)
+        val sameRevision = summary(revision = 4)
+
+        assertEquals(SummaryFreshness.STALE, stored.freshnessAgainst(sameRevision))
+        assertEquals(AnalysisStatus.OUTDATED, stored.displayStatus(sameRevision))
+    }
+
+    @Test
+    fun `the summary current revision drives the stale verdict`() {
+        val stored = analysis(revision = 4)
+        val bumped = summary(revision = 4).copy(currentRevision = 5)
+
+        assertEquals(SummaryFreshness.STALE, stored.freshnessAgainst(bumped))
     }
 
     @Test

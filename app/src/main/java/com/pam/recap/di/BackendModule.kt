@@ -3,12 +3,14 @@ package com.pam.recap.di
 import com.pam.recap.data.backend.BackendConfig
 import com.pam.recap.data.backend.BackendEndpoints
 import com.pam.recap.data.backend.BackendSessionRepositoryImpl
+import com.pam.recap.data.backend.ServerAnalysisRepositoryImpl
 import com.pam.recap.data.backend.ServerFinanceRepositoryImpl
 import com.pam.recap.data.backend.BackendSyncClient
 import com.pam.recap.domain.repository.BackendConsentSync
 import com.pam.recap.domain.repository.BackendDeletionSync
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.domain.repository.BackendSummarySync
+import com.pam.recap.domain.repository.ServerAnalysisRepository
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import dagger.Binds
 import dagger.Module
@@ -47,4 +49,8 @@ abstract class BackendModule {
     @Binds
     @Singleton
     abstract fun bindServerFinance(impl: ServerFinanceRepositoryImpl): ServerFinanceRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindServerAnalysis(impl: ServerAnalysisRepositoryImpl): ServerAnalysisRepository
 }

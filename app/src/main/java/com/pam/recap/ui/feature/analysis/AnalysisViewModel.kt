@@ -9,15 +9,20 @@ import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.Analysis
 import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.MonthlySummary
+import com.pam.recap.domain.model.ValidationOutcome
 import com.pam.recap.domain.repository.AnalysisRepository
 import com.pam.recap.domain.repository.FinanceRefreshBus
 import com.pam.recap.domain.repository.ConsentRepository
+import com.pam.recap.domain.repository.ServerAnalysis
+import com.pam.recap.domain.repository.ServerAnalysisRepository
+import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.ComputeMonthlySummaryUseCase
 import com.pam.recap.domain.usecase.RequestAnalysisUseCase
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -62,6 +67,8 @@ class AnalysisViewModel @Inject constructor(
     private val computeSummary: ComputeMonthlySummaryUseCase,
     private val requestAnalysis: RequestAnalysisUseCase,
     private val resolveInitialMonth: ResolveInitialMonthUseCase,
+    private val serverAnalysis: ServerAnalysisRepository,
+    private val serverFinance: ServerFinanceRepository,
 ) : ViewModel() {
 
     private val month = MutableStateFlow<JakartaMonth?>(null)
@@ -98,32 +105,72 @@ class AnalysisViewModel @Inject constructor(
         combine(month.filterNotNull(), refreshTick) { selected, _ -> selected },
     ) { session, selectedMonth -> session.ownerId to selectedMonth }
         .flatMapLatest { (ownerId, selectedMonth) ->
-            combine(
-                analyses.observeLatest(ownerId, selectedMonth.id()),
-                consents.observeLatest(ownerId, ConsentPurpose.AI_PROCESSING),
-                ui,
-            ) { analysis, consent, toggles ->
-                Triple(analysis, consent?.isGranted == true, toggles)
-            }.flatMapLatest { (analysis, granted, toggles) ->
-                flow {
-                    val summary = computeSummary(ownerId, selectedMonth, persist = false)
-                    emit(
-                        AnalysisUiState(
-                            isLoading = false,
-                            month = selectedMonth,
-                            summary = summary,
-                            analysis = analysis,
-                            aiConsentGranted = granted,
-                            showSuggestions = toggles.showSuggestions,
-                            selectedObservation = toggles.selectedObservation,
-                            isGenerating = toggles.isGenerating,
-                            error = toggles.error,
-                        ),
-                    )
-                }
+            // B-1: with a backend configured the canonical month summary and stored analysis come
+            // from the server; the local Room pipeline (empty on a fresh server-mode install) must
+            // not gate the screen or the generate button.
+            if (serverAnalysis.isEnabled) {
+                serverState(ownerId, selectedMonth)
+            } else {
+                localState(ownerId, selectedMonth)
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AnalysisUiState())
+
+    private fun localState(ownerId: String, selectedMonth: JakartaMonth): Flow<AnalysisUiState> =
+        combine(
+            analyses.observeLatest(ownerId, selectedMonth.id()),
+            consents.observeLatest(ownerId, ConsentPurpose.AI_PROCESSING),
+            ui,
+        ) { analysis, consent, toggles ->
+            Triple(analysis, consent?.isGranted == true, toggles)
+        }.flatMapLatest { (analysis, granted, toggles) ->
+            flow {
+                val summary = computeSummary(ownerId, selectedMonth, persist = false)
+                emit(
+                    AnalysisUiState(
+                        isLoading = false,
+                        month = selectedMonth,
+                        summary = summary,
+                        analysis = analysis,
+                        aiConsentGranted = granted,
+                        showSuggestions = toggles.showSuggestions,
+                        selectedObservation = toggles.selectedObservation,
+                        isGenerating = toggles.isGenerating,
+                        error = toggles.error,
+                    ),
+                )
+            }
+        }
+
+    private fun serverState(ownerId: String, selectedMonth: JakartaMonth): Flow<AnalysisUiState> =
+        combine(
+            consents.observeLatest(ownerId, ConsentPurpose.AI_PROCESSING),
+            ui,
+        ) { consent, toggles ->
+            (consent?.isGranted == true) to toggles
+        }.flatMapLatest { (granted, toggles) ->
+            flow {
+                val summaryOutcome = serverFinance.summary(ownerId, selectedMonth)
+                val analysisOutcome = serverAnalysis.latest(ownerId, selectedMonth)
+                val summary = (summaryOutcome as? Outcome.Success)?.value
+                emit(
+                    AnalysisUiState(
+                        isLoading = false,
+                        month = selectedMonth,
+                        summary = summary,
+                        analysis = (analysisOutcome as? Outcome.Success)?.value
+                            ?.toAnalysis(ownerId, selectedMonth),
+                        aiConsentGranted = granted,
+                        showSuggestions = toggles.showSuggestions,
+                        selectedObservation = toggles.selectedObservation,
+                        isGenerating = toggles.isGenerating,
+                        error = (summaryOutcome as? Outcome.Failure)?.error
+                            ?: (analysisOutcome as? Outcome.Failure)?.error
+                            ?: toggles.error,
+                    ),
+                )
+            }
+        }
 
     fun previousMonth() = month.update { it?.previous() }
 
@@ -145,7 +192,11 @@ class AnalysisViewModel @Inject constructor(
                 ui.update { it.copy(isGenerating = false) }
                 return@launch
             }
-            val result = requestAnalysis(ownerId, selectedMonth, regenerate)
+            val result = if (serverAnalysis.isEnabled) {
+                serverAnalysis.generate(ownerId, selectedMonth)
+            } else {
+                requestAnalysis(ownerId, selectedMonth, regenerate)
+            }
             ui.update {
                 it.copy(
                     isGenerating = false,
@@ -153,6 +204,34 @@ class AnalysisViewModel @Inject constructor(
                     selectedObservation = 0,
                 )
             }
+            if (result is Outcome.Success && serverAnalysis.isEnabled) {
+                // The response itself carries the fresh snapshot; the next collection re-reads it.
+                refreshTick.update { it + 1 }
+            }
         }
     }
 }
+
+/**
+ * B-1/B-2: the domain view of a server-stored analysis. The status is the effective status mapped
+ * from the server's canonical freshness, so the revision comparison in `displayStatus` is only a
+ * fallback and never overrides a dependency-hash STALE the backend already reported.
+ */
+private fun ServerAnalysis.toAnalysis(ownerId: String, month: JakartaMonth): Analysis = Analysis(
+    id = "server:${month.id()}:$inputRevision",
+    ownerId = ownerId,
+    monthId = month.id(),
+    summaryId = "server:${month.id()}:$inputRevision",
+    inputRevision = inputRevision,
+    consentId = null,
+    providerId = "backend-go",
+    modelId = "server",
+    promptVersion = promptVersion,
+    observations = observations,
+    suggestions = suggestions,
+    limitations = limitations,
+    status = status,
+    validation = ValidationOutcome.valid(regenerationCount = 0, at = createdAt),
+    usage = null,
+    createdAt = createdAt,
+)

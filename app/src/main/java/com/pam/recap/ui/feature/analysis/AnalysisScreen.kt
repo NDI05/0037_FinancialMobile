@@ -270,13 +270,16 @@ private fun AnalysisEmptyCard(
 internal fun AnalysisFreshnessHeader(analysis: Analysis, summary: MonthlySummary?) {
     AnalysisHeader(status = analysis.displayStatus(summary))
     if (analysis.freshnessAgainst(summary) == SummaryFreshness.STALE) {
-        NoticeBanner(
-            text = stringResource(
-                R.string.analysis_stale_body,
-                analysis.inputRevision,
-                summary?.inputRevision ?: analysis.inputRevision,
-            ),
-        )
+        val currentRevision = summary?.currentRevision ?: analysis.inputRevision
+        // B-2: the server can report STALE without a revision bump when the dependency hash moved
+        // (prior month, categories, budget plan or an import job). Say that instead of printing
+        // two identical revision numbers.
+        val text = if (analysis.inputRevision < currentRevision) {
+            stringResource(R.string.analysis_stale_body, analysis.inputRevision, currentRevision)
+        } else {
+            stringResource(R.string.analysis_stale_dependency_body, analysis.inputRevision)
+        }
+        NoticeBanner(text = text)
     }
 }
 

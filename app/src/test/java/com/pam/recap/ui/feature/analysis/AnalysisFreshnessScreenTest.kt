@@ -110,10 +110,28 @@ class AnalysisFreshnessScreenTest {
     }
 
     @Test
-    fun `a missing summary never pretends the analysis is stale`() {
+    fun `a missing summary renders as unavailable instead of available`() {
+        // B-3: no canonical revision means "tidak tersedia", never a reassuring current chip.
         setContent(analysis(revision = 3), summary = null)
 
-        composeRule.onNodeWithText("Tersedia").assertIsDisplayed()
+        composeRule.onNodeWithText("Tidak tersedia").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Tersedia").assertCountEquals(0)
         composeRule.onAllNodesWithText("Kedaluwarsa").assertCountEquals(0)
+    }
+
+    @Test
+    fun `a dependency-hash stale report explains the change without new revision numbers`() {
+        // B-2: the server can report STALE while the revision is unchanged (prior month, category or
+        // budget edits). The banner must not print two identical revision numbers.
+        setContent(
+            analysis(revision = 4, status = AnalysisStatus.OUTDATED),
+            summary(revision = 4),
+        )
+
+        composeRule.onNodeWithText("Kedaluwarsa").assertIsDisplayed()
+        composeRule.onNodeWithText(
+            "Analisis ini dibuat dari data yang sejak itu sudah berubah (revisi 4), meskipun nomor " +
+                "revisi bulan tetap. Buat ulang analisis agar sesuai data terbaru.",
+        ).assertIsDisplayed()
     }
 }

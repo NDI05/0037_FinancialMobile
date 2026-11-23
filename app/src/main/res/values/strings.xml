@@ -331,6 +331,7 @@
     <string name="analysis_observation_of">%1$d dari %2$d</string>
     <string name="analysis_limitations_eyebrow">Batasan</string>
     <string name="analysis_stale_body">Analisis ini dibuat dari revisi %1$d, sedangkan data bulan ini sudah di revisi %2$d. Buat ulang analisis agar sesuai data terbaru.</string>
+    <string name="analysis_stale_dependency_body">Analisis ini dibuat dari data yang sejak itu sudah berubah (revisi %1$d), meskipun nomor revisi bulan tetap. Buat ulang analisis agar sesuai data terbaru.</string>
 
     <!-- Budget -->
     <string name="budget_plan_freshness_current">Rencana server · revisi %1$d</string>
