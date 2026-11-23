@@ -35,6 +35,7 @@ import com.pam.recap.ui.components.BottomNavBar
 import com.pam.recap.ui.components.BottomNavItem
 import com.pam.recap.ui.feature.analysis.AnalysisScreen
 import com.pam.recap.ui.feature.budget.BudgetPlanScreen
+import com.pam.recap.ui.feature.category.CategoryManagementScreen
 import com.pam.recap.ui.feature.consent.ConsentScreen
 import com.pam.recap.ui.feature.entry.ManualEntryScreen
 import com.pam.recap.ui.feature.gmail.GmailConnectScreen
@@ -191,9 +192,14 @@ fun PamNavHost(modifier: Modifier = Modifier) {
                     onOpenGmail = { navController.navigate(PamDestination.GmailConnect) },
                     onOpenConsentHistory = { navController.navigate(PamDestination.ConsentHistory) },
                     onOpenBudget = { navController.navigate(PamDestination.BudgetPlan()) },
+                    onOpenCategories = { navController.navigate(PamDestination.CategoryManagement) },
                     onOpenDeletion = { navController.navigate(PamDestination.DataDeletion) },
                     onSignedOut = { navController.replaceWith(PamDestination.Welcome) },
                 )
+            }
+
+            composable<PamDestination.CategoryManagement> {
+                CategoryManagementScreen(onBack = { navController.popBackStack() })
             }
 
             composable<PamDestination.ConsentHistory> {

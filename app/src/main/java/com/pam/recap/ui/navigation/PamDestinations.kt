@@ -53,6 +53,9 @@ sealed interface PamDestination {
     data class BudgetPlan(val monthId: String? = null) : PamDestination
 
     @Serializable
+    data object CategoryManagement : PamDestination
+
+    @Serializable
     data object Settings : PamDestination
 
     @Serializable

@@ -29,6 +29,9 @@ data class CategoryTotal(
  * bank-balance claim, and every surface that renders it must also render `EMAIL-DERIVED`
  * (BR-05).
  */
+/** Server-computed freshness of a month summary (S2.5). */
+enum class SummaryFreshness { CURRENT, STALE, HISTORICAL }
+
 data class MonthlySummary(
     val id: String,
     val ownerId: String,
@@ -51,6 +54,8 @@ data class MonthlySummary(
     val generatedAt: Instant,
     /** FR-22: set when a row changed after this summary was computed. */
     val isOutdated: Boolean = false,
+    /** S2.5: CURRENT when computed from the latest revision, STALE when older, HISTORICAL when newer. */
+    val freshness: SummaryFreshness = if (isOutdated) SummaryFreshness.STALE else SummaryFreshness.CURRENT,
 ) {
 
     fun totalFor(category: Category): Money =

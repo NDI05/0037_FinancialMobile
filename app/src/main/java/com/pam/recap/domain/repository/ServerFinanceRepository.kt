@@ -206,9 +206,11 @@ interface ServerFinanceRepository {
         patch: TransactionPatch,
     ): Outcome<Transaction> = Outcome.Failure(AppError.Configuration("backend_update_not_supported"))
 
+    /** [revision] enables the server compare-and-swap; null keeps the unconditional delete. */
     suspend fun deleteTransaction(
         ownerId: String,
         transactionId: String,
+        revision: Int? = null,
     ): Outcome<Unit> = Outcome.Failure(AppError.Configuration("backend_delete_not_supported"))
 
     suspend fun get(ownerId: String, transactionId: String): Outcome<Transaction>

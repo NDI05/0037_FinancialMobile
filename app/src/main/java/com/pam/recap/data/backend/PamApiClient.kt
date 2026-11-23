@@ -129,10 +129,16 @@ class PamApiClient @Inject constructor(
         return requestNoContent(ownerId, Request.Builder().url(endpoint).delete())
     }
 
-    suspend fun deleteTransaction(ownerId: String, transactionId: String): Outcome<Unit> {
+    suspend fun deleteTransaction(
+        ownerId: String,
+        transactionId: String,
+        revision: Int? = null,
+    ): Outcome<Unit> {
         val endpoint = config.endpoint("/v1/transactions/$transactionId")
             ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
-        return requestNoContent(ownerId, Request.Builder().url(endpoint).delete())
+        val builder = Request.Builder().url(endpoint).delete()
+        revision?.let { builder.header("If-Match", "\"$it\"") }
+        return requestNoContent(ownerId, builder)
     }
 
     suspend fun createCategory(ownerId: String, body: RemoteCategoryWrite): Outcome<RemoteCategoryItem> {
@@ -404,6 +410,8 @@ data class RemoteSummary(
     val categoryTotals: List<RemoteCategoryTotal> = emptyList(),
     val generatedAt: String? = null,
     val emailDerived: Boolean = true,
+    val currentRevision: Int = 0,
+    val freshness: String = "",
 )
 
 @Serializable

@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Logout
@@ -64,6 +65,7 @@ fun SettingsScreen(
     onOpenGmail: () -> Unit,
     onOpenConsentHistory: () -> Unit,
     onOpenBudget: () -> Unit,
+    onOpenCategories: () -> Unit,
     onOpenDeletion: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -168,6 +170,12 @@ fun SettingsScreen(
                 title = stringResource(R.string.budget_title),
                 subtitle = stringResource(R.string.settings_budget_body),
                 onClick = onOpenBudget,
+            )
+            SettingsRow(
+                icon = Icons.Rounded.Category,
+                title = stringResource(R.string.category_manage_title),
+                subtitle = stringResource(R.string.settings_categories_body),
+                onClick = onOpenCategories,
             )
             if (state.demoRowCount > 0) {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {

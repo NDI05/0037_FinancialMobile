@@ -10,6 +10,7 @@ import com.pam.recap.domain.model.CategoryTotal
 import com.pam.recap.domain.model.CoverageStatus
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.model.MonthlySummary
+import com.pam.recap.domain.model.SummaryFreshness
 import com.pam.recap.domain.model.ParseStatus
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionSource
@@ -232,8 +233,11 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         is Outcome.Failure -> result
     }
 
-    override suspend fun deleteTransaction(ownerId: String, transactionId: String): Outcome<Unit> =
-        api.deleteTransaction(ownerId, transactionId)
+    override suspend fun deleteTransaction(
+        ownerId: String,
+        transactionId: String,
+        revision: Int?,
+    ): Outcome<Unit> = api.deleteTransaction(ownerId, transactionId, revision)
 
     override suspend fun summary(ownerId: String, month: JakartaMonth): Outcome<MonthlySummary> =
         when (val result = api.summary(ownerId, month.id())) {
@@ -429,6 +433,11 @@ class ServerFinanceRepositoryImpl @Inject constructor(
                     serverLabel = total.label,
                     serverKind = mapped.kind.name,
                 )
+            },
+            freshness = when (freshness.uppercase()) {
+                "STALE" -> SummaryFreshness.STALE
+                "HISTORICAL" -> SummaryFreshness.HISTORICAL
+                else -> if (currentRevision > inputRevision) SummaryFreshness.STALE else SummaryFreshness.CURRENT
             },
             uncategorizedCount = uncategorizedCount,
             manualEntryCount = manualEntryCount,
