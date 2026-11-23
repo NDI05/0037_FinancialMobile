@@ -646,7 +646,8 @@ data class RemoteCategoryItem(
     val revision: Int = 0,
     val color: String? = null,
     val isBuiltin: Boolean = false,
-    val attributes: Map<String, String> = emptyMap(),
+    /** The server sends an explicit JSON null for categories without attributes. */
+    val attributes: Map<String, String>? = null,
 )
 
 @Serializable

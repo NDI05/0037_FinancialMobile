@@ -118,7 +118,7 @@ class PamApiClientTest {
         server.enqueue(
             json(
                 200,
-                """{"categories":[{"id":"cat_food","code":"food","label":"Makanan","kind":"EXPENSE","revision":2}],
+                """{"categories":[{"id":"cat_food","code":"food","label":"Makanan","kind":"EXPENSE","revision":2,"attributes":null}],
                    "search":{"scanned":3,"truncated":false},"nextCursor":"cat:next"}""",
             ),
         )
