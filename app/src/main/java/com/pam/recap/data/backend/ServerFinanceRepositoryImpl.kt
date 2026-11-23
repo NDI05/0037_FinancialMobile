@@ -23,6 +23,7 @@ import com.pam.recap.domain.repository.ServerCategoryJob
 import com.pam.recap.domain.repository.ServerImportJob
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.ServerTransactionPage
+import com.pam.recap.domain.repository.TransactionPatch
 import kotlinx.serialization.Serializable
 import kotlin.math.roundToInt
 import javax.inject.Inject
@@ -98,6 +99,52 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         is Outcome.Success -> wireMap { result.value.toDomain(ownerId) }
         is Outcome.Failure -> result
     }
+
+    override suspend fun searchMonth(
+        ownerId: String,
+        month: JakartaMonth,
+        query: String,
+        categoryId: String?,
+        direction: String?,
+        limit: Int,
+        cursor: String?,
+    ): Outcome<ServerTransactionPage> = when (
+        val result = api.searchTransactions(ownerId, month.id(), query, categoryId, direction, limit, cursor)
+    ) {
+        is Outcome.Success -> wireMap {
+            ServerTransactionPage(
+                items = result.value.items.map { it.toDomain(ownerId) },
+                nextCursor = result.value.nextCursor,
+                scanned = result.value.search?.scanned ?: 0,
+                truncated = result.value.search?.truncated ?: false,
+            )
+        }
+        is Outcome.Failure -> result
+    }
+
+    override suspend fun updateTransaction(
+        ownerId: String,
+        transactionId: String,
+        patch: TransactionPatch,
+    ): Outcome<Transaction> = when (
+        val result = api.patchTransaction(
+            ownerId,
+            transactionId,
+            com.pam.recap.data.backend.RemoteTransactionPatch(
+                categoryId = patch.categoryId,
+                description = patch.description,
+                merchantLabel = patch.merchantLabel,
+                note = patch.note,
+                revision = patch.revision,
+            ),
+        )
+    ) {
+        is Outcome.Success -> wireMap { result.value.toDomain(ownerId) }
+        is Outcome.Failure -> result
+    }
+
+    override suspend fun deleteTransaction(ownerId: String, transactionId: String): Outcome<Unit> =
+        api.deleteTransaction(ownerId, transactionId)
 
     override suspend fun summary(ownerId: String, month: JakartaMonth): Outcome<MonthlySummary> =
         when (val result = api.summary(ownerId, month.id())) {

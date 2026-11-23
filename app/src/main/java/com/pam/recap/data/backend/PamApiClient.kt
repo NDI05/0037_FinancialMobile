@@ -89,6 +89,46 @@ class PamApiClient @Inject constructor(
             RemoteTransaction.serializer())
     }
 
+    suspend fun searchTransactions(
+        ownerId: String,
+        monthId: String,
+        query: String,
+        categoryId: String?,
+        direction: String?,
+        limit: Int,
+        cursor: String?,
+    ): Outcome<RemoteTransactionPage> {
+        val base = config.endpoint("/v1/transactions")
+            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
+        val url = base.toHttpUrl().newBuilder()
+            .addQueryParameter("month", monthId)
+            .addQueryParameter("limit", limit.coerceIn(1, 100).toString())
+            .apply {
+                query.trim().takeIf { it.isNotEmpty() }?.let { addQueryParameter("q", it) }
+                categoryId?.takeIf { it.isNotBlank() }?.let { addQueryParameter("categoryId", it) }
+                direction?.takeIf { it.isNotBlank() }?.let { addQueryParameter("direction", it) }
+                cursor?.takeIf { it.isNotBlank() }?.let { addQueryParameter("cursor", it) }
+            }
+            .build()
+        return request(ownerId, Request.Builder().url(url).get(), RemoteTransactionPage.serializer())
+    }
+
+    suspend fun patchTransaction(
+        ownerId: String,
+        transactionId: String,
+        body: RemoteTransactionPatch,
+    ): Outcome<RemoteTransaction> {
+        val encoded = json.encodeToString(RemoteTransactionPatch.serializer(), body)
+        return send(ownerId, "PATCH", "/v1/transactions/$transactionId", encoded, null,
+            RemoteTransaction.serializer())
+    }
+
+    suspend fun deleteTransaction(ownerId: String, transactionId: String): Outcome<Unit> {
+        val endpoint = config.endpoint("/v1/transactions/$transactionId")
+            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
+        return requestNoContent(ownerId, Request.Builder().url(endpoint).delete())
+    }
+
     suspend fun budget(ownerId: String, monthId: String): Outcome<RemoteBudgetPlan> =
         get(ownerId, "/v1/budget-plans/$monthId", RemoteBudgetPlan.serializer())
 
@@ -197,6 +237,45 @@ class PamApiClient @Inject constructor(
             .header("accept", JSON_MEDIA_TYPE.toString())
         idempotencyKey?.let { builder.header("Idempotency-Key", it) }
         return request(ownerId, builder, deserializer)
+    }
+
+    /** Same auth/refresh handling as [request], for endpoints that answer 204 without a body. */
+    private suspend fun requestNoContent(
+        ownerId: String,
+        builder: Request.Builder,
+    ): Outcome<Unit> = withContext(ioDispatcher) {
+        var refreshed = false
+        var rejectedToken: String? = null
+        while (true) {
+            val tokenResult = if (!refreshed) sessions.token(ownerId) else sessions.renew(ownerId, rejectedToken)
+            if (tokenResult is Outcome.Failure) {
+                return@withContext Outcome.Failure(tokenResult.error)
+            }
+            val token = (tokenResult as Outcome.Success).value
+            val request = builder.header("authorization", "Bearer $token").build()
+            val response = try {
+                client.newCall(request).execute().use { call ->
+                    ApiResponse(call.code, call.body?.string().orEmpty())
+                }
+            } catch (error: IOException) {
+                SafeLogger.failure(TAG, "api_network_failed")
+                return@withContext Outcome.Failure(AppError.Network("backend_unreachable"))
+            }
+            if (response.code == 401 && !refreshed) {
+                refreshed = true
+                rejectedToken = token
+                continue
+            }
+            if (response.code !in 200..299) {
+                val machine = runCatching {
+                    json.decodeFromString(BackendErrorBody.serializer(), response.body).code
+                }.getOrNull()
+                return@withContext Outcome.Failure(backendError(response.code, machine))
+            }
+            return@withContext Outcome.Success(Unit)
+        }
+        @Suppress("UNREACHABLE_CODE")
+        Outcome.Success(Unit)
     }
 
     private suspend fun <T> request(
@@ -348,6 +427,9 @@ data class RemoteTransaction(
 @Serializable
 data class RemoteTransactionPatch(
     val categoryId: String? = null,
+    val description: String? = null,
+    val merchantLabel: String? = null,
+    val note: String? = null,
     val revision: Int,
 )
 
@@ -355,6 +437,13 @@ data class RemoteTransactionPatch(
 data class RemoteTransactionPage(
     val items: List<RemoteTransaction> = emptyList(),
     val nextCursor: String? = null,
+    val search: RemoteSearchMeta? = null,
+)
+
+@Serializable
+data class RemoteSearchMeta(
+    val scanned: Int = 0,
+    val truncated: Boolean = false,
 )
 
 @Serializable

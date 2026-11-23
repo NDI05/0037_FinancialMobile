@@ -1,5 +1,6 @@
 package com.pam.recap.domain.repository
 
+import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.MonthlySummary
@@ -38,6 +39,18 @@ data class CategoryDrainResult(
 data class ServerTransactionPage(
     val items: List<Transaction>,
     val nextCursor: String? = null,
+    /** Rows the server examined for a search, and whether its scan cap cut the result. */
+    val scanned: Int = 0,
+    val truncated: Boolean = false,
+)
+
+/** Partial edit for a server row; omitted fields keep their current value. */
+data class TransactionPatch(
+    val revision: Int,
+    val categoryId: String? = null,
+    val description: String? = null,
+    val merchantLabel: String? = null,
+    val note: String? = null,
 )
 
 /**
@@ -108,6 +121,31 @@ interface ServerFinanceRepository {
         limit: Int = 100,
         cursor: String? = null,
     ): Outcome<ServerTransactionPage>
+
+    /**
+     * One server-side page of a filtered search. The cursor belongs to the exact query/month: the
+     * caller must drop it whenever any filter changes.
+     */
+    suspend fun searchMonth(
+        ownerId: String,
+        month: JakartaMonth,
+        query: String = "",
+        categoryId: String? = null,
+        direction: String? = null,
+        limit: Int = 50,
+        cursor: String? = null,
+    ): Outcome<ServerTransactionPage> = listMonth(ownerId, month, limit, cursor)
+
+    suspend fun updateTransaction(
+        ownerId: String,
+        transactionId: String,
+        patch: TransactionPatch,
+    ): Outcome<Transaction> = Outcome.Failure(AppError.Configuration("backend_update_not_supported"))
+
+    suspend fun deleteTransaction(
+        ownerId: String,
+        transactionId: String,
+    ): Outcome<Unit> = Outcome.Failure(AppError.Configuration("backend_delete_not_supported"))
 
     suspend fun get(ownerId: String, transactionId: String): Outcome<Transaction>
 
