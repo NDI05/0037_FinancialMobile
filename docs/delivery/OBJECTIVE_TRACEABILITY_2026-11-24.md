@@ -27,14 +27,14 @@ angka final: **29 PASS / 4 PARTIAL / 5 NOT RUN**.
 | Tombol "Sinkronkan sekarang" | tombol di sheet → `POST /v1/gmail/sync`, state "Sedang sinkron" | UAT HP 24 Nov (202 → progress → idle) | G25, G28 |
 | Progress / percobaan / berhasil / tautkan ulang | status job, pesan "Perlu perhatian", alur tautkan ulang | G34 evidence, UAT HP | G28, G34 |
 | Endpoint 18090 via `adb reverse` | `adb reverse tcp:18090` + base URL debug | preflight UAT exit 0 | G21, G28 |
-| SSO Google via Credential Manager | bottom sheet/entry Google, nonce + link akun lama | contract harness, unit/HTTP | G30–G35 |
+| SSO Google via Credential Manager | bottom sheet/entry Google, nonce + link akun lama | unit/HTTP SSO + fixture perangkat; contract harness = bukti Gmail, bukan UI SSO | G30–G35 |
 
 ## Profil privat, panduan, dan dokumen
 
 | Butir mandat | Status |
 |---|---|
 | Profil privat mode 600 di luar repo (`GMAIL_CLIENT_ID/SECRET` owner) | **Selesai** — `~/.config/pam/*` mode 700/600, tidak ter-track git |
-| Panduan test user + Web OAuth client | `docs/GOOGLE_SSO_OWNER_SETUP.md`, `docs/GMAIL_OWNER_UAT_RP0.md` |
+| Panduan test user + Web OAuth client | `docs/GOOGLE_SSO_OWNER_SETUP.md` (repo Android), `docs/GMAIL_OWNER_UAT_RP0.md` (repo backend `0037-Backend-Financial`) |
 | README / PROGRESS_DAILY / matriks gate / panduan UAT / CR-007 | Diperbarui tiap ronde; CR-007 mencakup push→polling 15 m dan syarat backend hidup |
 | Audit independen → kirim temuan → uji + audit ulang | Tiga audit read-only (ronde 7, 2, 3); temuan P1 PAN ditutup `e19477b`/`c69cf57` dan diverifikasi ulang |
 | Push tiap commit, integrasi branch worker, hapus branch, `main` utuh | Semua commit dipush; tidak ada branch worker tersisa; `main` backend `327d876`, Android `c10ca67` |

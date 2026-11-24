@@ -8,8 +8,8 @@ Google.
 - Tested backend: `0037-Backend-Financial` @ **5d76c7f** branch `integration/2026-11-24`
   (cherry-pick of worker `work/gmail-polling` commits `450bc98`, `14e190d`, `f618289`, `f412c50`;
   worker head was `f412c50098811b7a73b79af1c0a9e7808427911b`)
-- Harness: `scripts/qa/gmail/contract_e2e.py` on branch `work/gmail-qa-harness`
-  (v1 `740c573`, restart env-freeze fix in the same commit that carries this document)
+- Harness: `scripts/qa/gmail/contract_e2e.py` from branch lane `work/gmail-qa-harness`
+  (v1 `740c573`; branch sudah di-merge lalu dihapus, riwayat lewat SHA)
 - Environment: `APP_ENV=development`, `GMAIL_PROVIDER=fake`, `GMAIL_MODE=polling`,
   `GMAIL_ALLOW_LOOPBACK_REDIRECT=true`, redirect `http://127.0.0.1:18099/v1/gmail/connect/callback`
   (isolated free port, **never port 18090**), throw-away SQLite DB, synthetic fixture
@@ -20,6 +20,9 @@ Google.
   isolated port 18099, fresh DB/fixture) → **PASS=82, FAIL=0, exit 0**. The harness has not yet
   been extended to assert the new 429 `retryable`/camelCase shape or the cleared marker; those are
   covered by the Go unit/HTTP tests in `internal/gmail` and `internal/httpapi`.
+- Re-run pada integrasi `138b5c3` (setelah lane SSO), `7bb16f0` (parser `gmail-livin-v2`), dan
+  HEAD `00bb515` (tes semantik cooldown): masing-masing **PASS=82, FAIL=0, exit 0** pada port
+  terisolasi 18099 dengan DB/fixture baru (log ronde 10/15; lihat PROGRESS_DAILY).
 
 ## Command
 

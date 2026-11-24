@@ -101,7 +101,7 @@ merchant/nominal), bukan kegagalan impor diam-diam; alasannya tercatat per pesan
   valid dari sisi nominal/tanggal/dedupe (`source_ref_hash` unik), hanya label merchant pada
   templat tertentu yang berpotensi kurang bersih.
 
-## 4. Verifikasi tombol "Sinkronkan sekarang" dari HP fisik (24 Nov 2026, 21:05–21:15 WIB)
+## 5. Verifikasi tombol "Sinkronkan sekarang" dari HP fisik (24 Nov 2026, 21:05–21:15 WIB)
 
 Aplikasi debug pada HP owner (`com.pam.recap.debug`, `1.0.0-debug`) sudah login dan tertaut Gmail,
 jadi alur antrian bisa diuji langsung dari perangkat (bukan hanya curl/harness).
@@ -120,7 +120,7 @@ saat job manual yang dipicu selesai (`ClearGmailSyncRequest`), sehingga ketukan 
 selesai kembali diterima (202) — ini perilaku desain, bukan pelanggaran throttle. Respons **429**
 `sync_cooldown` hanya muncul bila permintaan datang saat penanda masih aktif (job belum selesai);
 jalur itu tetap dicakup harness kontrak (G26), karena tombol UI dinonaktifkan ("Sedang sinkron") selama job berjalan sehingga tidak bisa dipicu dari layar; semantik pasca-drain sekarang dikunci unit test `TestManualSyncCooldownThenCoalesces` (commit `00bb515`).
-selama job berjalan sehingga tidak bisa dipicu dari layar. Total 7 permintaan manual 21:00–21:19:
+Total 7 permintaan manual 21:00–21:19:
 semua **202**, `failures=0`, tanpa WARN/ERROR, jumlah tetap **914**.
 
 Catatan: notice "Kategori: Koneksi terputus" pada sheet adalah respons 503 lama
@@ -129,7 +129,7 @@ kategori baru. Bukti ini memperkuat G25 (Gmail live + tombol manual dari HP) tet
 G36 (SSO Google + Run literal dari Android Studio) maupun G29/G37 (GCP Rp0), yang tetap menunggu
 pemilik.
 
-## 5. Audit state DB live (agregat, 24 Nov 2026 ~21:20 WIB)
+## 6. Audit state DB live (agregat, 24 Nov 2026 ~21:20 WIB)
 
 Diambil langsung dari DB UAT privat (`~/.config/pam/pam-gmail-uat.db`) setelah seluruh sinkron
 manual di §4 selesai. Hanya angka agregat yang dicatat, tanpa email/ID/token/transaksi.
@@ -150,7 +150,7 @@ Kesimpulan: tidak ada tanda auto-merge/penautan Google (identitas 0), tidak ada 
 menggantung, dan tidak ada jejak Pub/Sub — cocok dengan mode polling Rp0. Gate **G36** (SSO live
 dari Run Android Studio) dan **G29/G37** (Rp0) tetap menunggu pemilik.
 
-## 6. Verifikasi integritas data live (agregat, 24 Nov 2026 ~21:30 WIB)
+## 7. Verifikasi integritas data live (agregat, 24 Nov 2026 ~21:30 WIB)
 
 Pemeriksaan langsung DB UAT privat (angka saja; tanpa email/ID/token/merchant/nominal):
 
