@@ -33,3 +33,7 @@ gradle/gradle-daemon-jvm.properties
 backend/.dev-server.log
 
 # Go build output / local data
+
+# artefak build Go/binary
+bin/
+*.exe
