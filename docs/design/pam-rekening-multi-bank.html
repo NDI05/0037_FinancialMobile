@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipe pemilih bank PAM</title>
+<style>
+@font-face{font-family:Manrope;src:url("../../app/src/main/res/font/manrope.ttf") format("truetype");font-weight:400 800;font-display:swap}
+:root{color-scheme:light;--canvas:#fcf9f8;--surface:#fff;--ink:#1c1b1b;--muted:#434654;--line:#e8e2df;--blue:#004bc4;--blue-soft:#e9f0ff;--lime:#d3f048;--green:#167650;--rose:#a63b28;--paper:#f0ece8}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.48 Manrope,system-ui,sans-serif}
+button,select{font:inherit;color:inherit}button{cursor:pointer}button:focus-visible,select:focus-visible{outline:3px solid var(--blue);outline-offset:3px}button:disabled{cursor:default}
+.layout{display:grid;grid-template-columns:minmax(260px,355px) minmax(360px,432px);gap:clamp(40px,8vw,125px);align-items:start;justify-content:center;padding:38px 28px}
+.review{padding:64px 0 0}.wordmark{font-size:15px;font-weight:800;letter-spacing:.13em;color:#18433c;display:flex;gap:10px;align-items:center}.mark{width:19px;height:19px;border-radius:6px;background:var(--lime);display:inline-grid;place-items:center}.mark:after{content:"";width:8px;height:8px;border:2px solid #263000;border-radius:2px;transform:rotate(15deg)}
+h1,h2,h3,p{margin:0}h1{font-size:clamp(42px,5.6vw,74px);line-height:1.01;letter-spacing:-.088em;margin:26px 0 18px;font-weight:800}.intro{color:var(--muted);font-size:16px;max-width:30ch}.guide{margin:32px 0 0;border-top:1px solid #d9d3ce;padding:18px 0}.guide h2{font-size:15px;letter-spacing:-.025em}.guide p{font-size:14px;color:var(--muted);margin-top:6px;max-width:34ch}
+.phone{min-width:0;background:var(--canvas);border:1px solid #e0d9d5;border-radius:35px;box-shadow:0 14px 44px #33241618,0 2px 8px #3324160c;overflow:hidden;position:relative}
+.mobile-head{position:relative;display:grid;place-items:center;padding:20px 52px 13px;min-height:62px}.mobile-head h2{font-size:21px;letter-spacing:-.045em;font-weight:800}
+.mobile-head .mark{position:absolute;left:22px;background:#e6f4ee}
+.inner{padding:0 20px 22px}.demo-label{font-size:12px;color:var(--muted);text-align:center;margin:0 0 10px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 12px}.toolbar label{font-size:13px;font-weight:800}.toolbar select{max-width:65%;min-height:48px;padding:5px 31px 5px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;font-size:14px;font-weight:800}
+.hero{position:relative;overflow:hidden;background:#103d83;color:white;border-radius:24px;padding:16px 18px 18px;isolation:isolate}
+.hero::after{content:"";position:absolute;z-index:-1;inset:0;background:radial-gradient(ellipse at 114% 3%,#3a74ed 0,transparent 57%),linear-gradient(140deg,#123c7d,#07346d);pointer-events:none}
+.hero::before{content:"";position:absolute;z-index:0;right:-60px;bottom:-123px;width:233px;height:233px;border:1px solid #d9ebff45;border-radius:50%;box-shadow:0 0 0 20px #d9ebff15,0 0 0 43px #d9ebff0c;pointer-events:none}
+.bank-trigger{display:flex;align-items:center;gap:10px;border:1px solid #fff7;background:#ffffff12;color:#fff;border-radius:14px;padding:4px 12px 4px 6px;min-height:48px;font-size:14px;font-weight:800;max-width:100%;position:relative}
+.bank-trigger .chevron{margin-left:8px;width:8px;height:8px;border-right:2px solid;border-bottom:2px solid;transform:rotate(45deg) translateY(-3px)}
+.symbol{display:grid;width:33px;height:33px;flex:none;place-items:center;border-radius:10px;font-size:12px;font-weight:800;letter-spacing:-.03em;color:#1b3b7a;background:#e1ebff}
+.bank-trigger:focus-visible{outline-color:var(--lime)}.bank-trigger:active{background:#ffffff30}
+.total-label{color:#e5efff;font-size:14px;margin:16px 0 1px;font-weight:700}.total{display:flex;align-items:baseline;flex-wrap:wrap;gap:9px}.total strong{font-size:56px;letter-spacing:-.09em;line-height:1;font-weight:800}.total span{font-size:14px;font-weight:700}
+.method-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 19px}
+.metric{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:9px 10px;min-width:0}.metric span{display:block;font-size:12px;color:var(--muted);overflow-wrap:anywhere}.metric strong{font-size:21px;font-weight:800;letter-spacing:-.055em}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 8px}.section-head h3{font-size:17px;letter-spacing:-.04em}.section-head span{font-size:12px;color:var(--muted)}
+.list{list-style:none;margin:0;padding:0;background:#fff;border:1px solid var(--line);border-radius:17px}
+.tx{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;column-gap:10px;row-gap:3px;padding:9px 10px;min-height:56px}.tx+.tx{border-top:1px solid var(--line)}
+.tx-name{font-size:13px;font-weight:800;overflow-wrap:anywhere}.tx-meta,.tx-by{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.tx-by{text-align:right}
+.tx .symbol{color:#34452b;background:#ecf1e2;font-size:11px}.tx[data-type="Transfer"] .symbol{color:#3d2d72;background:#eee7ff}.tx[data-type="VA"] .symbol{color:#70410a;background:#faeedb}
+.empty{padding:16px 14px;font-size:14px;color:var(--muted)}.sheet{width:min(100%,405px);max-width:100%;inset-inline:0;margin:auto auto 0;border:0;border-radius:25px 25px 0 0;max-height:min(82dvh,600px);padding:12px 19px max(22px,env(safe-area-inset-bottom));color:var(--ink);background:var(--canvas);box-shadow:0 -12px 52px #1a233545;overflow:auto}
+.sheet::backdrop{background:#111b3254}.handle{height:4px;width:38px;background:#c9c0bd;border-radius:7px;margin:1px auto 9px}.sheet header{display:flex;align-items:center;justify-content:space-between;gap:10px}.sheet h2{font-size:21px;letter-spacing:-.045em}.close{border:1px solid var(--line);border-radius:14px;background:white;min-width:48px;min-height:48px;font-size:23px;line-height:1}
+.bank-options{display:grid;gap:7px;margin-top:8px}.option{display:grid;grid-template-columns:36px minmax(0,1fr) 34px;align-items:center;gap:11px;text-align:left;padding:9px 11px;min-height:57px;border:1px solid var(--line);border-radius:15px;background:white;width:100%}
+.option[aria-pressed="true"]{border-color:#9cbaef;background:var(--blue-soft)}.option:active{border-color:var(--blue)}.option b{font-size:14px}.option small{display:block;font-size:12px;color:var(--muted)}.choose{color:#174f9c;font-weight:800;text-align:right;font-size:18px}
+[data-bank="jago"] .symbol{background:#f5ebdf;color:#743e16}[data-bank="bri"] .symbol{background:#e1f2f3;color:#125163}[data-bank="all"] .symbol{background:#e6f4ee;color:#1f5b46}
+@media(max-width:760px){body{background:var(--canvas)}.layout{display:block;padding:0}.review{display:none}.phone{width:100%;max-width:500px;margin:auto;min-height:100dvh;border:0;box-shadow:none;border-radius:0}.mobile-head{padding-top:max(17px,env(safe-area-inset-top))}.inner{padding-bottom:max(20px,env(safe-area-inset-bottom))}}
+@media(max-width:345px){.inner{padding-inline:12px}.tx{gap:6px;padding-inline:6px}.metric{padding-inline:6px}}
+@media(min-width:761px){.sheet{margin:auto;border-radius:24px;padding-bottom:20px}}
+@media(prefers-reduced-motion:no-preference){.option,.bank-trigger{transition:background-color .16s,border-color .16s}}
+</style>
+</head>
+<body>
+<main class="layout">
+  <aside class="review" aria-label="Panduan review prototipe">
+    <div class="wordmark"><span class="mark" aria-hidden="true"></span>PAM</div>
+    <h1>Pilih bank</h1>
+    <p class="intro">Satu kartu per bank. Lihat jumlah transaksi yang tercatat pada periode pilihanmu.</p>
+    <section class="guide">
+      <h2>Coba ganti bank atau periode</h2>
+      <p>Ketuk nama bank pada kartu. Pilihan bank memperbarui jumlah dan daftar transaksi sekaligus.</p>
+    </section>
+    <section class="guide">
+      <h2>Untuk persetujuan desain</h2>
+      <p>Mandiri direncanakan untuk rilis awal. Jago dan BRI ditampilkan memakai data demo untuk menilai desain tahap berikutnya.</p>
+    </section>
+  </aside>
+  <article class="phone" aria-label="Pratinjau Android">
+    <header class="mobile-head"><span class="mark" aria-hidden="true"></span><h2>Ringkasan</h2></header>
+    <div class="inner">
+      <p class="demo-label">Prototipe · Data simulasi</p>
+      <div class="toolbar">
+        <label for="period">Periode</label>
+        <select id="period">
+          <option value="11">November 2026</option>
+          <option value="10">Oktober 2026</option>
+          <option value="09">September 2026</option>
+        </select>
+      </div>
+      <section class="hero" aria-label="Jumlah transaksi tercatat">
+        <button id="open-banks" type="button" class="bank-trigger" aria-haspopup="dialog">
+          <span class="symbol" aria-hidden="true" id="bank-symbol">M</span>
+          <span id="bank-name">Mandiri</span>
+          <span class="chevron" aria-hidden="true"></span>
+        </button>
+        <p class="total-label">Total transaksi tercatat</p>
+        <div class="total" aria-live="polite" aria-atomic="true"><strong id="total">0</strong><span>transaksi</span></div>
+      </section>
+      <div class="method-counts" aria-label="Jumlah menurut jenis transaksi">
+        <div class="metric"><span>QRIS</span><strong id="qris-count">0</strong></div>
+        <div class="metric"><span>Transfer</span><strong id="transfer-count">0</strong></div>
+        <div class="metric"><span>Virtual account</span><strong id="va-count">0</strong></div>
+      </div>
+      <div class="section-head"><h3>Transaksi periode ini</h3><span id="list-bank">Mandiri</span></div>
+      <ul class="list" id="transactions"></ul>
+    </div>
+  </article>
+</main>
+<dialog class="sheet" id="banks" aria-labelledby="sheet-title">
+  <div class="handle" aria-hidden="true"></div>
+  <header><h2 id="sheet-title">Pilih bank</h2><form method="dialog"><button class="close" aria-label="Tutup pemilih bank">×</button></form></header>
+  <div class="bank-options" id="bank-options"></div>
+</dialog>
+<script>
+const banks = [
+  { id: "all", label: "Semua bank", badge: "S" },
+  { id: "mandiri", label: "Mandiri", badge: "M" },
+  { id: "jago", label: "Bank Jago", badge: "J" },
+  { id: "bri", label: "BRI", badge: "B" },
+];
+const sample = [
+  {bank:"mandiri", month:"11", day:23, type:"QRIS", label:"Bakso Pak Raka", direction:"Keluar"},
+  {bank:"mandiri", month:"11", day:21, type:"VA", label:"Belanja daring", direction:"Keluar"},
+  {bank:"jago", month:"11", day:21, type:"Transfer", label:"Transfer masuk", direction:"Masuk"},
+  {bank:"mandiri", month:"11", day:20, type:"Transfer", label:"Transfer masuk", direction:"Masuk"},
+  {bank:"bri", month:"11", day:19, type:"VA", label:"Pembayaran tagihan", direction:"Keluar"},
+  {bank:"mandiri", month:"11", day:18, type:"Transfer", label:"Transfer keluar", direction:"Keluar"},
+  {bank:"jago", month:"11", day:17, type:"QRIS", label:"Kopi sore", direction:"Keluar"},
+  {bank:"mandiri", month:"11", day:17, type:"QRIS", label:"Makan siang", direction:"Keluar"},
+  {bank:"mandiri", month:"10", day:22, type:"QRIS", label:"Belanja harian", direction:"Keluar"},
+  {bank:"jago", month:"10", day:14, type:"VA", label:"Pembayaran tagihan", direction:"Keluar"},
+  {bank:"mandiri", month:"10", day:11, type:"Transfer", label:"Transfer masuk", direction:"Masuk"},
+];
+let selected = "mandiri";
+const byId = id => document.getElementById(id);
+const period = byId("period");
+const dialog = byId("banks");
+const trigger = byId("open-banks");
+const counts = {QRIS:"qris-count", Transfer:"transfer-count", VA:"va-count"};
+const channel = {QRIS:"QRIS", Transfer:"Transfer", VA:"Virtual account"};
+const badge = {QRIS:"QR", Transfer:"TF", VA:"VA"};
+function node(tag, className, content) {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (content != null) element.textContent = content;
+  return element;
+}
+function periodItems(bank) {
+  return sample.filter(item => item.month === period.value && (bank === "all" || item.bank === bank));
+}
+function render() {
+  const bank = banks.find(item => item.id === selected);
+  const current = periodItems(selected);
+  trigger.dataset.bank = bank.id;
+  trigger.setAttribute("aria-label", "Pilih bank, saat ini " + bank.label);
+  byId("bank-name").textContent = bank.label;
+  byId("bank-symbol").textContent = bank.badge;
+  byId("list-bank").textContent = bank.label;
+  byId("total").textContent = current.length;
+  for (const [type, id] of Object.entries(counts)) {
+    byId(id).textContent = current.filter(item => item.type === type).length;
+  }
+  const list = byId("transactions");
+  list.replaceChildren();
+  if (!current.length) {
+    list.append(node("li", "empty", "Belum ada transaksi tercatat untuk periode ini."));
+  }
+  for (const item of current) {
+    const row = node("li", "tx");
+    row.dataset.type = item.type;
+    const icon = node("span", "symbol", badge[item.type]);
+    icon.setAttribute("aria-hidden", "true");
+    const text = node("div");
+    text.append(node("div", "tx-name", item.label), node("div", "tx-meta", channel[item.type] + " · " + item.direction));
+    const date = item.day + " " + period.selectedOptions[0].textContent.split(" ")[0];
+    const by = selected === "all" ? date + " · " + banks.find(entry => entry.id === item.bank).label : date;
+    row.append(icon, text, node("span", "tx-by", by));
+    list.append(row);
+  }
+}
+function showBanks() {
+  const group = byId("bank-options");
+  group.replaceChildren();
+  for (const bank of banks) {
+    const option = node("button", "option");
+    option.type = "button";
+    option.dataset.bank = bank.id;
+    option.setAttribute("aria-pressed", String(bank.id === selected));
+    const icon = node("span", "symbol", bank.badge);
+    icon.setAttribute("aria-hidden", "true");
+    const text = node("span");
+    text.append(node("b", "", bank.label), node("small", "", periodItems(bank.id).length + " transaksi" + (["jago","bri"].includes(bank.id) ? " · Tahap berikutnya" : "")));
+    const check = node("span", "choose", bank.id === selected ? "✓" : "");
+    check.setAttribute("aria-hidden", "true");
+    option.append(icon, text, check);
+    option.addEventListener("click", () => {
+      selected = bank.id;
+      render();
+      dialog.close();
+    });
+    group.append(option);
+  }
+  dialog.showModal();
+  group.querySelector('[aria-pressed="true"]').focus();
+}
+trigger.addEventListener("click", showBanks);
+dialog.addEventListener("close", () => trigger.focus());
+dialog.addEventListener("click", event => {
+  if (event.target !== dialog) return;
+  const rect = dialog.getBoundingClientRect();
+  if (event.clientX < rect.left || event.clientX > rect.right
+      || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();
+});
+period.addEventListener("change", render);
+render();
+</script>
+</body>
+</html>
