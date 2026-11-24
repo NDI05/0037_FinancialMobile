@@ -123,3 +123,12 @@ Checklist penutupan harian:
 Tidak ada perubahan kode setelah gate build terakhir (`19e6860`/`f1625b5`); semua commit
 sesudahnya hanya dokumentasi/evidence. Merge ke `main`, deploy, dan revisi SRS resmi tetap
 menunggu instruksi pemilik.
+
+### Penutupan audit independen (24 Nov 2026)
+
+Audit akhir menemukan P1/P2 pada jalur audit retensi; semuanya ditutup di backend `e5407a7`:
+sweep terjadwal dan endpoint kini menulis baris `FAILED` (context terpisah), finalize import-job
+dijaga jendela setahun, tes worker/endpoint/404/in-window ditambah, dan smoke runtime menguji
+`DELETE` lampiran serta `PATCH` job kedaluwarsa. Gate backend: 10 paket, **186 test, 0 gagal**.
+Temuan P3 (optimasi baca ganda, presedensi revisi DELETE, resource string mati) dicatat sebagai
+backlog non-blocking; klaim yang tidak dapat dibuktikan (hash APK) kini diikat ke artefak build.
