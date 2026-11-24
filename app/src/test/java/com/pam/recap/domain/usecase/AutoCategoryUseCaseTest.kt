@@ -26,6 +26,7 @@ import com.pam.recap.domain.repository.ServerTransactionPage
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -62,6 +63,7 @@ class AutoCategoryUseCaseTest {
         var drainCalls = 0
         var enqueuedIds: List<String> = emptyList()
         var gate: CompletableDeferred<Unit>? = null
+        val drainStarted = CompletableDeferred<Unit>()
 
         override suspend fun categories(ownerId: String): Outcome<List<ServerCategory>> =
             Outcome.Success(emptyList())
@@ -97,6 +99,7 @@ class AutoCategoryUseCaseTest {
 
         override suspend fun drainCategories(ownerId: String): Outcome<CategoryDrainResult> {
             drainCalls++
+            drainStarted.complete(Unit)
             gate?.await()
             return drain
         }
@@ -204,8 +207,7 @@ class AutoCategoryUseCaseTest {
         server.gate = gate
         val (useCase, _) = useCase(server)
         val first = async(kotlinx.coroutines.Dispatchers.Default) { useCase.runIfConnected("u_1") }
-        val deadline = System.currentTimeMillis() + 5_000
-        while (server.drainCalls == 0 && System.currentTimeMillis() < deadline) kotlinx.coroutines.delay(5)
+        withTimeout(20_000) { server.drainStarted.await() }
         assertEquals(1, server.drainCalls)
         val second = async(kotlinx.coroutines.Dispatchers.Default) { useCase.runIfConnected("u_1") }
         gate.complete(Unit)
