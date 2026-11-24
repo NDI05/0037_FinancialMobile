@@ -27,7 +27,6 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -182,7 +181,6 @@ class GoogleSsoAccountSourceTest {
         val configured = BuildConfig.PAM_GOOGLE_SSO_CLIENT_ID.isNotBlank()
         assertEquals(configured, BuildConfig.PAM_GOOGLE_SSO_ENABLED)
         assertEquals(configured, source().isGoogleSsoEnabled)
-        if (!configured) assertFalse(source().isGoogleSsoEnabled)
     }
 
     private class PassthroughSecretStore : WrappedSecretStore {
