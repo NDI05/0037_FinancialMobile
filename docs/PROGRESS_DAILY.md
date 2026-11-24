@@ -306,3 +306,17 @@ provenance/tally yang basi. Semua ditemukan dan ditutup dengan perubahan dokumen
 Tidak ada perubahan status gate: **38 gate — 29 PASS, 4 PARTIAL, 5 NOT RUN**. Runtime live tetap
 `/readyz=200`, 0 ERROR/FATAL, 914 transaksi, 21/21 job COMPLETE. Sisa tetap milik pemilik: G36
 (login Google + tombol Run), G29/G37 (Rp0), G24 (merge/deploy/SRS), G14 (hapus retensi nyata).
+
+### Verifikasi ulang ronde 20 (backend `00bb515`, tanpa perubahan kode)
+
+- `go vet ./...` **exit 0**; `go test ./... -count=1` **exit 0** (10 paket ber-test: auth,
+  categoryllm, config, crypto, finance, gmail, httpapi, llm, retention, store).
+- `go test -race ./internal/auth ./internal/gmail ./internal/store ./internal/httpapi -count=1`
+  **exit 0** (auth 3,2 dtk; gmail 23,3 dtk; store 35,5 dtk; httpapi 266,3 dtk); `go build ./...`
+  **exit 0**.
+- Android UAT APK di HP tetap `lastUpdateTime 2026-11-24 19:28:04` (pemilik belum menekan **Run**
+  ulang); `gcloud` tetap tidak tersedia; 0 panggilan `/v1/auth/google`; `google_identities=0`.
+- DB live: 914 transaksi, 21/21 job COMPLETE; `/readyz=200`, 0 ERROR/FATAL pada log terbaru.
+- Gate tidak berubah: **38 baris — 29 PASS / 4 PARTIAL / 5 NOT RUN**. Tidak ada temuan kode baru;
+  sisa pekerjaan tetap G36 (SSO + Run pemilik), G29/G37 (Rp0), G24 (merge/deploy/SRS), G14 (hapus
+  retensi nyata) — semuanya menunggu input/izin pemilik.
