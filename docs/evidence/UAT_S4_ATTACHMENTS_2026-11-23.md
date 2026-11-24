@@ -12,7 +12,7 @@ byte antar perangkat, dan bukan acceptance penuh S4 (C18/C20 dan admin C21–C25
 | APK | `com.pam.recap.debug`, dibangun `./scripts/build.sh --no-watch-fs :app:assembleDebug -PPAM_BACKEND_BASE_URL=http://127.0.0.1:18090` |
 | Backend | binary `/tmp/pam-uat-api-fixed` dari `backend-go` HEAD `7562609`, env `/Users/user/.config/pam/real-uat.env`, port 18090 |
 | Database | Turso/libSQL UAT (bukan data perangkat lain); migrasi 015 diterapkan |
-| Perangkat | AVD `emulator-5554` (sdk_gphone64_arm64), akun UAT tersimpan `andhikap877@gmail.com` |
+| Perangkat | AVD `emulator-5554` (sdk_gphone64_arm64), akun UAT tersimpan `<owner-email>` |
 | Berkas uji | `uat-kwitansi.pdf` 193 B `application/pdf` di `/sdcard/Download` (dibuat sendiri untuk uji) |
 
 Perintah kunci: `adb -s emulator-5554 reverse tcp:18090 tcp:18090`; backend dijalankan dengan
@@ -74,3 +74,6 @@ buka palsu — kondisi "file unavailable" ini belum diuji pada perangkat kedua.
 - C18 (update nama/atribut) dan C20 (search lampiran) diverifikasi oleh unit/integration test
   pada irisan UI terkait, bukan skenario UAT ini.
 - Byte file tidak diunggah ke cloud; klaim S4.1 tetap "metadata sinkron, byte privat lokal".
+
+
+> Redaksi 2026-11-24 (temuan audit P1-3): alamat email pemilik dan `owner_id` pemilik diganti dengan penanda `<owner-email>`/`<owner-id>`; nilai asli tidak disimpan di repo.

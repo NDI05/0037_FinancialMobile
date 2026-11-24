@@ -46,7 +46,7 @@ is not accepted/required by PAM and is not stored.
 
 ## REAL-UAT import/lifecycle evidence — 22 November 2026
 
-- Owner linked Gmail from the UI; connection card showed `andhikap877@gmail.com` / Terhubung.
+- Owner linked Gmail from the UI; connection card showed `<owner-email>` / Terhubung.
   Credential/password are not recorded here.
 - Import run: matched 83, locally saved 47, skipped 36 (`malformed event time`), complete.
   The Android uploader then called Go: `POST /v1/import-jobs` 201, categories 200,
@@ -62,3 +62,6 @@ is not accepted/required by PAM and is not stored.
   separate.
 - This is REAL-UAT evidence for the accepted rows, not a claim that all Livin templates parse
   or that AI analysis ran.
+
+
+> Redaksi 2026-11-24 (temuan audit P1-3): alamat email pemilik dan `owner_id` pemilik diganti dengan penanda `<owner-email>`/`<owner-id>`; nilai asli tidak disimpan di repo.
