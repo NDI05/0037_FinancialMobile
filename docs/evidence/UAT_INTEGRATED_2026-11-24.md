@@ -22,7 +22,7 @@ bukan pernyataan tentang gate live Google.
 | 5 | Sheet status ringkas + rentang retensi | `05_status_sheet.png`: "Status pembaruan", "Riwayat yang bisa diakses: November 2025 sampai November 2026", label "Menunggu AI/Perlu tinjauan" tidak muncul karena tidak ada job tertunda — bagian daftar job kosong | PASS (bagian job hanya terbukti lewat unit test) |
 | 6 | Analisis dengan consent belum diberikan | `06_analisis.png`: penjelasan agregat + CTA "Buka persetujuan"; tidak ada panggilan provider | PASS |
 | 7 | Layar Tautkan Gmail saat `GMAIL_ENABLED=false` | `07_gmail_disabled.png`: "Server PAM belum mengaktifkan tautan Gmail…", tanpa CTA connect menyesatkan, ledger izin/retensi tampil | PASS |
-| 8 | Entri IMAP lama tidak lagi tampil di Pengaturan | Sesudah perubahan: hanya "Tautkan Gmail lewat browser"; label cakupan menjadi "Email Livin hanya-baca (tanpa akses tulis)" | PASS |
+| 8 | Entri IMAP lama tidak lagi tampil di Pengaturan | APK final dipasang ulang (`app-debug.apk`, sha256 `e5cba1dc…`): `08_pengaturan_final.png`+dump menunjukkan hanya "Tautkan Gmail lewat browser", label cakupan "Email Livin hanya-baca (tanpa akses tulis)", tanpa tombol "Kelola kotak masuk" | PASS |
 | 9 | TalkBack/48 dp/font 200%/360–412 dp pada HEAD ini | Bukti aksesibilitas sebelumnya: [UAT_ACCESSIBILITY_2026-11-24](UAT_ACCESSIBILITY_2026-11-24.md); tidak diulang pada pasangan build ini | PARTIAL |
 | 10 | OAuth Google nyata, Pub/Sub nyata, backfill akun pilot | Tidak ada kredensial Google di lingkungan ini | NOT RUN |
 | 11 | Hapus data retensi nyata + restore | Hanya DB sintetis; tidak menyentuh DB owner | NOT RUN |
