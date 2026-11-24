@@ -1,8 +1,9 @@
 # Pemisahan backend Go ke 0037 Backend Financial
 
-Tanggal: **24 November 2026** (WIB). Status: **PARTIAL** — source terpisah dan build/test
-independen sudah PASS; Android E2E terhadap server dari repo baru dan rollback masih
-`NOT RUN`/menunggu verifikasi QA. Merge/deploy tetap menunggu instruksi pemilik.
+Tanggal: **24 November 2026** (WIB). Status: **PARTIAL** — source terpisah, build/test
+independen, dan E2E Android↔server-dari-repo-backend sudah **PASS** (QA, `aea555f`);
+restore/rollback data nyata masih `NOT RUN` dan menunggu otorisasi pemilik. Merge/deploy
+tetap menunggu instruksi pemilik.
 
 ## Keputusan dan URL
 
@@ -55,16 +56,18 @@ curl -fsS localhost:18094/healthz; curl -fsS localhost:18094/readyz
 | Dua URL repo + dua Git root | PASS | repo di atas; worktree Android terpisah dari clone backend |
 | Go build/vet/test dari clone backend | PASS (baseline) | QA: 11 paket, 167 tes, 0 gagal; `vet`/`build` rc=0 |
 | `/healthz` + `/readyz` server dari repo backend | PASS (baseline) | QA: 200 `{"status":"ok"}` / `{"status":"ready"}`, migrasi 16 baris, DB file terisolasi |
-| Android build tanpa source server | PENDING (build sedang dijalankan) | `:app:compileDebugKotlin` + `testDebugUnitTest` |
-| APK Android login + baca data ke server dari repo backend | NOT RUN | dijadwalkan P4/P5 QA |
-| Migrasi DB terisolasi | PASS (baseline) | DB file baru `/tmp/wqa-split-*/pam.db`, 16 migrasi |
-| Rollback ke pasangan baseline | NOT RUN | baseline: `cd0f91a` + `backend-go/` dari commit itu |
-| Cutover launcher UAT | NOT RUN | menunggu parity E2E + instruksi pemilik |
+| Android build tanpa source server | PASS | QA `aea555f`: `:app:assembleDebug --rerun-tasks` rc=0, APK sha256 `ef183b75…`, identik dengan build baseline `cd0f91a` |
+| APK Android login + baca data ke server dari repo backend | PASS | QA P7: akun sintetis → Ringkasan Rp22.222,21 / 2 transaksi, dump+screenshot `ui_split/14`–`15`; port uji 18095 + `adb reverse` agar 18090 milik owner tidak diganggu |
+| Migrasi DB terisolasi | PASS | DB baru `/tmp/pam-split-run/db/pam.db`, `schema_migrations` 16 baris, DB owner tidak disentuh |
+| Rollback ke pasangan baseline | PARTIAL | server dari `git show cd0f91a:backend-go` → health/ready 200, 16 migrasi; APK `cd0f91a` build rc=0 sha256 sama. Restore DB produksi/rollback data nyata **NOT RUN** (otorisasi owner) |
+| Cutover launcher UAT | NOT RUN | menunggu rollback DB + instruksi pemilik |
+| Audit independen | PASS tanpa P0 | `docs/evidence/AUDIT_BACKEND_SPLIT_2026-11-24.md`; temuan P2 diperbaiki (`4e6946b`: README §6, tautan/kontrak backend, dir kosong) |
 
 ## Sisa
 
-1. Verifikasi E2E Android debug (dibangun dari repo Android) login dan membaca data dari
-   server yang dijalankan dari clone backend (QA lane, DB terisolasi).
-2. Bukti rollback: APK/commit baseline masih dapat dijalankan dengan server dari commit
-   `cd0f91a` (arsip Node dan riwayat Git tersedia).
-3. Gate Gmail API (repo backend, lane w-go) belum masuk matriks ini.
+1. Restore/rollback data nyata dan cutover launcher UAT — menunggu otorisasi pemilik.
+2. Kode Gmail API ada di branch `feat/gmail-api` repo backend (6 commit, `9d388ae`);
+   bukti: `docs/evidence/GMAIL_API_2026-11-24.md` + `docs/evidence/GMAIL_UI_2026-11-24.md`.
+   Merge ke `main`/PR tetap menunggu instruksi pemilik.
+3. Gap kontrak `attributes` (nilai JSON non-string) ditemukan QA — dicatat sebagai temuan
+   pre-existing, bukan efek split; perlu keputusan desain terpisah.
