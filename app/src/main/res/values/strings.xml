@@ -106,7 +106,6 @@
     <string name="error_description_required">Keterangan wajib diisi.</string>
     <string name="error_refund_must_be_credit">Pengembalian dana harus berupa pemasukan.</string>
     <string name="error_refund_target_must_be_expense">Pilih transaksi pengeluaran sebagai target.</string>
-    <string name="error_plan_value_negative">Nilai rencana tidak boleh negatif.</string>
     <string name="error_not_signed_in">Anda belum masuk.</string>
 
     <!-- Welcome -->
@@ -263,7 +262,11 @@
     <string name="manual_amount_placeholder">0</string>
     <string name="manual_description_label">Keterangan</string>
     <string name="manual_description_placeholder">Misal: gaji bulanan</string>
+    <string name="manual_note_label">Catatan (opsional)</string>
+    <string name="manual_note_placeholder">Hanya tersimpan di perangkat</string>
+    <string name="manual_note_counter">%1$d/%2$d karakter</string>
     <string name="manual_date_label">Tanggal</string>
+    <string name="manual_date_out_of_window">Tanggal harus di antara awal jendela setahun dan hari ini.</string>
     <string name="manual_category_eyebrow">Kategori</string>
     <string name="manual_save">Simpan transaksi</string>
     <string name="currency_code">IDR</string>
@@ -427,7 +430,7 @@
     <string name="error_google_identity_not_linked">Akun Google ini belum tertaut. Masuk dengan email PAM lalu tautkan Google dari Akun.</string>
     <string name="error_google_identity_conflict">Akun Google sudah tertaut ke akun PAM lain.</string>
     <string name="error_google_already_linked">Akun ini sudah tertaut ke Google.</string>
-    <string name="error_account_inactive">Akun ini tidak aktif. Hubungi admin PAM.</string>
+    <string name="error_account_inactive">Akun ini tidak aktif. Hubungi dukungan PAM bila menurut Anda ini keliru.</string>
     <string name="error_google_sso_disabled">Masuk dengan Google belum diaktifkan di server ini. Gunakan email dan kata sandi PAM.</string>
     <string name="error_google_play_services_unavailable">Google Play Services tidak tersedia di perangkat ini. Gunakan email dan kata sandi PAM.</string>
     <string name="settings_account">Akun</string>

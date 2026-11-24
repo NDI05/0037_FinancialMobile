@@ -18,6 +18,7 @@ class ManualPendingActionStore @Inject constructor(
         val identity: String,
         val amountText: String,
         val description: String,
+        val note: String,
         val dateIso: String,
         val direction: String,
         val categoryCode: String,
@@ -29,7 +30,7 @@ class ManualPendingActionStore @Inject constructor(
     fun save(ownerId: String, pending: Pending): Boolean {
         val encoded = listOf(
             pending.key, pending.identity, pending.amountText, pending.description,
-            pending.dateIso, pending.direction, pending.categoryCode,
+            pending.note, pending.dateIso, pending.direction, pending.categoryCode,
         ).joinToString("\u001f") { java.util.Base64.getUrlEncoder().encodeToString(it.encodeToByteArray()) }
         val wrapped = runCatching { wrappedSecrets.wrap(encoded.encodeToByteArray()) }.getOrNull()
             ?: return false
@@ -41,10 +42,16 @@ class ManualPendingActionStore @Inject constructor(
         val wrapped = prefs.getString(key(ownerId), null) ?: return null
         val decoded = runCatching { wrappedSecrets.unwrap(wrapped).decodeToString() }.getOrNull() ?: return null
         val parts = decoded.split("\u001f")
-        if (parts.size != 7) return null
+        if (parts.size != 7 && parts.size != 8) return null
         return runCatching {
             val values = parts.map { String(java.util.Base64.getUrlDecoder().decode(it)) }
-            Pending(values[0], values[1], values[2], values[3], values[4], values[5], values[6])
+            // A payload written before notes existed has no note field; the draft then restores
+            // with an empty note instead of losing its retry identity.
+            if (values.size == 7) {
+                Pending(values[0], values[1], values[2], values[3], "", values[4], values[5], values[6])
+            } else {
+                Pending(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7])
+            }
         }.getOrNull()
     }
 

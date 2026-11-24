@@ -97,7 +97,6 @@
     <string name="error_description_required">A description is required.</string>
     <string name="error_refund_must_be_credit">A refund must be an incoming amount.</string>
     <string name="error_refund_target_must_be_expense">Choose an expense as the refund target.</string>
-    <string name="error_plan_value_negative">Plan values cannot be negative.</string>
     <string name="error_not_signed_in">You are not signed in.</string>
 
     <string name="welcome_tagline">A monthly financial recap built from Livin email — numbers you can check, not a bank balance.</string>
@@ -247,7 +246,11 @@
     <string name="manual_amount_placeholder">0</string>
     <string name="manual_description_label">Description</string>
     <string name="manual_description_placeholder">e.g. monthly salary</string>
+    <string name="manual_note_label">Note (optional)</string>
+    <string name="manual_note_placeholder">Stored on this device only</string>
+    <string name="manual_note_counter">%1$d/%2$d characters</string>
     <string name="manual_date_label">Date</string>
+    <string name="manual_date_out_of_window">The date must fall between the start of the one-year window and today.</string>
     <string name="manual_category_eyebrow">Category</string>
     <string name="manual_save">Save transaction</string>
     <string name="currency_code">IDR</string>
@@ -404,7 +407,7 @@
     <string name="error_google_identity_not_linked">This Google account is not linked yet. Sign in with your PAM email, then link Google from Account.</string>
     <string name="error_google_identity_conflict">This Google account is already linked to another PAM account.</string>
     <string name="error_google_already_linked">This account is already linked to Google.</string>
-    <string name="error_account_inactive">This account is inactive. Contact the PAM admin.</string>
+    <string name="error_account_inactive">This account is inactive. Contact PAM support if you believe this is a mistake.</string>
     <string name="error_google_sso_disabled">Google sign-in is not enabled on this server yet. Use your PAM email and password.</string>
     <string name="error_google_play_services_unavailable">Google Play Services is unavailable on this device. Use your PAM email and password.</string>
     <string name="settings_account">Account</string>

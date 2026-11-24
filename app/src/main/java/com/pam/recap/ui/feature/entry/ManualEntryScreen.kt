@@ -148,6 +148,24 @@ fun ManualEntryScreen(
                     placeholder = stringResource(R.string.manual_description_placeholder),
                 )
                 Spacer(modifier = Modifier.height(PamSpacing.sm))
+                LabelledField(
+                    label = stringResource(R.string.manual_note_label),
+                    value = state.note,
+                    onValueChange = viewModel::setNote,
+                    placeholder = stringResource(R.string.manual_note_placeholder),
+                    singleLine = false,
+                )
+                Spacer(modifier = Modifier.height(PamSpacing.xxs))
+                Text(
+                    text = stringResource(
+                        R.string.manual_note_counter,
+                        state.note.length,
+                        com.pam.recap.ui.feature.transactions.TransactionEditLimits.NOTE,
+                    ),
+                    style = com.pam.recap.ui.theme.LabelM,
+                    color = OnInkMuted,
+                )
+                Spacer(modifier = Modifier.height(PamSpacing.sm))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -161,6 +179,7 @@ fun ManualEntryScreen(
                     CircularIconWell(
                         icon = Icons.Rounded.ChevronLeft,
                         contentDescription = stringResource(R.string.action_previous),
+                        enabled = state.dateRange.canGoEarlier(state.date),
                         onClick = { viewModel.shiftDate(-1) },
                     )
                     Text(
@@ -177,8 +196,13 @@ fun ManualEntryScreen(
                     CircularIconWell(
                         icon = Icons.Rounded.ChevronRight,
                         contentDescription = stringResource(R.string.action_next),
+                        enabled = state.dateRange.canGoLater(state.date),
                         onClick = { viewModel.shiftDate(1) },
                     )
+                }
+                if (state.dateOutOfWindow) {
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    NoticeBanner(text = stringResource(R.string.manual_date_out_of_window))
                 }
             }
 

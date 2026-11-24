@@ -24,11 +24,12 @@ fun appErrorRes(error: AppError): Int = when (error) {
         com.pam.recap.core.result.AppErrorRules.REAUTH_REQUIRED -> R.string.error_reauth_required
         com.pam.recap.core.result.AppErrorRules.DELETION_IN_PROGRESS -> R.string.error_deletion_in_progress
         com.pam.recap.core.result.AppErrorRules.DESCRIPTION_REQUIRED -> R.string.error_description_required
+        // NFR-15: manual dates outside the rolling window have their own next-step explanation.
+        com.pam.recap.core.result.AppErrorRules.INVALID_DATE -> R.string.manual_date_out_of_window
         com.pam.recap.core.result.AppErrorRules.REFUND_MUST_BE_CREDIT -> R.string.error_refund_must_be_credit
         com.pam.recap.core.result.AppErrorRules.REFUND_TARGET_MUST_BE_EXPENSE ->
             R.string.error_refund_target_must_be_expense
 
-        com.pam.recap.core.result.AppErrorRules.PLAN_VALUE_NEGATIVE -> R.string.error_plan_value_negative
         com.pam.recap.core.result.AppErrorRules.INVALID_EMAIL -> R.string.error_invalid_email
         com.pam.recap.core.result.AppErrorRules.PASSWORD_TOO_SHORT -> R.string.error_password_too_short
         com.pam.recap.core.result.AppErrorRules.INVALID_CREDENTIALS -> R.string.error_invalid_credentials

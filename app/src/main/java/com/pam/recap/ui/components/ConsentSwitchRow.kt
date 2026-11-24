@@ -98,6 +98,7 @@ fun LabelledField(
     visualTransformation: androidx.compose.ui.text.input.VisualTransformation =
         androidx.compose.ui.text.input.VisualTransformation.None,
     trailing: (@Composable () -> Unit)? = null,
+    singleLine: Boolean = true,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         if (!label.isNullOrBlank()) {
@@ -116,7 +117,8 @@ fun LabelledField(
             androidx.compose.foundation.text.BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
-                singleLine = true,
+                singleLine = singleLine,
+                minLines = if (singleLine) 1 else 2,
                 keyboardOptions = keyboardOptions,
                 visualTransformation = visualTransformation,
                 textStyle = com.pam.recap.ui.theme.TitleL.copy(color = OnInk),

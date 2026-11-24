@@ -29,12 +29,36 @@ class ManualPendingActionStoreTest {
     fun `delimiter and unicode survive a restart read`() {
         val pending = ManualPendingActionStore.Pending(
             key = "key", identity = "a|b", amountText = "175000",
-            description = "Kopi \u001f khusus — 100%", dateIso = "2026-11-22",
+            description = "Kopi \u001f khusus — 100%", note = "catatan", dateIso = "2026-11-22",
             direction = "DEBIT", categoryCode = "custom_coffee",
         )
         assertTrue(ManualPendingActionStore(context, XorStore()).save("u_1", pending))
         val restarted = ManualPendingActionStore(context, XorStore())
         assertEquals(pending, restarted.read("u_1"))
+    }
+
+    @Test
+    fun `payload written before notes existed still restores with an empty note`() {
+        // A pre-upgrade payload has seven fields (no note); the retry identity must survive the
+        // upgrade instead of being discarded and duplicated on the server.
+        val encoded = listOf("key", "a|b", "175000", "Kopi", "2026-11-22", "DEBIT", "food")
+            .joinToString("\u001f") {
+                Base64.encodeToString(it.toByteArray(), Base64.NO_WRAP)
+            }
+        context.getSharedPreferences("pam_backend_session", Context.MODE_PRIVATE)
+            .edit()
+            .putString(
+                "manual_pending_u_1",
+                XorStore().wrap(encoded.toByteArray()),
+            )
+            .commit()
+
+        val restored = ManualPendingActionStore(context, XorStore()).read("u_1")
+
+        assertEquals("key", restored?.key)
+        assertEquals("a|b", restored?.identity)
+        assertEquals("", restored?.note)
+        assertEquals("food", restored?.categoryCode)
     }
 
     @Test
@@ -44,7 +68,7 @@ class ManualPendingActionStoreTest {
             override fun unwrap(wrapped: String): ByteArray = error("unavailable")
         })
         val saved = store.save("u_1", ManualPendingActionStore.Pending(
-            "key", "id", "1", "d", "2026-11-22", "DEBIT", "food",
+            "key", "id", "1", "d", "", "2026-11-22", "DEBIT", "food",
         ))
         assertFalse(saved)
         assertNull(store.read("u_1"))

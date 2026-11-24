@@ -110,7 +110,6 @@ object AppErrorRules {
     const val DESCRIPTION_REQUIRED = "description_required"
     const val REFUND_MUST_BE_CREDIT = "refund_must_be_credit"
     const val REFUND_TARGET_MUST_BE_EXPENSE = "refund_target_must_be_expense"
-    const val PLAN_VALUE_NEGATIVE = "plan_value_negative"
     const val INVALID_EMAIL = "invalid_email"
     const val PASSWORD_TOO_SHORT = "password_too_short"
     const val INVALID_CREDENTIALS = "invalid_credentials"
