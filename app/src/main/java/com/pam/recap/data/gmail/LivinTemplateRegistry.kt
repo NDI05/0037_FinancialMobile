@@ -30,6 +30,21 @@ data class LivinFieldLabels(
     val recipient: List<String> = listOf("merchant", "penerima", "nama merchant"),
     val acquirer: List<String> = listOf("acquirer", "penyelenggara"),
     val status: List<String> = listOf("status"),
+    /**
+     * Pure identifiers that show up next to — or instead of — a merchant. They are read only as a
+     * last-resort marker so a transaction is not silently dropped; the backend then routes a
+     * numeric label to NEEDS_REVIEW/merchant_not_identifiable instead of the category provider.
+     */
+    val reference: List<String> = listOf(
+        "merchant pan",
+        "customer pan",
+        "no referensi",
+        "no. referensi",
+        "no ref qris",
+        "no. ref. qris",
+        "nomor referensi",
+        "referensi",
+    ),
 )
 
 /**
@@ -195,11 +210,22 @@ class LivinTemplateRegistry(
                 // The real bill-payment body has Nominal/Tanggal/Merchant only: its subject says
                 // "Pembayaran Berhasil!", so the success marker lives in the subject, not a
                 // "Status:" field. Verified against a real Gmail message (F1/F2 device run).
+                //
+                // The same subject also delivers QRIS "Pembayaran Berhasil!" notifications whose
+                // body carries a QR section (Penerima + business location + Merchant/Customer PAN
+                // + No. Referensi/No. Ref. QRIS). In that layout the readable business name is
+                // under "Penerima" and "Merchant PAN" is just a 19-digit identifier, so Penerima
+                // must win. "Merchant"/"Nama Merchant" stay allowed so the older bill body keeps
+                // parsing; the parser maps every PAN/reference label to the last-resort marker
+                // instead of a merchant name.
                 requiredFields = setOf(
                     LivinField.AMOUNT,
                     LivinField.EVENT_TIME,
                     LivinField.DIRECTION,
                     LivinField.RECIPIENT,
+                ),
+                labels = LivinFieldLabels(
+                    recipient = listOf("penerima", "merchant", "nama merchant"),
                 ),
                 successMarkers = listOf("berhasil"),
                 failureMarkers = listOf("gagal", "tidak berhasil", "dibatalkan", "ditolak"),

@@ -255,6 +255,111 @@ class LivinQrisParserTest {
     }
 
     @Test
+    fun `a qris body inside a bill-payment notification uses the penerima business name`() {
+        // Owner-reported P0: the real "Pembayaran Berhasil!" body carries a QR section with a
+        // readable Penerima *and* Merchant/Customer PAN identifiers. The 19-digit PAN must never
+        // become the merchant name, and the location line after the name is not part of it.
+        val body = """
+            Pembayaran Berhasil!
+            Nominal
+            Rp175.000
+            Tanggal
+            19 Februari 2026 11:10:00
+            Penerima
+            Kopi Kenangan Senayan
+            Jl. Asia Afrika No. 8, Jakarta
+            Merchant PAN
+            9360012345678901234
+            Customer PAN
+            9360098765432109876
+            No. Referensi
+            20260219ABC123
+            No. Ref. QRIS
+            QRISREF998877
+        """.trimIndent()
+        val message = RawMessage(
+            messageId = "qris-bill-penerima",
+            sender = "Livin <noreply.livin@bankmandiri.co.id>",
+            subject = "Pembayaran Berhasil!",
+            internalDate = null,
+            textParts = listOf(body),
+        )
+
+        val parsed = parser.parse(message) as ParseResult.Parsed
+        assertEquals(Money.ofMinor(17_500_000), parsed.amount)
+        assertEquals(Direction.DEBIT, parsed.direction)
+        assertEquals("Kopi Kenangan Senayan", parsed.merchantLabel)
+    }
+
+    @Test
+    fun `penerima wins over a merchant label when both are present`() {
+        val body = """
+            Pembayaran Berhasil!
+            Nominal: Rp175.000
+            Tanggal: 19 Februari 2026 11:10:00
+            Merchant: Toko Tidak Terverifikasi
+            Penerima: Warung Nasi Ibu Siti
+        """.trimIndent()
+        val message = RawMessage(
+            messageId = "penerima-priority",
+            sender = "Livin <noreply.livin@bankmandiri.co.id>",
+            subject = "Pembayaran Berhasil!",
+            internalDate = null,
+            textParts = listOf(body),
+        )
+
+        val parsed = parser.parse(message) as ParseResult.Parsed
+        assertEquals("Warung Nasi Ibu Siti", parsed.merchantLabel)
+    }
+
+    @Test
+    fun `a reference-only body parses to the identifier so the backend can flag it`() {
+        // No Penerima at all: the row must still reach the backend, whose numeric-label guard
+        // finishes it NEEDS_REVIEW/merchant_not_identifiable with zero provider calls. Dropping
+        // the email here would lose a real payment.
+        val body = """
+            Pembayaran Berhasil!
+            Nominal: Rp175.000
+            Tanggal: 19 Februari 2026 11:10:00
+            Merchant PAN
+            9360012345678901234
+            No. Referensi
+            20260219ABC123
+        """.trimIndent()
+        val message = RawMessage(
+            messageId = "reference-only",
+            sender = "Livin <noreply.livin@bankmandiri.co.id>",
+            subject = "Pembayaran Berhasil!",
+            internalDate = null,
+            textParts = listOf(body),
+        )
+
+        val parsed = parser.parse(message) as ParseResult.Parsed
+        assertEquals("9360012345678901234", parsed.merchantLabel)
+    }
+
+    @Test
+    fun `an inline merchant pan never becomes the merchant name`() {
+        val body = """
+            Pembayaran Berhasil!
+            Nominal: Rp175.000
+            Tanggal: 19 Februari 2026 11:10:00
+            Penerima: Bakso Pak Kumis
+            Merchant PAN: 9360012345678901234
+        """.trimIndent()
+        val message = RawMessage(
+            messageId = "inline-pan",
+            sender = "Livin <noreply.livin@bankmandiri.co.id>",
+            subject = "Pembayaran Berhasil!",
+            internalDate = null,
+            textParts = listOf(body),
+        )
+
+        val parsed = parser.parse(message) as ParseResult.Parsed
+        assertEquals("Bakso Pak Kumis", parsed.merchantLabel)
+    }
+
+    @Test
     fun `a bill payment with no success marker anywhere is unresolved`() {
         val body = """
             Nominal: Rp175.000

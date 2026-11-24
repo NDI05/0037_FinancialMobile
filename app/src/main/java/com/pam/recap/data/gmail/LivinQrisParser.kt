@@ -115,9 +115,15 @@ class LivinQrisParser(
             }
         }
 
+        // A readable business name always wins. PAN/reference cells are not names: they are read
+        // into REFERENCE_FIELD only so the row still reaches the backend, which then routes the
+        // numeric label to NEEDS_REVIEW/merchant_not_identifiable (never the category provider).
         val merchant = firstValue(fields, template.labels.recipient)
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
+            ?: firstValue(fields, listOf(REFERENCE_FIELD))
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
             ?: return ParseResult.Unresolved(RedactionReason.MISSING_RECIPIENT)
 
         val acquirer = firstValue(fields, template.labels.acquirer)?.trim()?.takeIf { it.isNotEmpty() }
@@ -170,6 +176,20 @@ class LivinQrisParser(
             for (index in lines.indices) {
                 val line = lines[index]
                 if (line.isEmpty()) continue
+                // Identifier cells ("Merchant PAN", "Customer PAN", "No. Referensi",
+                // "No. Ref. QRIS") are read under their own key. They must never be treated as a
+                // merchant name: the same body can carry both a readable Penerima and a PAN.
+                val referenceLabel = referenceLabelKey(line, labels.reference)
+                if (referenceLabel != null) {
+                    val inline = referenceValueOnSameLine(line, referenceLabel)
+                    val value = if (inline != null) {
+                        inline
+                    } else {
+                        valueAfter(lines, index + 1, allowed, labels.reference)
+                    }
+                    if (value != null) result.putIfAbsent(REFERENCE_FIELD, value)
+                    continue
+                }
                 val separator = line.indexOf(':')
                 if (separator > 0) {
                     val key = labelKey(line.substring(0, separator), allowed) ?: continue
@@ -180,16 +200,41 @@ class LivinQrisParser(
                     }
                     // "Nominal :" with the value in the next cell/line — how Gmail's HTML
                     // rendition of a Livin notification arrives after stripHtml.
-                    valueAfter(lines, index + 1, allowed)?.let { result.putIfAbsent(key, it) }
+                    valueAfter(lines, index + 1, allowed, labels.reference)
+                        ?.let { result.putIfAbsent(key, it) }
                     continue
                 }
                 // A bare label line from a table layout: "Nominal", or a qualified label such as
                 // "Nominal Pembayaran" / "Tanggal Transaksi" (measured on a real notification).
                 val bare = labelKey(line, allowed) ?: continue
-                valueAfter(lines, index + 1, allowed)?.let { result.putIfAbsent(bare, it) }
+                valueAfter(lines, index + 1, allowed, labels.reference)
+                    ?.let { result.putIfAbsent(bare, it) }
             }
         }
         return result
+    }
+
+    /**
+     * Recognizes a pure-identifier label. Returns the matched allow-listed prefix, or null.
+     *
+     * Matched before [labelKey] on purpose: without this, "Merchant PAN" would match the
+     * "merchant" recipient alias and a 19-digit PAN would be stored as the business name.
+     */
+    private fun referenceLabelKey(raw: String, references: List<String>): String? {
+        val normalized = raw.lowercase().removeSuffix(":").trim()
+        return references.firstOrNull { label ->
+            normalized == label || normalized.startsWith("$label ") || normalized.startsWith("$label:")
+        }
+    }
+
+    /** Inline identifier value on the same rendered line, e.g. "Merchant PAN 936000...". */
+    private fun referenceValueOnSameLine(line: String, label: String): String? {
+        if (!line.lowercase().startsWith(label)) return null
+        return line.substring(label.length)
+            .trim()
+            .removePrefix(":")
+            .trim()
+            .takeIf { it.isNotEmpty() }
     }
 
     /**
@@ -197,13 +242,18 @@ class LivinQrisParser(
      *
      * Real Livin HTML renders "Nominal Pembayaran" and "Tanggal Transaksi": the label is followed
      * by a short qualifier. Only an allow-listed word as the *first* word, with at most two extra
-     * words, is accepted — a sentence that merely contains "nominal" is still ignored.
+     * words, is accepted — a sentence that merely contains "nominal" is still ignored. Qualified
+     * identifiers ("Merchant PAN", "Customer PAN") are rejected: the qualifier makes them
+     * identifiers, not names.
      */
     private fun labelKey(raw: String, allowed: Set<String>): String? {
         val normalized = raw.lowercase().removeSuffix(":").trim()
         if (normalized in allowed) return normalized
         val words = normalized.split(WHITESPACE_RUN).filter { it.isNotEmpty() }
-        if (words.size in 2..3 && words.first() in allowed) return words.first()
+        if (words.size in 2..3 && words.first() in allowed) {
+            if (words.drop(1).any { it in IDENTIFIER_QUALIFIERS }) return null
+            return words.first()
+        }
         return null
     }
 
@@ -211,12 +261,18 @@ class LivinQrisParser(
      * The first non-empty line after a label that is not itself a label or a dangling separator.
      * Returning null instead of guessing keeps a prose sentence from becoming an amount.
      */
-    private fun valueAfter(lines: List<String>, from: Int, allowed: Set<String>): String? {
+    private fun valueAfter(
+        lines: List<String>,
+        from: Int,
+        allowed: Set<String>,
+        references: List<String>,
+    ): String? {
         for (index in from until lines.size) {
             val candidate = lines[index].trim()
             if (candidate.isEmpty()) continue
             if (candidate.endsWith(":")) return null
             if (labelKey(candidate, allowed) != null) return null
+            if (referenceLabelKey(candidate, references) != null) return null
             return candidate
         }
         return null
@@ -322,6 +378,13 @@ class LivinQrisParser(
     private companion object {
         const val CURRENCY_IDR = "IDR"
         const val ACQUIRER_MISSING_PENALTY = 0.1f
+
+        /** Internal key for a PAN/reference fallback label; never a merchant name. */
+        const val REFERENCE_FIELD = "reference"
+
+        /** Qualifiers that turn a merchant-ish label into a pure identifier. */
+        val IDENTIFIER_QUALIFIERS: Set<String> =
+            setOf("pan", "referensi", "reference", "ref", "customer", "nomor")
 
         /** Observed shapes: `03 Feb 2026 14:22:07`, `03/02/2026 14:22`, `2026-02-03 14:22:07`. */
         val DATE_TIME_PATTERNS: List<String> = listOf(

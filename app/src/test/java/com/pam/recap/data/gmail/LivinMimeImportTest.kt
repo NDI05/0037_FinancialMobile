@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -193,6 +194,50 @@ class LivinMimeImportTest {
             idGenerator = IdGenerator { "id-${nextId++}" },
         )
         return useCase to fixture
+    }
+
+    /**
+     * The owner-reported P0 shape: a QRIS section inside a "Pembayaran Berhasil!" notification.
+     * Both a readable `Penerima` (business name on its own row, location on the next) and pure
+     * identifiers (`Merchant PAN`, `Customer PAN`, `No. Referensi`, `No. Ref. QRIS`) are present,
+     * so a naive "merchant first" label list stores a 19-digit PAN as the merchant name.
+     */
+    private fun livinQrisInsideBillMime(): MimeMessage = mime(
+        """
+        Content-Type: text/html; charset=UTF-8
+
+        <html><body>
+        <p>Pembayaran Berhasil!</p>
+        <table>
+        <tr><td>Nominal</td><td>Rp175.000</td></tr>
+        <tr><td>Tanggal</td><td>19 Februari 2026 11:10:00</td></tr>
+        <tr><td>Penerima</td><td>Kopi Kenangan Senayan</td></tr>
+        <tr><td>Lokasi</td><td>Jl. Asia Afrika No. 8, Jakarta</td></tr>
+        <tr><td>Merchant PAN</td><td>9360012345678901234</td></tr>
+        <tr><td>Customer PAN</td><td>9360098765432109876</td></tr>
+        <tr><td>No. Referensi</td><td>20260219ABC123</td></tr>
+        <tr><td>No. Ref. QRIS</td><td>QRISREF998877</td></tr>
+        </table>
+        </body></html>
+        """.trimIndent(),
+    )
+
+    @Test
+    fun `a qris section inside a bill email stores the penerima name not the PAN`() = runTest {
+        val raw = extract(livinQrisInsideBillMime())
+        val parsed = parser.parse(raw) as? ParseResult.Parsed
+            ?: error("expected a parsed QRIS-in-bill notification, was ${parser.parse(raw)}")
+        assertEquals("Kopi Kenangan Senayan", parsed.merchantLabel)
+        assertEquals(Money.ofMajor(175_000), parsed.amount)
+        assertEquals(Instant.parse("2026-02-19T04:10:00Z"), parsed.eventAt)
+
+        val (useCase, fixture) = importFor(raw)
+        val job = (useCase("u_demo", month) as Outcome.Success).value
+        assertEquals(ImportState.COMPLETE, job.state)
+        assertEquals(1, job.importedCount)
+        val row = fixture.transactions.all().single { it.ownerId == "u_demo" }
+        assertEquals("Kopi Kenangan Senayan", row.merchantLabel)
+        assertFalse(row.merchantLabel.orEmpty().contains("9360012345678901234"))
     }
 
     @Test
