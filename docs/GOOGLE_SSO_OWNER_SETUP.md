@@ -5,9 +5,11 @@ kartu "Tautkan Google" di aplikasi PAM. Tidak ada secret, client ID asli, atau d
 disimpan di repo: nilai diisi lewat build property dan environment server.
 
 Status implementasi Android: **IMPLEMENTED (fixture/unit)** di branch `feat/c2-android`
-(commit `e67380a`). UAT perangkat nyata dengan akun Google betulan **NOT RUN** — menunggu langkah
-1–5 di bawah dikerjakan pemilik. Tanpa client ID, fitur otomatis tersembunyi dan aplikasi berjalan
-seperti sebelumnya (login email/PAM tetap normal).
+(commit `e67380a`). Prasyarat live sudah siap: backend UAT melayani nonce/validasi token, APK
+terpasang memuat Web client ID, dan Gmail live sudah **PASS untuk akun pilot owner**. UAT login
+**Google nyata (G36)** tetap **NOT RUN** — menunggu langkah eksekusi pemilik di §9. Tanpa client
+ID, fitur otomatis tersembunyi dan aplikasi berjalan seperti sebelumnya (login email/PAM tetap
+normal).
 
 Kontrak backend yang dipakai Android (lihat task SSO): `GET /v1/auth/google/nonce` (anonim),
 `POST /v1/auth/google` (anonim), `POST /v1/auth/google/link` (Bearer), dan flag opsional
@@ -197,3 +199,25 @@ aktif, dan akun penguji milik pemilik.
   Pub/Sub/Identity Platform untuk aktivasi SSO.
 - Mematikan SSO (kosongkan build property dan/atau flag backend) mengembalikan aplikasi ke alur
   email/PAM tanpa perubahan data.
+
+## 9. Cek eksekusi UAT SSO (G36) — untuk pemilik
+
+Prasyarat otomatis: jalankan §0 sampai exit `0`. Lalu dari Android Studio tekan **Run** pada
+konfigurasi `app` (varian `debug`, HP fisik terhubung; `adb reverse tcp:18090 tcp:18090`).
+
+1. **Masuk dengan Google (akun baru/uji)**: pilih akun Google di sheet Credential Manager →
+   aplikasi masuk ke beranda. Diharapkan: tidak ada pembuatan akun otomatis dari email, dan
+   `GET /v1/me` menandai `googleLinked=true` untuk sesi itu.
+2. **Tautkan akun PAM lama** (jika masuk lewat email/PAM): buka akun → "Tautkan Google" → pilih
+   akun Google yang sama → status "Google tertaut". Diharapkan: `ownerId`, transaksi, peran, dan
+   status Gmail **tidak berubah**; tidak ada data ganda.
+3. **Akun tidak aktif**: coba akun SUSPENDED/INACTIVE → ditolak (`account_inactive`) tanpa
+   mengubah sesi aktif.
+4. **Skip/refuse onboarding**: tolak tautkan Gmail atau lewati langkah Gmail → tetap masuk dan
+   tetap bisa mencatat transaksi manual; consent AI tetap terpisah.
+5. **Email Livin baru saat app tertutup**: tutup aplikasi, tunggu pesan Livin baru (atau kirim
+   dari akun uji), lalu buka aplikasi setelah delta 15 menit / "Sinkronkan sekarang".
+   Diharapkan: transaksi masuk tepat sekali (tanpa duplikat).
+
+Catat hasilnya per butir (PASS/FAIL + waktu WIB). Gate SSO (G36) dilaporkan terpisah dari Gmail
+live (G25) dan Rp0 (G29/G37); jangan menyalakan Billing/Pub/Sub untuk aktivasi SSO.
