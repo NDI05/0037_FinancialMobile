@@ -104,7 +104,7 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun OverviewScreen(
-    onOpenTransactions: (categoryCode: String?, monthId: String?) -> Unit,
+    onOpenTransactions: (categoryCode: String?, monthId: String?, direction: Direction?) -> Unit,
     onOpenTransaction: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: OverviewViewModel = hiltViewModel(),
@@ -170,7 +170,7 @@ fun OverviewScreen(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clickable { onOpenTransactions(null, month.id()) },
+                                .clickable { onOpenTransactions(null, month.id(), Direction.CREDIT) },
                         ) {
                             StatTile(
                                 eyebrow = stringResource(R.string.overview_gross_in),
@@ -187,7 +187,7 @@ fun OverviewScreen(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clickable { onOpenTransactions(null, month.id()) },
+                                .clickable { onOpenTransactions(null, month.id(), Direction.DEBIT) },
                         ) {
                             StatTile(
                                 eyebrow = stringResource(R.string.overview_gross_out),
@@ -210,8 +210,8 @@ fun OverviewScreen(
                     item {
                         CategoryBreakdown(
                             summary = summary,
-                            onOpenCategory = { code -> onOpenTransactions(code, month.id()) },
-                            onSeeAll = { onOpenTransactions(null, month.id()) },
+                            onOpenCategory = { code -> onOpenTransactions(code, month.id(), null) },
+                            onSeeAll = { onOpenTransactions(null, month.id(), null) },
                         )
                     }
                 } else {
@@ -230,7 +230,7 @@ fun OverviewScreen(
                                     style = LabelM,
                                     color = OnInkMuted,
                                     modifier = Modifier
-                                        .clickable { onOpenTransactions(null, month.id()) }
+                                        .clickable { onOpenTransactions(null, month.id(), null) }
                                         .padding(PamSpacing.xs),
                                 )
                             },

@@ -39,12 +39,20 @@ sealed interface PamDestination {
     @Serializable
     data class Overview(val monthId: String? = null) : PamDestination
 
-    /** FR-27/FR-32: the list can be opened pre-filtered by category, month or day. */
+    /**
+     * FR-27/FR-32: the list can be opened pre-filtered by category, month, day or direction.
+     *
+     * [direction] is `CREDIT`/`DEBIT` (the enum name) so the Overview "Masuk"/"Keluar" cards open
+     * exactly the rows behind those totals. [bank] is carried for the future bank filter; no bank
+     * field exists on transactions yet, so it is accepted but not applied.
+     */
     @Serializable
     data class Transactions(
         val categoryCode: String? = null,
         val monthId: String? = null,
         val dayIso: String? = null,
+        val direction: String? = null,
+        val bank: String? = null,
     ) : PamDestination
 
     @Serializable

@@ -111,7 +111,9 @@ class TransactionsViewModel @Inject constructor(
     private val category = MutableStateFlow(
         savedStateHandle.get<String>("categoryCode")?.let(Category::fromCode),
     )
-    private val direction = MutableStateFlow<Direction?>(null)
+    private val direction = MutableStateFlow(
+        savedStateHandle.get<String>("direction")?.let { runCatching { Direction.valueOf(it) }.getOrNull() },
+    )
     private val query = MutableStateFlow("")
     private val refreshTick = MutableStateFlow(0L)
     private val classification = MutableStateFlow(ClassificationState())

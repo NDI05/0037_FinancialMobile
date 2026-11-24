@@ -166,11 +166,12 @@ fun PamNavHost(
 
             composable<PamDestination.Overview> {
                 OverviewScreen(
-                    onOpenTransactions = { categoryCode, monthId ->
+                    onOpenTransactions = { categoryCode, monthId, direction ->
                         navController.navigate(
                             PamDestination.Transactions(
                                 categoryCode = categoryCode,
                                 monthId = monthId,
+                                direction = direction?.name,
                             ),
                         )
                     },
@@ -184,9 +185,7 @@ fun PamNavHost(
                 val args = entry.toRoute<PamDestination.Transactions>()
                 // A tab tap lands on the bare route; a drill-down carries a filter, and only the
                 // drill-down gets a back well (C2-2).
-                val openedAsDrillDown = args.monthId != null ||
-                    args.categoryCode != null ||
-                    args.dayIso != null
+                val openedAsDrillDown = args.isDrillDown()
                 TransactionsScreen(
                     onOpenTransaction = { id ->
                         navController.navigate(PamDestination.TransactionDetail(id))
@@ -412,3 +411,11 @@ internal fun tabTargetFor(key: String): PamDestination? = when (key) {
     PamDestination.TAB_SETTINGS -> PamDestination.Settings
     else -> null
 }
+
+/**
+ * True when the transactions route was opened from another screen with a filter (FR-32), so Back
+ * must return there instead of the tab behaving like a root destination. A direction-only tap —
+ * Overview "Masuk"/"Keluar" — is a drill-down for exactly that reason.
+ */
+internal fun PamDestination.Transactions.isDrillDown(): Boolean =
+    monthId != null || categoryCode != null || dayIso != null || direction != null || bank != null

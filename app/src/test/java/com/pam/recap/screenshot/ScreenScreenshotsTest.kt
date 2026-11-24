@@ -317,7 +317,7 @@ class ScreenScreenshotsTest {
 
         shot("01-overview") {
             OverviewScreen(
-                onOpenTransactions = { _, _ -> },
+                onOpenTransactions = { _, _, _ -> },
                 onOpenTransaction = {},
                 viewModel = viewModel,
             )
