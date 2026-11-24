@@ -303,7 +303,7 @@ private fun AdminBody(
                     modifier = Modifier.weight(1f).testTag("admin_search_field"),
                     label = { Text(stringResource(R.string.admin_search)) },
                     singleLine = true,
-                    enabled = !state.loading,
+                    enabled = !state.busy,
                 )
                 PillButton(
                     text = stringResource(R.string.admin_invite_action),

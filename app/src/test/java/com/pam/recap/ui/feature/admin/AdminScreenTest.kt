@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -103,6 +104,21 @@ class AdminScreenTest {
             )
         }
 
+        compose.onNodeWithTag("admin_search_field").performTextInput("ani")
+        assertEquals("ani", query)
+    }
+
+    @Test
+    fun `the search field stays editable while the first page loads`() {
+        var query = ""
+        compose.setContent {
+            AdminScreenContent(
+                state = adminState().copy(loading = true),
+                onQueryChange = { query = it },
+            )
+        }
+
+        compose.onNodeWithTag("admin_search_field").assertIsEnabled()
         compose.onNodeWithTag("admin_search_field").performTextInput("ani")
         assertEquals("ani", query)
     }
