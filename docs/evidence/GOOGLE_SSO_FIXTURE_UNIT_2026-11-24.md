@@ -14,7 +14,7 @@
 | Backend `test -race ./internal/auth ./internal/httpapi ./internal/store` | PASS |
 | Android `:app:testDebugUnitTest` | **678 tes / 88 suite / 0 gagal** (640 lama + 38 SSO) |
 | Android `:app:lintDebug` | **0 error / 123 warning / 1 hint** |
-| Android `:app:assembleDebug` | PASS; APK 47.992.939 byte, sha256 `1a4c8ddf…` |
+| Android `:app:assembleDebug` | PASS; APK 48.362.013 byte, sha256 `41584bae…` (lane `e67380a`: 47.992.939 byte, sha256 `1a4c8ddf…`; isi setara) |
 | Migrasi | 21 (`001`–`021`), upgrade 020→021 diuji |
 
 APK gate dibangun **tanpa** `PAM_GOOGLE_SSO_CLIENT_ID`; tombol SSO tersembunyi dan APK tidak

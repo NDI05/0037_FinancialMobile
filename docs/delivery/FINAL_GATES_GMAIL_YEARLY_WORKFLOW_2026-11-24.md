@@ -25,7 +25,7 @@ Verifikasi fresh pada pasangan ini (24 November 2026):
 |---|---|
 | Android `:app:testDebugUnitTest` | **678 tes / 88 suite / 0 gagal** (640 tes lama + 38 tes SSO) |
 | Android `:app:lintDebug` | **0 error / 123 warning / 1 hint** |
-| Android `:app:assembleDebug` | **PASS**; APK debug **47.992.939 byte**, sha256 `1a4c8ddf…` (build final `e67380a`, dibangun 24 Nov 2026 18:02 WIB; APK gate dibangun tanpa `PAM_GOOGLE_SSO_CLIENT_ID` sehingga tombol SSO tersembunyi — bukan bukti UI SSO) |
+| Android `:app:assembleDebug` | **PASS**; APK debug **48.362.013 byte**, sha256 `41584bae…` (build integrasi `96337dc`, 24 Nov 2026 18:15 WIB; build lane `e67380a` sebelumnya 47.992.939 byte sha256 `1a4c8ddf…` — isi setara, byte berbeda karena urutan dex/kompresi ZIP). APK gate dibangun tanpa `PAM_GOOGLE_SSO_CLIENT_ID` (0 kemunculan `googleusercontent.com`) sehingga tombol SSO tersembunyi — bukan bukti UI SSO |
 | Backend `vet` + `build` + `test ./... -count=1` | **PASS** semua paket; `-race` pada `internal/auth`, `internal/gmail`, `internal/store`, `internal/httpapi` **PASS** |
 | Migrasi DB baru | 21 migrasi (`001`–`021`, termasuk `google_identities` dan nonce SSO) |
 | QA E2E kontrak polling §9 (provider fake) | **PASS=82, FAIL=0, exit 0** |
