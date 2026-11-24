@@ -162,3 +162,23 @@ konfigurasi (client ID terisi ⇔ SSO aktif), bukan nilai khusus satu mesin. CR-
 DRAFT-SSO-04 menjadi PARTIAL (Gmail live PASS; SSO/Rp0 terbuka), DRAFT-GM-13 ditambah untuk
 templat produksi Livin, dan status bukti ronde 7 dicatat. Gate tetap **29 PASS / 4 PARTIAL /
 5 NOT RUN**; G36 (SSO Google nyata + Run pemilik) dan G29/G37 (Rp0) menunggu pemilik.
+
+### Audit independen ronde 7 + hardening parser (24 Nov 2026, ronde 8)
+
+Audit read-only (agen segar) atas parser live `5df6be6`/`c98527b`, tes SSO `4eeffd6`, dan dokumen
+bukti: **P0 nol**, dua **P1** ditemukan dan ditutup. (1) `findLabel` menerima baris field
+(`Nominal…`, `Tanggal…`, `No. Referensi…`, `pkl…`) sebagai merchant; diperbaiki di backend
+`e3b84b4` dengan penjaga `looksLikeFieldValue`, batas panjang label, dan regresi
+`TestParseLivinStackedLabelRejectsFieldLines`. (2) Angka bukti live tidak rekonsiliasi; kini
+dijelaskan: run final mengimpor **769**, ditambah **145** baris tersimpan dari percobaan live
+pertama (Nov 38, Okt 28, Sep 79) = **914** unik, 79 duplikat Sep adalah baris yang sama. Sekaligus
+diperbaiki: WITA/WIT memakai offset sebenarnya, waktu diambil walau ada baris referensi di antara
+tanggal dan waktu, alias bulan `Nop`/`Peb`, `math.Round` nominal, dan entri layout `WIB` dead code
+dihapus; email promosi QRIS dicatat backlog non-blocking. Backend `e3b84b4`:
+vet/build/test/race **PASS**, runtime loopback dibangun ulang (`vcs.modified=false`, `/readyz=200`).
+Evidence audit: `docs/evidence/AUDIT_GMAIL_PARSER_R7_2026-11-24.md`. Gate tetap **29 PASS /
+4 PARTIAL / 5 NOT RUN**; G25 PASS-live-owner, G36/G29/G37 tetap NOT RUN/OPEN.
+
+Parser hasil hardening diberi tag `gmail-livin-v2` (`7bb16f0`) dan runtime loopback dibangun
+ulang dari commit itu; 914 baris live lama tetap bertanda `gmail-livin-v1` — regenerasinya bersifat
+destruktif pada data owner sehingga menunggu persetujuan pemilik. Gate tidak berubah.
