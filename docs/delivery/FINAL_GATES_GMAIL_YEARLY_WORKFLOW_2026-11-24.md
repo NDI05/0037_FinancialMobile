@@ -107,9 +107,9 @@ dan Rp0 masih milik pemilik.
 
 - Split: `docs/evidence/UAT_BACKEND_SPLIT_2026-11-24.md`, `AUDIT_BACKEND_SPLIT_2026-11-24.md`,
   `docs/delivery/BACKEND_SPLIT_2026-11-24.md` (termasuk rollback dan URL).
-- Gmail API/polling: `0037-Backend-Financial/docs/GMAIL_API.md`,
-  [GMAIL_API_CONTRACT](https://github.com/NDI05/0037-Backend-Financial/blob/integration/2026-11-24/docs/GMAIL_API_CONTRACT.md) §9,
-  `GMAIL_API_SETUP.md`, `AUDIT_GMAIL_API_2026-11-24.md`, `GMAIL_UI_2026-11-24.md`.
+- Gmail API/polling: [`GMAIL_API_CONTRACT`](https://github.com/NDI05/0037-Backend-Financial/blob/integration/2026-11-24/docs/GMAIL_API_CONTRACT.md) §1–9,
+  [`GMAIL_API_SETUP`](https://github.com/NDI05/0037-Backend-Financial/blob/integration/2026-11-24/docs/GMAIL_API_SETUP.md),
+  `AUDIT_GMAIL_API_2026-11-24.md`, `GMAIL_UI_2026-11-24.md`.
 - Kontrak polling E2E: `docs/evidence/GMAIL_CONTRACT_E2E_2026-11-24.md` +
   `scripts/qa/gmail/contract_e2e.py` (+ `README.md`).
 - UAT perangkat FIXTURE: `docs/evidence/GMAIL_POLLING_UAT_PHONE_2026-11-24.md` +
