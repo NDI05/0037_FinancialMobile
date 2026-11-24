@@ -221,14 +221,16 @@ type transactionCreate struct {
 }
 
 type transactionPatch struct {
-	CategoryID         *string         `json:"categoryId"`
-	Description        *string         `json:"description"`
-	MerchantLabel      *string         `json:"merchantLabel"`
-	Note               *string         `json:"note"`
-	Attributes         *map[string]any `json:"attributes"`
-	IsInternalTransfer *bool           `json:"isInternalTransfer"`
-	LinkedRefundOf     *string         `json:"linkedRefundOf"`
-	Revision           int             `json:"revision"`
+	CategoryID          *string         `json:"categoryId"`
+	Description         *string         `json:"description"`
+	MerchantLabel       *string         `json:"merchantLabel"`
+	ExpectedFingerprint *string         `json:"expectedFingerprint"`
+	SourceRef           *string         `json:"sourceRef"`
+	Note                *string         `json:"note"`
+	Attributes          *map[string]any `json:"attributes"`
+	IsInternalTransfer  *bool           `json:"isInternalTransfer"`
+	LinkedRefundOf      *string         `json:"linkedRefundOf"`
+	Revision            int             `json:"revision"`
 }
 
 func (s *Server) createTransaction(w http.ResponseWriter, r *http.Request) {
@@ -341,7 +343,8 @@ func (s *Server) updateTransaction(w http.ResponseWriter, r *http.Request) {
 	info, _ := authFrom(r)
 	transaction, err := s.Store.UpdateTransaction(r.Context(), info.OwnerID, r.PathValue("id"),
 		store.TransactionPatch{CategoryID: body.CategoryID, Description: body.Description,
-			MerchantLabel: body.MerchantLabel, Note: body.Note, Attributes: body.Attributes,
+			MerchantLabel: body.MerchantLabel, ExpectedFingerprint: body.ExpectedFingerprint,
+			SourceRef: body.SourceRef, Note: body.Note, Attributes: body.Attributes,
 			IsInternalTransfer: body.IsInternalTransfer, LinkedRefundOf: body.LinkedRefundOf,
 			Revision: body.Revision}, s.Now())
 	if err != nil {
@@ -642,6 +645,11 @@ func (s *Server) mapWriteError(w http.ResponseWriter, r *http.Request, err error
 		writeError(w, http.StatusGone, "invitation_expired", "Invitation expired", correlationOf(r))
 	case errors.Is(err, store.ErrInvitationInvalid):
 		writeError(w, http.StatusBadRequest, "invalid_invitation", "Invitation is invalid", correlationOf(r))
+	case errors.Is(err, store.ErrFingerprintMismatch), errors.Is(err, store.ErrIdentityMismatch):
+		writeError(w, http.StatusConflict, "identity_conflict", err.Error(), correlationOf(r))
+	case errors.Is(err, store.ErrFingerprintRequired), errors.Is(err, store.ErrSourceRefRequired),
+		errors.Is(err, store.ErrInvalidMerchantLabel):
+		writeError(w, http.StatusBadRequest, "invalid_request", err.Error(), correlationOf(r))
 	case errors.Is(err, store.ErrInvalidCursor):
 		writeError(w, http.StatusBadRequest, "invalid_cursor",
 			"cursor was issued for a different query; restart from the first page", correlationOf(r))

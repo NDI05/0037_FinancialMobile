@@ -27,6 +27,12 @@ var (
 	ErrConsentChanged      = errors.New("consent changed")
 	ErrSessionStale        = errors.New("session no longer active")
 	ErrCrossOwner          = errors.New("object belongs to another owner")
+	// Merchant-label repair guards (P0 PAN-as-merchant fix). Each one fails closed: no update.
+	ErrFingerprintRequired  = errors.New("expectedFingerprint is required to repair a merchant label")
+	ErrFingerprintMismatch  = errors.New("expectedFingerprint does not match the stored row")
+	ErrSourceRefRequired    = errors.New("sourceRef is required to adopt a legacy row before repair")
+	ErrIdentityMismatch     = errors.New("sourceRef belongs to a different notification")
+	ErrInvalidMerchantLabel = errors.New("merchantLabel must be a business name, not an identifier")
 )
 
 // Store is the owner-scoped persistence layer. Every method that touches finance data takes the

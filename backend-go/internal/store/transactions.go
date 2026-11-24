@@ -73,9 +73,16 @@ type TransactionInput struct {
 }
 
 type TransactionPatch struct {
-	CategoryID         *string
-	Description        *string
-	MerchantLabel      *string
+	CategoryID    *string
+	Description   *string
+	MerchantLabel *string
+	// ExpectedFingerprint is the client's compare-and-swap proof for a merchant-label repair: it
+	// must equal the currently stored fingerprint, so a stale view can never overwrite a newer
+	// value. The replacement fingerprint is derived server-side; a client never sends it.
+	ExpectedFingerprint *string
+	// SourceRef is the opaque device reference `UIDVALIDITY:UID` used only to adopt rows imported
+	// before source references existed. It is ignored (and must match) when one is already stored.
+	SourceRef          *string
 	Note               *string
 	Attributes         *map[string]any
 	IsInternalTransfer *bool
@@ -315,6 +322,19 @@ func (s *Store) UpdateTransaction(ctx context.Context, ownerID, id string, patch
 	if current.Revision != patch.Revision {
 		return Transaction{}, ErrRevisionConflict
 	}
+	// Merchant-label repair path (P0: PAN stored instead of the Penerima business name). It has
+	// stricter preconditions than an ordinary edit: the row must still be the email row the client
+	// believes it is, and the identity of that row must be provable from stored data.
+	var repair *merchantRepair
+	if patch.MerchantLabel != nil {
+		repair, err = s.prepareMerchantRepair(ctx, ownerID, current, patch)
+		if err != nil {
+			return Transaction{}, err
+		}
+		if repair.noop {
+			return current, nil
+		}
+	}
 	categoryID := current.CategoryID
 	if patch.CategoryID != nil {
 		categoryID = *patch.CategoryID
@@ -329,7 +349,7 @@ func (s *Store) UpdateTransaction(ctx context.Context, ownerID, id string, patch
 		sensitive.Description = *patch.Description
 	}
 	if patch.MerchantLabel != nil {
-		sensitive.MerchantLabel = *patch.MerchantLabel
+		sensitive.MerchantLabel = repair.merchantLabel
 	}
 	if patch.Note != nil {
 		sensitive.Note = *patch.Note
@@ -357,26 +377,70 @@ func (s *Store) UpdateTransaction(ctx context.Context, ownerID, id string, patch
 		return Transaction{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	fingerprint := current.Fingerprint
+	var refCipher, refIV, refTag, refVersion, refHash any
+	if repair != nil {
+		fingerprint = repair.fingerprint
+		if repair.adopt {
+			sealedRef, err := crypto.Seal([]byte(repair.sourceRef), s.DataKey, s.KeyVersion,
+				ownerID, "source_ref")
+			if err != nil {
+				return Transaction{}, err
+			}
+			refCipher, refIV, refTag = sealedRef.Ciphertext, sealedRef.IV, sealedRef.Tag
+			refVersion = s.KeyVersion
+			refHash = s.sourceRefHash(repair.sourceRef)
+		}
+	}
 	// A user edit that changes the category supersedes any classifier output: provenance switches
 	// to USER and every classifier-derived attribute (origin, confidence, reason, rule and taxonomy
 	// versions) is cleared so no stale "LLM" provenance survives the override.
 	categoryChanged := patch.CategoryID != nil
-	result, err := tx.ExecContext(ctx, `UPDATE transactions SET category_id = ?,
-		category_origin = 'USER',
-		classifier_origin = CASE WHEN ? THEN '' ELSE classifier_origin END,
-		category_confidence = CASE WHEN ? THEN NULL ELSE category_confidence END,
-		category_reason = CASE WHEN ? THEN NULL ELSE category_reason END,
-		category_rule_version = CASE WHEN ? THEN NULL ELSE category_rule_version END,
-		category_taxonomy_version = CASE WHEN ? THEN NULL ELSE category_taxonomy_version END,
-		sensitive_ciphertext = ?, sensitive_iv = ?, sensitive_tag = ?,
-		key_version = ?, is_internal_transfer = ?, linked_refund_of = ?,
-		revision = revision + 1, updated_at = ?
-		WHERE owner_id = ? AND id = ? AND revision = ? AND deleted_at IS NULL`,
-		nullableString(categoryID), boolInt(categoryChanged), boolInt(categoryChanged),
-		boolInt(categoryChanged), boolInt(categoryChanged), boolInt(categoryChanged),
-		sealed.Ciphertext, sealed.IV, sealed.Tag, s.KeyVersion,
-		boolInt(internal), nullableString(linked), nowString(now), ownerID, id, patch.Revision)
+	var result sql.Result
+	if repair != nil && repair.adopt {
+		result, err = tx.ExecContext(ctx, `UPDATE transactions SET category_id = ?,
+			category_origin = 'USER',
+			classifier_origin = CASE WHEN ? THEN '' ELSE classifier_origin END,
+			category_confidence = CASE WHEN ? THEN NULL ELSE category_confidence END,
+			category_reason = CASE WHEN ? THEN NULL ELSE category_reason END,
+			category_rule_version = CASE WHEN ? THEN NULL ELSE category_rule_version END,
+			category_taxonomy_version = CASE WHEN ? THEN NULL ELSE category_taxonomy_version END,
+			sensitive_ciphertext = ?, sensitive_iv = ?, sensitive_tag = ?,
+			key_version = ?, is_internal_transfer = ?, linked_refund_of = ?,
+			fingerprint = ?,
+			source_ref_ciphertext = ?, source_ref_iv = ?, source_ref_tag = ?,
+			source_ref_key_version = ?, source_ref_hash = ?,
+			revision = revision + 1, updated_at = ?
+			WHERE owner_id = ? AND id = ? AND revision = ? AND fingerprint = ? AND deleted_at IS NULL`,
+			nullableString(categoryID), boolInt(categoryChanged), boolInt(categoryChanged),
+			boolInt(categoryChanged), boolInt(categoryChanged), boolInt(categoryChanged),
+			sealed.Ciphertext, sealed.IV, sealed.Tag, s.KeyVersion,
+			boolInt(internal), nullableString(linked), fingerprint,
+			refCipher, refIV, refTag, refVersion, refHash,
+			nowString(now), ownerID, id, patch.Revision, current.Fingerprint)
+	} else {
+		result, err = tx.ExecContext(ctx, `UPDATE transactions SET category_id = ?,
+			category_origin = 'USER',
+			classifier_origin = CASE WHEN ? THEN '' ELSE classifier_origin END,
+			category_confidence = CASE WHEN ? THEN NULL ELSE category_confidence END,
+			category_reason = CASE WHEN ? THEN NULL ELSE category_reason END,
+			category_rule_version = CASE WHEN ? THEN NULL ELSE category_rule_version END,
+			category_taxonomy_version = CASE WHEN ? THEN NULL ELSE category_taxonomy_version END,
+			sensitive_ciphertext = ?, sensitive_iv = ?, sensitive_tag = ?,
+			key_version = ?, is_internal_transfer = ?, linked_refund_of = ?,
+			fingerprint = ?,
+			revision = revision + 1, updated_at = ?
+			WHERE owner_id = ? AND id = ? AND revision = ? AND fingerprint = ? AND deleted_at IS NULL`,
+			nullableString(categoryID), boolInt(categoryChanged), boolInt(categoryChanged),
+			boolInt(categoryChanged), boolInt(categoryChanged), boolInt(categoryChanged),
+			sealed.Ciphertext, sealed.IV, sealed.Tag, s.KeyVersion,
+			boolInt(internal), nullableString(linked), fingerprint,
+			nowString(now), ownerID, id, patch.Revision, current.Fingerprint)
+	}
 	if err != nil {
+		if isUnique(err.Error()) {
+			return Transaction{}, ErrConflict
+		}
 		return Transaction{}, err
 	}
 	changed, _ := result.RowsAffected()
@@ -390,6 +454,96 @@ func (s *Store) UpdateTransaction(ctx context.Context, ownerID, id string, patch
 		return Transaction{}, err
 	}
 	return s.GetTransaction(ctx, ownerID, id)
+}
+
+// merchantRepair is the resolved, verified plan for replacing a stored merchant label.
+type merchantRepair struct {
+	merchantLabel string
+	sourceRef     string
+	fingerprint   string
+	adopt         bool // true when the row predates stored source references
+	noop          bool // the requested state is already stored (idempotent replay)
+}
+
+// prepareMerchantRepair enforces the repair preconditions:
+//   - the caller proves it is patching the row it read (expectedFingerprint CAS);
+//   - the notification identity is available: stored sealed source ref, or supplied once to adopt
+//     a legacy row (fail closed when neither exists);
+//   - the replacement label is a real business name, never another identifier;
+//   - the replacement fingerprint is derived here from canonical stored fields and the label.
+func (s *Store) prepareMerchantRepair(ctx context.Context, ownerID string, current Transaction,
+	patch TransactionPatch) (*merchantRepair, error) {
+	if current.Source == "MANUAL" {
+		return nil, fmt.Errorf("merchant label of a manual transaction is not repairable")
+	}
+	expected := ""
+	if patch.ExpectedFingerprint != nil {
+		expected = strings.ToLower(strings.TrimSpace(*patch.ExpectedFingerprint))
+	}
+	if expected == "" {
+		return nil, ErrFingerprintRequired
+	}
+	if expected != current.Fingerprint {
+		return nil, ErrFingerprintMismatch
+	}
+	storedRef, err := s.storedSourceRef(ctx, ownerID, current.ID)
+	if err != nil {
+		return nil, err
+	}
+	sourceRef := storedRef
+	adopt := false
+	supplied := ""
+	if patch.SourceRef != nil {
+		supplied = strings.TrimSpace(*patch.SourceRef)
+	}
+	if sourceRef == "" {
+		if supplied == "" || !validSourceRef(supplied) {
+			return nil, ErrSourceRefRequired
+		}
+		sourceRef = supplied
+		adopt = true
+	} else if supplied != "" && supplied != sourceRef {
+		// The row already carries a verified identity; a different claimed reference means the
+		// client is looking at another notification.
+		return nil, ErrIdentityMismatch
+	}
+	label := strings.TrimSpace(*patch.MerchantLabel)
+	if label == "" || len(label) > 120 || isReferenceOnlyLabel(label) {
+		return nil, ErrInvalidMerchantLabel
+	}
+	fingerprint := s.transactionFingerprint(sourceRef, current.AmountMinor,
+		current.EventAt.UnixMilli(), current.Direction, label)
+	if !adopt && current.Fingerprint == fingerprint &&
+		strings.TrimSpace(current.Sensitive.MerchantLabel) == label {
+		return &merchantRepair{noop: true}, nil
+	}
+	return &merchantRepair{merchantLabel: label, sourceRef: sourceRef,
+		fingerprint: fingerprint, adopt: adopt}, nil
+}
+
+// storedSourceRef returns the decrypted source reference of a row, or "" for a legacy row.
+func (s *Store) storedSourceRef(ctx context.Context, ownerID, id string) (string, error) {
+	var ciphertext, iv, tag []byte
+	var keyVersion sql.NullInt64
+	err := s.DB.QueryRowContext(ctx, `SELECT source_ref_ciphertext, source_ref_iv,
+		source_ref_tag, source_ref_key_version FROM transactions
+		WHERE owner_id = ? AND id = ? AND deleted_at IS NULL`, ownerID, id).Scan(
+		&ciphertext, &iv, &tag, &keyVersion)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	if len(ciphertext) == 0 || len(iv) == 0 || len(tag) == 0 || !keyVersion.Valid {
+		return "", nil
+	}
+	plain, err := crypto.Open(crypto.Sealed{Ciphertext: ciphertext, IV: iv, Tag: tag,
+		KeyVersion: int(keyVersion.Int64)}, s.DataKey, ownerID, "source_ref")
+	if err != nil {
+		return "", err
+	}
+	return string(plain), nil
 }
 
 // DeleteTransaction soft-deletes one row and its attachment metadata. expectedRevision is

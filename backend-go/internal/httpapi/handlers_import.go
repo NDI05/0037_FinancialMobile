@@ -14,7 +14,10 @@ type importJobCreate struct {
 }
 
 type importCandidateJSON struct {
-	Fingerprint   string         `json:"fingerprint"`
+	Fingerprint string `json:"fingerprint"`
+	// SourceRef is the opaque device reference (UIDVALIDITY:UID). Optional; when present it is
+	// sealed and becomes the repair identity of the imported row.
+	SourceRef     string         `json:"sourceRef"`
 	Status        string         `json:"status"`
 	Reason        string         `json:"reason"`
 	Direction     string         `json:"direction"`
@@ -91,7 +94,8 @@ func (s *Server) importBatch(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		candidates = append(candidates, store.ImportCandidate{
-			Fingerprint: candidate.Fingerprint, Status: candidate.Status, Reason: candidate.Reason,
+			Fingerprint: candidate.Fingerprint, SourceRef: candidate.SourceRef,
+			Status: candidate.Status, Reason: candidate.Reason,
 			Direction: candidate.Direction, AmountMinor: candidate.AmountMinor, EventAt: eventAt,
 			CategoryID: candidate.CategoryID, ParserVersion: candidate.ParserVersion,
 			Confidence: candidate.Confidence, Description: candidate.Description,

@@ -31,7 +31,10 @@ type ImportJob struct {
 }
 
 type ImportCandidate struct {
-	Fingerprint   string
+	Fingerprint string
+	// SourceRef is the opaque device reference `UIDVALIDITY:UID` of the notification. It is
+	// optional for older clients, sealed at rest, and is the repair identity for this row.
+	SourceRef     string
 	Status        string
 	Reason        string
 	Direction     string
@@ -118,6 +121,9 @@ func (s *Store) ImportBatch(ctx context.Context, ownerID, jobID, batchKey, reque
 		if candidate.Status == "PARSED" && monthIDFor(candidate.EventAt) != jobMonth {
 			return ImportBatchCounts{}, false, fmt.Errorf("invalid candidate eventAt: outside the import month %s", jobMonth)
 		}
+		if candidate.SourceRef != "" && !validSourceRef(candidate.SourceRef) {
+			return ImportBatchCounts{}, false, fmt.Errorf("sourceRef must look like UIDVALIDITY:UID")
+		}
 		if candidate.CategoryID != "" {
 			if err := s.ensureCategory(ctx, ownerID, candidate.CategoryID); err != nil {
 				return ImportBatchCounts{}, false, err
@@ -181,17 +187,35 @@ func (s *Store) ImportBatch(ctx context.Context, ownerID, jobID, batchKey, reque
 		if err != nil {
 			return ImportBatchCounts{}, false, err
 		}
+		var refCipher, refIV, refTag any
+		var refVersion any
+		var refHash any
+		if candidate.SourceRef != "" {
+			sealedRef, err := crypto.Seal([]byte(candidate.SourceRef), s.DataKey, s.KeyVersion,
+				ownerID, "source_ref")
+			if err != nil {
+				return ImportBatchCounts{}, false, err
+			}
+			refCipher, refIV, refTag = sealedRef.Ciphertext, sealedRef.IV, sealedRef.Tag
+			refVersion = s.KeyVersion
+			refHash = s.sourceRefHash(candidate.SourceRef)
+		}
+		// Two independent identity keys: the device fingerprint and the sealed source reference.
+		// A reparsed notification changes the former (its merchant fields changed), so the latter
+		// is what makes a post-repair re-import a duplicate instead of a new row.
 		result, err := tx.ExecContext(ctx, `INSERT INTO transactions
 			(id, owner_id, category_id, direction, source, amount_minor, currency, event_at_ms,
 			 month_id, fingerprint, parser_version, parser_confidence, category_origin,
 			 sensitive_ciphertext, sensitive_iv, sensitive_tag, key_version,
-			 is_internal_transfer, linked_refund_of, revision, created_at, updated_at)
-			VALUES (?, ?, ?, ?, 'EMAIL', ?, 'IDR', ?, ?, ?, ?, ?, 'IMPORTED', ?, ?, ?, ?, 0, NULL, 0, ?, ?)
-			ON CONFLICT(owner_id, fingerprint) DO NOTHING`,
+			 source_ref_ciphertext, source_ref_iv, source_ref_tag, source_ref_key_version,
+			 source_ref_hash, is_internal_transfer, linked_refund_of, revision, created_at, updated_at)
+			VALUES (?, ?, ?, ?, 'EMAIL', ?, 'IDR', ?, ?, ?, ?, ?, 'IMPORTED', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, 0, ?, ?)
+			ON CONFLICT DO NOTHING`,
 			NewID("tx"), ownerID, nullableString(candidate.CategoryID), candidate.Direction,
 			candidate.AmountMinor, candidate.EventAt.UnixMilli(), monthID, candidate.Fingerprint,
 			candidate.ParserVersion, candidate.Confidence, sealed.Ciphertext, sealed.IV, sealed.Tag,
-			s.KeyVersion, nowString(now), nowString(now))
+			s.KeyVersion, refCipher, refIV, refTag, refVersion, refHash,
+			nowString(now), nowString(now))
 		if err != nil {
 			return ImportBatchCounts{}, false, err
 		}
