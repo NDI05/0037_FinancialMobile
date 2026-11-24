@@ -43,3 +43,25 @@ Tidak ada temuan pada: overstatement gate (G36 NOT RUN dan G29/G37 OPEN benar), 
   rute status 401 tanpa token, HP + `adb reverse` OK); GCP Rp0 tetap manual/owner.
 - Gate tetap **29 PASS / 4 PARTIAL / 5 NOT RUN**; G25 tetap PASS-live-owner, G36 dan G29/G37 tetap
   NOT RUN/OPEN.
+
+## 4. Audit ulang ronde 2 (24 Nov 2026, sesi terpisah, read-only)
+
+Lingkup: HEAD `7bb16f0` + WIP hardening. Uji bersih: **183 PASS / 0 FAIL** (`internal/gmail`,
+`internal/httpapi`), `vet`/`test ./...` PASS.
+
+| Prioritas | Temuan | Status |
+|---|---|---|
+| **P1** | Baris field dari template proyek sendiri (`Merchant PAN: …`, `Customer PAN: …`) masih bisa menjadi merchant pada jalur stacked; jalur inline juga belum kena guard | **diperbaiki** `e19477b`: guard berbasis nilai (prefix field, pola `Label: nilai` generik, token identifier ≥6 digit) diterapkan pada **kedua** jalur; regresi `TestParseLivinStackedLabelRejectsPANAndFieldLines` + `TestParseLivinInlineLabelRejectsPANLine` |
+| P2 | Merchant sah dengan kata bulan + digit (`Warung Bu Des 2`) ditolak | **diperbaiki**: deteksi tanggal butuh tahun 4 digit; regresi `TestParseLivinMerchantWithShortMonthWord` |
+| P2 | Join tanggal–waktu menjangkau ±2 baris tanpa syarat | **diperbaiki**: jangkauan maksimum 3 baris hanya bila semua baris di antaranya field/separator; regresi `TestParseLivinIgnoresDistantTime` + `TestParseLivinTimeAcrossThreeFieldLines` |
+| P2 | Amount tanpa `Rp` (`150.000,00`) lolos sebagai label | **diperbaiki**: koma diperlakukan sebagai pemisah identifier; masuk regresi PAN |
+| P3 | Label stacked diikuti baris pemisah (`------`) → merchant hilang | **diperbaiki**: baris separator dilewati saat mengambil nilai; regresi `TestParseLivinBareLabelSkipsSeparatorLine` |
+| P3 | Zona pada baris terpisah (`… pkl 09:30:45` lalu `WITA`) diabaikan | **diperbaiki**: token zona terdekat dipakai saat parse; regresi `TestParseLivinSeparateZoneLine` |
+
+Kontradiksi dokumen yang dilaporkan juga ditutup: (a) counter duplikat Nov/Okt 0 dijelaskan
+(baris lama tidak dipindai ulang), (b) angka pass pertama vs run final dipisahkan, (c) bukti 914
+dinyatakan berasal dari build `c98527b` dan hardening hanya rebuild runtime, (d) klaim PAN
+dipersempit ke guard yang benar-benar teruji (`e19477b`).
+
+Gate backend setelah perbaikan: `e19477b` vet/build/test/race **PASS**; runtime loopback
+dibangun ulang dari `e19477b` (`vcs.modified=false`, `/readyz=200`).

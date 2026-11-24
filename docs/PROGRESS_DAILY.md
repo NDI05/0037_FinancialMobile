@@ -185,3 +185,21 @@ destruktif pada data owner sehingga menunggu persetujuan pemilik. Gate tidak ber
 Gate Android final setelah semua perubahan ronde 8: `testDebugUnitTest` **678 tes/88 suite/0
 gagal/0 dilewati**, `lintDebug` **0 error/123 warning/1 hint**, `assembleDebug` PASS (APK
 47.992.939 B, sha256 `5368c92f…`). Tidak ada perubahan status gate.
+
+### Audit ulang ronde 2 — celah PAN/field-label ditutup (24 Nov 2026, ronde 9)
+
+Audit independen kedua (read-only, HEAD `7bb16f0`) menemukan **P1 nyata**: baris field dari
+template proyek sendiri (`Merchant PAN: …`, `Customer PAN: …`) masih bisa menjadi merchant pada
+jalur stacked, dan jalur inline `Label: nilai` belum kena guard. Ditutup di backend `e19477b`
+dengan guard berbasis nilai (prefix field, pola `Label: nilai` generik, token identifier ≥6 digit)
+pada kedua jalur; sekaligus: merchant sah berkata bulan + digit (`Warung Bu Des 2`) tidak lagi
+ditolak, join tanggal–waktu maksimal 3 baris hanya melewati baris field/separator, amount tanpa
+`Rp` (`150.000,00`) diperlakukan identifier, baris separator `------` dilewati, dan zona pada baris
+terpisah (`WITA`) dipakai. Regresi baru: PAN stacked/inline, false-positive bulan, distant time,
+three-field time, separator, separate zone. Gate backend `e19477b`: vet/build/test (10 paket) +
+race auth/gmail/httpapi/store **PASS**; runtime loopback dibangun ulang dari `e19477b`
+(`vcs.modified=false`, `/readyz=200`). Kontradiksi dokumen yang dilaporkan audit juga ditutup:
+counter duplikat Nov/Okt 0 dijelaskan (baris lama tidak dipindai ulang), angka pass pertama vs run
+final dipisahkan, bukti 914 dinyatakan dari build `c98527b` (hardening hanya rebuild runtime), dan
+klaim PAN dipersempit ke guard yang teruji. Gate tetap **29 PASS / 4 PARTIAL / 5 NOT RUN**;
+G36/G29/G37 tetap menunggu pemilik.

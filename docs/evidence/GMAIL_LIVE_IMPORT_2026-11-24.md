@@ -9,7 +9,9 @@ email, token, ID pesan Gmail, nominal, merchant, subjek, atau isi email di repo/
 Backend resmi owner berjalan di `127.0.0.1:18090` (`APP_ENV=uat-local`) dengan kredensial OAuth
 nyata dan mode **polling**. Backfill setahun berjalan (12 bulan), tetapi **semua pesan Livin
 dilewati** (`seen` bertambah, `imported=0`): 104 (Nov) + 136 (Okt) + 136 (Sep) + 24 (Agu) +
-92 (Jul) + 50 (Jun) pesan, `skipped` sama dengan `seen`.
+92 (Jul) + 50 (Jun) pesan, `skipped` sama dengan `seen`. Angka ini milik **pass pertama yang
+gagal** (hanya 6 bulan yang sempat berjalan) dan tidak boleh dibandingkan langsung dengan angka
+`dipindai` pada run final §3.
 
 Penyebab ditelusuri **tanpa membaca isi email**: diagnostik sementara (di luar repo, dihapus
 setelah dipakai) hanya mencetak *bentuk* baris (digit/huruf dimask) dan agregat statistik parser.
@@ -33,9 +35,12 @@ Gate backend setelah perbaikan: `go vet ./...` **PASS**, `go build ./...` **PASS
 `go test ./... -count=1` **PASS** (10 paket; `internal/gmail` termasuk regresi stacked/Indonesian),
 `-race` auth/gmail/httpapi/store **PASS**. Audit independen ronde 7 menemukan dua P1: baris field
 bisa menjadi merchant dan angka bukti belum rekonsiliasi; keduanya ditutup di `e3b84b4` dan dokumen
-ini. Perbaikan tambahan `e3b84b4`: WITA/WIT memakai offset sebenarnya, waktu tetap diambil walau ada
-baris referensi di antara tanggal dan waktu, alias bulan `Nop`/`Peb`, pembulatan nominal, batas
-panjang label. Runtime loopback dibangun ulang dari `e3b84b4` (`vcs.modified=false`).
+ini. Perbaikan tambahan `e3b84b4` (audit ronde 7) dan `e19477b` (audit ronde 2): WITA/WIT
+memakai offset sebenarnya, waktu tetap diambil walau ada baris field di antara tanggal dan waktu,
+alias bulan `Nop`/`Peb`, pembulatan nominal, batas panjang label, dan **baris PAN/identifier tidak
+boleh menjadi merchant** baik pada label stacked maupun inline. Runtime loopback dibangun ulang dari
+`e19477b` (`vcs.modified=false`) **tanpa impor ulang**; bukti 914 di §3 tetap dihasilkan build
+`c98527b` (20:16 WIB), sebelum commit hardening, dan hardening berlaku untuk impor berikutnya.
 
 ## 3. Bukti live (agregat, final 24 Nov 20:16 WIB — backfill 12/12 COMPLETE)
 
@@ -66,7 +71,11 @@ sebelum reset buku sinkronisasi (bukan data transaksi).
 Total tabel **914** karena **145 baris sudah tersimpan** dari percobaan live pertama (sebelum buku
 sinkronisasi di-reset): Nov 38, Okt 28, Sep 79. Baris lama itu tidak dihitung ulang sebagai impor
 (duplikat), sehingga run final mencatat **79 duplikat pada Sep** — 79 baris Sep yang sama — dan
-769 + 145 = **914**. Semua 914 memiliki `source_ref_hash` unik (0 baris duplikat).
+769 + 145 = **914**. Semua 914 memiliki `source_ref_hash` unik (0 baris duplikat). Counter
+duplikat per bulan hanya menghitung baris yang **dipindai ulang oleh job run itu**: baris Nov 38
+dan Okt 28 tidak dipindai ulang oleh job final, jadi kolom duplikat Nov/Okt tetap **0**; hanya Sep
+yang dipindai ulang (79). Karena itu counter per bulan tidak boleh dijumlahkan sebagai total
+duplikat global.
 
 Sisa `skipped` adalah pesan yang bukan transaksi atau template lain (promosi/notifikasi tanpa
 merchant/nominal), bukan kegagalan impor diam-diam; alasannya tercatat per pesan di
