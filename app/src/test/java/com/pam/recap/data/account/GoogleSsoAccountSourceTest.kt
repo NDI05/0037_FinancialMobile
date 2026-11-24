@@ -177,9 +177,12 @@ class GoogleSsoAccountSourceTest {
 
     @Test
     fun `sso is advertised only when the build configured a client id`() {
-        assertEquals(BuildConfig.PAM_GOOGLE_SSO_ENABLED, source().isGoogleSsoEnabled)
-        // This unit-test build passes no client ID, so the production rule must hide the feature.
-        assertFalse(source().isGoogleSsoEnabled)
+        // local.properties is owner-specific: a UAT machine sets the Web OAuth client ID while a
+        // clean CI checkout does not. The rule under test is the mapping, not this machine's value.
+        val configured = BuildConfig.PAM_GOOGLE_SSO_CLIENT_ID.isNotBlank()
+        assertEquals(configured, BuildConfig.PAM_GOOGLE_SSO_ENABLED)
+        assertEquals(configured, source().isGoogleSsoEnabled)
+        if (!configured) assertFalse(source().isGoogleSsoEnabled)
     }
 
     private class PassthroughSecretStore : WrappedSecretStore {
