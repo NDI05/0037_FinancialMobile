@@ -1,0 +1,194 @@
+== bootstrapping synthetic owners 2026-11-24 08:43:41 WIB ==
+HTTP 201  POST /v1/accounts
+{"displayName":"WQA Owner A","email":"wqa.owner.a@pam-uat.test","ownerId":"u_03ea23e182b3f0cf0ea02224096bed9a","role":"USER","userId":"u_03ea23e182b3f0cf0ea02224096bed9a"}
+
+HTTP 201  POST /v1/accounts
+{"displayName":"WQA Owner B","email":"wqa.owner.b@pam-uat.test","ownerId":"u_fc086edbf9378fb03c23c2aab6260f8c","role":"USER","userId":"u_fc086edbf9378fb03c23c2aab6260f8c"}
+
+HTTP 201  POST /v1/sessions
+{"accessToken":"<redacted-jwt>","accessExpiresAt":"2026-11-24T08:58:41.737481+07:00","expiresAt":"2026-11-24T08:58:41.737481+07:00","refreshToken":"<redacted-token>","refreshExpiresAt":"2026-12-24T08:43:41.737481+07:00","displayName":"WQA Owner A","user":{"id":"u_03ea23e182b3f0cf0ea
+HTTP 201  POST /v1/sessions
+{"accessToken":"<redacted-jwt>","accessExpiresAt":"2026-11-24T08:58:41.832605+07:00","expiresAt":"2026-11-24T08:58:41.832605+07:00","refreshToken":"<redacted-token>","refreshExpiresAt":"2026-12-24T08:43:41.832605+07:00","displayName":"WQA Owner B","user":{"id":"u_fc086edbf9378fb03c2
+ownerA_token_len=404 ownerB_token_len=404
+HTTP 200  GET /v1/categories?limit=100
+{"categories":[{"attributes":null,"code":"education","color":"amber_deep","createdAt":"2026-11-24T01:43:41.616555Z","id":"cat_739245fc2106f1d399c92c9c096a7804","isBuiltin":true,"kind":"EXPENSE","label":"Pendidikan","revision":0,"updatedAt":"2026-11-24T01:43:41.616555Z"},{"attributes":null,"code":"food","color":"amber","createdAt":"2026-11-24T01:43:41.616555Z","id":"cat_b1e571374039e590b800732555c418bf","isBuiltin":true,"kind":"EXPENSE","label":"Makanan","revision":0,"updatedAt":"2026-11-24T01:43:41.616555Z"},{"attributes":null,"code":"health","color":"rose","createdAt":"2026-11-24T01:43:41.616555Z","id":"cat_b1723ac60fa7dc88d8d6f3423d82fbd0","isBuiltin":true,"kind":"EXPENSE","label":"Kesehat
+baseline_total=11 builtin_id=cat_739245fc2106f1d399c92c9c096a7804 builtin_code=education
+HTTP 201  POST /v1/categories
+{"attributes":{"kanal":"android","sumber":"qa"},"code":"wqa_custom_1","color":"#336699","createdAt":"2026-11-24T01:43:41.991125Z","id":"cat_176e6fe8ca60928bdc85c037edf6105e","isBuiltin":false,"kind":"EXPENSE","label":"WQA Kategori QA","revision":0,"updatedAt":"2026-11-24T01:43:41.991125Z"}
+
+C06 status=HTTP 201  POST /v1/categories
+201 id=cat_176e6fe8ca60928bdc85c037edf6105e revision=0 label=WQA Kategori QA attributes={"kanal":"android","sumber":"qa"}
+HTTP 201  POST /v1/transactions
+{"amountMinor":123456,"attributes":null,"categoryCode":"wqa_custom_1","categoryConfidence":0,"categoryId":"cat_176e6fe8ca60928bdc85c037edf6105e","categoryKind":"EXPENSE","categoryOrigin":"USER","categoryReason":"","categoryRuleVersion":"","categoryTaxonomyVersion":"","createdAt":"2026-11-24T01:43:42.040263Z","currency":"IDR","deletedAt":null,"description":"WQA C06 custom category used","direction":"DEBIT","eventAt":"2026-11-24T01:40:00Z","fingerprint":"db7a98e1a45c4a5510fa420d6608674f","id":"tx_48a45e661573a76b4218793d4d8668b5","isInternalTransfer":false,"linkedRefundOf":null,"merchantLabel":"","monthId":"2026-11","note":"","parserConfidence":0,"parserVersion":"","revision":0,"source":"MANUA
+C06 selectable_on_transaction: status=HTTP 201  POST /v1/transactions
+201 tx=tx_48a45e661573a76b4218793d4d8668b5 categoryId=cat_176e6fe8ca60928bdc85c037edf6105e
+HTTP 200  GET /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e
+{"attributes":{"kanal":"android","sumber":"qa"},"code":"wqa_custom_1","color":"#336699","createdAt":"2026-11-24T01:43:41.991125Z","id":"cat_176e6fe8ca60928bdc85c037edf6105e","isBuiltin":false,"kind":"EXPENSE","label":"WQA Kategori QA","revision":0,"updatedAt":"2026-11-24T01:43:41.991125Z"}
+
+C07 status=HTTP 200  GET /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e
+200 id=cat_176e6fe8ca60928bdc85c037edf6105e code=wqa_custom_1 label=WQA Kategori QA kind=EXPENSE attributes={"kanal":"android","sumber":"qa"}
+HTTP 200  PATCH /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e
+{"attributes":{"kanal":"android","sumber":"qa","tahap":"update"},"code":"wqa_custom_1","color":"#336699","createdAt":"2026-11-24T01:43:41.991125Z","id":"cat_176e6fe8ca60928bdc85c037edf6105e","isBuiltin":false,"kind":"EXPENSE","label":"WQA Kategori QA v2","revision":1,"updatedAt":"2026-11-24T01:43:42.132214Z"}
+
+HTTP 200  GET /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e
+{"attributes":{"kanal":"android","sumber":"qa","tahap":"update"},"code":"wqa_custom_1","color":"#336699","createdAt":"2026-11-24T01:43:41.991125Z","id":"cat_176e6fe8ca60928bdc85c037edf6105e","isBuiltin":false,"kind":"EXPENSE","label":"WQA Kategori QA v2","revision":1,"updatedAt":"2026-11-24T01:43:42.132214Z"}
+
+HTTP 409  PATCH /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e
+{"code":"revision_conflict","message":"Revision changed","retryable":false,"correlationId":"req_60c6279f0e30213adc9f4e2f5b3c3e96"}
+
+C08 update=HTTP 200  PATCH /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e
+200 readback=HTTP 200  GET /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e
+200 revision=1 label=WQA Kategori QA v2 attributes={"kanal":"android","sumber":"qa","tahap":"update"} stalePATCH=HTTP 409  PATCH /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e
+409 code=revision_conflict
+HTTP 403  DELETE /v1/categories/cat_739245fc2106f1d399c92c9c096a7804
+{"code":"builtin_category","message":"built-in category cannot be deleted","retryable":false,"correlationId":"req_ef3f85936d78f119e14ba05f66a95f84"}
+
+HTTP 409  DELETE /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e
+{"code":"conflict","message":"category is still referenced","retryable":false,"correlationId":"req_3754b59e934c1bd7b24fd9a15e472593"}
+
+HTTP 201  POST /v1/categories
+{"attributes":null,"code":"wqa_custom_2","color":"","createdAt":"2026-11-24T01:43:42.267122Z","id":"cat_0465103aaf8e4eaee9b218fd046ebe91","isBuiltin":false,"kind":"EXPENSE","label":"WQA Pengganti","revision":0,"updatedAt":"2026-11-24T01:43:42.267122Z"}
+
+HTTP 204  DELETE /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e?reassignTo=cat_0465103aaf8e4eaee9b218fd046ebe91
+
+HTTP 200  GET /v1/transactions/tx_48a45e661573a76b4218793d4d8668b5
+{"amountMinor":123456,"attributes":null,"categoryCode":"wqa_custom_2","categoryConfidence":0,"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryKind":"EXPENSE","categoryOrigin":"USER","categoryReason":"","categoryRuleVersion":"","categoryTaxonomyVersion":"","createdAt":"2026-11-24T01:43:42.040263Z","currency":"IDR","deletedAt":null,"description":"WQA C06 custom category used","direction":"DEBIT","eventAt":"2026-11-24T01:40:00Z","fingerprint":"db7a98e1a45c4a5510fa420d6608674f","id":"tx_48a45e661573a76b4218793d4d8668b5","isInternalTransfer":false,"linkedRefundOf":null,"merchantLabel":"","monthId":"2026-11","note":"","parserConfidence":0,"parserVersion":"","revision":0,"source":"MANUA
+HTTP 404  GET /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e
+{"code":"not_found","message":"Not found","retryable":false,"correlationId":"req_82681856938021313414745a4d8395b0"}
+
+C09 builtin_delete=HTTP 403  DELETE /v1/categories/cat_739245fc2106f1d399c92c9c096a7804
+403 code=builtin_category msg=built-in category cannot be deleted
+C09 in_use_delete=HTTP 409  DELETE /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e
+409 code=conflict msg=category is still referenced
+C09 reassign_delete=HTTP 204  DELETE /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e?reassignTo=cat_0465103aaf8e4eaee9b218fd046ebe91
+204 tx_category_after=cat_0465103aaf8e4eaee9b218fd046ebe91 old_category_get=HTTP 404  GET /v1/categories/cat_176e6fe8ca60928bdc85c037edf6105e
+404
+HTTP 200  PUT /v1/budget-plans/2026-12
+{"attributes":{"catatan":"wqa plan","sumber":"qa"},"createdAt":"2026-11-24T01:43:42.405766Z","expectedIncomeMinor":12000000,"gapMinor":7500000,"limits":[{"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryCode":"wqa_custom_2","amountMinor":2500000}],"monthId":"2026-12","plannedSavingsMinor":2000000,"revision":0,"totalLimitMinor":2500000,"updatedAt":"2026-11-24T01:43:42.405766Z"}
+
+HTTP 200  GET /v1/budget-plans/2026-12
+{"attributes":{"catatan":"wqa plan","sumber":"qa"},"createdAt":"2026-11-24T01:43:42.405766Z","expectedIncomeMinor":12000000,"gapMinor":7500000,"limits":[{"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryCode":"wqa_custom_2","amountMinor":2500000}],"monthId":"2026-12","plannedSavingsMinor":2000000,"revision":0,"totalLimitMinor":2500000,"updatedAt":"2026-11-24T01:43:42.405766Z"}
+
+C11 put=HTTP 200  PUT /v1/budget-plans/2026-12
+200 revision=0 limits=[{"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryCode":"wqa_custom_2","amountMinor":2500000}] totalLimit=2500000 gap=7500000 attributes={"catatan":"wqa plan","sumber":"qa"}
+HTTP 200  PUT /v1/budget-plans/2026-12
+{"attributes":{"catatan":"wqa plan v2","revisi":"2","sumber":"qa"},"createdAt":"2026-11-24T01:43:42.405766Z","expectedIncomeMinor":13000000,"gapMinor":7500000,"limits":[{"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryCode":"wqa_custom_2","amountMinor":3000000}],"monthId":"2026-12","plannedSavingsMinor":2500000,"revision":1,"totalLimitMinor":3000000,"updatedAt":"2026-11-24T01:43:42.48432Z"}
+
+HTTP 200  GET /v1/budget-plans/2026-12
+{"attributes":{"catatan":"wqa plan v2","revisi":"2","sumber":"qa"},"createdAt":"2026-11-24T01:43:42.405766Z","expectedIncomeMinor":13000000,"gapMinor":7500000,"limits":[{"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryCode":"wqa_custom_2","amountMinor":3000000}],"monthId":"2026-12","plannedSavingsMinor":2500000,"revision":1,"totalLimitMinor":3000000,"updatedAt":"2026-11-24T01:43:42.48432Z"}
+
+HTTP 409  PUT /v1/budget-plans/2026-12
+{"code":"revision_conflict","message":"Revision changed","retryable":false,"correlationId":"req_856b2ac755baf2cffc3fa4e454927fba"}
+
+C13 update=HTTP 200  PUT /v1/budget-plans/2026-12
+200 revision=1 limits=[{"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryCode":"wqa_custom_2","amountMinor":3000000}] attributes={"catatan":"wqa plan v2","revisi":"2","sumber":"qa"} stalePUT=HTTP 409  PUT /v1/budget-plans/2026-12
+409 code=revision_conflict
+HTTP 201  POST /v1/transactions
+{"amountMinor":10001,"attributes":null,"categoryCode":"wqa_custom_2","categoryConfidence":0,"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryKind":"EXPENSE","categoryOrigin":"USER","categoryReason":"","categoryRuleVersion":"","categoryTaxonomyVersion":"","createdAt":"2026-11-24T01:43:42.577803Z","currency":"IDR","deletedAt":null,"description":"WQA cursor row 1","direction":"DEBIT","eventAt":"2026-11-24T01:41:00Z","fingerprint":"0ca91e191bc481293026246c44e9b20e","id":"tx_44b7699ddee0c5943e2381f44efefea8","isInternalTransfer":false,"linkedRefundOf":null,"merchantLabel":"","monthId":"2026-11","note":"","parserConfidence":0,"parserVersion":"","revision":0,"source":"MANUAL","updatedAt
+HTTP 201  POST /v1/transactions
+{"amountMinor":10002,"attributes":null,"categoryCode":"wqa_custom_2","categoryConfidence":0,"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryKind":"EXPENSE","categoryOrigin":"USER","categoryReason":"","categoryRuleVersion":"","categoryTaxonomyVersion":"","createdAt":"2026-11-24T01:43:42.601591Z","currency":"IDR","deletedAt":null,"description":"WQA cursor row 2","direction":"DEBIT","eventAt":"2026-11-24T01:42:00Z","fingerprint":"58e49c73d68c261212c2a51797c38295","id":"tx_5c5dd737db3b14ce0ebdaac760c3e736","isInternalTransfer":false,"linkedRefundOf":null,"merchantLabel":"","monthId":"2026-11","note":"","parserConfidence":0,"parserVersion":"","revision":0,"source":"MANUAL","updatedAt
+HTTP 201  POST /v1/transactions
+{"amountMinor":10003,"attributes":null,"categoryCode":"wqa_custom_2","categoryConfidence":0,"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryKind":"EXPENSE","categoryOrigin":"USER","categoryReason":"","categoryRuleVersion":"","categoryTaxonomyVersion":"","createdAt":"2026-11-24T01:43:42.624952Z","currency":"IDR","deletedAt":null,"description":"WQA cursor row 3","direction":"DEBIT","eventAt":"2026-11-24T01:43:00Z","fingerprint":"cc0d3c789adb23c5d156d989b126a2cc","id":"tx_76d705e0f46422097c542931be9c4d02","isInternalTransfer":false,"linkedRefundOf":null,"merchantLabel":"","monthId":"2026-11","note":"","parserConfidence":0,"parserVersion":"","revision":0,"source":"MANUAL","updatedAt
+HTTP 200  GET /v1/transactions?month=2026-11&limit=2
+{"items":[{"amountMinor":10003,"attributes":null,"categoryCode":"wqa_custom_2","categoryConfidence":0,"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryKind":"EXPENSE","categoryOrigin":"USER","categoryReason":"","categoryRuleVersion":"","categoryTaxonomyVersion":"","createdAt":"2026-11-24T01:43:42.624952Z","currency":"IDR","deletedAt":null,"description":"WQA cursor row 3","direction":"DEBIT","eventAt":"2026-11-24T01:43:00Z","fingerprint":"cc0d3c789adb23c5d156d989b126a2cc","id":"tx_76d705e0f46422097c542931be9c4d02","isInternalTransfer":false,"linkedRefundOf":null,"merchantLabel":"","monthId":"2026-11","note":"","parserConfidence":0,"parserVersion":"","revision":0,"source":"MANUAL",
+HTTP 200  GET /v1/transactions?month=2026-11&limit=2&cursor=MTc5NTQ4NDUyMDAwMHx0eF81YzVkZDczN2RiM2IxNGNlMGViZGFhYzc2MGMzZTczNnw4YmY4ZDE1ZDNlMmFiM2Fl
+{"items":[{"amountMinor":10001,"attributes":null,"categoryCode":"wqa_custom_2","categoryConfidence":0,"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryKind":"EXPENSE","categoryOrigin":"USER","categoryReason":"","categoryRuleVersion":"","categoryTaxonomyVersion":"","createdAt":"2026-11-24T01:43:42.577803Z","currency":"IDR","deletedAt":null,"description":"WQA cursor row 1","direction":"DEBIT","eventAt":"2026-11-24T01:41:00Z","fingerprint":"0ca91e191bc481293026246c44e9b20e","id":"tx_44b7699ddee0c5943e2381f44efefea8","isInternalTransfer":false,"linkedRefundOf":null,"merchantLabel":"","monthId":"2026-11","note":"","parserConfidence":0,"parserVersion":"","revision":0,"source":"MANUAL",
+HTTP 200  GET /v1/categories?limit=2
+{"categories":[{"attributes":null,"code":"education","color":"amber_deep","createdAt":"2026-11-24T01:43:41.616555Z","id":"cat_739245fc2106f1d399c92c9c096a7804","isBuiltin":true,"kind":"EXPENSE","label":"Pendidikan","revision":0,"updatedAt":"2026-11-24T01:43:41.616555Z"},{"attributes":null,"code":"food","color":"amber","createdAt":"2026-11-24T01:43:41.616555Z","id":"cat_b1e571374039e590b800732555c418bf","isBuiltin":true,"kind":"EXPENSE","label":"Makanan","revision":0,"updatedAt":"2026-11-24T01:43:41.616555Z"}],"nextCursor":"<redacted-cursor>","search":{"scanned":3,"truncated":false}}
+
+HTTP 200  GET /v1/categories?limit=2&cursor=eyJiIjp0cnVlLCJjIjoiZm9vZCIsImkiOiJjYXRfYjFlNTcxMzc0MDM5ZTU5MGI4MDA3MzI1NTVjNDE4YmYiLCJzIjoiMzkyMGE5MTQzZDNhZWI5OCJ9
+{"categories":[{"attributes":null,"code":"health","color":"rose","createdAt":"2026-11-24T01:43:41.616555Z","id":"cat_b1723ac60fa7dc88d8d6f3423d82fbd0","isBuiltin":true,"kind":"EXPENSE","label":"Kesehatan","revision":0,"updatedAt":"2026-11-24T01:43:41.616555Z"},{"attributes":null,"code":"housing","color":"violet_deep","createdAt":"2026-11-24T01:43:41.616555Z","id":"cat_148a0f11c32332048da9e796a1364e4d","isBuiltin":true,"kind":"EXPENSE","label":"Tempat tinggal","revision":0,"updatedAt":"2026-11-24T01:43:41.616555Z"}],"nextCursor":"<redacted-cursor>","search":{"scanned":5,"truncated":false}}
+
+C02 tx page1_count=2 page1=[tx_76d705e0f46422097c542931be9c4d02,tx_5c5dd737db3b14ce0ebdaac760c3e736] nextCursor=<redacted-cursor>... page2_count=2 page2=[tx_44b7699ddee0c5943e2381f44efefea8,tx_48a45e661573a76b4218793d4d8668b5]
+C02 cat page1=[cat_739245fc2106f1d399c92c9c096a7804,cat_b1e571374039e590b800732555c418bf] nextCursor=<redacted-cursor>... page2=[cat_b1723ac60fa7dc88d8d6f3423d82fbd0,cat_148a0f11c32332048da9e796a1364e4d]
+HTTP 201  POST /v1/attachments
+{"attributes":{"sumber":"qa"},"createdAt":"2026-11-24T01:43:42.805086Z","deviceRef":null,"fileName":"wqa-bukti.pdf","id":"att_d28ec68d64d9fc64120afcd58d63fe94","localFileId":null,"mimeType":"application/pdf","revision":0,"sha256":"999f13787d1ef2064697415157b0ba40e5d771f9e186f20ec08bc0aef6a67779","sizeBytes":193,"storageRef":"private/wqa/bukti.pdf","transactionId":"tx_48a45e661573a76b4218793d4d8668b5","updatedAt":"2026-11-24T01:43:42.805086Z"}
+
+HTTP 200  GET /v1/attachments?transactionId=tx_48a45e661573a76b4218793d4d8668b5&q=bukti
+{"items":[{"attributes":{"sumber":"qa"},"createdAt":"2026-11-24T01:43:42.805086Z","deviceRef":null,"fileName":"wqa-bukti.pdf","id":"att_d28ec68d64d9fc64120afcd58d63fe94","localFileId":null,"mimeType":"application/pdf","revision":0,"sha256":"999f13787d1ef2064697415157b0ba40e5d771f9e186f20ec08bc0aef6a67779","sizeBytes":193,"storageRef":"private/wqa/bukti.pdf","transactionId":"tx_48a45e661573a76b4218793d4d8668b5","updatedAt":"2026-11-24T01:43:42.805086Z"}]}
+
+HTTP 404  GET /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94
+{"code":"not_found","message":"Not found","retryable":false,"correlationId":"req_4f25dd2a53cf5be428fa75099d6b054e"}
+
+HTTP 409  PATCH /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94
+{"code":"revision_conflict","message":"Revision changed","retryable":false,"correlationId":"req_d543966b2dc90822ec5b33bebce521b8"}
+
+HTTP 200  PATCH /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94
+{"attributes":{"sumber":"qa","tahap":"rename"},"createdAt":"2026-11-24T01:43:42.805086Z","deviceRef":null,"fileName":"wqa-renamed.pdf","id":"att_d28ec68d64d9fc64120afcd58d63fe94","localFileId":null,"mimeType":"application/pdf","revision":1,"sha256":"999f13787d1ef2064697415157b0ba40e5d771f9e186f20ec08bc0aef6a67779","sizeBytes":193,"storageRef":"private/wqa/bukti.pdf","transactionId":"tx_48a45e661573a76b4218793d4d8668b5","updatedAt":"2026-11-24T01:43:42.908139Z"}
+
+HTTP 200  GET /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94
+{"attributes":{"sumber":"qa","tahap":"rename"},"createdAt":"2026-11-24T01:43:42.805086Z","deviceRef":null,"fileName":"wqa-renamed.pdf","id":"att_d28ec68d64d9fc64120afcd58d63fe94","localFileId":null,"mimeType":"application/pdf","revision":1,"sha256":"999f13787d1ef2064697415157b0ba40e5d771f9e186f20ec08bc0aef6a67779","sizeBytes":193,"storageRef":"private/wqa/bukti.pdf","transactionId":"tx_48a45e661573a76b4218793d4d8668b5","updatedAt":"2026-11-24T01:43:42.908139Z"}
+
+HTTP 409  DELETE /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94?revision=99
+{"code":"revision_conflict","message":"Revision changed","retryable":false,"correlationId":"req_48e1854b8bcd02dd7d5ec441fc17ba97"}
+
+HTTP 204  DELETE /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94?revision=1
+
+HTTP 404  DELETE /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94?revision=1
+{"code":"not_found","message":"Not found","retryable":false,"correlationId":"req_79bc6de11dc7f92885673fa3973524d7"}
+
+HTTP 404  GET /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94
+{"code":"not_found","message":"Not found","retryable":false,"correlationId":"req_c5959fa1518f5ec27b3267166f976292"}
+
+C20 create=HTTP 201  POST /v1/attachments
+201 id=att_d28ec68d64d9fc64120afcd58d63fe94 ctx_search=HTTP 200  GET /v1/attachments?transactionId=tx_48a45e661573a76b4218793d4d8668b5&q=bukti
+200 hits=1 other_owner_get=HTTP 404  GET /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94
+404
+C18 stalePatch=HTTP 409  PATCH /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94
+409 code=revision_conflict okPatch=HTTP 200  PATCH /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94
+200 revision=1 fileName(read)=wqa-renamed.pdf attrs={"sumber":"qa","tahap":"rename"}
+C19 delete_bad_rev=HTTP 409  DELETE /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94?revision=99
+409 code=revision_conflict delete_ok=HTTP 204  DELETE /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94?revision=1
+204 retry_delete=HTTP 404  DELETE /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94?revision=1
+404 after_get=HTTP 404  GET /v1/attachments/att_d28ec68d64d9fc64120afcd58d63fe94
+404 code_after=not_found
+HTTP 403  GET /v1/admin/accounts
+{"code":"forbidden","message":"Admin role required","retryable":false,"correlationId":"req_52f494d4761e8e4b7e026e7283fa256a"}
+
+C25 USER admin_route=HTTP 403  GET /v1/admin/accounts
+403 code=forbidden
+== done 2026-11-24 08:43:43 WIB ==
+HTTP 201  POST /v1/sessions
+{"accessToken":"<redacted-jwt>","accessExpiresAt":"2026-11-24T08:58:43.14379+07:00","expiresAt":"2026-11-24T08:58:43.14379+07:00","refreshToken":"<redacted-token>","refreshExpiresAt":"2026-12-24T08:43:43.14379+07:00","displayName":"WQA Owner A","user":{"id":"u_03ea23e182b3f0cf0ea022
+HTTP 200  PUT /v1/budget-plans/2027-01
+{"attributes":{"catatan":"plan untuk dihapus"},"createdAt":"2026-11-24T01:43:43.247992Z","expectedIncomeMinor":5000000,"gapMinor":4500000,"limits":null,"monthId":"2027-01","plannedSavingsMinor":500000,"revision":0,"totalLimitMinor":0,"updatedAt":"2026-11-24T01:43:43.247992Z"}
+
+HTTP 204  DELETE /v1/budget-plans/2027-01
+
+HTTP 404  GET /v1/budget-plans/2027-01
+{"code":"not_found","message":"Not found","retryable":false,"correlationId":"req_946d5c53bdcf6e05233560cbf3e43814"}
+
+HTTP 200  GET /v1/budget-plans?from=2026-12&to=2027-01
+{"plans":[{"attributes":{"catatan":"wqa plan v2","revisi":"2","sumber":"qa"},"createdAt":"2026-11-24T01:43:42.405766Z","expectedIncomeMinor":13000000,"gapMinor":7500000,"limits":[{"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryCode":"wqa_custom_2","amountMinor":3000000}],"monthId":"2026-12","plannedSavingsMinor":2500000,"revision":1,"totalLimitMinor":3000000,"updatedAt":"2026-11-24T01:43:42.48432Z"}]}
+
+C14 delete_plan=HTTP 204  DELETE /v1/budget-plans/2027-01
+204 after_get=HTTP 404  GET /v1/budget-plans/2027-01
+404 code=not_found surviving_list_months=["2026-12"]
+HTTP 201  POST /v1/categories
+{"attributes":{"catatan":"simpan-restart","slot":2,"sumber":"qa"},"code":"wqa_durable","color":"","createdAt":"2026-11-24T01:43:43.350212Z","id":"cat_13115a093c99c43b1be89c594e44ba32","isBuiltin":false,"kind":"EXPENSE","label":"WQA Durabilitas","revision":0,"updatedAt":"2026-11-24T01:43:43.350212Z"}
+
+HTTP 200  PUT /v1/budget-plans/2026-12
+{"attributes":{"catatan":"wqa plan durable","sumber":"qa"},"createdAt":"2026-11-24T01:43:42.405766Z","expectedIncomeMinor":13000000,"gapMinor":9000000,"limits":[{"categoryId":"cat_13115a093c99c43b1be89c594e44ba32","categoryCode":"wqa_durable","amountMinor":1500000}],"monthId":"2026-12","plannedSavingsMinor":2500000,"revision":2,"totalLimitMinor":1500000,"updatedAt":"2026-11-24T01:43:43.386716Z"}
+
+PRE-RESTART cat4=cat_13115a093c99c43b1be89c594e44ba32 cat4_attrs={"catatan":"simpan-restart","slot":2,"sumber":"qa"} plan_rev=2 plan_attrs={"catatan":"wqa plan durable","sumber":"qa"} tx=tx_48a45e661573a76b4218793d4d8668b5
+HTTP 201  POST /v1/sessions
+{"accessToken":"<redacted-jwt>","accessExpiresAt":"2026-11-24T08:58:46.536557+07:00","expiresAt":"2026-11-24T08:58:46.536557+07:00","refreshToken":"<redacted-token>","refreshExpiresAt":"2026-12-24T08:43:46.536557+07:00","displayName":"WQA Owner A","user":{"id":"u_03ea23e182b3f0cf0ea
+HTTP 200  GET /v1/categories/cat_13115a093c99c43b1be89c594e44ba32
+{"attributes":{"catatan":"simpan-restart","slot":2,"sumber":"qa"},"code":"wqa_durable","color":"","createdAt":"2026-11-24T01:43:43.350212Z","id":"cat_13115a093c99c43b1be89c594e44ba32","isBuiltin":false,"kind":"EXPENSE","label":"WQA Durabilitas","revision":0,"updatedAt":"2026-11-24T01:43:43.350212Z"}
+
+HTTP 200  GET /v1/budget-plans/2026-12
+{"attributes":{"catatan":"wqa plan durable","sumber":"qa"},"createdAt":"2026-11-24T01:43:42.405766Z","expectedIncomeMinor":13000000,"gapMinor":9000000,"limits":[{"categoryId":"cat_13115a093c99c43b1be89c594e44ba32","categoryCode":"wqa_durable","amountMinor":1500000}],"monthId":"2026-12","plannedSavingsMinor":2500000,"revision":2,"totalLimitMinor":1500000,"updatedAt":"2026-11-24T01:43:43.386716Z"}
+
+HTTP 200  GET /v1/transactions/tx_48a45e661573a76b4218793d4d8668b5
+{"amountMinor":123456,"attributes":null,"categoryCode":"wqa_custom_2","categoryConfidence":0,"categoryId":"cat_0465103aaf8e4eaee9b218fd046ebe91","categoryKind":"EXPENSE","categoryOrigin":"USER","categoryReason":"","categoryRuleVersion":"","categoryTaxonomyVersion":"","createdAt":"2026-11-24T01:43:42.040263Z","currency":"IDR","deletedAt":null,"description":"WQA C06 custom category used","direction":"DEBIT","eventAt":"2026-11-24T01:40:00Z","fingerprint":"db7a98e1a45c4a5510fa420d6608674f","id":"tx_48a45e661573a76b4218793d4d8668b5","isInternalTransfer":false,"linkedRefundOf":null,"merchantLabel":"","monthId":"2026-11","note":"","parserConfidence":0,"parserVersion":"","revision":0,"source":"MANUA
+POST-RESTART category=HTTP 200  GET /v1/categories/cat_13115a093c99c43b1be89c594e44ba32
+200 attrs={"catatan":"simpan-restart","slot":2,"sumber":"qa"} label=WQA Durabilitas
+POST-RESTART plan=HTTP 200  GET /v1/budget-plans/2026-12
+200 revision=2 limits=[{"categoryId":"cat_13115a093c99c43b1be89c594e44ba32","categoryCode":"wqa_durable","amountMinor":1500000}] attrs={"catatan":"wqa plan durable","sumber":"qa"}
+POST-RESTART transaction=HTTP 200  GET /v1/transactions/tx_48a45e661573a76b4218793d4d8668b5
+200 categoryId=cat_0465103aaf8e4eaee9b218fd046ebe91 amountMinor=123456
+HTTP 401  GET /v1/categories
+{"code":"unauthorized","message":"Missing or invalid access token","retryable":false,"correlationId":"req_870c9b5ae01e139e8b8c50bea8a39857"}
+
+POST-RESTART unauth_categories=HTTP 401  GET /v1/categories
+401 code=unauthorized

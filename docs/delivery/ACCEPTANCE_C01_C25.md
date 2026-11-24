@@ -106,10 +106,62 @@ S3/S4 di atas tanpa bukti baru.
 | Kegagalan + "Coba lagi" di perangkat owner | **PASS runtime** (tampilan alasan & tombol) ; alur resume unggahan **NOT RUN** | Sheet owner idle: alasan gagal tampil, tombol sinkron; buka/tutup ulang identik, tanpa request baru | Tidak ada unggahan pending yang boleh dipicu ulang di data owner |
 | Alasan kategori AI tampil di Android | **PASS runtime (owner, backend 18090 lama)** | `classified=0 needsReview=5 failed=0`; copy "Perlu tinjauan: nama merchant tidak aman dikirim ke AI…"; 0 panggilan Azure. [UAT_CATEGORY_LIVIN_2026-11-23.md](../evidence/UAT_CATEGORY_LIVIN_2026-11-23.md) §12 | Notis nomor referensi di detail **belum teramati** pada record owner; kategori AI terklasifikasi/precision ≥95% tetap **NOT RUN** |
 | Route/layar impor lama pensiun | **PASS by construction + grep**; probe deep-link **NOT RUN** | Destination/shortcut/string impor hilang; tidak ada deep link yang pernah mengekspos route itu. [UAT_UI_REVAMP_2026-11-23.md](../evidence/UAT_UI_REVAMP_2026-11-23.md) §5 | Tidak ada percobaan runtime ke route lama |
-| "Buat Analisis" sebagai gate terpisah (provider Ollama, bulan EMPTY-coverage + tx manual) | **NOT RUN** | Build UAT ini memakai analisis deterministik on-device (`PAM_ANALYSIS_BACKEND_URL` kosong); bulan uji menampilkan "Belum ada data". [UAT_MERGED_UI_CATEGORY_2026-11-23.md](../evidence/UAT_MERGED_UI_CATEGORY_2026-11-23.md) §7 | Perlu konfigurasi URL analisis backend + bulan EMPTY berisi tx manual |
+| "Buat Analisis" sebagai gate terpisah (provider Ollama, bulan EMPTY-coverage + tx manual) | **PASS runtime (Azure, 24 Nov 2026)** | UAT owner `:18090`: `POST /v1/analyses` **200** (5,98 s, korelasi `req_79edd5e5…`), provider Azure 499 prompt + 188/215 completion token, lalu `GET /v1/analyses/2026-11` **200** `status=AVAILABLE`, `freshness=CURRENT`, `inputRevision=26` = revisi server. Log `/tmp/pam-azure-analysis-uat.log`; ringkasan tersimpan [UAT_PM_GO_2026-11-24.md](../evidence/UAT_PM_GO_2026-11-24.md) §F | Percobaan pertama sesi pagi 400 tidak lagi direproduksi setelah backend baru; bulan EMPTY-coverage tetap NOT RUN terpisah |
 
 Gate merged head `a310067`: 509 tes debug / 519 tes assessment (0 gagal), `lintDebug` 0
 error (112 warning), `lintAssessment` 0 error (120 warning), assemble debug+assessment PASS,
 Go test/vet/build/`-race` PASS, APK debug sha256 `0e9169f2…`, assessment `dea936b8…`.
 Regresi merge-only yang ditemukan auditor (7 `MissingTranslation`) diperbaiki di `a310067`
 dan diverifikasi ulang.
+
+## Addendum 24 November 2026 — bukti API/admin/assessment baru (w-qa)
+
+Dokumen rekonsiliasi lengkap + rekomendasi gate:
+[UAT_PM_QA_2026-11-24.md](../evidence/UAT_PM_QA_2026-11-24.md). Test JVM fresh 24 Nov pada
+HEAD `6cc0f2a`: `:app:testDebugUnitTest` **531 tes / 74 suite, 0 failure** dan
+`testAssessmentUnitTest` **541 tes / 75 suite, 0 failure** (angka 513/523 adalah snapshot
+`4dacad7`, bukan HEAD, dan tidak dipakai sebagai klaim final). Rincian mentah:
+`docs/evidence/assets/pm_qa_2026-11-24/{s3_api,s4_admin,ui}/` dan
+[UAT_ASSESSMENT_2026-11-24.md](../evidence/UAT_ASSESSMENT_2026-11-24.md).
+Backend: terisolasi `:18092` (DB sementara, akun sintetis), kecuali walk UI yang memakai UAT
+`:18090` + akun sintetis baru `wqa.ui.*`. Tidak ada akun/data pemilik yang disentuh.
+
+| Butir | Status bukti baru | Bukti | Batas |
+|---|---|---|---|
+| C06 create custom | **PASS API + UI** | POST `/v1/categories` 201 + kategori dipakai transaksi 201; dibuat dari UI (`qa24`, atribut `sumber=qa-uat`) + API readback 200 | — |
+| C07 read | **PASS API** (+ UI) | GET kategori 200 `id/code/label/kind/attributes` | Idem |
+| C08 update + 409 | **PASS API** (+ UI) | PATCH 200 readback + PATCH revisi basi 409 `revision_conflict` | Idem |
+| C09 guard builtin/used | **PASS API + UI** | 403 `builtin_category`; 409 "category is still referenced" (juga dipicu di UAT `:18090`); reassign 204 + GET lama 404; **reassign final lewat UI 24 Nov** `qa24`→`food`, kategori `qa24` count 0 | — |
+| C11 create plan/limits | **PASS API + UI** | PUT plan 200 limits/totalLimit/gap/attributes; **simpan rencana Nov 2026 dari UI 24 Nov** (`ui_split/19`–`21`), API revision 2 | — |
+| C13 update + 409 | **PASS API** | PUT 200 limits/attributes baru; PUT basi 409 | UI update limit + konflik belum dijalankan 24 Nov |
+| C14 delete plan | **PASS API + UI** | DELETE 204 → GET 404, plan lain tetap; **hapus rencana lewat dialog UI 24 Nov** (`ui_split/22`–`23`), API `plans:[]` | — |
+| C02 cursor | **PASS API** | transaksi & kategori halaman 2 dengan id berbeda | UI halaman 2 belum diulang |
+| Persistensi | PASS API | kategori/plan/transaksi tetap setelah restart; kolom DB terenkripsi | DB sementara |
+| C18 konflik revisi | **PASS API** | PATCH stale 409, PATCH benar 200 | UI konflik perangkat ditunda (emulator dialihkan) |
+| C19 hapus + retry | **PASS API** | DELETE rev salah 409, benar 204, retry 404 | Retry kegagalan di UI dicatat §2.5 dok. QA |
+| C20 konteks/owner | **PASS API** | search `transactionId`+`q` 1 hit; owner lain GET 404 | UI konteks dicatat §2.5 dok. QA |
+| C21 bootstrap/audit | PASS API | `pam-admin -promote` + audit `bootstrap_admin`, token lama stale | Email tetap tidak dikirim |
+| C23 role change/revoke/audit | **PASS API + UI** | PATCH role 200; token lama 401 `session_stale`; refresh 401 `refresh_invalid`; audit `admin.account.update`; **promosi/demote akun sintetis `wqa.ui.b` lewat dialog UI 24 Nov** (`ui_split/27`–`34`) | Status SUSPENDED via UI belum diulang |
+| C24 last-admin + race | **PASS API/DB** | race dua admin → tepat 1 sukses, sisi lain 409 `last_admin`; self-demote 409; self-deactivate 400; UPDATE SQL langsung diabort trigger `last_active_admin` | Guard tidak dipentaskan ulang di perangkat |
+| C24 deactivate + revoke | **PASS API** | DELETE 200 SUSPENDED, sesi target 401, audit `admin.account.deactivate` | — |
+| C25 filter/cursor/USER | **PASS API + PARTIAL UI (diperluas)** | role/status filter, cursor halaman 2, `q=`; USER token 403 `forbidden`; layar Admin menolak USER di UI; **filter peran ADMIN di UI menyaring 8→5 akun** 24 Nov (`ui_split/30`–`31`) | Cursor UI tidak ada (daftar UAT < page size); pencarian live UI tidak menyaring (temuan §2.5 dok. QA) |
+| S4.4 assessment | **PASS audit** | assemble+test+deps RC=0; 523 tes 0 gagal; 0 dependensi/string Room/SQLCipher/WorkManager; APK tanpa `libsqlcipher.so` | Tidak koexist (applicationId sama); foreground-only; install NOT RUN |
+
+Sesi UI perangkat 24 Nov terbagi dua (emulator-5556, akun sintetis `wqa.ui.a`, UAT `:18090`).
+Sesi pagi menambah bukti UI **C06/C07/C08** (buat kategori `qa24` + atribut dari UI, readback
+editor, banner konflik 409) dan **C25 USER-ditolak**. Sesi ulang build gabungan 11:07–11:35 WIB
+menambah bukti UI **nav P0 PASS**, **C09 reassign final**, **C11/C14 rencana anggaran**, **C23
+role-change akun sintetis**, dan **filter peran C25**. Sisa GAP bukti UI (bukan FAIL): C13
+update/konflik, C18–C20, status SUSPENDED C23 via UI, guard last-admin C24 di perangkat, dan
+regresi parser "Penerima" di UI (di-SKIP atas arahan Lead; diverifikasi Lead lewat API UAT).
+Dokumentasi UI: `docs/evidence/assets/pm_qa_2026-11-24/ui/` dan `.../ui_split/` (sesi ulang).
+**Serah terima emulator:** 5556 diserahkan ke w-ui sejak 09:31 WIB, lalu dikembalikan untuk sesi
+ulang 11:07–11:35 WIB dan dilepas kembali setelah walk selesai.
+
+Status gate di atas **tidak dinaikkan** oleh addendum ini; rekomendasi gate ada di dokumen QA
+§4 dan keputusan tetap milik Lead/pemilik.
+
+| Butir P0 24 Nov | Status | Bukti | Batas |
+|---|---|---|---|
+| Navigasi Transaksi satu sumber bulan + kembali ke Ringkasan | **PASS runtime (emulator gabungan)** | Sesi ulang 11:07–11:35 WIB: gejala (c) kembali dari daftar Transaksi ke Ringkasan **direproduksi sebelum** perbaikan lalu **PASS sesudah**; Home↔Transaksi dua putaran; "Lihat semua" konsisten; bulan aktif tampil. Lihat [UAT_PM_UI_2026-11-24.md](../evidence/UAT_PM_UI_2026-11-24.md) + `ui_split/01`–`17` | Varian final lewat **Run Android Studio** pemilik dan drill-down-after dengan data belum dijalankan; gejala (a) tab kosong tidak tereproduksi |
+| Merchant Livin = nama `Penerima`, repair tanpa duplikat | **PASS API/unit (data owner read-only)** | 49 baris November 2026 tanpa duplikat setelah repair 13 baris; label nama usaha, bukan PAN/referensi; 40 baris uncategorized di-enqueue, job `NEEDS_REVIEW` revisi 0 lama tidak memblokir, 8 baris terklasifikasi model (6 food/1 shopping/1 transport) biaya $0.00101235. [UAT_PM_GO_2026-11-24.md](../evidence/UAT_PM_GO_2026-11-24.md) §E | Tampilan merchant di UI detail baru diverifikasi visual terbatas; dedupe re-import antar-perangkat belum terbukti karena klien belum mengirim `sourceRef` di jalur impor |

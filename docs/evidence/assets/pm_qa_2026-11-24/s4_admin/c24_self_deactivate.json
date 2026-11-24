@@ -1,0 +1,1 @@
+{"code":"invalid_request","message":"an admin cannot change their own privileged state","retryable":false,"correlationId":"req_cef7841fd4074851d8f4835be31d6eae"}

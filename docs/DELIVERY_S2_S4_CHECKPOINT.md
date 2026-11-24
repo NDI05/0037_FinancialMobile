@@ -801,3 +801,67 @@ utama yang tersisa; `origin/feat/c2-android == 718eaf7` (verifikasi via `git ls-
 
 Mailbox nyata + email baru otomatis, benchmark berlabel manusia (precision), 36 email
 malformed, UAT pemilik penuh, hosting/backup-restore, serta keputusan merge/deploy.
+
+## Penutupan P0 owner 24 November 2026 — `feat/c2-android` @ `3b8a038`
+
+Dua P0 yang dimandatkan pemilik dikerjakan, diuji, dan di-push; gate di bawah adalah keputusan
+PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
+
+### Paket perubahan
+
+- Navigasi Transaksi satu sumber bulan: `0030a43` — `tabNavigationSpec` memakai
+  `popUpTo(Overview)` non-inclusive + `singleTop`, `ActiveMonthStore` sebagai sumber bulan aktif,
+  test `TabNavigationSpecTest` (3) dan `TransactionsTabMonthTest` (5). Bukti UI gabungan:
+  [UAT_PM_UI_2026-11-24.md](evidence/UAT_PM_UI_2026-11-24.md) + dump sanitized.
+- Parser Livin: `02ee6df` — nama merchant diambil dari `Penerima` (fallback `Merchant`/`Nama
+  Merchant`), `Merchant PAN`/`Customer PAN`/`No. Referensi`/`No. Ref. QRIS` tidak pernah menjadi
+  nama; test +5 parser dan +1 MIME.
+- Identitas email server-derived: `b5ee7ae` — migrasi `016` (`source_ref_ciphertext/iv/tag/
+  key_version`, `source_ref_hash`, UNIQUE parsial owner+hash), fingerprint HMAC, PATCH CAS repair;
+  test `merchant_repair_test.go`.
+- Repair label satu kali saat sync: `276b7e1` — marker `merchant_repair_v1_<bulan>`, bukti
+  identitas lokal, `MAX_EMAIL_REFS=100`, marker hanya jika `failed==0`, temuan Go `patchHasOtherChanges`;
+  `MerchantRepairUseCaseTest` (5) + regresi `ImportMonthUseCaseTest`.
+- Celah klasifikasi pasca-repair: `6cc0f2a` (baris `uncategorized` tetap eligible; validasi
+  analisis mencatat alasan penolakan) dan `3b8a038` (satu aturan eligibility, tanpa cabang
+  redundan); test `TestAutoCategoryQueueReopensUncategorizedUserRow`.
+- Audit P1: redaksi token aset QA (belum di-commit saat audit), redaksi email/owner-id pemilik
+  di evidence 23 Nov (`0436fe2`), klaim dedupe re-import dipersempit (lihat batas).
+- Evidence: [UAT_PM_GO_2026-11-24.md](evidence/UAT_PM_GO_2026-11-24.md) §D–E,
+  [UAT_PM_UI_2026-11-24.md](evidence/UAT_PM_UI_2026-11-24.md),
+  [UAT_PM_QA_2026-11-24.md](evidence/UAT_PM_QA_2026-11-24.md),
+  [UAT_AUDIT_2026-11-24.md](evidence/UAT_AUDIT_2026-11-24.md).
+
+### Hasil gate fresh (auditor independen, HEAD `6cc0f2a`)
+
+- Go `test ./... -count=1` PASS 8/8 paket, 127 test top-level; `go vet` bersih.
+- Android debug **531 test/74 suite/0 gagal**, assessment **541/75/0 gagal** (`--rerun-tasks`);
+  `:app:lintDebug` 0 error, 112 warning, 1 hint.
+- UAT API owner (read-only): 49 baris November 2026 tanpa duplikat setelah repair 13 baris;
+  label merchant berupa nama usaha; 40 baris uncategorized di-enqueue, job `NEEDS_REVIEW`
+  revisi 0 lama tidak memblokir, 8 baris terklasifikasi model (6 Makanan, 1 Belanja,
+  1 Transportasi), biaya aktual $0.00101235.
+- Emulator gabungan `wqa`: (c) kembali dari daftar Transaksi ke Ringkasan direproduksi sebelum
+  perbaikan dan PASS sesudah; (a) tab kosong tidak tereproduksi; C09/C11/C14 PASS runtime.
+
+### Keputusan gate PM (24 November 2026)
+
+- **S2 = PARTIAL (kondisional).** Perbaikan P0 dan bukti unit/integrasi lengkap, tetapi
+  acceptance varian final di perangkat pemilik (Run Android Studio) dan bukti drill-down-after
+  dengan data belum ada; klaim dedupe re-import via `sourceRef` tidak boleh dibaca PASS karena
+  klien belum mengirim `sourceRef` di jalur impor. Gate tetap terbuka sampai Run pemilik.
+- **S3 = PASS API/unit.** C01–C15 lulus sesuai matriks; dua aksi UI (C09/C25) tetap PARTIAL
+  sesuai batas yang sudah dicatat, bukan PASS palsu.
+- **S4 = PARTIAL.** C16–C20 dan C21/C24 lulus dari sesi 23 Nov; C25 UI PARTIAL dan
+  tombol **Buat Analisis** dari UI owner masih 400 (logging alasan sudah ditambahkan; penyebab
+  menunggu percobaan pemilik).
+- **S5 tetap terbuka:** merge/deploy, hosting/backup, benchmark berlabel, mailbox produksi.
+
+### Batas yang tidak diklaim
+
+Repair hanya memindai bulan yang sedang disinkronkan; `transactions.go` masih menulis
+`category_origin='USER'` saat PATCH kategori (provenance berubah meski nilai kategori/note
+tetap); klien belum mengirim `sourceRef` pada jalur impor sehingga dedupe antar-perangkat/
+reinstall belum terbukti; filter/cursor C25 dan role-change C23 baru diuji sebagian;
+perubahan kontrak PATCH `merchantLabel` (wajib `expectedFingerprint`) belum masuk dokumen
+kontrak.

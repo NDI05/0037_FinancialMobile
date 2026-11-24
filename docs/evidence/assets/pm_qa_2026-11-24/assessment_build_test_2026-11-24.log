@@ -1,0 +1,225 @@
+== assembleAssessment 2026-11-24 08:36:37 WIB ==
+
+> Configure project :app
+WARNING: The option setting 'android.defaults.buildfeatures.buildconfig=true' is deprecated.
+The current default is 'false'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+To keep using this feature, add the following to your module-level build.gradle files:
+    android.buildFeatures.buildConfig = true
+or from Android Studio, click: `Refactor` > `Migrate BuildConfig to Gradle Build Files`.
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preAssessmentBuild UP-TO-DATE
+> Task :app:mergeAssessmentNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateAssessmentBuildConfig UP-TO-DATE
+> Task :app:checkAssessmentAarMetadata UP-TO-DATE
+> Task :app:processAssessmentNavigationResources FROM-CACHE
+> Task :app:compileAssessmentNavigationResources UP-TO-DATE
+> Task :app:generateAssessmentResValues UP-TO-DATE
+> Task :app:mapAssessmentSourceSetPaths
+> Task :app:generateAssessmentResources FROM-CACHE
+> Task :app:packageAssessmentResources
+> Task :app:parseAssessmentLocalResources FROM-CACHE
+> Task :app:createAssessmentCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksAssessment UP-TO-DATE
+> Task :app:processAssessmentMainManifest UP-TO-DATE
+> Task :app:processAssessmentManifest UP-TO-DATE
+> Task :app:processAssessmentManifestForPackage UP-TO-DATE
+> Task :app:javaPreCompileAssessment UP-TO-DATE
+> Task :app:mergeAssessmentShaders UP-TO-DATE
+> Task :app:compileAssessmentShaders NO-SOURCE
+> Task :app:generateAssessmentAssets UP-TO-DATE
+> Task :app:mergeAssessmentAssets UP-TO-DATE
+> Task :app:compressAssessmentAssets UP-TO-DATE
+> Task :app:desugarAssessmentFileDependencies UP-TO-DATE
+> Task :app:checkAssessmentDuplicateClasses UP-TO-DATE
+> Task :app:mergeExtDexAssessment UP-TO-DATE
+> Task :app:mergeLibDexAssessment UP-TO-DATE
+> Task :app:mergeAssessmentJniLibFolders UP-TO-DATE
+> Task :app:mergeAssessmentResources
+> Task :app:mergeAssessmentNativeLibs UP-TO-DATE
+> Task :app:stripAssessmentDebugSymbols UP-TO-DATE
+> Task :app:validateSigningAssessment UP-TO-DATE
+> Task :app:writeAssessmentAppMetadata UP-TO-DATE
+> Task :app:writeAssessmentSigningConfigVersions UP-TO-DATE
+> Task :app:processAssessmentResources
+> Task :app:kspAssessmentKotlin
+> Task :app:compileAssessmentKotlin
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/data/ai/AnalysisCopySource.kt:36:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/domain/usecase/SyncSessionCoordinator.kt:85:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to property.
+- To opt in to applying to both value parameter and property, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/components/CategoryVisuals.kt:74:45 'val Icons.Rounded.HelpOutline: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.HelpOutline.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/components/PamScaffold.kt:162:38 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/account/AccountScreen.kt:56:35 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/admin/AdminScreen.kt:70:33 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/analysis/AnalysisScreen.kt:86:36 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/attachment/TransactionAttachmentsSection.kt:51:38 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/budget/BudgetPlanScreen.kt:80:38 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/category/CategoryManagementScreen.kt:59:46 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/consent/ConsentScreen.kt:45:35 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/entry/ManualEntryScreen.kt:60:39 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/entry/ManualEntryScreen.kt:88:56 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/gmail/GmailConnectScreen.kt:64:40 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/overview/OverviewScreen.kt:110:36 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/overview/OverviewScreen.kt:596:41 'val Icons.Rounded.Undo: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Undo.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/settings/ConsentHistoryScreen.kt:46:42 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/settings/DataDeletionScreen.kt:51:40 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/settings/SettingsScreen.kt:74:36 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/settings/SettingsScreen.kt:257:38 'val Icons.Rounded.Logout: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Logout.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/status/UpdateStatusTopBarAction.kt:35:44 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/transactions/TransactionDetailScreen.kt:79:45 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/transactions/TransactionsScreen.kt:65:40 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/navigation/PamNavHost.kt:66:47 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/navigation/PamNavHost.kt:92:49 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/navigation/PamNavHost.kt:240:30 'val Icons.Rounded.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ReceiptLong.
+
+> Task :app:compileAssessmentJavaWithJavac
+> Task :app:hiltAggregateDepsAssessment UP-TO-DATE
+> Task :app:hiltJavaCompileAssessment
+> Task :app:processAssessmentJavaRes
+> Task :app:mergeAssessmentJavaResource
+> Task :app:transformAssessmentClassesWithAsm
+> Task :app:dexBuilderAssessment
+> Task :app:mergeAssessmentGlobalSynthetics UP-TO-DATE
+> Task :app:mergeProjectDexAssessment
+> Task :app:packageAssessment
+> Task :app:createAssessmentApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleAssessment
+w: Detected multiple Kotlin daemon sessions at 
+
+[Incubating] Problems report is available at: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.4.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 13s
+43 actionable tasks: 14 executed, 3 from cache, 26 up-to-date
+ASSEMBLE_RC=0
+== testAssessmentUnitTest 2026-11-24 08:37:51 WIB ==
+
+> Configure project :app
+WARNING: The option setting 'android.defaults.buildfeatures.buildconfig=true' is deprecated.
+The current default is 'false'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+To keep using this feature, add the following to your module-level build.gradle files:
+    android.buildFeatures.buildConfig = true
+or from Android Studio, click: `Refactor` > `Migrate BuildConfig to Gradle Build Files`.
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preAssessmentBuild UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateAssessmentBuildConfig
+> Task :app:checkAssessmentAarMetadata
+> Task :app:processAssessmentNavigationResources
+> Task :app:generateAssessmentResValues
+> Task :app:compileAssessmentNavigationResources
+> Task :app:mapAssessmentSourceSetPaths
+> Task :app:generateAssessmentResources
+> Task :app:packageAssessmentResources
+> Task :app:createAssessmentCompatibleScreenManifests
+> Task :app:extractDeepLinksAssessment
+> Task :app:parseAssessmentLocalResources
+> Task :app:mergeAssessmentResources
+> Task :app:processAssessmentMainManifest
+> Task :app:processAssessmentManifest
+> Task :app:javaPreCompileAssessment
+> Task :app:mergeAssessmentShaders
+> Task :app:compileAssessmentShaders NO-SOURCE
+> Task :app:generateAssessmentAssets UP-TO-DATE
+> Task :app:mergeAssessmentAssets
+> Task :app:preAssessmentUnitTestBuild UP-TO-DATE
+> Task :app:processAssessmentUnitTestManifest
+> Task :app:javaPreCompileAssessmentUnitTest
+> Task :app:processAssessmentManifestForPackage
+> Task :app:processAssessmentResources
+> Task :app:packageAssessmentUnitTestForUnitTest
+> Task :app:generateAssessmentUnitTestConfig
+> Task :app:kspAssessmentKotlin
+> Task :app:compileAssessmentKotlin
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/data/ai/AnalysisCopySource.kt:36:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/domain/usecase/SyncSessionCoordinator.kt:85:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to property.
+- To opt in to applying to both value parameter and property, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/components/CategoryVisuals.kt:74:45 'val Icons.Rounded.HelpOutline: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.HelpOutline.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/components/PamScaffold.kt:162:38 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/account/AccountScreen.kt:56:35 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/admin/AdminScreen.kt:70:33 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/analysis/AnalysisScreen.kt:86:36 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/attachment/TransactionAttachmentsSection.kt:51:38 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/budget/BudgetPlanScreen.kt:80:38 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/category/CategoryManagementScreen.kt:59:46 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/consent/ConsentScreen.kt:45:35 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/entry/ManualEntryScreen.kt:60:39 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/entry/ManualEntryScreen.kt:88:56 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/gmail/GmailConnectScreen.kt:64:40 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/overview/OverviewScreen.kt:110:36 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/overview/OverviewScreen.kt:596:41 'val Icons.Rounded.Undo: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Undo.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/settings/ConsentHistoryScreen.kt:46:42 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/settings/DataDeletionScreen.kt:51:40 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/settings/SettingsScreen.kt:74:36 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/settings/SettingsScreen.kt:257:38 'val Icons.Rounded.Logout: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Logout.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/status/UpdateStatusTopBarAction.kt:35:44 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/transactions/TransactionDetailScreen.kt:79:45 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/feature/transactions/TransactionsScreen.kt:65:40 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/navigation/PamNavHost.kt:66:47 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/navigation/PamNavHost.kt:92:49 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/main/java/com/pam/recap/ui/navigation/PamNavHost.kt:240:30 'val Icons.Rounded.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ReceiptLong.
+
+> Task :app:compileAssessmentJavaWithJavac
+> Task :app:hiltAggregateDepsAssessment
+> Task :app:hiltJavaCompileAssessment
+> Task :app:processAssessmentJavaRes
+> Task :app:bundleAssessmentClassesToCompileJar
+> Task :app:transformAssessmentClassesWithAsm
+> Task :app:bundleAssessmentClassesToRuntimeJar
+> Task :app:kspAssessmentUnitTestKotlin
+
+> Task :app:compileAssessmentUnitTestKotlin
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/test/java/com/pam/recap/contract/ContractBridgeTest.kt:82:22 Redundant creation of Json format. Creating instances for each usage can be slow.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/test/java/com/pam/recap/contract/ContractBridgeTest.kt:84:13 This declaration needs opt-in. Its usage should be marked with '@kotlinx.serialization.ExperimentalSerializationApi' or '@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)'
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/test/java/com/pam/recap/contract/ContractBridgeTest.kt:90:9 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'File?'.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/test/java/com/pam/recap/data/gmail/LivinQrisParserTest.kt:75:21 Check for instance is always 'false'.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/test/java/com/pam/recap/domain/usecase/SyncSessionCoordinatorTest.kt:187:13 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/testAssessment/java/com/pam/recap/assessment/AssessmentDurabilityTest.kt:595:27 The corresponding parameter in the supertype 'WrappedSecretStore' is named 'plainSecret'. This may cause problems when calling this function with named arguments.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/testAssessment/java/com/pam/recap/assessment/AssessmentDurabilityTest.kt:602:27 The corresponding parameter in the supertype 'WrappedSecretStore' is named 'plainSecret'. This may cause problems when calling this function with named arguments.
+w: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/src/testAssessment/java/com/pam/recap/assessment/AssessmentVariantTest.kt:331:27 The corresponding parameter in the supertype 'WrappedSecretStore' is named 'plainSecret'. This may cause problems when calling this function with named arguments.
+
+> Task :app:compileAssessmentUnitTestJavaWithJavac NO-SOURCE
+> Task :app:hiltAggregateDepsAssessmentUnitTest
+> Task :app:hiltJavaCompileAssessmentUnitTest NO-SOURCE
+> Task :app:processAssessmentUnitTestJavaRes
+> Task :app:transformAssessmentUnitTestClassesWithAsm
+> Task :app:testAssessmentUnitTest
+> Task :app:finalizeTestRoborazziAssessment SKIPPED
+
+[Incubating] Problems report is available at: file:///Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.4.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 44s
+38 actionable tasks: 38 executed
+TEST_RC=0
+== dependency graph assessmentRuntimeClasspath 2026-11-24 08:39:35 WIB ==
+DEPS_RC=0
+DONE rc_assemble=0 rc_test=0 rc_deps=0

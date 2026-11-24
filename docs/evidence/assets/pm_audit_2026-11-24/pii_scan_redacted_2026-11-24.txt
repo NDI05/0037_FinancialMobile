@@ -1,0 +1,29 @@
+# Scan PII/secret (auditor, 24 Nov 2026) — nilai sensitif TIDAK dicetak (redacted)
+
+A. Token/refresh token mentah di aset evidence (belum di-commit; working tree):
+   docs/evidence/assets/pm_qa_2026-11-24/s3_api/login_a.json
+   docs/evidence/assets/pm_qa_2026-11-24/s3_api/login_a2.json
+   docs/evidence/assets/pm_qa_2026-11-24/s3_api/login_a3.json
+   docs/evidence/assets/pm_qa_2026-11-24/s3_api/login_b.json
+   docs/evidence/assets/pm_qa_2026-11-24/s3_api/state.env        (TA, TB)
+   docs/evidence/assets/pm_qa_2026-11-24/s3_api/pre_restart.env
+   docs/evidence/assets/pm_qa_2026-11-24/s3_api/scenario_transcript.txt
+   docs/evidence/assets/pm_qa_2026-11-24/s4_admin/login_a.json
+   docs/evidence/assets/pm_qa_2026-11-24/s4_admin/login_a_admin.json
+   docs/evidence/assets/pm_qa_2026-11-24/s4_admin/login_b_admin.json
+   docs/evidence/assets/pm_qa_2026-11-24/s4_admin/login_c.json
+   docs/evidence/assets/pm_qa_2026-11-24/s4_admin/state_admin.env (TA, TB, ACTOR)
+   docs/evidence/assets/pm_qa_2026-11-24/s4_admin/scenario_transcript.txt
+   Isi: accessToken (exp 24 Nov), refreshToken (exp 24 Des 2026) untuk akun sintetis
+   UAT/isolated. owner: wqa.owner.*@pam-uat.test. Tidak ada token pemilik.
+   Status: 0 file ter-track git saat audit; semuanya kandidat commit.
+
+B. Email/owner-id pemilik di dokumen ter-track (pre-existing, bukan dari commit yang diaudit):
+   docs/REAL_UAT_HANDOFF.md:49
+   docs/evidence/UAT_S4_ADMIN_2026-11-23.md:17,20,23,47,51
+   docs/evidence/UAT_S4_ATTACHMENTS_2026-11-23.md:15
+
+C. Tidak ditemukan (teks): PAN 16-19 digit, nomor referensi 19 digit, App Password,
+   private key, Bearer token di dokumen/aset 24 Nov. PNG tidak didekode; tidak ada klaim.
+
+D. Yang aman: aset UI 24 Nov memakai akun sintetis dan email disamarkan (wui/wqa.*@pam-uat.test).

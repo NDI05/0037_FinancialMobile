@@ -1,0 +1,105 @@
+HTTP 201  POST /v1/accounts
+{"displayName":"WQA Owner C","email":"wqa.owner.c@pam-uat.test","ownerId":"u_e72b7ad43f9616676e9104aca70dbe16","role":"USER","userId":"u_e72b7ad43f9616676e9104aca70dbe16"}
+
+HTTP 201  POST /v1/sessions
+{"accessToken":"<redacted-jwt>","accessExpiresAt":"2026-11-24T08:58:46.917869+07:00","expiresAt":"2026-11-24T08:58:46.917869+07:00","refreshToken":"<redacted-token>","refreshExpiresAt":"2026-12-24T08:43:46.917869+07:00","displayName":"WQA Owner C","user":{"id":"u_e72b7ad43f9616676e9104aca70dbe16","ownerId":"u_e72b7ad43f9616676e9104aca70dbe16","email":"wqa.owner.c@pam-uat.test","di
+HTTP 201  POST /v1/sessions
+{"accessToken":"<redacted-jwt>","accessExpiresAt":"2026-11-24T08:58:47.02023+07:00","expiresAt":"2026-11-24T08:58:47.02023+07:00","refreshToken":"<redacted-token>","refreshExpiresAt":"2026-12-24T08:43:47.02023+07:00","displayName":"WQA Owner A","user":{"id":"u_03ea23e182b3f0cf0ea02224096bed9a","ownerId":"u_03ea23e182b3f0cf0ea02224096bed9a","email":"wqa.owner.a@pam-uat.test","displ
+A role before bootstrap: USER
+CLI promote: owner=u_03ea23e182b3f0cf0ea02224096bed9a email=wqa.owner.a@pam-uat.test role=ADMIN changed=true (promoted)
+HTTP 401  GET /v1/me
+{"code":"session_stale","message":"Session role changed","retryable":false,"correlationId":"req_9135b32ac4baaf78da500dad9b802b1a"}
+
+HTTP 201  POST /v1/sessions
+{"accessToken":"<redacted-jwt>","accessExpiresAt":"2026-11-24T08:58:47.177948+07:00","expiresAt":"2026-11-24T08:58:47.177948+07:00","refreshToken":"<redacted-token>","refreshExpiresAt":"2026-12-24T08:43:47.177948+07:00","displayName":"WQA Owner A","user":{"id":"u_03ea23e182b3f0cf0ea02224096bed9a","ownerId":"u_03ea23e182b3f0cf0ea02224096bed9a","email":"wqa.owner.a@pam-uat.test","d
+stale_old_token=HTTP 401  GET /v1/me
+401 code=session_stale | relogin role=ADMIN
+HTTP 200  GET /v1/admin/accounts?q=wqa.owner.b
+{"items":[{"createdAt":"2026-11-24T01:43:41.714148Z","displayName":"WQA Owner B","email":"wqa.owner.b@pam-uat.test","ownerId":"u_fc086edbf9378fb03c23c2aab6260f8c","revision":0,"role":"USER","status":"ACTIVE","updatedAt":"2026-11-24T01:43:41.714148Z","userId":"u_fc086edbf9378fb03c23c2aab6260f8c"}]}
+
+HTTP 200  PATCH /v1/admin/accounts/u_fc086edbf9378fb03c23c2aab6260f8c
+{"createdAt":"2026-11-24T01:43:41.714148Z","displayName":"WQA Owner B","email":"wqa.owner.b@pam-uat.test","ownerId":"u_fc086edbf9378fb03c23c2aab6260f8c","revision":1,"role":"ADMIN","status":"ACTIVE","updatedAt":"2026-11-24T01:43:47.336105Z","userId":"u_fc086edbf9378fb03c23c2aab6260f8c"}
+
+HTTP 401  GET /v1/me
+{"code":"session_stale","message":"Session is no longer active","retryable":false,"correlationId":"req_a65cdda5f540a031e29892e36c193e4d"}
+
+HTTP 201  POST /v1/sessions
+{"accessToken":"<redacted-jwt>","accessExpiresAt":"2026-11-24T08:58:47.384624+07:00","expiresAt":"2026-11-24T08:58:47.384624+07:00","refreshToken":"<redacted-token>","refreshExpiresAt":"2026-12-24T08:43:47.384624+07:00","displayName":"WQA Owner B","user":{"id":"u_fc086edbf9378fb03c23c2aab6260f8c","ownerId":"u_fc086edbf9378fb03c23c2aab6260f8c","email":"wqa.owner.b@pam-uat.test","d
+C23 update=HTTP 200  PATCH /v1/admin/accounts/u_fc086edbf9378fb03c23c2aab6260f8c
+200 owner=u_fc086edbf9378fb03c23c2aab6260f8c role_before=USER role_after=ADMIN | b_new_login_role=ADMIN
+C23 pre-change B token GET /v1/me status=session_stale
+HTTP 403  GET /v1/admin/accounts
+{"code":"forbidden","message":"Admin role required","retryable":false,"correlationId":"req_e77f06bcf76c6ec19d42bd73fbe04f5a"}
+
+C25 USER-token admin route=HTTP 403  GET /v1/admin/accounts
+403 code=forbidden
+HTTP 200  GET /v1/admin/accounts?role=ADMIN&limit=100
+{"items":[{"createdAt":"2026-11-24T01:43:41.714148Z","displayName":"WQA Owner B","email":"wqa.owner.b@pam-uat.test","ownerId":"u_fc086edbf9378fb03c23c2aab6260f8c","revision":1,"role":"ADMIN","status":"ACTIVE","updatedAt":"2026-11-24T01:43:47.336105Z","userId":"u_fc086edbf9378fb03c23c2aab6260f8c"},{"createdAt":"2026-11-24T01:43:41.616555Z","displayName":"WQA Owner A","email":"wqa.owner.a@pam-uat.test","ownerId":"u_03ea23e182b3f0cf0ea02224096bed9a","revision":1,"role":"ADMIN","status":"ACTIVE","updatedAt":"2026-11-24T01:43:47.135078Z","userId":"u_03ea23e182b3f0cf0ea02224096bed9a"}]}
+
+HTTP 200  GET /v1/admin/accounts?status=ACTIVE&limit=100
+{"items":[{"createdAt":"2026-11-24T01:43:46.89296Z","displayName":"WQA Owner C","email":"wqa.owner.c@pam-uat.test","ownerId":"u_e72b7ad43f9616676e9104aca70dbe16","revision":0,"role":"USER","status":"ACTIVE","updatedAt":"2026-11-24T01:43:46.89296Z","userId":"u_e72b7ad43f9616676e9104aca70dbe16"},{"createdAt":"2026-11-24T01:43:41.714148Z","displayName":"WQA Owner B","email":"wqa.owner.b@pam-uat.test","ownerId":"u_fc086edbf9378fb03c23c2aab6260f8c","revision":1,"role":"ADMIN","status":"ACTIVE","updatedAt":"2026-11-24T01:43:47.336105Z","userId":"u_fc086edbf9378fb03c23c2aab6260f8c"},{"createdAt":"2026-11-24T01:43:41.616555Z","displayName":"WQA Owner A","email":"wqa.owner.a@pam-uat.test","ownerId":"u_03ea23e182b3f0cf0ea02224096bed9a","revision":1,"role":"ADMIN","status":"ACTIVE","updatedAt":"2026-
+HTTP 200  GET /v1/admin/accounts?q=wqa.owner
+{"items":[{"createdAt":"2026-11-24T01:43:46.89296Z","displayName":"WQA Owner C","email":"wqa.owner.c@pam-uat.test","ownerId":"u_e72b7ad43f9616676e9104aca70dbe16","revision":0,"role":"USER","status":"ACTIVE","updatedAt":"2026-11-24T01:43:46.89296Z","userId":"u_e72b7ad43f9616676e9104aca70dbe16"},{"createdAt":"2026-11-24T01:43:41.714148Z","displayName":"WQA Owner B","email":"wqa.owner.b@pam-uat.test","ownerId":"u_fc086edbf9378fb03c23c2aab6260f8c","revision":1,"role":"ADMIN","status":"ACTIVE","updatedAt":"2026-11-24T01:43:47.336105Z","userId":"u_fc086edbf9378fb03c23c2aab6260f8c"},{"createdAt":"2026-11-24T01:43:41.616555Z","displayName":"WQA Owner A","email":"wqa.owner.a@pam-uat.test","ownerId":"u_03ea23e182b3f0cf0ea02224096bed9a","revision":1,"role":"ADMIN","status":"ACTIVE","updatedAt":"2026-
+HTTP 200  GET /v1/admin/accounts?limit=1
+{"items":[{"createdAt":"2026-11-24T01:43:46.89296Z","displayName":"WQA Owner C","email":"wqa.owner.c@pam-uat.test","ownerId":"u_e72b7ad43f9616676e9104aca70dbe16","revision":0,"role":"USER","status":"ACTIVE","updatedAt":"2026-11-24T01:43:46.89296Z","userId":"u_e72b7ad43f9616676e9104aca70dbe16"}],"nextCursor":"<redacted-cursor>"}
+
+HTTP 200  GET /v1/admin/accounts?limit=1&cursor=MTc5NTQ4NDYyNjAwMHx1X2U3MmI3YWQ0M2Y5NjE2Njc2ZTkxMDRhY2E3MGRiZTE2fDk2YTI5NmQyMjRmMjg1YzY
+{"items":[{"createdAt":"2026-11-24T01:43:41.714148Z","displayName":"WQA Owner B","email":"wqa.owner.b@pam-uat.test","ownerId":"u_fc086edbf9378fb03c23c2aab6260f8c","revision":1,"role":"ADMIN","status":"ACTIVE","updatedAt":"2026-11-24T01:43:47.336105Z","userId":"u_fc086edbf9378fb03c23c2aab6260f8c"}],"nextCursor":"<redacted-cursor>"}
+
+C25 role=ADMIN count=2 roles=["ADMIN"]
+C25 status=ACTIVE count=3 page1=u_e72b7ad43f9616676e9104aca70dbe16 nextCursor=<redacted-cursor>... page2=u_fc086edbf9378fb03c23c2aab6260f8c distinct=yes
+C25 q=wqa.owner count=3 emails=["wqa.owner.c@pam-uat.test","wqa.owner.b@pam-uat.test","wqa.owner.a@pam-uat.test"]
+HTTP 200  GET /v1/admin/accounts/u_fc086edbf9378fb03c23c2aab6260f8c
+{"createdAt":"2026-11-24T01:43:41.714148Z","displayName":"WQA Owner B","email":"wqa.owner.b@pam-uat.test","ownerId":"u_fc086edbf9378fb03c23c2aab6260f8c","revision":1,"role":"ADMIN","status":"ACTIVE","updatedAt":"2026-11-24T01:43:47.336105Z","userId":"u_fc086edbf9378fb03c23c2aab6260f8c"}
+
+HTTP 200  GET /v1/admin/accounts?q=wqa.owner.a
+{"items":[{"createdAt":"2026-11-24T01:43:41.616555Z","displayName":"WQA Owner A","email":"wqa.owner.a@pam-uat.test","ownerId":"u_03ea23e182b3f0cf0ea02224096bed9a","revision":1,"role":"ADMIN","status":"ACTIVE","updatedAt":"2026-11-24T01:43:47.135078Z","userId":"u_03ea23e182b3f0cf0ea02224096bed9a"}]}
+
+C24 actors: A=u_03ea23e182b3f0cf0ea02224096bed9a rev=1 B=u_fc086edbf9378fb03c23c2aab6260f8c rev=1
+C24 RACE a_demotes_b=409 code=last_admin | b_demotes_a=200 code=null
+C24 race outcome: exactly_one_success=yes
+HTTP 200  GET /v1/admin/accounts?role=ADMIN
+{"items":[{"createdAt":"2026-11-24T01:43:41.714148Z","displayName":"WQA Owner B","email":"wqa.owner.b@pam-uat.test","ownerId":"u_fc086edbf9378fb03c23c2aab6260f8c","revision":1,"role":"ADMIN","status":"ACTIVE","updatedAt":"2026-11-24T01:43:47.336105Z","userId":"u_fc086edbf9378fb03c23c2aab6260f8c"}]}
+
+HTTP 409  PATCH /v1/admin/accounts/u_fc086edbf9378fb03c23c2aab6260f8c
+{"code":"last_admin","message":"The last active admin cannot be changed","retryable":false,"correlationId":"req_b66228d135d8e65e13bda49e009a38d3"}
+
+HTTP 400  DELETE /v1/admin/accounts/u_fc086edbf9378fb03c23c2aab6260f8c?revision=1
+{"code":"invalid_request","message":"an admin cannot change their own privileged state","retryable":false,"correlationId":"req_cef7841fd4074851d8f4835be31d6eae"}
+
+C24 self_demote_last_admin=HTTP 409  PATCH /v1/admin/accounts/u_fc086edbf9378fb03c23c2aab6260f8c
+409 code=last_admin msg=The last active admin cannot be changed
+C24 self_deactivate=HTTP 400  DELETE /v1/admin/accounts/u_fc086edbf9378fb03c23c2aab6260f8c?revision=1
+400 code=invalid_request msg=an admin cannot change their own privileged state
+C24 DB trigger direct UPDATE: Error in 2nd command line argument: last_active_admin
+C24 admins_left_in_db=1
+HTTP 401  GET /v1/me
+{"code":"session_stale","message":"Session is no longer active","retryable":false,"correlationId":"req_666ed317d8ea88a7d59e0e748ccf10d7"}
+
+HTTP 401  POST /v1/sessions/refresh
+{"code":"refresh_invalid","message":"Session is no longer active","retryable":false,"correlationId":"req_0b20e68749cb18cd781bd7c16cf6f0f1"}
+
+C24 demoted_token_me=session_stale | refresh_after_role_change=refresh_invalid
+HTTP 200  GET /v1/admin/accounts/u_03ea23e182b3f0cf0ea02224096bed9a
+{"createdAt":"2026-11-24T01:43:41.616555Z","displayName":"WQA Owner A","email":"wqa.owner.a@pam-uat.test","ownerId":"u_03ea23e182b3f0cf0ea02224096bed9a","revision":2,"role":"USER","status":"ACTIVE","updatedAt":"2026-11-24T01:43:47.764666Z","userId":"u_03ea23e182b3f0cf0ea02224096bed9a"}
+
+HTTP 200  DELETE /v1/admin/accounts/u_03ea23e182b3f0cf0ea02224096bed9a?revision=2
+{"createdAt":"2026-11-24T01:43:41.616555Z","displayName":"WQA Owner A","email":"wqa.owner.a@pam-uat.test","ownerId":"u_03ea23e182b3f0cf0ea02224096bed9a","revision":3,"role":"USER","status":"SUSPENDED","updatedAt":"2026-11-24T01:43:48.032475Z","userId":"u_03ea23e182b3f0cf0ea02224096bed9a"}
+
+C24 deactivate_demoted=HTTP 200  DELETE /v1/admin/accounts/u_03ea23e182b3f0cf0ea02224096bed9a?revision=2
+200 status=SUSPENDED
+HTTP 401  GET /v1/me
+{"code":"session_stale","message":"Session is no longer active","retryable":false,"correlationId":"req_83b3c95305d6f26acf186dcc29b85935"}
+
+C24 demoted_token_after_deactivate=session_stale
+HTTP 200  GET /v1/admin/audit?limit=50
+{"items":[{"action":"admin.account.deactivate","actorOwnerId":"u_fc086edbf9378fb03c23c2aab6260f8c","createdAt":"2026-11-24T01:43:48.032475Z","id":"aud_2df85df90b39479e10f65454a55885f4","metadata":{"status":"SUSPENDED"},"targetOwnerId":"u_03ea23e182b3f0cf0ea02224096bed9a"},{"action":"admin.account.update","actorOwnerId":"u_fc086edbf9378fb03c23c2aab6260f8c","createdAt":"2026-11-24T01:43:47.764666Z","id":"aud_ed095e10ffa71f7f82f3ec0ad41ff8b7","metadata":{"displayName":"WQA Owner A","role":"USER","status":"ACTIVE"},"targetOwnerId":"u_03ea23e182b3f0cf0ea02224096bed9a"},{"action":"admin.account.update","actorOwnerId":"u_03ea23e182b3f0cf0ea02224096bed9a","createdAt":"2026-11-24T01:43:47.336105Z","id":"aud_566ed5d8e09c0308d3eb9304e5809d20","metadata":{"displayName":"WQA Owner B","role":"ADMIN","st
+HTTP 200  GET /v1/admin/audit?action=admin.account.update&limit=50
+{"items":[{"action":"admin.account.update","actorOwnerId":"u_fc086edbf9378fb03c23c2aab6260f8c","createdAt":"2026-11-24T01:43:47.764666Z","id":"aud_ed095e10ffa71f7f82f3ec0ad41ff8b7","metadata":{"displayName":"WQA Owner A","role":"USER","status":"ACTIVE"},"targetOwnerId":"u_03ea23e182b3f0cf0ea02224096bed9a"},{"action":"admin.account.update","actorOwnerId":"u_03ea23e182b3f0cf0ea02224096bed9a","createdAt":"2026-11-24T01:43:47.336105Z","id":"aud_566ed5d8e09c0308d3eb9304e5809d20","metadata":{"displayName":"WQA Owner B","role":"ADMIN","status":"ACTIVE"},"targetOwnerId":"u_fc086edbf9378fb03c23c2aab6260f8c"}]}
+
+HTTP 200  GET /v1/admin/audit?action=admin.account.deactivate&limit=50
+{"items":[{"action":"admin.account.deactivate","actorOwnerId":"u_fc086edbf9378fb03c23c2aab6260f8c","createdAt":"2026-11-24T01:43:48.032475Z","id":"aud_2df85df90b39479e10f65454a55885f4","metadata":{"status":"SUSPENDED"},"targetOwnerId":"u_03ea23e182b3f0cf0ea02224096bed9a"}]}
+
+AUDIT actions=["admin.account.deactivate","admin.account.update","bootstrap_admin"]
+AUDIT update_rows=2 deactivate_rows=1
+== admin suite done 2026-11-24 08:43:48 WIB ==

@@ -273,6 +273,10 @@ langsung di-push ke branch kerja yang sama. Merge/deploy memerlukan instruksi te
 Perbarui baris tanggal hari ini pada log harian dengan commit, bukti dan gate tersisa;
 jangan menulis PASS hanya karena source ditambahkan atau build berhasil.
 
-**Gate terbuka:** correctness auto-sync, seluruh S2–S4 yang belum diterima, benchmark
-berlabel manusia, coverage parser yang belum terbukti, serta perangkat/background,
-backup/restore, availability dan owner UAT sesuai gate S5.
+**Status gate 24 November 2026 (HEAD `3b8a038`):** S2 **PARTIAL** (perbaikan P0 nav +
+parser/merchant sudah di-push, test fresh 531/541 lulus, menunggu Run Android Studio pemilik untuk
+acceptance varian final), S3 **PASS API/unit** (C09/C25 UI PARTIAL sesuai batas), S4 **PARTIAL**
+(tombol Buat Analisis dari UI owner masih 400). Gate terbuka: correctness auto-sync lanjutan,
+drill-down-after nav dengan data, dedupe re-import antar-perangkat, benchmark berlabel manusia,
+coverage parser, perangkat/background, backup/restore, availability, serta merge/deploy (butuh
+instruksi pemilik).

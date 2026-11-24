@@ -1,0 +1,5 @@
+Fresh Go test run (auditor), HEAD 6cc0f2a, 24 Nov 2026
+Command: cd backend-go && ../scripts/go.sh test ./... -count=1
+Result: PASS semua paket (0 failure). Lihat test_fresh_2026-11-24.txt untuk rincian.
+Test yang relevan: httpapi/merchant_repair_test.go (3 test), httpapi/category_queue_test.go
+(TestAutoCategoryQueueReopensUncategorizedUserRow), store fingerprint/imports.
