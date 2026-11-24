@@ -69,9 +69,9 @@ bukan data pemilik.
 |---|---|---|---|
 | C21 Create terkontrol/invite; public register USER | **PASS runtime** | `pam-admin -promote` idempoten + audit `bootstrap_admin`; undangan `201` token tampil sekali; `POST /v1/accounts` dari undangan `201` peran sesuai undangan | Email undangan tidak benar-benar dikirim |
 | C22 Read list/detail tanpa finance owner lain | **PASS runtime** | Daftar 4 akun, detail editor, tidak ada data keuangan di layar admin | Hanya 4 akun UAT |
-| C23 Update role/status/revision/revocation/audit | **PASS runtime** | Edit nama 200, konflik 409 dengan draf utuh, reload revisi lalu simpan 200; audit `admin.account.update` | Perubahan peran belum dijalankan di perangkat (nama/status sudah) |
+| C23 Update role/status/revision/revocation/audit | **PASS runtime** | Edit nama 200, konflik 409 dengan draf utuh, reload revisi lalu simpan 200; audit `admin.account.update`; 24 Nov: promosi/demote peran via UI (`ui_split/27`–`34`) dan SUSPENDED via UI (`ui_split/41`, DB rev 3) | — |
 | C24 Delete/deactivate + last-admin guard + revoke | **PASS runtime** | Nonaktifkan akun lain 200 → `SUSPENDED` + seluruh sesi target dicabut; self-deactivate ditolak 400; last-admin guard ditutup test store/HTTP + trigger DB; walk teraudit `a512770` (`UAT_GAP_ADMIN_2026-11-23.md`), regresi merged head lulus | Guard `last_admin` tidak dipicu ulang di perangkat (sengaja, agar sesi admin bukti tidak tercabut) |
-| C25 Search query/role/status/cursor; USER ditolak | **PASS runtime** | Pencarian `andhika` → 1 baris; USER tanpa peran ditolak sebelum request admin; filter peran/status/cursor diuji API/VM; list default server mengecualikan DELETED (commit `daa5f36`); walk teraudit `a512770`, regresi merged head lulus; field pencarian admin tidak lagi dinonaktifkan selama pemuatan (hardening + unit test, 24 Nov) | Filter status di perangkat hanya diamati; cursor butuh >1 halaman; walk perangkat tidak diulang sengaja |
+| C25 Search query/role/status/cursor; USER ditolak | **PASS runtime** | Pencarian `andhika` → 1 baris; USER tanpa peran ditolak sebelum request admin; filter peran/status/cursor diuji API/VM; list default server mengecualikan DELETED (commit `daa5f36`); walk teraudit `a512770`; 24 Nov: field pencarian admin memakai state lokal (`4860808`) sehingga pencarian live menyaring 9→1 tanpa *Muat ulang* (`ui_split/40`) dan filter status SUSPENDED 9→1 (`ui_split/42`) | Cursor lintas halaman hanya API/unit (daftar UAT < page size) |
 
 ## Kesimpulan gate
 
@@ -118,7 +118,7 @@ dan diverifikasi ulang.
 
 Dokumen rekonsiliasi lengkap + rekomendasi gate:
 [UAT_PM_QA_2026-11-24.md](../evidence/UAT_PM_QA_2026-11-24.md). Test JVM fresh 24 Nov pada
-HEAD `9473064` (+ hardening field pencarian admin): `:app:testDebugUnitTest` **532 tes /
+HEAD `4860808` (+ hardening & state lokal field pencarian admin): `:app:testDebugUnitTest` **533 tes /
 74 suite, 0 failure** dan `testAssessmentUnitTest` **542 tes / 75 suite, 0 failure** (angka 513/523 adalah snapshot
 `4dacad7`, bukan HEAD, dan tidak dipakai sebagai klaim final). Rincian mentah:
 `docs/evidence/assets/pm_qa_2026-11-24/{s3_api,s4_admin,ui}/` dan

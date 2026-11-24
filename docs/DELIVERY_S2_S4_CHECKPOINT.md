@@ -835,7 +835,7 @@ PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
 ### Hasil gate fresh (auditor independen, HEAD `6cc0f2a`)
 
 - Go `test ./... -count=1` PASS 8/8 paket, 127 test top-level; `go vet` bersih.
-- Android debug **532 test/74 suite/0 gagal**, assessment **542/75/0 gagal** (setelah hardening pencarian admin);
+- Android debug **533 test/74 suite/0 gagal**, assessment **543/75/0 gagal** (setelah hardening & state lokal pencarian admin `4860808`);
   `:app:lintDebug` 0 error, 112 warning, 1 hint.
 - UAT API owner (read-only): 49 baris November 2026 tanpa duplikat setelah repair 13 baris;
   label merchant berupa nama usaha; 40 baris uncategorized di-enqueue, job `NEEDS_REVIEW`
@@ -853,9 +853,12 @@ PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
   [UAT_PM_QA_2026-11-24.md](evidence/UAT_PM_QA_2026-11-24.md) §2.6.
 - Hardening UI admin (`897e751`): field pencarian tidak dinonaktifkan selama pemuatan halaman
   (hanya saat aksi `busy`), unit test baru; APK perangkat pemilik dipasang ulang 11:51 dan
-  auto-sync mengirim satu `POST /v1/import-jobs` 201. Temuan QA "pencarian tidak menyaring"
-  tidak tereproduksi dari artefak statis (dump `35` hanya memuat akun `wqa.*`); walk ulang
-  admin belum dijalankan karena sesi admin sintetis tidak aktif.
+  auto-sync mengirim satu `POST /v1/import-jobs` 201. Saat walk ulang admin 12:05–12:15 temuan
+  QA "pencarian tidak menyaring" **tereproduksi** sebagai teks teracak karena field terikat ke
+  query ViewModel dan terekomposisi saat pemuatan; perbaikan final `4860808` menyimpan teks
+  field secara lokal, pencarian live kini menyaring 9→1 tanpa *Muat ulang*, filter status
+  SUSPENDED 9→1, dan SUSPENDED via dialog UI terbukti (DB rev 3).
+  [UAT_PM_QA_2026-11-24.md](evidence/UAT_PM_QA_2026-11-24.md) §2.8, `ui_split/40`–`42`.
 
 ### Keputusan gate PM (24 November 2026)
 
@@ -868,10 +871,11 @@ PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
   UI 24 Nov; C02/C06–C08/C10/C12/C15 mengandalkan runtime 23 Nov atau API 24 Nov dan tidak
   dijalankan ulang. Keputusan acceptance final tetap di pemilik.
 - **S4 = PARTIAL.** C16–C20 (termasuk konflik dan retry hapus lampiran di perangkat,
-  QA doc §2.7), C21/C22/C24, C23 (API+UI), dan **Buat Analisis** (Azure 200,
-  `AVAILABLE/CURRENT`, UI "ANALISIS TERSIMPAN") sudah terbukti; C25 UI tetap PARTIAL
-  (status SUSPENDED via UI dan cursor lintas halaman belum dijalankan; pencarian admin live
-  belum diulang di perangkat; hardening field pencarian `897e751`).
+  QA doc §2.7), C21/C22/C24, C23 (API+UI, termasuk SUSPENDED via dialog), C25 (API + UI:
+  pencarian live, filter peran/status, USER ditolak — QA doc §2.8), dan **Buat Analisis**
+  (Azure 200, `AVAILABLE/CURRENT`, UI "ANALISIS TERSIMPAN") sudah terbukti. Sisa bukti
+  UI: C20 konteks/owner-scope dan guard last-admin C24 di perangkat; cursor C25 lintas
+  halaman hanya API/unit karena daftar UAT < page size.
 - **S5 tetap terbuka:** merge/deploy, hosting/backup, benchmark berlabel, mailbox produksi.
 
 ### Batas yang tidak diklaim
