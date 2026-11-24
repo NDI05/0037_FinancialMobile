@@ -2,10 +2,11 @@
 
 Tanggal keputusan: **23 November 2026**.
 Status **24 November 2026**: polling Gmail sudah diuji dengan fixture, termasuk pada
-HP fisik. UAT Gmail live dan gate GCP Rp0 masih terbuka. Google SSO dan onboarding
+HP fisik. **Gmail live PASS** untuk akun pilot owner (12/12 bulan, 914 transaksi unik, 0
+duplikat; [evidence](../evidence/GMAIL_LIVE_IMPORT_2026-11-24.md)). Google SSO dan onboarding
 Gmail terpadu disetujui untuk dirancang di §10; implementasinya selesai di fixture/unit
-(`pam-app@e67380a`, backend `71013f5`), sedangkan UAT akun Google nyata, Gmail live, dan
-gate Rp0 **NOT RUN (owner)**.
+(`pam-app@e67380a`, backend `71013f5`) dan live Gmail berjalan, sedangkan UAT akun Google nyata
+(**G36**) dan gate Rp0 (**G29/G37**) tetap **NOT RUN/OPEN (owner)**.
 
 Draf konsolidasi SRS: [CR-005](../changes/CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md) dan
 [CR-007](../changes/CR_007_DRAFT_GMAIL_API_YEARLY_WORKFLOW.md).
@@ -315,7 +316,9 @@ Ukur waktu penyimpanan, waktu tampil di Android, dan waktu kategori selesai seca
 **Status 24 November 2026** — **implementasi selesai di fixture/unit** (`pam-app@e67380a`,
 backend `71013f5`): Credential Manager, verifikasi ID token Go (RS256/JWKS,
 issuer/audience/expiry/nonce sekali pakai), penautan unik-atomik, onboarding Gmail + Lewati.
-UAT akun Google nyata, Gmail live, dan gate Rp0 **NOT RUN (owner)**; bukti polling FIXTURE
+Live Gmail **PASS** untuk akun pilot owner (914 transaksi unik, 0 duplikat, 12/12 bulan),
+dengan parser produksi ditandai `gmail-livin-v2` (backend `e3b84b4`/`7bb16f0`); UAT akun Google
+nyata (**G36**) dan gate Rp0 (**G29/G37**) tetap **NOT RUN/OPEN (owner)**. Bukti polling FIXTURE
 tetap berlaku untuk lingkup fixture. Lihat [CR-007](../changes/CR_007_DRAFT_GMAIL_API_YEARLY_WORKFLOW.md)
 dan [matriks gate](../delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md).
 
