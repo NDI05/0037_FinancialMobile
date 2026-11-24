@@ -1,12 +1,16 @@
 package com.pam.recap
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
@@ -20,6 +24,7 @@ import com.pam.recap.domain.repository.AutoCategoryScheduler
 import com.pam.recap.domain.repository.AutoSyncScheduler
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.AutoCategoryUseCase
+import com.pam.recap.domain.model.GmailLinkResult
 import com.pam.recap.domain.usecase.IncrementalSyncUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -34,6 +39,9 @@ import kotlinx.coroutines.launch
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    /** Result of `pam://gmail/connected…`, consumed by the nav host once the gate is Ready. */
+    private var gmailLinkResult by mutableStateOf<GmailLinkResult?>(null)
 
     @Inject
     lateinit var sessions: SessionRepository
@@ -70,15 +78,39 @@ class MainActivity : ComponentActivity() {
                 WindowManager.LayoutParams.FLAG_SECURE,
             )
         }
+        readGmailLink(intent)
         setContent {
             PamTheme {
                 com.pam.recap.ui.feature.status.UpdateStatusActionProvider {
                     Box(modifier = Modifier.fillMaxSize().background(Ink)) {
-                        PamNavHost()
+                        PamNavHost(
+                            gmailLinkResult = gmailLinkResult,
+                            onGmailLinkHandled = { gmailLinkResult = null },
+                        )
                     }
                 }
             }
         }
+    }
+
+    /**
+     * The OAuth callback returns from the browser as `pam://gmail/connected?status=…&reason=…`
+     * (contract §2). Only the projection is kept; no token or code is read or stored.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        readGmailLink(intent)
+    }
+
+    private fun readGmailLink(intent: Intent?) {
+        val data = intent?.data ?: return
+        if (data.scheme != "pam" || data.host != "gmail") return
+        if (data.path?.startsWith("/connected") != true) return
+        gmailLinkResult = GmailLinkResult.fromWire(
+            status = data.getQueryParameter("status"),
+            reason = data.getQueryParameter("reason"),
+        )
     }
 
     /**

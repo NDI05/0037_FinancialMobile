@@ -38,7 +38,9 @@ import com.pam.recap.ui.feature.budget.BudgetPlanScreen
 import com.pam.recap.ui.feature.category.CategoryManagementScreen
 import com.pam.recap.ui.feature.consent.ConsentScreen
 import com.pam.recap.ui.feature.entry.ManualEntryScreen
+import com.pam.recap.domain.model.GmailLinkResult
 import com.pam.recap.ui.feature.gmail.GmailConnectScreen
+import com.pam.recap.ui.feature.gmail.GmailLinkScreen
 import com.pam.recap.ui.feature.overview.OverviewScreen
 import com.pam.recap.ui.feature.settings.ConsentHistoryScreen
 import com.pam.recap.ui.feature.settings.DataDeletionScreen
@@ -61,7 +63,12 @@ import com.pam.recap.ui.session.SessionGateViewModel
  * flow screens, and the raised action always opens the import job.
  */
 @Composable
-fun PamNavHost(modifier: Modifier = Modifier) {
+fun PamNavHost(
+    modifier: Modifier = Modifier,
+    /** Result of the `pam://gmail/connected` deep link, parsed by MainActivity. */
+    gmailLinkResult: GmailLinkResult? = null,
+    onGmailLinkHandled: () -> Unit = {},
+) {
     val navController = rememberNavController()
     val gateViewModel: SessionGateViewModel = hiltViewModel()
     val gate by gateViewModel.state.collectAsStateWithLifecycle()
@@ -70,6 +77,18 @@ fun PamNavHost(modifier: Modifier = Modifier) {
 
     LaunchedEffect(gate, destination) {
         gateRedirect(gate, destination)?.let(navController::replaceWith)
+    }
+
+    // The browser returns through the pam://gmail/connected deep link. Only navigate once the gate
+    // is Ready, otherwise the redirect would immediately replace the target screen.
+    LaunchedEffect(gmailLinkResult, gate) {
+        val result = gmailLinkResult ?: return@LaunchedEffect
+        if (gate !is GateState.Ready) return@LaunchedEffect
+        navController.navigate(
+            PamDestination.GmailLink(status = if (result.success) "success" else "error",
+                reason = result.reason),
+        )
+        onGmailLinkHandled()
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -111,6 +130,15 @@ fun PamNavHost(modifier: Modifier = Modifier) {
                             navController.replaceWith(PamDestination.Overview())
                         }
                     },
+                )
+            }
+
+            composable<PamDestination.GmailLink> { entry ->
+                val args = entry.toRoute<PamDestination.GmailLink>()
+                GmailLinkScreen(
+                    onBack = { navController.popBackStack() },
+                    statusArg = args.status,
+                    reasonArg = args.reason,
                 )
             }
 
@@ -181,6 +209,7 @@ fun PamNavHost(modifier: Modifier = Modifier) {
             composable<PamDestination.Settings> {
                 SettingsScreen(
                     onOpenGmail = { navController.navigate(PamDestination.GmailConnect) },
+                    onOpenGmailLink = { navController.navigate(PamDestination.GmailLink()) },
                     onOpenConsentHistory = { navController.navigate(PamDestination.ConsentHistory) },
                     onOpenBudget = { navController.navigate(PamDestination.BudgetPlan()) },
                     onOpenCategories = { navController.navigate(PamDestination.CategoryManagement) },

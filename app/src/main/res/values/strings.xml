@@ -665,4 +665,36 @@
     <string name="admin_audit_empty">Belum ada catatan audit.</string>
     <string name="admin_audit_load_more">Muat audit lain</string>
     <string name="settings_admin_row">Kelola undangan, peran dan status akun.</string>
+
+    <!-- Gmail OAuth link (contract 0037-Backend-Financial §1–§4). No token/password is asked here. -->
+    <string name="gmail_link_title">Gmail</string>
+    <string name="gmail_link_eyebrow">Sumber data</string>
+    <string name="gmail_link_headline">Tautkan Gmail lewat izin browser</string>
+    <string name="gmail_link_connecting">Memeriksa status Gmail…</string>
+    <string name="gmail_link_not_connected">Gmail belum tertaut</string>
+    <string name="gmail_link_connected_as">Terhubung sebagai %1$s</string>
+    <string name="gmail_link_connected_generic">Gmail terhubung</string>
+    <string name="gmail_link_connect">Tautkan Gmail</string>
+    <string name="gmail_link_reconnect">Ganti akun Gmail</string>
+    <string name="gmail_link_disconnect">Putuskan</string>
+    <string name="gmail_link_disconnect_title">Putuskan Gmail?</string>
+    <string name="gmail_link_disconnect_body">Email berhenti dibaca dan token dicabut di server. Transaksi yang sudah dikonfirmasi tetap tersimpan.</string>
+    <string name="gmail_link_success">Gmail berhasil ditautkan.</string>
+    <string name="gmail_link_failed">Gagal menautkan Gmail. Kode: %1$s</string>
+    <string name="gmail_link_failed_generic">Gagal menautkan Gmail. Coba lagi.</string>
+    <string name="gmail_link_server_required">Fitur ini memerlukan koneksi ke server PAM. Build ini belum mengatur alamat server.</string>
+    <string name="gmail_link_consent_title">Izin dan retensi</string>
+    <string name="gmail_link_consent_notice">Email hanya diproses sementara di server untuk membaca notifikasi Livin. Isi email tidak disimpan di perangkat ini.</string>
+    <string name="gmail_link_consent_separate">Persetujuan Gmail, kategorisasi AI, dan Analisis AI terpisah; masing-masing bisa diubah kapan saja.</string>
+    <string name="gmail_link_retention">Transaksi disimpan maksimal 1 tahun sejak dibuat, lalu dihapus.</string>
+    <string name="gmail_link_sync_idle">Sinkronisasi menganggur</string>
+    <string name="gmail_link_sync_backfill">Menyiapkan data setahun…</string>
+    <string name="gmail_link_sync_delta">Menyinkronkan email baru…</string>
+    <string name="gmail_link_sync_error">Sinkronisasi gagal; coba lagi nanti</string>
+    <string name="gmail_link_sync_unknown">Status sinkronisasi belum diketahui</string>
+    <string name="gmail_link_last_sync">Sinkron terakhir</string>
+    <string name="gmail_link_watch_until">Pemantauan otomatis sampai</string>
+    <string name="gmail_link_never">belum pernah</string>
+    <string name="gmail_link_browser_missing">Tidak ada browser untuk membuka izin Gmail.</string>
+    <string name="settings_open_gmail_link">Tautkan Gmail lewat browser</string>
 </resources>

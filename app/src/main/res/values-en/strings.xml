@@ -643,4 +643,36 @@
     <string name="budget_history_item_detail">limit %1$s · gap %2$s</string>
     <string name="budget_history_truncated">Showing the latest %1$d plans; narrow the month range to see the rest.</string>
     <string name="category_more_hint">Showing %1$d of %2$d scanned categories; narrow the search to see the rest.</string>
+
+    <!-- Gmail OAuth link (contract 0037-Backend-Financial §1–§4). No token/password is asked here. -->
+    <string name="gmail_link_title">Gmail</string>
+    <string name="gmail_link_eyebrow">Data source</string>
+    <string name="gmail_link_headline">Link Gmail through browser consent</string>
+    <string name="gmail_link_connecting">Checking Gmail status…</string>
+    <string name="gmail_link_not_connected">Gmail not linked</string>
+    <string name="gmail_link_connected_as">Connected as %1$s</string>
+    <string name="gmail_link_connected_generic">Gmail connected</string>
+    <string name="gmail_link_connect">Link Gmail</string>
+    <string name="gmail_link_reconnect">Change Gmail account</string>
+    <string name="gmail_link_disconnect">Disconnect</string>
+    <string name="gmail_link_disconnect_title">Disconnect Gmail?</string>
+    <string name="gmail_link_disconnect_body">Email reading stops and the token is revoked on the server. Confirmed transactions stay.</string>
+    <string name="gmail_link_success">Gmail linked successfully.</string>
+    <string name="gmail_link_failed">Gmail linking failed. Code: %1$s</string>
+    <string name="gmail_link_failed_generic">Gmail linking failed. Try again.</string>
+    <string name="gmail_link_server_required">This feature needs a connection to the PAM server. This build has no server address.</string>
+    <string name="gmail_link_consent_title">Consent and retention</string>
+    <string name="gmail_link_consent_notice">Email is processed only briefly on the server to read Livin notifications. Email content is not stored on this device.</string>
+    <string name="gmail_link_consent_separate">Gmail, AI categorisation and AI Analysis consents are separate; each can be changed at any time.</string>
+    <string name="gmail_link_retention">Transactions are kept for at most 1 year after creation, then deleted.</string>
+    <string name="gmail_link_sync_idle">Sync idle</string>
+    <string name="gmail_link_sync_backfill">Preparing a year of data…</string>
+    <string name="gmail_link_sync_delta">Syncing new email…</string>
+    <string name="gmail_link_sync_error">Sync failed; try again later</string>
+    <string name="gmail_link_sync_unknown">Sync status unknown</string>
+    <string name="gmail_link_last_sync">Last sync</string>
+    <string name="gmail_link_watch_until">Automatic watch until</string>
+    <string name="gmail_link_never">never</string>
+    <string name="gmail_link_browser_missing">No browser is available to open the Gmail consent page.</string>
+    <string name="settings_open_gmail_link">Link Gmail through browser</string>
 </resources>

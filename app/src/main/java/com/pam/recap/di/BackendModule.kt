@@ -5,11 +5,13 @@ import com.pam.recap.data.backend.BackendEndpoints
 import com.pam.recap.data.backend.BackendSessionRepositoryImpl
 import com.pam.recap.data.backend.ServerAnalysisRepositoryImpl
 import com.pam.recap.data.backend.ServerFinanceRepositoryImpl
+import com.pam.recap.data.backend.ServerGmailLinkRepositoryImpl
 import com.pam.recap.data.backend.BackendSyncClient
 import com.pam.recap.domain.repository.BackendConsentSync
 import com.pam.recap.domain.repository.BackendDeletionSync
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.domain.repository.BackendSummarySync
+import com.pam.recap.domain.repository.GmailLinkRepository
 import com.pam.recap.domain.repository.ServerAnalysisRepository
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import dagger.Binds
@@ -53,4 +55,8 @@ abstract class BackendModule {
     @Binds
     @Singleton
     abstract fun bindServerAnalysis(impl: ServerAnalysisRepositoryImpl): ServerAnalysisRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindGmailLink(impl: ServerGmailLinkRepositoryImpl): GmailLinkRepository
 }

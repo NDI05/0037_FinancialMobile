@@ -344,6 +344,27 @@ class PamApiClient @Inject constructor(
     // shared request helpers; only the HTTP → AppError mapping is admin-specific so the UI can tell
     // `invalid_cursor`, `revision_conflict`, `last_admin` and `invitation_expired` apart.
 
+    // Gmail OAuth link (contract §1–§4, backend repo 0037-Backend-Financial). The Android client
+    // only starts the flow and reads the projection; tokens never reach this device.
+    suspend fun gmailStatus(ownerId: String): Outcome<RemoteGmailStatus> =
+        get(ownerId, "/v1/gmail/status", RemoteGmailStatus.serializer())
+
+    suspend fun gmailConnectStart(
+        ownerId: String,
+        reconnect: Boolean = false,
+    ): Outcome<RemoteGmailConnectStart> {
+        val encoded = json.encodeToString(
+            RemoteGmailConnectRequest.serializer(),
+            RemoteGmailConnectRequest(reconnect = reconnect),
+        )
+        return send(ownerId, "POST", "/v1/gmail/connect/start", encoded, null,
+            RemoteGmailConnectStart.serializer())
+    }
+
+    suspend fun gmailDisconnect(ownerId: String): Outcome<RemoteGmailDisconnect> =
+        send(ownerId, "POST", "/v1/gmail/disconnect", "{}", null,
+            RemoteGmailDisconnect.serializer())
+
     suspend fun currentRole(ownerId: String): Outcome<RemoteAuthMe> =
         get(ownerId, "/v1/me", RemoteAuthMe.serializer(), ::adminBackendError)
 
