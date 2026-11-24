@@ -20,6 +20,21 @@ dokumen + skrip verifikasi). Hasil fresh: backend `go vet ./...`, `go build ./..
 `assembleDebug` **PASS** (APK 47.992.939 B, sha256 `8ce4763c…`). Status gate di bawah **tidak
 berubah**: G25/G29/G36 tetap NOT RUN/open menunggu input pemilik.
 
+Revisi 24 November 2026 (ronde 6): **UAT live pertama pemilik** dijalankan pada backend resmi
+`127.0.0.1:18090` dengan kredensial OAuth nyata. Backfill pertama memindai ratusan email tetapi
+**mengimpor 0 transaksi** karena templat produksi Livin memakai label **stacked** (`Penerima` di
+baris sendiri, nilai di baris berikutnya) dan tanggal+waktu bertumpuk dengan nama bulan Indonesia
+(`12 Okt 2026` + `pkl 09:30:45 WIB`); parser hanya mengenal bentuk fixture satu baris. Backend
+diperbaiki lewat `5df6be6` (label/waktu stacked) dan `c98527b` (bulan Indonesia), diuji ulang
+(`go vet/build/test ./...` + `-race` **PASS**), lalu runtime resmi dibangun ulang dan dijalankan
+ulang. Hasil live: **transaksi Livin nyata masuk tanpa duplikat** (Nov 40/54, Okt 53/86, Agu
+55/124; total 327 baris unik pada snapshot 19:59 WIB, backfill melanjutkan ke bulan-bulan
+sebelumnya) — rincian agregat di
+[GMAIL_LIVE_IMPORT](../evidence/GMAIL_LIVE_IMPORT_2026-11-24.md). **G25 (Gmail live) berubah
+menjadi PASS (live, akun pilot owner)**; G29/G37 (Rp0) tetap OPEN dan **G36 (SSO Google + tombol
+Run pemilik) tetap NOT RUN** karena login Google nyata belum dicoba. Gate Gmail live dan SSO
+dilaporkan terpisah sesuai mandat.
+
 ## 1. Pasangan build yang diverifikasi
 
 | Komponen | Repo | Branch | HEAD | Status `main` |
@@ -95,7 +110,7 @@ lingkungan/kredensial atau sengaja menunggu pemilik.
 | G22. Audit independen | Audit split, Gmail API/retensi, audit akhir retensi, **audit ronde 4** atas polling/status/sinkron manual, **audit ronde 5** re-audit perbaikan ronde 4 + bukti UAT | [AUDIT_BACKEND_SPLIT](../evidence/AUDIT_BACKEND_SPLIT_2026-11-24.md), [AUDIT_GMAIL_API](../evidence/AUDIT_GMAIL_API_2026-11-24.md), [AUDIT_RETENTION](../evidence/AUDIT_RETENTION_INTEGRATION_2026-11-24.md), [AUDIT_FINAL_FIXES](../evidence/AUDIT_FINAL_FIXES_2026-11-24.md); ronde 4 → `addc240` (Android) + `1290910` (backend); [AUDIT round 5](../evidence/AUDIT_GMAIL_POLLING_R5_2026-11-24.md); ronde 5 verdict: MAJOR/P0 nol, siap merge (keputusan pemilik); MINOR F2 ditutup di `7f218ed` + tes, F1/F3/F6 dicatat backlog non-blocking | **PASS** | — |
 | G23. Dokumentasi delivery | CR_007 revisi polling, checkpoints, matriks, README, PROGRESS_DAILY, kontrak API, runbook UAT fixture | Commit dokumen ini; [CR_007](../changes/CR_007_DRAFT_GMAIL_API_YEARLY_WORKFLOW.md); [API_CONTRACT](https://github.com/NDI05/0037-Backend-Financial/blob/integration/2026-11-24/docs/API_CONTRACT.md); [GMAIL_API_SETUP](https://github.com/NDI05/0037-Backend-Financial/blob/integration/2026-11-24/docs/GMAIL_API_SETUP.md) | **PASS** | SRS resmi direvisi owner setelah keputusan |
 | G24. Merge/deploy/SRS resmi | — | Sengaja tidak dilakukan: menunggu persetujuan pemilik | **NOT RUN** (owner) | Keputusan owner atas CR-005/006/007 lalu merge `main`, deploy, revisi SRS |
-| G25. Gmail live E2E | — | Tidak ada kredensial Google di lingkungan ini; semua bukti Gmail memakai provider fake/fixture | **NOT RUN** (owner) | Consent screen + test users, OAuth Web client + secret, Gmail API, email Livin nyata, ukur latensi; Pub/Sub hanya bila push opt-in dipakai |
+| G25. Gmail live E2E | Email Livin nyata terimpor dari Gmail nyata lewat polling; tidak ada duplikat; aplikasi menampilkan data tersimpan | Backend resmi owner `127.0.0.1:18090` (`APP_ENV=uat-local`, OAuth nyata, polling): backfill live memindai ratusan email; setelah perbaikan parser `5df6be6`/`c98527b`, **327 transaksi unik** pada snapshot 19:59 WIB (Nov 40/54, Okt 53/86, Sep 0 baru/79 duplikat, Agu 55/124, Jul 55/92, Jun 73/124, bulan lain berjalan), 0 duplikat baris; app memanggil `/v1/summary` + `/v1/transactions` normal. Bukti agregat: [GMAIL_LIVE_IMPORT](../evidence/GMAIL_LIVE_IMPORT_2026-11-24.md) | **PASS** (live, akun pilot owner) | Latensi/kuota/biaya nyata & Rp0 = G29/G37; SSO = G36; bukan bukti untuk akun lain |
 | G26. Kontrak polling §9 (202/429/409/503) | `POST /v1/gmail/sync` → `202 {"queued":true,"coalesced":...}`; cooldown `429 {"code":"sync_cooldown","retryable":true,"retryAfterSeconds":N}`; `409 gmail_not_connected`/`gmail_needs_reauth`; `503 gmail_disabled`; status §9.2; tidak pernah impor sinkron | E2E fake: sync #1 `202 queued`, #2 `429 sync_cooldown` non-blocking; restart melanjutkan; `needs_reauth=false`; probe `409/503` sesuai tes handler; evidence [`GMAIL_CONTRACT_E2E`](../evidence/GMAIL_CONTRACT_E2E_2026-11-24.md) | **PASS** (fake) | Perilaku 429/409 nyata dengan kuota Google = owner (G25) |
 | G27. QA E2E kontrak independen | Harness black-box `scripts/qa/gmail/contract_e2e.py` + `README.md`: register/login, OAuth dev, backfill 12/12, sync 202/429, restart, `history_expired`, `rate_limit`, cek `watch/stop/category=0`, push 404, tidak ada kebocoran token/email/ID | Run nyata pada integrasi `5d76c7f`, **diulang pada HEAD final `1290910`**, dan **diulang lagi pada integrasi `138b5c3` setelah lane SSO**: **PASS=82, FAIL=0, exit 0** pada ketiga run (fake, port terisolasi); harness `19c009a`, evidence `cbec95a` + [SSO_ONBOARDING_DEVICE_FIXTURE](../evidence/SSO_ONBOARDING_DEVICE_FIXTURE_2026-11-24.md) | **PASS** (fake; port terisolasi) | Tidak menggantikan Gmail live (G25) |
 | G28. UAT perangkat fisik FIXTURE | HP fisik `105397ba0507` (varian debug, `adb reverse tcp:18090`), backend `1290910` profil fixture: tautkan Gmail, backfill 12/12, panel status server, manual sync 202 + drain, cooldown 429 + hitungan mundur UI, delta saat app ditutup, restart backend tidak menggandakan, rekonsiliasi UI vs DB | [UAT perangkat FIXTURE](../evidence/GMAIL_POLLING_UAT_PHONE_2026-11-24.md) butir 1–10 **PASS** pada build awal `a7abb14` + **smoke build final `7f218ed`** (instal ulang, sheet "Menunggu" 12/12, tap → `202` → drain) + aset `docs/evidence/assets/gmail_polling_uat/`; penyimpangan dicatat (bukan Gmail live) | **PASS** (alur terkontrol) | Gmail live/consent nyata tetap G25; penyimpangan kecil UI "Perlu perhatian" dicatat di evidence |
@@ -112,13 +127,14 @@ lingkungan/kredensial atau sengaja menunggu pemilik.
 
 ### Akuntansi gate final
 
-Total **38 gate**: **28 PASS, 4 PARTIAL, 6 NOT RUN**.
-- PASS: G1, G2, G4b, G5, G6, G7, G8, G9, G10, G11, G12, G13, G15, G16, G19, G20, G21, G22, G23, G26, G27, G28, G30, G31, G32, G33, G34, G35.
+Total **38 gate**: **29 PASS, 4 PARTIAL, 5 NOT RUN**.
+- PASS: G1, G2, G4b, G5, G6, G7, G8, G9, G10, G11, G12, G13, G15, G16, G19, G20, G21, G22, G23, **G25 (live owner)**, G26, G27, G28, G30, G31, G32, G33, G34, G35.
 - PARTIAL: G3 (drill rollback), G4 (proteksi `main` backend), G17 (retire IMAP penuh), G18 (TalkBack/lebar layar final).
-- NOT RUN (owner): G14 (hapus/restore data nyata), G24 (merge/deploy/SRS), G25 (Gmail live), G29 (GCP Rp0 / OPEN), G36 (UAT SSO HP + Run), G37 (gate live/Rp0 terpisah).
+- NOT RUN (owner): G14 (hapus/restore data nyata), G24 (merge/deploy/SRS), G29 (GCP Rp0 / OPEN), G36 (UAT SSO HP + Run), G37 (gate live/Rp0 terpisah).
 
-Tidak ada gate FAIL. Angka ini tidak boleh dibaca sebagai kelulusan proyek: merge/deploy, Gmail live,
-dan Rp0 masih milik pemilik.
+Tidak ada gate FAIL. Angka ini tidak boleh dibaca sebagai kelulusan proyek: Gmail live sudah PASS
+untuk akun pilot owner (G25), tetapi **SSO live (G36)**, **Rp0 (G29/G37)**, merge/deploy, dan revisi
+SRS resmi masih milik pemilik.
 
 ## 3. Bukti kunci (jalur file)
 

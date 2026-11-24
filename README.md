@@ -13,9 +13,11 @@ Azure, dan mengakses analisis serta perencanaan anggaran sesuai consent masing-m
 > **Snapshot gate Gmail/retensi 24 November 2026:** Android HEAD `a7abb14` (fresh:
 > **640 tes/83 suite/0 gagal**, lint **0 error/120 warning**, APK debug **46.433.080 byte**, sha256 `7efc1803…`, dibangun 17:28 WIB),
 > backend `integration/2026-11-24` HEAD `1290910` (vet/build/test/race PASS), kontrak polling §9
-> **QA E2E 82/82 PASS** (fake provider) dan **UAT perangkat FIXTURE PASS**. Gate **Gmail live**
-> dan **GCP Rp0** tetap **NOT RUN/OPEN (owner)**; tombol Run Android Studio literal **NOT RUN**
-> (instalasi UAT via `adb install -r`). Rincian: [laporan gate akhir](docs/delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md).
+> **QA E2E 82/82 PASS** (fake provider) dan **UAT perangkat FIXTURE PASS**. **Gmail live (G25)
+> PASS untuk akun pilot owner** setelah perbaikan parser `5df6be6`/`c98527b` (ratusan transaksi
+> Livin nyata terimpor, 0 duplikat); **GCP Rp0 (G29/G37)** tetap **OPEN** dan **SSO live (G36)** +
+> tombol Run Android Studio literal tetap **NOT RUN** (instalasi UAT via `adb install -r`).
+> Rincian: [laporan gate akhir](docs/delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md).
 > Snapshot lama `ce56d9c` + [review recovery PM](docs/reviews/PM_REVIEW_CE56D9C_SYNC_RECOVERY.md)
 > tetap menjadi riwayat. Hasil TERLAPOR SE dan WIP yang belum diverifikasi tidak dihitung
 > sebagai acceptance penuh.
@@ -58,7 +60,7 @@ harus tampil sebagai keadaan berbeda.
 | S4 | Lampiran, admin, visual dan cutover varian penilaian | Belum lulus gate |
 | S5 | Verifikasi operasional, benchmark, perangkat dan owner UAT | Gate akhir masih terbuka |
 
-Rincian bukti per gate dan sisa pekerjaan pemilik ada di [laporan gate akhir](docs/delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md) (38 gate: 28 PASS, 4 PARTIAL, 6 NOT RUN).
+Rincian bukti per gate dan sisa pekerjaan pemilik ada di [laporan gate akhir](docs/delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md) (38 gate: 29 PASS, 4 PARTIAL, 5 NOT RUN).
 
 ### Implementasi versus acceptance
 
@@ -257,7 +259,9 @@ Bukti kontrak polling 24 November 2026:
 - UAT perangkat fisik FIXTURE (HP `105397ba0507`, `adb reverse 18090`): backfill 12/12,
   manual sync + drain, cooldown 429 + hitungan mundur UI, delta saat app ditutup, restart
   backend tanpa duplikat. Hasil: [GMAIL_POLLING_UAT_PHONE](docs/evidence/GMAIL_POLLING_UAT_PHONE_2026-11-24.md).
-  Ini **bukan** Gmail live; gate tersebut tetap **NOT RUN (owner)**.
+  Ini bukan bukti live; Gmail live sekarang **PASS** pada akun pilot owner lewat
+  [GMAIL_LIVE_IMPORT](docs/evidence/GMAIL_LIVE_IMPORT_2026-11-24.md), sedangkan SSO live (G36)
+  tetap **NOT RUN**.
 
 ## 7. Konfigurasi, data, dan biaya
 
@@ -326,9 +330,9 @@ sinkron server ditutup dengan bukti terkontrol, bukan Gmail live.
   duplikat). Gate tally: **30 gate — 22 PASS, 4 PARTIAL, 4 NOT RUN**.
 - S2 tetap **PARTIAL kondisional** (menunggu Run Android Studio pemilik untuk varian final +
   drill-down-after); S3 PASS sesuai bukti lama; S4 PARTIAL (gap C20/C24/C25 di perangkat).
-- **NOT RUN (owner):** Gmail live/consent Google nyata, Web OAuth client + test user, Pub/Sub
-  nyata (hanya bila push opt-in dipakai), Azure nyata, dan **GCP Rp0** (**OPEN**: Billing masih
-  tertaut). Tombol **Run Android Studio secara literal NOT RUN** (UAT dipasang via
+- **NOT RUN (owner):** UAT SSO Google nyata (G36), Pub/Sub nyata (hanya bila push opt-in
+  dipakai), Azure nyata, dan **GCP Rp0** (**OPEN**: Billing masih tertaut). Gmail live (G25)
+  sekarang PASS untuk akun pilot owner; bukan bukti untuk akun lain. Tombol **Run Android Studio secara literal NOT RUN** (UAT dipasang via
   `adb install -r`; lihat penyimpangan di evidence UAT).
 - Keputusan per gate: [FINAL_GATES_GMAIL_YEARLY_WORKFLOW](docs/delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md)
   dan [GATE_DECISIONS_S2_S4](docs/delivery/GATE_DECISIONS_S2_S4_2026-11-24.md). Gate terbuka:

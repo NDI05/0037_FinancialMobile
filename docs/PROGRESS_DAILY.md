@@ -132,3 +132,19 @@ dijaga jendela setahun, tes worker/endpoint/404/in-window ditambah, dan smoke ru
 `DELETE` lampiran serta `PATCH` job kedaluwarsa. Gate backend: 10 paket, **186 test, 0 gagal**.
 Temuan P3 (optimasi baca ganda, presedensi revisi DELETE, resource string mati) dicatat sebagai
 backlog non-blocking; klaim yang tidak dapat dibuktikan (hash APK) kini diikat ke artefak build.
+
+### UAT Gmail live pertama + perbaikan parser (24 Nov 2026, ronde 6)
+
+Backend resmi owner (profil `~/.config/pam/gmail-uat.env`, `127.0.0.1:18090`, OAuth nyata, polling)
+menjalankan backfill tahunan dan **mengimpor 0 transaksi** walau ratusan email Livin terpindai.
+Diagnostik agregat/bentuk baris (tanpa isi email) menemukan dua bentuk produksi yang tidak dikenal
+parser fixture: label **stacked** (`Penerima` baris sendiri) dan tanggal+waktu bertumpuk dengan
+bulan Indonesia (`12 Okt 2026` + `pkl 09:30:45 WIB`). Backend diperbaiki di `5df6be6` dan
+`c98527b` (plus regresi stacked/Indonesian), `vet`/`build`/`test ./...`/`-race` PASS, lalu runtime
+resmi dibangun ulang dengan launcher owner dan dijalankan ulang. Hasil live: **ratusan transaksi
+Livin nyata tersimpan tanpa duplikat** (Nov 40/54, Okt 53/86, Agu 55/124, dst.; total 327 baris
+unik saat snapshot 19:59 WIB dan backfill melanjutkan sampai 12/12). Gate **G25 berubah PASS
+(live, akun pilot owner)**; G29/G37 (Rp0) tetap OPEN dan G36 (SSO Google + Run pemilik) tetap NOT
+RUN. Bukti agregat: [GMAIL_LIVE_IMPORT](../evidence/GMAIL_LIVE_IMPORT_2026-11-24.md). Tidak ada
+alamat email, nominal, merchant, ID pesan, atau token yang ditulis ke repo/chat; data owner tetap
+di profil lokalnya.
