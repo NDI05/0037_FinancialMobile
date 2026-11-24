@@ -13,13 +13,14 @@ penundaan background sync pada roadmap v0.3 adalah historis.
 ## 1. Keputusan dan batas scope
 
 - Pengguna tidak perlu menekan Impor untuk pembaruan rutin setelah login, koneksi Gmail
-  dan consent yang sesuai tersedia. Tombol pembaruan manual tetap sarana recovery opsional.
+  dan consent yang sesuai tersedia. Impor awal mencakup riwayat setahun sesuai addendum
+  §8. Tombol pembaruan manual tetap sarana recovery opsional.
 - Tahap awal mempertahankan **IMAP dan parser di Android**. Credential Gmail tidak pindah
   ke backend. Tidak menambah Google OAuth, GCP/Pub/Sub, atau hosting publik dalam scope ini.
 - Target pemeriksaan background **setiap 30 menit**, ditambah pemeriksaan saat aplikasi
   masuk foreground jika data sudah cukup lama. WorkManager bersifat best effort, bukan
   jaminan realtime, jam pasti, atau tetap berjalan ketika perangkat mati/force-stop.
-- Kategorisasi melalui antrean backend dengan target pemrosesan **setiap 2 jam**,
+- Kategorisasi rutin melalui antrean backend dengan target pemrosesan **sekitar 2 jam**,
   maksimal **5 merchant unik berkonteks sama per request**. Impor/penyimpanan finansial
   tidak menunggu model. Rules, pemetaan terkonfirmasi, dan cache diperiksa lebih dahulu.
 - Gunakan komponen status bersama di top bar dan panel rincian. Loading hanya muncul
@@ -59,9 +60,9 @@ tanggal selesai atau menyebut sprint selesai berdasarkan dokumen ini.
 4. Gunakan fingerprint dan idempotency upload server. Tangani UIDVALIDITY berubah,
    email datang terlambat, disconnect, restart, parser version/reprocess, partial batch,
    pagination dan recovery tanpa impor ganda. Backfill/reconciliation eksplisit dan bounded.
-5. Satu pekerjaan per owner/mailbox: foreground, background, dan Impor manual melewati
-   koordinasi yang sama. Tidak ada full scan, koneksi IMAP abadi/IDLE, atau service terus
-   menyala sebagai cara mengakali jadwal Android pada tahap ini.
+5. Satu pekerjaan per owner/mailbox: foreground, background, impor awal, dan Impor manual
+   melewati koordinasi yang sama. Scan riwayat hanya untuk impor awal atau pemulihan cakupan.
+   Sinkronisasi rutin menggunakan delta dan koneksi IMAP yang dibatasi durasi.
 6. Worker memerlukan jaringan; lakukan backoff pada gangguan, bukan retry rapat. Jangan
    mensyaratkan Wi-Fi/charging pada semua sync kecil sehingga data rutin selalu tertunda.
    Backfill besar dapat memiliki kebijakan resource terpisah.
@@ -76,8 +77,9 @@ dan jitter scheduler yang mencegah herd. Nilai ini belum keputusan SLA final.
 
 - Setelah commit finansial server, enqueue kandidat eligible secara idempotent apabila
   AI_CATEGORIZATION masih GRANTED dan auto-categorization aktif. Jangan memakai consent
-  Gmail/aggregate sebagai izin Azure. Hindari backlog tersembunyi dari data lama; target
-  run otomatis adalah transaksi baru, reclassification histori tetap aksi eksplisit.
+  Gmail/aggregate sebagai izin Azure. Run rutin menargetkan transaksi baru. Satu job
+  klasifikasi riwayat saat impor awal mengikuti cakupan dan consent pada §8.
+  Klasifikasi ulang histori sesudahnya tetap aksi eksplisit.
 - Auto-categorization harus dijelaskan sebagai pemrosesan berkala tanpa tap; grant lama
   tidak diam-diam diubah menjadi opt-in otomatis jika notice sebelumnya hanya manual.
 - Kelompokkan merchant/direction/method/taxonomy/model/prompt yang relevan per owner.
@@ -179,3 +181,78 @@ latensi tanpa pengukuran. S5 tetap memerlukan kesiapan backend/perangkat dan own
 - [Genius Scan](https://help.geniusscan.com/exporting-and-sharing/export-destination-and-shortcuts/verify-if-your-documents-have-been-backed-up): indikator atas membuka detail status.
 - [Dropbox](https://help.dropbox.com/sync/check-sync-status): status terpisah syncing/paused/up-to-date/issues.
 - [Gmail Push](https://developers.google.com/workspace/gmail/api/guides/push): opsi arsitektur lanjutan, tidak termasuk tahap IMAP ini.
+
+## 8. Addendum 24 November 2026 — workflow setahun
+
+Status **draf delivery**. Gate S2–S4 yang sedang ditutup tetap mengikuti
+[keputusan acceptance PM](../delivery/GATE_DECISIONS_S2_S4_2026-11-24.md). Masukkan
+workflow baru ke tindak lanjut setelah baseline stabil, dan prioritaskan cacat penandaan
+cakupan delta sebelum mengaktifkan impor tahunan. SRS v0.5 dijadikan rujukan untuk
+mencatat dampak. Rumusan calon requirement ada di [CR-005](../changes/CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md)
+dan [CR-006](../changes/CR_006_DRAFT_SYNC_UI_CATEGORY_REVIEW.md).
+
+### Login, impor awal, dan rekap kategori
+
+1. Setelah PAM menerima sesi owner, validasi koneksi Gmail dan izin `GMAIL_READ`.
+   Jika impor awal belum selesai untuk koneksi tersebut, mulai satu job otomatis.
+   Login ulang ke akun dan mailbox yang sama melanjutkan checkpoint yang tersimpan.
+2. Tangkap batas waktu dan watermark awal. Baca notifikasi Livin yang diizinkan
+   per bulan, utamakan bulan berjalan, cek waktu transaksi di WIB, dan unggah
+   bertahap. Simpan rentang, halaman, hasil, dan konfirmasi Go sehingga pekerjaan bisa
+   dilanjutkan setelah restart. Email yang tiba selama backfill masuk delta
+   berikutnya. Proses riwayat dan delta berbagi koordinasi yang sama dan dapat
+   bergantian di batas chunk agar transaksi baru tetap bisa diproses.
+3. Tampilkan transaksi segera setelah tiap commit diakui Go. Tandai cakupan
+   bulan berjalan atau bulan lama dengan status riil. Jika impor tertahan,
+   lanjutkan dari checkpoint. `COMPLETE` pada delta hanya menutup rentang delta
+   tersebut dan tidak boleh menutup kelengkapan satu bulan atau satu tahun. Jika
+   status historis tidak punya mode/rentang, anggap cakupan bulanan belum terbukti.
+   Tombol sinkronisasi dapat mengisi periode yang belum lengkap.
+4. Setelah impor awal punya hasil akhir yang tercatat, sistem otomatis mengantrekan
+   **satu job kategorisasi riwayat** apabila consent AI yang mencakup pemrosesan
+   histori aktif. Jika selesai parsial, hanya kategorikan baris yang sudah diakui Go
+   dan teruskan job yang sama saat data tambahan tersedia.
+5. Go mengecualikan pilihan pengguna, memakai aturan dan cache, lalu menggabungkan
+   kandidat per owner berdasarkan merchant dan konteks kategori. Azure hanya
+   menerima kandidat yang masih memerlukan model. Satu job tahunan dipecah sesuai
+   batas 5 merchant unik, batas input 1.024 token, kuota, dan plafon biaya. Satu
+   panggilan cukup bila sisa kandidat muat. Nol panggilan dimungkinkan jika seluruh
+   hasil tersedia dari aturan/cache. Status transaksi dan status AI tampil terpisah.
+6. Baris Livin lama dengan label PAN memakai koreksi identitas terverifikasi yang
+   sudah ada sebagai jalur rekonsiliasi. Verifikasi reimpor setelah koreksi secara
+   khusus agar perubahan nama merchant tidak menciptakan baris baru.
+
+### Transaksi baru dan penghematan request
+
+- Saat aplikasi aktif, jalankan pemeriksaan otomatis dengan cooldown dari rencana.
+  Di latar belakang, pertahankan target 30 menit melalui WorkManager untuk varian
+  standar. Gunakan ukuran waktu email diterima → transaksi terlihat sebagai metrik UAT.
+  Jadwal aktual mengikuti jaringan dan keputusan OS.
+- Simpan setiap transaksi yang valid segera setelah diakui Go. Antrekan kandidat
+  AI satu kali. Untuk draft ini, kirim kelompok yang sudah mencapai batas
+  merchant/token jika anggaran tersedia, atau kumpulkan batch hingga jendela
+  sekitar 2 jam jatuh tempo. Pertahankan target flush sisa berdasarkan usia seperti
+  §4 dan ukur dampaknya. Prioritaskan transaksi baru di atas histori. Cooldown,
+  single-flight, dan limiter tetap berlaku ketika antrean penuh.
+- Contoh perhitungan: 80 transaksi dengan 11 kombinasi merchant/konteks yang
+  berbeda dan belum ada di cache memerlukan paling sedikit 3 panggilan bila semuanya
+  memenuhi syarat dan muat per batch. 80 kombinasi unik memerlukan paling sedikit 16
+  panggilan dalam kondisi yang sama. Split token, timeout/retry, dan batch terpisah
+  menurut waktu dapat mengubah jumlah aktual. Backlog dilanjutkan ketika jatah
+  pulih, sementara transaksi tetap bisa dilihat dan dikoreksi.
+- Jika target rilis membutuhkan pembaruan dalam hitungan detik saat aplikasi
+  tertutup, buat keputusan arsitektur tersendiri untuk Gmail API
+  `watch` → Cloud Pub/Sub → `history.list`, termasuk hosting, consent dan
+  pemulihan notifikasi yang terlewat. Target awal menggunakan IMAP di Android.
+  Lihat [jadwal WorkManager](https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started/define-work)
+  dan [Gmail API push](https://developers.google.com/workspace/gmail/api/guides/push).
+
+### Urutan kerja dan bukti penerimaan
+
+| Urutan | Pekerjaan delivery | Bukti penerimaan |
+|---|---|---|
+| 1 | Simpan mode/rentang/konfirmasi per bulan. Perbaiki short-circuit scan bulanan. | Job delta `COMPLETE` tetap memicu pengisian riwayat bulan yang belum lengkap. Uji juga data lintas batas bulan dan akun yang punya job lama tanpa rentang. |
+| 2 | Impor awal setahun, per bulan, dengan checkpoint dan delta yang memakai satu koordinator. | Fixture lintas periode, email pertama dan terakhir di dalam jendela, email di luar batas, retry setelah restart/timeout dan email baru selama backfill. Tidak ada kehilangan data atau transaksi ganda. |
+| 3 | Jalankan satu job kategori histori, lanjutkan batch rutin hemat. | Uji 0 kandidat, 1 batch, >1 batch, merchant berulang, cache hit, consent dicabut, anggaran habis, serta hasil provider yang tiba setelah transaksi kedaluwarsa. Buktikan transaksi terlihat sebelum AI selesai dan ukur calls/token aktual. |
+| 4 | Terapkan batas periode di UI dan API serta rancang cleanup retensi. | Uji kedua ujung periode, rollover WIB/leap year, query/API langsung, data lama dan hasil agregat, dan restore tanpa memunculkan data kedaluwarsa. Aktifkan cleanup setelah aturan retensi dan backup difinalisasi. |
+| 5 | Sederhanakan UI Indonesia dan uji UAT dari Android Studio. | Pesan singkat, satu status sheet, filter periode, aksesibilitas, dan bukti dari satu perangkat. Setelah pengujian sintetis lulus, validasi sampel email asli dengan persetujuan pemilik. |

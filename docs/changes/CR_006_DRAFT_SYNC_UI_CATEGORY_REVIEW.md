@@ -48,3 +48,15 @@ kategori, status proses) untuk perubahan yang dibuktikan pada 23 November 2026.
   diklasifikasi.
 - Tidak ada perubahan pada batas biaya, consent AI, sanitasi merchant, isolasi cache per
   owner, dedup, atau maksimum 5 merchant per request.
+
+## 4. Addendum 24 November 2026 — bahasa Indonesia ringkas dan periode riwayat
+
+| ID draf | Calon requirement | Bukti penerimaan |
+|---|---|---|
+| DRAFT-UI-07 | UI utama berbahasa Indonesia yang ringkas. Judul, nominal, periode, aksi utama, serta info yang dibutuhkan untuk keputusan pengguna tetap terlihat. Pindahkan detail teknis, timestamp berulang, dan rincian hitungan ke sheet yang sudah ada. | Walk Ringkasan, Transaksi, Detail, Analisis, dan Pengaturan. Verifikasi pesan kosong, gagal, konflik, dan status AI tetap jelas, tanpa pengulangan instruksi. |
+| DRAFT-UI-08 | Ikon top bar membuka satu sheet `Status pembaruan`. Tampilkan status singkat seperti **Mengambil riwayat**, **Menunggu AI**, **Perlu tinjauan**, atau **Coba lagi**. Tampilkan satu progress bar per tahap aktif. Persentase hanya muncul jika total diketahui. | Mock dan uji proses awal, antrean AI, hasil parsial, retry, serta buka ulang sheet. Progress tidak menghalangi penggunaan transaksi yang sudah tersimpan. |
+| DRAFT-UI-09 | Pemilih periode pada Ringkasan, Transaksi, Analisis, dan sheet impor membatasi navigasi pada jendela setahun yang sama. Nonaktifkan panah maju saat bulan berjalan dan panah mundur saat bulan tertua. Bulan batas yang hanya tercakup sebagian dapat dijelaskan dengan label pendek. Editor anggaran mengikuti keputusan FR-42. | Uji dua ujung periode, bulan berikutnya, argumen rute/API, rollover WIB, font 200%, TalkBack, dan kepindahan Ringkasan–Transaksi. |
+
+Pertahankan penjelasan penting tentang izin Gmail, penggunaan Azure, cakupan email,
+dan retensi pada saat pengguna mengambil keputusan. Rincian tambahan dapat dibuka
+dari tempat yang relevan. Gunakan [definisi periode pada CR-005](CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md#batas-periode-dan-dampak-retensi).

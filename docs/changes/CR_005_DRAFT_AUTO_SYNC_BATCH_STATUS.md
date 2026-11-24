@@ -3,6 +3,11 @@
 Tanggal: **23 November 2026**.
 Status: **arah fitur disetujui pemilik; draf konsolidasi SRS, BELUM diterapkan**.
 
+Addendum 24 November 2026 mencatat workflow yang diminta pemilik untuk impor awal
+setahun, kategorisasi otomatis, dan retensi data. Addendum ini mengarahkan revisi
+berikutnya. Status di dokumen ini merujuk pada draf dan tidak menilai ulang fitur
+auto-sync yang sudah dibuktikan pada checkpoint implementasi.
+
 Instruksi pemilik: masukkan ke perencanaan dan draf revisi untuk nanti;
 **jangan memperbarui SRS sekarang**. Full SRS resmi tetap v0.5; file DOCX/PDF,
 requirement IDs dan version history resminya tidak berubah oleh CR ini.
@@ -90,3 +95,37 @@ mengaktifkan layanan. P0 classifier aktif tetap diselesaikan lebih dahulu.
 Saat pemilik meminta revisi SRS: baca baseline lengkap, finalisasi parameter berdasarkan
 hasil engineering/UAT, tetapkan requirement IDs, konsolidasikan semua impact dan diagrams,
 render/validasi dokumen lengkap, kemudian cocokkan traceability dengan implementation.
+
+## 6. Addendum 24 November 2026 — impor awal, antrean AI, dan retensi setahun
+
+| Area | SRS v0.5, rencana, dan kode saat ini | Calon perubahan SRS |
+|---|---|---|
+| Impor awal setelah Gmail terhubung | FR-06/54 mengatur koneksi tervalidasi, FR-11/12/16–20 dan BR-01/05 mengatur impor per bulan dan hasilnya. Auto-sync saat ini memakai pencarian incremental. Tanpa cursor awal, overlap pemulihan 6 jam tidak menjangkau satu tahun. Jalur bulanan dapat melewati pencarian jika job terakhir bulan itu `COMPLETE`, termasuk job incremental. | **DRAFT-AS-05** — Setelah koneksi Gmail valid dan `GMAIL_READ` tersedia, jadwalkan satu impor awal otomatis untuk rentang setahun. Simpan cakupan dan checkpoint per bulan. Keberhasilan delta tidak mengisi status cakupan impor awal atau impor bulanan. |
+| Kategorisasi setelah impor awal | FR-66–71 mensyaratkan consent khusus, input terbatas, aturan/cache, keamanan, dan pengendalian biaya. Implementasi saat ini membatasi 5 merchant unik per request dan menerapkan batas token. Rencana awal menunda klasifikasi backlog lama. | **DRAFT-BC-05** — Setelah tahap impor awal selesai atau hasil parsial akhirnya tercatat, jalankan satu job kategori otomatis untuk transaksi eligible yang telah dikonfirmasi server, dengan notice dan consent `AI_CATEGORIZATION` yang mencakup pemrosesan histori. Perluas job yang sama ketika data impor parsial berhasil dipulihkan. Satu job dapat terdiri dari nol, satu, atau beberapa request provider. |
+| Email baru dan batch rutin | DRAFT-AS-02 menargetkan cek foreground dan pemeriksaan background 30 menit best effort. DRAFT-BC-02/03 menargetkan antrean sekitar 2 jam dengan flush sisa berdasarkan usia saat sehat. | **DRAFT-AS-06** — Setelah cursor awal dicatat, sinkronisasi delta mengambil email baru tanpa tap dan memprioritaskan transaksi baru ketika ada backlog histori. **DRAFT-BC-06** — Commit transaksi segera. Gabungkan kandidat uncached per owner dan konteks, kirim batch saat memenuhi batas kandidat/token atau ketika jendela tunggu jatuh tempo. |
+| Retensi dan periode | NFR-15 mengusulkan 24 bulan sejak impor, dengan kebijakan deletion akun dan backup terpisah. BR-01 memakai waktu transaksi WIB. Tombol bulan di beberapa ViewModel masih memanggil `next()` tanpa batas bulan saat ini. | **DRAFT-RET-01** — Simpan dan sajikan data keuangan dalam jendela setahun bergulir berdasarkan waktu transaksi WIB. Hentikan akses data di luar jendela dan hapus dengan cleanup terjadwal. **DRAFT-RET-02** — Pemilih periode riwayat berhenti pada bulan berjalan dan bulan tertua yang masih tercakup. Terapkan batas yang sama pada UI, query, impor, dan API. |
+
+### Batas periode dan dampak retensi
+
+- Usulan definisi setahun ialah awal hari WIB pada tanggal hari ini dikurangi satu tahun
+  kalender sampai saat pengambilan data. Pada 24 November 2026, riwayat dimulai 24 November
+  2025 pukul 00.00 WIB. Bulan tertua mungkin hanya sebagian, dan pemilih bisa mencakup 13
+  nama bulan. Gunakan `eventAt` untuk menentukan kelayakan, dengan buffer tanggal penerimaan
+  email mengikuti BR-01. Validasi pergantian bulan/tahun serta batas 29 Februari.
+- Retensi diusulkan berlaku untuk data keuangan yang diimpor maupun dicatat manual.
+  Tentukan treatment anggaran periode lama, ringkasan/analisis turunan, metadata lampiran
+  dan file lokal yang terhubung, cache, antrean, serta backup. Hasil agregat ikut dihitung
+  ulang pada periode yang terpotong. Restore dan sinkronisasi ulang tidak boleh
+  memunculkan kembali data yang sudah di luar jendela. Consent, sesi, dan audit akun
+  mengikuti kebijakan masing-masing. Retensi tahunan dan penghapusan akun tetap dua alur.
+- **Benturan FR-42** — SRS mengizinkan rencana anggaran masa depan. Draft membatasi layar
+  riwayat dan laporan pada masa lalu serta bulan berjalan. Putuskan pada revisi resmi
+  apakah editor perencanaan anggaran tetap punya pengecualian atau FR-42 ikut diubah.
+- Sebelum mengaktifkan pembersihan data, finalisasi pemberitahuan, cakupan cleanup data
+  lama, jadwal penghapusan, perlakuan backup, dan bukti pemulihan pada DB terisolasi.
+  Addendum ini mendeskripsikan kebijakan yang diinginkan dan kasus uji.
+
+Detail orkestrasi, batas biaya, dan acceptance ada di
+[rencana delivery terbaru](../plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md#8-addendum-24-november-2026--workflow-setahun).
+Usulan bahasa dan batas pemilih bulan pada UI ada di
+[CR-006](CR_006_DRAFT_SYNC_UI_CATEGORY_REVIEW.md).
