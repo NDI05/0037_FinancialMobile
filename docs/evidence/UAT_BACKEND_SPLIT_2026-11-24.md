@@ -1,164 +1,265 @@
 # UAT pemisahan backend Go → repo terpisah (parity gate) — 24 November 2026
 
-Dokumen ini adalah **checklist parity + baseline** untuk pemisahan backend Go dari repo Android
-`pam-app` ke repo `0037-Backend-Financial`, dan migrasi Gmail ke Gmail API. Ditulis oleh w-qa.
-Status: **persiapan/baseline**; verifikasi end-to-end **belum dijalankan** karena PM masih
-membersihkan tree Android (menunggu sinyal "tree Android sudah bersih dari backend-go").
+Dokumen gate untuk pemisahan backend Go dari repo Android `pam-app` ke repo
+`0037-Backend-Financial`, beserta serah-terima APK debug yang membaca data dari server yang
+dijalankan **dari repo backend** (bukan dari source di repo Android). Ditulis oleh w-qa.
 
-Aturan bukti: setiap klaim di bawah menyebut **perintah persis** dan hasil yang benar-benar
-diamati pada 24 Nov 2026 13:18–13:21 WIB. PASS hanya bila perintah dijalankan ulang dari clone
-bersih dan hasilnya cocok. Jangan menyalin status dari dokumen delivery S2–S4 lama.
+Aturan bukti: setiap status menyebut **perintah persis**, hash, dan hasil yang benar-benar
+diamati di mesin ini pada 24 Nov 2026 13:18–13:50 WIB. Semua verifikasi memakai port terisolasi
+dan DB file di `/tmp`; backend UAT pemilik (`:18090`), DB Turso pemilik, dan akun pemilik **tidak
+disentuh**. Artefak mentah (dump UI, screenshot, log server) berada di
+`/tmp/pam-split-run/artifacts/` dan `/tmp/pam-split-run/server.log` (tidak di-commit; sesi ini
+hanya meng-commit dokumen ini).
 
-## 1. Baseline tercatat (24 Nov 2026, 13:18–13:21 WIB)
+## 1. Baseline & state saat verifikasi
 
 ### 1.1 Repo Android — `pam-app`
 
-- Path: `/Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app`
-- Remote: `https://github.com/NDI05/0037_FinancialMobile.git`
-- Branch: `feat/c2-android`
-- HEAD: `cd0f91a2b06562ddf12e8fea1c4868e88de54007` — `2026-11-24 13:11:35 +0700` —
-  `docs: resume PAM delivery with separate backend repository`
-- Working tree: **bersih** (`git status --porcelain` = 0 baris)
-- Ukuran tree (`git ls-files`): **934 file**; rincian teratas: `docs/` 425, `app/` 318,
-  **`backend-go/` 93**, `backend/` (Node lama) 70, `scripts/` 13, `fixtures/` 4.
-- Kode Android yang relevan: **176 file `*.kt`** di `app/src/main`.
-- `backend-go/` **masih ada** di tree Android saat baseline → inilah yang sedang dipindahkan PM.
+- Remote: `https://github.com/NDI05/0037_FinancialMobile.git`, branch `feat/c2-android`.
+- HEAD saat verifikasi: **`b5ebf192bc49bc6bb1029f69f9105e755686c1df`** (2026-11-24 13:26:13 +0700,
+  "chore(repo): drop stray Go binary and ignore build outputs"); `git ls-remote origin
+  refs/heads/feat/c2-android` = hash yang sama.
+- Riwayat pemisahan: `cd0f91a` (resume pemisahan) → `70d1535` (source `backend-go/`, fixture
+  Node, `backend/` lama, docs/scripts keluar; **binary `backend-go/api` 19 MB ikut terbawa**) →
+  `b5ebf19` (hapus binary tersebut + ignore `bin/`, `.DS_Store`).
+- Tracked file: **769** (sebelum pemisahan 934). `git ls-files 'backend-go'` = **0**;
+  direktori `backend-go/` tidak ada di checkout. Kode Android `app/src/main` tetap utuh.
+- Apakah binary 19 MB masih ada di history? Ya, di commit `70d1535` (tidak di-rewrite karena
+  larangan force-push). Ini **temuan historis, bukan blocker gate**: tree aktif bersih dan
+  `.gitignore` menutup output build.
 
 ### 1.2 Repo backend Go — `0037-Backend-Financial`
 
-- Path: `/Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/0037-Backend-Financial`
-- Remote: `https://github.com/NDI05/0037-Backend-Financial.git`
-- Branch: `main`
-- HEAD: `327d8762b0c637a70f7e30f93ffbfd311b3a02ed` — `2026-11-24 13:17:58 +0700` —
-  `chore(repo): bootstrap standalone backend repository`
-- Working tree: **bersih**.
-- Ukuran tree (`git ls-files`): **103 file**, **72 file `*.go`**, **18.422 baris Go**;
-  paket: `cmd/api`, `cmd/pam-admin`, `internal/{analysis,auth,categoryllm,config,crypto,finance,httpapi,llm,store}`.
-- Tambahan khusus repo standalone dibanding salinan di Android: `.env.example`, `.gitignore`,
-  `.github/workflows/ci.yml`, `docs/API_CONTRACT.md`, `docs/GMAIL_API_CONTRACT.md`,
-  4 fixture `fixtures/interop/*.json`, `scripts/go.sh`.
+- Remote: `https://github.com/NDI05/0037-Backend-Financial.git`, branch `main`.
+- HEAD: **`327d8762b0c637a70f7e30f93ffbfd311b3a02ed`** (2026-11-24 13:17:58 +0700); hash remote
+  sama.
+- Tracked 103 file, 72 file `*.go` / 18.422 baris, 11 paket.
+- **Catatan penting:** working tree lokal repo backend **dirty** dengan implementasi Gmail API
+  yang belum di-commit (`internal/gmail/`, `internal/httpapi/handlers_gmail.go`,
+  `internal/store/gmail.go`, `internal/store/migrations/017.sql`, serta perubahan
+  `config`/`server`/`fingerprint`/`imports`/`main`). Verifikasi pada dokumen ini memakai
+  **clone bersih dari remote HEAD `327d8762`**, sehingga implementasi Gmail API tersebut
+  **tidak ikut diuji** (lihat P9).
+- Toolchain: clone tidak membawa `.toolchain/`; perintah memakai
+  `PAM_GOROOT=/Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/.toolchain/go`
+  (go1.27.4 darwin/arm64).
 
-### 1.3 Parity snapshot Android↔repo backend (saat baseline)
+### 1.3 Hasil ringkas
 
-Dibandingkan dengan meng-ekstrak commit (bukan working tree):
+Semua item yang diminta Lead dieksekusi. PASS: P1–P7; PARTIAL: P8 (build/health PASS, restore DB
+produksi NOT RUN); NOT RUN: P9 (Gmail API).
 
-```
-git -C pam-app archive HEAD:backend-go | tar -x -C /tmp/parity_a
-git -C 0037-Backend-Financial archive HEAD | tar -x -C /tmp/parity_g
-diff -rq /tmp/parity_a /tmp/parity_g
-```
+| ID | Butir | Status | Bukti ringkas |
+|---|---|---|---|
+| P1 | Dua URL + hash + sinkron remote | **PASS** | Android `b5ebf19…` = remote; backend `327d8762…` = remote |
+| P2 | Clone bersih repo backend | **PASS** | `git clone` → HEAD `327d8762…`, 103 file, tree bersih |
+| P3 | Go vet/build/test dari clone | **PASS** | vet/build/test rc=0; 11 paket, **167 test**, 0 skip, 0 fail |
+| P4 | Tree Android tanpa source backend + build debug | **PASS** | `backend-go` 0 file; `:app:assembleDebug --rerun-tasks` rc=0; APK sha256 `ef183b75…` |
+| P5 | Server dari repo backend, `/healthz`+`/readyz` | **PASS** | binary dari clone; health 200, ready 200, port 18095 (isolated) |
+| P6 | Migrasi DB terisolasi | **PASS** | DB baru `/tmp/pam-split-run/db/pam.db`; `schema_migrations` **16 baris**, max version 16 |
+| P7 | APK login + baca data dari server repo backend | **PASS** | login user sintetis; Ringkasan **Rp22.222,21 / 2 transaksi**; Transaksi 2 baris `Rp12.345,67` & `Rp9.876,54` |
+| P8 | Rollback pasangan baseline | **PARTIAL** | server dari `git show cd0f91a:backend-go` health/ready 200 (DB 16 migrasi); APK `cd0f91a` build rc=0 sha256 `ef183b75…`. **Restore DB produksi/skenario rollback nyata NOT RUN** (butuh otorisasi pemilik) |
+| P9 | Gmail API/Pub/Sub parity | **NOT RUN** | implementasi Gmail masih WIP uncommitted di repo backend; HEAD publik belum punya `internal/gmail/` maupun endpoint Gmail |
 
-Hasil: **72 file `.go` dan 18.422 baris di kedua sisi**; 93 path tracked sama. Perbedaan isi
-hanya 3 hal yang memang disengaja:
+## 2. Metode & perintah persis
 
-| Path | Perbedaan | Sebab |
-|---|---|---|
-| `README.md` | isi berbeda | README repo standalone (Gmail API, Pub/Sub, retensi) vs README salinan lama |
-| `internal/auth/interop_test.go` | path fixture `../../../fixtures/...` → `../../fixtures/...` | fixture dipindah ke dalam repo backend |
-| `internal/crypto/interop_test.go` | idem untuk `node-sealed.json` | idem |
+Semua perintah dijalankan dari shell dengan `PAM_GOROOT` seperti §1.2; Go memakai
+`GOCACHE=pam-app/.toolchain/go-cache`, `GOMODCACHE=pam-app/.toolchain/go-mod`.
 
-Tidak ada perbedaan logika/kode selain ketiga hal di atas pada saat baseline. Ini **titik acuan
-parity** yang harus dibuktikan ulang setelah PM selesai memindahkan tree.
-
-### 1.4 Toolchain
-
-- Go: **go1.27.4 darwin/arm64** di `pam-app/.toolchain/go/bin/go` (repo backend **tidak**
-  membawa `.toolchain/`; `scripts/go.sh` memakai urutan `PAM_GOROOT` → `./.toolchain/go` → PATH).
-- Perintah test resmi repo backend:
-  `PAM_GOROOT=<path>/pam-app/.toolchain/go ./scripts/go.sh test ./... -count=1`
-  (`scripts/go.sh` mengekspor `GOCACHE`/`GOMODCACHE` ke `.toolchain/go-cache` dan `.toolchain/go-mod`).
-
-### 1.5 Verifikasi Go dari repo standalone — **dijalankan sekarang (PASS)**
+### P1 — URL, hash, sinkron remote
 
 ```
-cd 0037-Backend-Financial
-PAM_GOROOT=/Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/.toolchain/go \
-  ./scripts/go.sh vet ./...            # rc=0
-… ./scripts/go.sh build ./...          # rc=0
-… ./scripts/go.sh test ./... -count=1 -json > /tmp/go_test.json   # rc=0
+git -C pam-app remote get-url origin                # https://github.com/NDI05/0037_FinancialMobile.git
+git -C pam-app rev-parse HEAD                        # b5ebf192bc49bc6bb1029f69f9105e755686c1df
+git -C pam-app ls-remote origin refs/heads/feat/c2-android
+git -C 0037-Backend-Financial remote get-url origin  # https://github.com/NDI05/0037-Backend-Financial.git
+git -C 0037-Backend-Financial rev-parse HEAD         # 327d8762b0c637a70f7e30f93ffbfd311b3a02ed
+git -C 0037-Backend-Financial ls-remote origin refs/heads/main
 ```
 
-Ringkasan hasil test (dihitung dari 709 event JSON): **11 paket**, **167 fungsi test**,
-**0 skip**, **0 gagal**, `rc=0`. Ini baseline "hijau" yang harus direproduksi dari **clone bersih**.
+Hasil: keempat hash remote cocok dengan HEAD lokal (Android feat/c2-android & backend main).
 
-### 1.6 Server dari repo standalone — **dijalankan sekarang (PASS)**
-
-Build & jalankan dari repo backend dengan DB file terisolasi (bukan DB owner):
+### P2 — clone bersih
 
 ```
-./scripts/go.sh build -o /tmp/wqa-split-18093/pam-api ./cmd/api
-PORT=18094 DATABASE_URL=file:/tmp/wqa-split-18093/pam.db \
-JWT_SECRET=<32+ chars sintetis> JWT_ISSUER=pam JWT_AUDIENCE=pam-android \
-ACCESS_TOKEN_TTL_SECONDS=900 REGISTRATION_INVITE_CODE=pam-dev \
-DATA_ENCRYPTION_KEY=<base64 32 byte> DATA_KEY_VERSION=1 \
-CATEGORY_LLM_ENABLED=false GMAIL_SYNC_ENABLED=false \
-/tmp/wqa-split-18093/pam-api
+rm -rf /tmp/pam-split-clone
+git clone https://github.com/NDI05/0037-Backend-Financial.git /tmp/pam-split-clone
+git -C /tmp/pam-split-clone log -1 --format='%H %s'   # 327d8762… chore(repo): bootstrap standalone backend repository
+git -C /tmp/pam-split-clone status --porcelain        # (kosong)
+git -C /tmp/pam-split-clone ls-files | wc -l          # 103
 ```
 
-Hasil teramati:
+### P3 — vet / build / test dari clone
 
-| Cek | Hasil |
-|---|---|
-| `GET /healthz` | **200** `{"status":"ok","uptimeSeconds":…}` |
-| `GET /readyz` | **200** `{"status":"ready"}` |
-| Migrasi DB | 17 file SQL di `internal/store/migrations`, **16 baris** di `schema_migrations` |
-| Shutdown | log `shutdown_requested`, proses berhenti bersih |
-| Log | ada WARN "development secrets are in use" (diharapkan untuk dev); tidak ada secret tercetak |
+```
+cd /tmp/pam-split-clone
+export PAM_GOROOT=/Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/.toolchain/go
+./scripts/go.sh vet ./...        # rc=0
+./scripts/go.sh build ./...      # rc=0
+./scripts/go.sh test ./... -count=1 -json > /tmp/clone_test.json   # rc=0
+```
 
-Catatan operasional: `ACCESS_TOKEN_TTL_SECONDS` divalidasi **60..900** (nilai 3600 membuat server
-gagal start — sempat teramati dan sudah dikoreksi ke 900); port **18093 sedang dipakai proses
-Python lain**, jadi baseline memakai **18094**. Migrasi ikut binary (embed), tidak butuh file
-migrasi eksternal. Android di bawah ini tidak dijalankan karena PM masih mengubah tree.
+Dihitung dari event `Action=="run"` unik: **11 paket, 167 fungsi test, 0 skip, 0 fail**.
 
-## 2. Checklist parity gate (diisi setelah PM menyatakan tree Android bersih)
+### P4 — Android tanpa source backend + build debug
 
-Semua langkah dijalankan berurutan; status per butir: **PASS / PARTIAL / FAIL / NOT RUN** +
-bukti (perintah + output ringkas + hash + artefak). Artefak disimpan di
-`docs/evidence/assets/pm_backend_split_2026-11-24/` **setelah** PM memberi izin
-(sebelum itu hanya dokumen ini yang diubah). Redaksi token/JWT/secret sebelum menyimpan.
+```
+git -C pam-app ls-files 'backend-go' | wc -l     # 0
+ls pam-app/backend-go                            # tidak ada
+git -C pam-app rev-parse HEAD                    # b5ebf19…
+cd pam-app
+./scripts/build.sh :app:assembleDebug --rerun-tasks -P PAM_BACKEND_BASE_URL=http://127.0.0.1:18090
+# BUILD SUCCESSFUL in 55s; 43 actionable tasks: 43 executed
+shasum -a 256 app/build/outputs/apk/debug/app-debug.apk
+# ef183b753f798bffed9f7e15100d9c0b6413c702f87008b28314f17c3e6f2653
+grep PAM_BACKEND_BASE_URL app/build/generated/source/buildConfig/debug/com/pam/recap/BuildConfig.java
+# = "http://127.0.0.1:18090"
+```
 
-| ID | Butir | Metode / perintah persis | Kriteria PASS | Status |
-|---|---|---|---|---|
-| P1 | Dua URL + hash repo | `git -C pam-app remote -v; git -C pam-app rev-parse HEAD; git -C 0037-Backend-Financial remote -v; git -C 0037-Backend-Financial rev-parse HEAD`; `git push --dry-run`/`git ls-remote origin` untuk memastikan hash terkirim | Kedua remote sama dengan baseline §1; HEAD Android + HEAD backend tercatat; hash di remote = hash lokal | NOT RUN |
-| P2 | Clone bersih repo backend | `git clone <url-backend> /tmp/pam-split-clone && git -C /tmp/pam-split-clone log -1 --format=%H`; bandingkan dengan §1.2 | Clone berhasil, HEAD = `327d8762…` (atau commit PM terbaru yang dilaporkan), working tree bersih | NOT RUN |
-| P3 | Go vet/build/test dari clone bersih | `PAM_GOROOT=<pam-app>/.toolchain/go /tmp/pam-split-clone/scripts/go.sh vet ./...`; `… build ./...`; `… test ./... -count=1 -json` | rc=0 untuk ketiganya; **167 fungsi test**, 0 gagal, 0 skip; jumlah paket 11 (perubahan sah hanya bila dilaporkan PM) | NOT RUN |
-| P4 | `backend-go/` hilang dari tree Android tanpa merusak build | `test ! -e pam-app/backend-go && echo absent`; `git -C pam-app ls-files 'backend-go' \| wc -l`; `./scripts/build.sh split-check -P PAM_BACKEND_BASE_URL=http://10.0.2.2:18094` (build debug) | `backend-go/` absen (0 file tracked); build debug **sukses**; tidak ada task Gradle/script yang menunjuk `backend-go` (grep `scripts/`, `settings.gradle.kts`, `app/build.gradle.kts`) | NOT RUN |
-| P5 | Server Go dijalankan dari repo backend (bukan dari pam-app) | Jalankan P6 server dari `/tmp/pam-split-clone` dengan DB terisolasi; `curl -s -w '%{http_code}' /healthz /readyz` | `/healthz` 200, `/readyz` 200, log menunjukkan port yang dipakai dan tidak ada error migrasi | NOT RUN |
-| P6 | Migrasi DB terisolasi | `rm -rf /tmp/pam-split-db && mkdir -p /tmp/pam-split-db`; jalankan server `DATABASE_URL=file:/tmp/pam-split-db/pam.db`; `sqlite3 …/pam.db 'select count(*), max(version) from schema_migrations'` | DB baru dibuat, migrasi 16 baris (atau sesuai laporan PM), server `readyz` 200; tidak menyentuh DB owner/UAT `:18090` | NOT RUN |
-| P7 | APK debug login + baca data dari server repo backend | Install debug dari langkah P4 ke emulator-5556; login akun sintetis UAT; buka Ringkasan + Transaksi; verifikasi via logcat/correlationId bahwa request masuk ke server repo backend | Login sukses, Ringkasan/Transaksi menampilkan data yang sama seperti baseline (jumlah transaksi + angka ringkasan), log server repo backend mencatat request dengan correlationId; tidak ada request ke `:18090` | NOT RUN |
-| P8 | Rollback ke pasangan baseline | Pasangan: Android `cd0f91a2…` (dengan `backend-go/` masih ada) + server dari `pam-app/backend-go` HEAD `cd0f91a2`; dokumentasikan langkah restore: checkout commit Android, build debug, jalankan server dari `pam-app/backend-go` pada port terpisah, ulangi smoke login+read | APK dari pasangan baseline login & membaca data dari server pasangan baseline; langkah restore tertulis dan bisa diulang | NOT RUN |
-| P9 | Rekonsiliasi Gmail API (bila PM menyerahkan) | Ikuti `docs/GMAIL_API_CONTRACT.md` di repo backend: cek endpoint OAuth/Pub/Sub + `GMAIL_SYNC_ENABLED` mati/hidup; jangan pakai kredensial owner nyata | Endpoint + config terdokumentasi sinkron dengan kontrak; mode OFF tidak memanggil Google; tanpa secret di repo | NOT RUN |
+APK yang sama kemudian di-install ulang ke emulator-5556 (`adb install -r`) dan tetap membaca
+data server (lihat P7). Menarik: APK hasil build HEAD `b5ebf19` **byte-identik** dengan APK yang
+dibangun terpisah dari baseline `cd0f91a` (sha256 sama) — commit pemisahan repo tidak mengubah
+source aplikasi Android.
 
-### 2.1 Urutan eksekusi yang akan dipakai
+### P5 / P6 — server + DB dari clone (port terisolasi)
 
-1. P1–P2 (hash & clone bersih) → 2. P3 (vet/build/test) → 3. P6 (DB terisolasi) → 4. P5
-(`/healthz` + `/readyz`) → 5. P4 (build Android tanpa source backend) → 6. P7 (login+read E2E) →
-7. P8 (rollback) → 8. P9 (Gmail API, hanya bila diserahkan PM).
+Catatan port: `:18090` dipakai backend UAT pemilik (`pam-azure`, PID 35599) dan `:18091` dipakai
+proses backend lain (`pam-be-me`, PID 33035). Karena backend pemilik tidak boleh diganggu,
+server uji dijalankan di **host port 18095**, lalu emulator diarahkan lewat
+`adb reverse tcp:18090 tcp:18095` sehingga APK (base URL `http://127.0.0.1:18090`) tetap
+mencapai server uji.
 
-### 2.2 Batas & larangan selama verifikasi
+```
+cd /tmp/pam-split-clone
+./scripts/go.sh build -o /tmp/pam-split-run/pam-api ./cmd/api
+rm -f /tmp/pam-split-run/db/pam.db*
+PORT=18095 APP_ENV=development \
+ DATABASE_URL=file:/tmp/pam-split-run/db/pam.db \
+ JWT_SECRET=wqa-split-2026-secret-0123456789abcdef-0123 \
+ JWT_ISSUER=pam-api JWT_AUDIENCE=pam-android ACCESS_TOKEN_TTL_SECONDS=900 \
+ REGISTRATION_INVITE_CODE=pam-dev DATA_ENCRYPTION_KEY="$(openssl rand -base64 32)" \
+ DATA_KEY_VERSION=1 CATEGORY_LLM_ENABLED=false GMAIL_SYNC_ENABLED=false \
+ /tmp/pam-split-run/pam-api
+curl -s -w ' [%{http_code}]' http://127.0.0.1:18095/healthz   # {"status":"ok"} [200]
+curl -s -w ' [%{http_code}]' http://127.0.0.1:18095/readyz    # {"status":"ready"} [200]
+sqlite3 /tmp/pam-split-run/db/pam.db 'select count(*), max(version) from schema_migrations;'
+# 16|16
+```
 
-- **Jangan** menyentuh backend UAT owner `:18090`, DB Turso owner, akun/data owner; verifikasi
-  memakai port **>18090** (mis. 18094/18095) + DB file di `/tmp`.
-- **Jangan** commit/push/checkout destruktif atau mengubah kode; lane ini hanya menguji.
-  Perubahan file dibatasi pada dokumen ini sampai PM memberi sinyal tree bersih.
-- **Jangan** menyalin secret/token/JWT mentah ke repo; redaksi `<redacted-token>`.
-- Jangan menjalankan build Android penuh selama PM masih mengubah tree (baseline ini sengaja
-  belum build).
-- Emulator dipakai bergiliran; wajib lepas lock `/tmp/pam-emu5556.lock` setelah selesai.
+Server mencatat `started` port 18095, migrasi berjalan otomatis pada DB baru (17 file SQL embed,
+16 baris `schema_migrations`), dan berhenti bersih (`shutdown_requested`) saat dimatikan.
+`ACCESS_TOKEN_TTL_SECONDS` wajib 60..900; `DATA_ENCRYPTION_KEY` base64 32 byte.
 
-## 3. Status gate ringkas (saat baseline, 24 Nov 13:21 WIB)
+### P7 — seeding lewat API + login UI + baca data
 
-| Gate | Status | Keterangan |
-|---|---|---|
-| Baseline tercatat | **PASS** | HEAD Android `cd0f91a2…` + HEAD backend `327d8762…`, tree bersih, ukuran file, parity snapshot |
-| Go standalone (vet/build/test) | **PASS (baseline)** | 11 paket / 167 test / 0 gagal dari repo backend saat baseline |
-| Server standalone `/healthz` + `/readyz` | **PASS (baseline)** | 200/200, migrasi 16 baris, DB terisolasi, shutdown bersih |
-| Backend pindah dari Android (P1–P4) | **NOT RUN** | menunggu PM menyatakan tree Android bersih |
-| E2E APK ↔ server repo backend (P5–P7) | **NOT RUN** | butuh tree Android bersih + build debug |
-| Rollback pasangan baseline (P8) | **NOT RUN** | disiapkan metodenya |
-| Gmail API parity (P9) | **NOT RUN** | menunggu penyerahan PM |
+```
+# akun sintetis
+POST /v1/accounts  {"email":"split.qa.133112@pam-uat.test","password":"split-qa-pass-2026",
+                    "displayName":"Split QA","inviteCode":"pam-dev"}          → 201
+POST /v1/sessions  {"email":…,"password":…}                                 → 201
+# kategori + 2 transaksi (owner sintetis, BUKAN data owner asli)
+POST /v1/categories {"code":"splitqa","label":"Split QA Makanan","kind":"EXPENSE",
+                    "attributes":{"sumber":"split-uat"}}                    → 201 cat_42d30f68…
+POST /v1/transactions (Idempotency-Key) amountMinor=1234567, eventAt=2026-11-10T03:15:00Z → 201 tx_2707387…
+POST /v1/transactions (Idempotency-Key) amountMinor=987654,  eventAt=2026-11-18T05:40:00Z → 201 tx_23f51d5…
+```
 
-Kesimpulan: **belum ada gate yang bisa dinaikkan**. Baseline membuktikan repo backend standalone
-sudah bisa di-vet/build/test dan server-nya sehat dengan DB terisolasi; semua klaim parity
-end-to-end masih **NOT RUN** sampai PM memberi sinyal dan verifikasi dijalankan ulang dari clone
-bersih sesuai §2.
+Di emulator: install APK P4 → `adb reverse tcp:18090 tcp:18095` → login akun sintetis lewat UI
+(form "Masuk", email + kata sandi) → layar persetujuan → "Lanjut tanpa menghubungkan Gmail" →
+Ringkasan → tab Transaksi.
+
+Hasil UI (dump + screenshot di `/tmp/pam-split-run/artifacts/`):
+
+- `09_ringkasan.{xml,png}`: ARUS KAS BERSIH **Rp22.222,21**, KELUAR Rp22.222,21,
+  kategori "Split QA Makanan" **2 transaksi**, 0 belum berkategori — angka = 1.234.567 + 987.654
+  minor dari server uji.
+- `14_transaksi_fixed.{xml,png}` dan `15_transaksi_after_reinstall.{xml,png}`: tab Transaksi
+  menampilkan **2 transaksi** — "Split QA Transaksi 1" Rp12.345,67 (10 Nov) dan
+  "Split QA Transaksi 2" Rp9.876,54 (18 Nov), sumber "Manual".
+- Log server uji mencatat request dari aplikasi: `/v1/sessions` 201, `/v1/consents` 201,
+  `/v1/summaries/{monthId}` 200, `/v1/transactions` 200, `/v1/categories` 200 — tanpa satu pun
+  request ke `:18090` backend pemilik.
+
+### P8 — rollback ke pasangan baseline (scope build/health)
+
+```
+# a) server dari source backend-go pada commit baseline cd0f91a
+mkdir -p /tmp/pam-base-backend
+git -C pam-app archive cd0f91a2b06562ddf12e8fea1c4868e88de54007:backend-go \
+  | tar -x -C /tmp/pam-base-backend          # 93 file
+cd /tmp/pam-base-backend
+GOROOT=$PAM_GOROOT GOCACHE=… GOMODCACHE=… go build -o pam-api ./cmd/api   # rc=0
+# catatan: snapshot baseline belum punya scripts/go.sh, jadi memakai go langsung
+PORT=18096 DATABASE_URL=file:/tmp/pam-base-run/db/pam.db … ./pam-api
+curl /healthz → 200; /readyz → 200; schema_migrations 16 baris   # isolate, DB baru
+
+# b) APK versi baseline cd0f91a
+git -C pam-app worktree add --detach /tmp/pam-base-android cd0f91a…
+cd /tmp/pam-base-android
+./scripts/build.sh :app:assembleDebug -P PAM_BACKEND_BASE_URL=http://127.0.0.1:18090
+# BUILD SUCCESSFUL in 1m15s; 21 executed
+shasum -a 256 app/build/outputs/apk/debug/app-debug.apk
+# ef183b753f798bffed9f7e15100d9c0b6413c702f87008b28314f17c3e6f2653  (sama dengan APK HEAD)
+git ls-files 'backend-go' | wc -l   # 93 (source backend masih ada di pasangan baseline)
+```
+
+Kedua sisi pasangan baseline terbukti **masih dapat dibangun dan dijalankan**. Restore database
+produksi / rollback data nyata **NOT RUN** — di luar scope izin (tidak menyentuh DB UAT pemilik)
+dan menunggu instruksi pemilik.
+
+### P9 — Gmail API/Pub/Sub
+
+Belum dijalankan: HEAD publik repo backend (`327d8762`) **belum memuat implementasi Gmail**
+(`internal/gmail/` tidak ada; `docs/GMAIL_API_CONTRACT.md` sudah ada tetapi endpoint belum).
+Implementasi Gmail yang sedang dikerjakan masih ada di working tree lokal repo backend yang
+**belum di-commit/push** (lihat §1.2). Uji parity Gmail menunggu commit+push tersebut, lalu
+diulang dari clone bersih dengan `GMAIL_SYNC_ENABLED=true/false` dan tanpa kredensial pemilik.
+
+## 3. Temuan
+
+1. **Temuan data-shape attributes (ditemukan & diperbaiki saat uji).** Seed transaksi pertama
+   memakai `attributes:{"tags":["split"]}` (array). Server menerima (201) dan Ringkasan tetap
+   benar, tetapi tab Transaksi menampilkan **"Data tidak dapat dibaca."** — klien Android
+   memetakan `attributes` server ke map string datar (`toStringAttributes`) sehingga nilai
+   non-string dianggap kegagalan protokol (`ErrorKind.PARSING`). Setelah transaksi dibuat ulang
+   dengan `attributes:{"sumber":"split-uat"}` (string datar), tab menampilkan 2 transaksi normal
+   (bukti `10`→`11` gagal, `14`/`15` sukses). **Kontrak `API_CONTRACT.md` belum membatasi tipe
+   nilai `attributes`** — rekomendasi: dokumentasikan "nilai atribut harus string" atau buat
+   klien mentoleransi nilai non-string. Ini bukan regresi pemisahan repo, tetapi gap kontrak
+   klien/server.
+2. **Binary 19 MB sempat masuk history Android** (`backend-go/api` di commit `70d1535`),
+   dihapus di `b5ebf19`. Tidak di-rewrite (larangan force-push); tree & build bersih.
+3. **Clone bersih butuh `PAM_GOROOT` eksternal** karena repo backend belum membawa `.toolchain/`.
+   CI workflow repo backend memasang Go sendiri; untuk run lokal dari checkout bersih, dokumentasi
+   `README` sebaiknya menyebut variabel ini.
+4. **Gmail API belum bisa digate** sampai implementasi WIP di repo backend di-commit+push.
+5. **Banner "Ada transaksi yang belum diakui server"** tampil setelah login (status pembaruan
+   menandai transaksi manual yang belum masuk siklus impor). Perilaku ini juga muncul pada sesi
+   baseline sebelumnya; bukan efek pemisahan repo, tetapi tetap perlu keputusan PM apakah akan
+   dirapikan sebelum serah terima.
+6. **APK deterministik**: build HEAD `b5ebf19` menghasilkan sha256 sama dengan build baseline
+   `cd0f91a` → bukti tidak ada perubahan source Android dalam commit pemisahan repo.
+
+## 4. Batas pengujian & cleanup
+
+- Tidak menyentuh `:18090` backend UAT pemilik (PID 35599 masih jalan setelah uji), DB Turso
+  pemilik, maupun akun/data pemilik. Semua server uji memakai DB file `/tmp` dan sudah dimatikan
+  (`shutdown_requested`); `adb reverse` sudah dicabut; worktree `/tmp/pam-base-android` dihapus.
+- Gate ini tidak mengubah/menghapus kode, fixture interop, migrasi DB, atau dokumen lain. Hanya
+  dokumen ini yang diubah dalam lane ini.
+- Yang **belum** dibuktikan: (a) restore DB produksi/rollback data nyata (butuh otorisasi),
+  (b) parity Gmail API/Pub/Sub (menunggu implementasi di-push), (c) APK login pada perangkat
+  fisik/Android Studio Run—uji UI memakai emulator-5556 dengan APK debug hasil build yang sama,
+  (d) konfigurasi provider Azure untuk kategori (uji ini `CATEGORY_LLM_ENABLED=false`, sesuai
+  batas biaya).
+
+## 5. Kesimpulan gate
+
+Pemisahan repo **terbukti berfungsi end-to-end untuk jalur inti**: backend dapat di-clone bersih,
+di-vet/build/test (167 test hijau), dijalankan sebagai server dengan DB terisolasi, dan APK debug
+yang dibangun **tanpa source backend** dapat login serta membaca transaksi/kategori yang dibuat
+lewat API dari server repo backend. Pasangan baseline masih dapat dibangun dan dijalankan.
+
+Status gate: **P1–P7 PASS; P8 PARTIAL (build/health PASS, restore DB produksi NOT RUN);
+P9 NOT RUN (menunggu implementasi Gmail di-push)**. Gate belum final sampai dua butir tersebut
+selesai/diotorisasi.
