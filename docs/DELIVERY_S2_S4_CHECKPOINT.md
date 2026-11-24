@@ -843,6 +843,10 @@ PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
   1 Transportasi), biaya aktual $0.00101235.
 - Emulator gabungan `wqa`: (c) kembali dari daftar Transaksi ke Ringkasan direproduksi sebelum
   perbaikan dan PASS sesudah; (a) tab kosong tidak tereproduksi; C09/C11/C14 PASS runtime.
+- Perangkat pemilik (24 Nov, APK build `0030a43` = kode Android final): sheet status dibuka
+  tanpa request, satu tap = satu percobaan sync; daftar menampilkan kategori Azure; detail
+  menampilkan field **Merchant** berisi nama usaha (bukan PAN); analisis tersimpan
+  `AVAILABLE/CURRENT`. [UAT_PM_OWNER_DEVICE_2026-11-24.md](evidence/UAT_PM_OWNER_DEVICE_2026-11-24.md).
 
 ### Keputusan gate PM (24 November 2026)
 
