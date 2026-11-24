@@ -3,7 +3,9 @@
 Tanggal keputusan: **23 November 2026**.
 Status **24 November 2026**: polling Gmail sudah diuji dengan fixture, termasuk pada
 HP fisik. UAT Gmail live dan gate GCP Rp0 masih terbuka. Google SSO dan onboarding
-Gmail terpadu disetujui untuk dirancang di §10. Implementasi dan UAT SSO masih direncanakan.
+Gmail terpadu disetujui untuk dirancang di §10; implementasinya selesai di fixture/unit
+(`pam-app@e67380a`, backend `71013f5`), sedangkan UAT akun Google nyata, Gmail live, dan
+gate Rp0 **NOT RUN (owner)**.
 
 Draf konsolidasi SRS: [CR-005](../changes/CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md) dan
 [CR-007](../changes/CR_007_DRAFT_GMAIL_API_YEARLY_WORKFLOW.md).

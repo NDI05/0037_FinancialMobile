@@ -113,8 +113,9 @@ tertutup secara andal dan menambah permukaan kredensial di perangkat.
 
 Status implementasi per 24 November 2026:
 
-- **Google SSO dan onboarding Gmail terpadu**: rancangan disetujui untuk backlog.
-  Implementasi dan acceptance belum dijalankan. Bukti polling di bawah mendahului
+- **Google SSO dan onboarding Gmail terpadu**: implementasi selesai di fixture/unit
+  (`pam-app@e67380a`, backend `71013f5`; lihat DRAFT-SSO-01..04). UAT akun Google nyata,
+  Gmail live, dan gate Rp0 **NOT RUN (owner)**. Bukti polling di bawah mendahului
   perubahan login ini.
 - Android `feat/c2-android` HEAD `a7abb14`: unit debug **639 tes/83 suite/0 gagal**,
   `lintDebug` **0 error/120 warning**, `assembleDebug` PASS, APK debug 46.433.025 byte.
