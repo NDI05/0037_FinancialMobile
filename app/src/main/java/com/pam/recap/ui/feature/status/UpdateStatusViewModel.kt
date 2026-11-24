@@ -183,7 +183,11 @@ class UpdateStatusViewModel @Inject constructor(
                     _serverSync.update { previous -> previous.withStatus(result.value, observedAt) }
                 }
                 is Outcome.Failure -> {
-                    _serverSync.update { it.copy(loading = false, error = result.error) }
+                    // A failed read is not evidence that the queued request is still running; drop
+                    // the local hint so a flaky connection cannot pin "Menghubungkan" forever.
+                    _serverSync.update {
+                        it.copy(loading = false, requestHintAt = null, error = result.error)
+                    }
                 }
             }
         } finally {

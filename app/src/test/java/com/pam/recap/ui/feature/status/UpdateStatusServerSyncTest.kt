@@ -233,6 +233,22 @@ class UpdateStatusServerSyncTest {
     }
 
     @Test
+    fun `a failed status read after the ack does not pin the connecting label`() = sheetTest { vm ->
+        gmail.statusResult = Outcome.Success(connectedStatus())
+        vm.onSheetOpened()
+
+        // The 202 arrives, but the follow-up read fails (flaky network).
+        gmail.statusResult = Outcome.Failure(AppError.Network("backend_unreachable"))
+        vm.syncServerNow()
+
+        val failed = vm.serverSync.value
+        assertFalse(
+            "a failed read must drop the local hint instead of pinning Menghubungkan",
+            failed.connecting(clock.now()),
+        )
+    }
+
+    @Test
     fun `a coalesced ack is reported as coalesced, not queued`() = sheetTest { vm ->
         gmail.syncResult = Outcome.Success(
             GmailSyncRequest(queued = true, coalesced = true),
