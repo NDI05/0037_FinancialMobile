@@ -108,3 +108,18 @@ Checklist penutupan harian:
 - [ ] Gate terbuka dan koreksi review terlihat.
 - [ ] Ringkasan README konsisten.
 - [ ] Tidak ada credential/raw email atau klaim selesai tanpa evidence.
+
+## Penutupan 24 Nov 2026 (lanjutan) — bukti runtime final
+
+| Item | Hasil | Bukti |
+|---|---|---|
+| Backend HEAD final | `40c4c31` (kode `f1625b5`, dokumen+evidence menyusul); remote `integration/2026-11-24` diverifikasi | `git ls-remote` = hash lokal |
+| Runtime smoke backend | DB baru 19 migrasi; healthz/readyz 200; guard lampiran by-id dan import-job kedaluwarsa **400**; list lampiran tanpa filter `items=0`; sweep report-only/delete sesuai gate; audit `REPORT_ONLY`/`DELETE` | [FINAL_RUNTIME_SMOKE](https://github.com/NDI05/0037-Backend-Financial/blob/integration/2026-11-24/docs/evidence/FINAL_RUNTIME_SMOKE_2026-11-24.md) |
+| Android HEAD final | `98d0743`+docs (kode `19e6860`); remote `feat/c2-android` diverifikasi | `git ls-remote` = hash lokal |
+| Bukti UI final | Pengaturan final tanpa entri IMAP; font 200% + 360 dp menampilkan Ringkasan/Transaksi tanpa crash | `docs/evidence/ui_integrated/08`, `09`, `10` |
+| Kebersihan repo | 3 worktree lane dihapus; branch lokal+remote lane dihapus setelah merge; sisa `main`/`develop`/`feat/c2-android` dan `main`/`integration/2026-11-24` | `git worktree list`, `git ls-remote` |
+| Gate | 26 baris: 19 PASS, 4 PARTIAL, 3 NOT RUN (rollback drill, hapus retensi nyata, Gmail live, merge/deploy/SRS milik owner) | [Laporan gate final](delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md) |
+
+Tidak ada perubahan kode setelah gate build terakhir (`19e6860`/`f1625b5`); semua commit
+sesudahnya hanya dokumentasi/evidence. Merge ke `main`, deploy, dan revisi SRS resmi tetap
+menunggu instruksi pemilik.
