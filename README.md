@@ -58,7 +58,7 @@ harus tampil sebagai keadaan berbeda.
 | S4 | Lampiran, admin, visual dan cutover varian penilaian | Belum lulus gate |
 | S5 | Verifikasi operasional, benchmark, perangkat dan owner UAT | Gate akhir masih terbuka |
 
-Rincian bukti per gate dan sisa pekerjaan pemilik ada di [laporan gate akhir](docs/delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md) (30 gate: 22 PASS, 4 PARTIAL, 4 NOT RUN).
+Rincian bukti per gate dan sisa pekerjaan pemilik ada di [laporan gate akhir](docs/delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md) (38 gate: 28 PASS, 4 PARTIAL, 6 NOT RUN).
 
 ### Implementasi versus acceptance
 

@@ -4,8 +4,8 @@ Dokumen ini adalah langkah milik **pemilik** untuk mengaktifkan tombol "Masuk de
 kartu "Tautkan Google" di aplikasi PAM. Tidak ada secret, client ID asli, atau data akun yang
 disimpan di repo: nilai diisi lewat build property dan environment server.
 
-Status implementasi Android: **IMPLEMENTED** di branch `work/sso-android`
-(commit `5cb14d1`). UAT perangkat nyata dengan akun Google betulan **NOT RUN** — menunggu langkah
+Status implementasi Android: **IMPLEMENTED (fixture/unit)** di branch `feat/c2-android`
+(commit `e67380a`). UAT perangkat nyata dengan akun Google betulan **NOT RUN** — menunggu langkah
 1–5 di bawah dikerjakan pemilik. Tanpa client ID, fitur otomatis tersembunyi dan aplikasi berjalan
 seperti sebelumnya (login email/PAM tetap normal).
 
