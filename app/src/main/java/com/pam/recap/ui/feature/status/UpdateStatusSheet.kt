@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.pam.recap.R
+import com.pam.recap.core.time.RetentionWindow
 import com.pam.recap.domain.model.CategoryQueuePhase
 import com.pam.recap.ui.components.PillButton
 import com.pam.recap.ui.components.PillButtonStyle
@@ -54,6 +55,8 @@ fun UpdateStatusSheet(
     now: Instant,
     onDismiss: () -> Unit,
     onSyncNow: () -> Unit = {},
+    /** The rolling window the served period belongs to; null keeps the sheet silent about it. */
+    retention: RetentionWindow? = null,
 ) {
     SheetScaffold(onDismissRequest = onDismiss) {
         Text(text = stringResource(R.string.update_status_title), style = TitleL, color = OnInk)
@@ -63,6 +66,23 @@ fun UpdateStatusSheet(
             StatusSection(title = stringResource(R.string.update_status_section_data)) {
                 status.month?.let {
                     BodyLine(stringResource(R.string.update_status_sync_period, it.label()))
+                }
+                retention?.let { window ->
+                    BodyLine(
+                        stringResource(
+                            R.string.update_status_retention_window,
+                            window.oldest.label(),
+                            window.newest.label(),
+                        ),
+                    )
+                    if (window.oldestPartial) {
+                        BodyLine(
+                            stringResource(
+                                R.string.update_status_retention_partial,
+                                window.oldest.label(),
+                            ),
+                        )
+                    }
                 }
                 StatusLine(
                     label = stringResource(R.string.update_status_last_attempt),

@@ -53,6 +53,7 @@ class TransactionsPagingTest {
                 transactions = FakeTransactionRepository(emptyList()),
                 clock = fixedClock(testNow),
             ),
+            clock = fixedClock(testNow),
             server = server,
         )
 
@@ -175,12 +176,13 @@ class TransactionsPagingTest {
 
     @Test
     fun `changing the month resets the cursor and shows the new month's rows`() = runTest {
-        val nextMonth = JakartaMonth.parse("2026-12")
-        val december = kotlin.time.Instant.parse("2026-12-05T03:00:00Z")
+        // The retention window ends at the current month, so a shift back is the reachable move.
+        val previous = JakartaMonth.parse("2026-10")
+        val october = kotlin.time.Instant.parse("2026-10-05T03:00:00Z")
         val server = RecordingServerFinanceRepository()
         server.pageProvider = { call ->
-            if (call.month == nextMonth) {
-                page(listOf(testTransaction("tx_dec").copy(eventAt = december)), null)
+            if (call.month == previous) {
+                page(listOf(testTransaction("tx_oct").copy(eventAt = october)), null)
             } else {
                 page(pageOne, "cursor_1")
             }
@@ -188,11 +190,11 @@ class TransactionsPagingTest {
         val vm = viewModel(server)
         vm.state.first { it.items.size == 50 }
 
-        vm.nextMonth()
-        val state = vm.state.first { it.month == nextMonth && it.items.singleOrNull()?.id == "tx_dec" }
+        vm.previousMonth()
+        val state = vm.state.first { it.month == previous && it.items.singleOrNull()?.id == "tx_oct" }
 
         assertEquals(null, server.searchCalls.last().cursor)
-        assertEquals(listOf("tx_dec"), state.items.map { it.id })
+        assertEquals(listOf("tx_oct"), state.items.map { it.id })
         assertFalse(state.hasMore)
     }
 

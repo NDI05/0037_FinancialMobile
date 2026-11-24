@@ -124,10 +124,15 @@ fun AnalysisScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(PamSpacing.sm),
         ) {
+            // Arrows stop at the rolling-year boundaries; no month outside the window is reachable.
+            val window = viewModel.window()
             MonthSelector(
                 label = month.label(),
                 onPrevious = viewModel::previousMonth,
                 onNext = viewModel::nextMonth,
+                canGoPrevious = window.canGoEarlier(month),
+                canGoNext = window.canGoLater(month),
+                partial = window.isPartial(month),
             )
 
             DisclosureCard(

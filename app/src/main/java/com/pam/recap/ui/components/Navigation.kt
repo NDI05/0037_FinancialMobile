@@ -55,6 +55,11 @@ import java.time.LocalDate
 /**
  * Centred month navigator with chevrons, matching the reference's `‹ January 4–10 ›` control.
  * Both chevrons are icon-only, so each carries its own description.
+ *
+ * The arrows are bounded by the rolling one-year window: [canGoPrevious] is false on the oldest
+ * reachable month and [canGoNext] is false on the current month, so the selector can never point at
+ * a period the product does not serve. [partial] marks the boundary month that is only partly
+ * covered by the window.
  */
 @Composable
 fun MonthSelector(
@@ -62,6 +67,9 @@ fun MonthSelector(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
+    canGoPrevious: Boolean = true,
+    canGoNext: Boolean = true,
+    partial: Boolean = false,
 ) {
     Row(
         modifier = modifier
@@ -74,20 +82,34 @@ fun MonthSelector(
             icon = Icons.Rounded.ChevronLeft,
             contentDescription = stringResource(R.string.action_previous),
             onClick = onPrevious,
+            enabled = canGoPrevious,
         )
-        Text(
-            text = label,
-            style = com.pam.recap.ui.theme.HeadlineM,
-            color = OnInk,
+        Column(
             modifier = Modifier
                 .padding(horizontal = PamSpacing.md)
                 .weight(1f, fill = false),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = label,
+                style = com.pam.recap.ui.theme.HeadlineM,
+                color = OnInk,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            if (partial) {
+                Text(
+                    text = stringResource(R.string.month_selector_partial),
+                    style = com.pam.recap.ui.theme.BodyS,
+                    color = OnInkMuted,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
+        }
         CircularIconWell(
             icon = Icons.Rounded.ChevronRight,
             contentDescription = stringResource(R.string.action_next),
             onClick = onNext,
+            enabled = canGoNext,
         )
     }
 }

@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.pam.recap.core.money.PercentChange
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
+import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.time.JakartaMonth
+import com.pam.recap.core.time.RetentionWindow
+import com.pam.recap.core.time.SystemClockProvider
 import com.pam.recap.domain.model.GmailConnection
 import com.pam.recap.domain.model.MonthlySummary
 import com.pam.recap.domain.model.SummaryComparison
@@ -65,6 +68,7 @@ class OverviewViewModel @Inject constructor(
     private val resolveInitialMonth: ResolveInitialMonthUseCase,
     private val server: ServerFinanceRepository? = null,
     private val reconnectGmail: ReconnectGmailUseCase? = null,
+    private val clock: ClockProvider = SystemClockProvider(),
     private val activeMonth: ActiveMonthStore = ActiveMonthStore(),
 ) : ViewModel() {
 
@@ -85,7 +89,9 @@ class OverviewViewModel @Inject constructor(
             // view model before the session is restored, and a null read used to leave Ringkasan
             // stuck on an unresolved month (same race the Transaksi tab had).
             val ownerId = sessions.observe().filterNotNull().first().ownerId
-            val resolved = resolveInitialMonth(ownerId)
+            // The newest local data may sit outside the rolling year; it is not reachable, so the
+            // screenshot/month state starts at the nearest month the product still serves.
+            val resolved = window().clamp(resolveInitialMonth(ownerId))
             activeMonth.select(ownerId, resolved)
             month.value = resolved
             reconnectGmail?.let { runCatching { it(ownerId) } }
@@ -96,8 +102,9 @@ class OverviewViewModel @Inject constructor(
             activeMonth.selection.collect { selection ->
                 val picked = selection ?: return@collect
                 val ownerId = sessions.current()?.ownerId ?: return@collect
-                if (picked.ownerId == ownerId && month.value != picked.month) {
-                    month.value = picked.month
+                val pickedMonth = window().clamp(picked.month)
+                if (picked.ownerId == ownerId && month.value != pickedMonth) {
+                    month.value = pickedMonth
                 }
             }
         }
@@ -165,9 +172,20 @@ class OverviewViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), OverviewUiState())
 
-    fun previousMonth() = shiftMonth { it.previous() }
+    /** The rolling one-year window the arrows are bounded by (DRAFT-RET-01/02). */
+    fun window(): RetentionWindow = RetentionWindow.of(clock)
 
-    fun nextMonth() = shiftMonth { it.next() }
+    fun previousMonth() {
+        val current = month.value ?: return
+        if (!window().canGoEarlier(current)) return
+        shiftMonth { it.previous() }
+    }
+
+    fun nextMonth() {
+        val current = month.value ?: return
+        if (!window().canGoLater(current)) return
+        shiftMonth { it.next() }
+    }
 
     private fun shiftMonth(transform: (JakartaMonth) -> JakartaMonth) {
         val next = month.value?.let(transform) ?: return

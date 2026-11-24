@@ -32,6 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -177,6 +179,9 @@ fun GlassTopBar(
 /**
  * 44 dp circular icon well. [contentDescription] is mandatory for icon-only controls (NFR-01);
  * pass `null` only when the icon is decorative next to a visible label.
+ *
+ * [enabled] keeps the control in the tree (and readable by TalkBack) while making it impossible to
+ * activate: the touch target stays at the minimum interactive size even when disabled.
  */
 @Composable
 fun CircularIconWell(
@@ -186,6 +191,7 @@ fun CircularIconWell(
     onClick: (() -> Unit)? = null,
     size: Dp = PamSize.iconButton,
     selected: Boolean = false,
+    enabled: Boolean = true,
     tint: androidx.compose.ui.graphics.Color = if (selected) Violet else OnInk.copy(alpha = 0.8f),
 ) {
     val wellModifier = modifier
@@ -194,8 +200,14 @@ fun CircularIconWell(
         .clip(CircleShape)
         .background(if (selected) Violet.copy(alpha = 0.16f) else GlassFill)
 
+    // The description sits on the control itself (not on the child icon) so TalkBack announces one
+    // node: name, role and disabled state together.
     val withClick = if (onClick != null) {
-        wellModifier.clickable(onClick = onClick)
+        wellModifier
+            .semantics {
+                if (contentDescription != null) this.contentDescription = contentDescription
+            }
+            .clickable(enabled = enabled, onClick = onClick)
     } else {
         wellModifier
     }
@@ -203,8 +215,8 @@ fun CircularIconWell(
     Box(modifier = withClick, contentAlignment = Alignment.Center) {
         Icon(
             imageVector = icon,
-            contentDescription = contentDescription,
-            tint = tint,
+            contentDescription = if (onClick != null) null else contentDescription,
+            tint = tint.copy(alpha = if (enabled) tint.alpha else tint.alpha * 0.4f),
             modifier = Modifier.size(20.dp),
         )
     }

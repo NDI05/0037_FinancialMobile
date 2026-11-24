@@ -5,7 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
+import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.time.JakartaMonth
+import com.pam.recap.core.time.RetentionWindow
+import com.pam.recap.core.time.SystemClockProvider
 import com.pam.recap.domain.model.Analysis
 import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.MonthlySummary
@@ -69,6 +72,7 @@ class AnalysisViewModel @Inject constructor(
     private val resolveInitialMonth: ResolveInitialMonthUseCase,
     private val serverAnalysis: ServerAnalysisRepository,
     private val serverFinance: ServerFinanceRepository,
+    private val clock: ClockProvider = SystemClockProvider(),
 ) : ViewModel() {
 
     val usesServerAnalysis: Boolean get() = serverAnalysis.isEnabled
@@ -76,7 +80,11 @@ class AnalysisViewModel @Inject constructor(
     private val month = MutableStateFlow<JakartaMonth?>(null)
     private val refreshTick = MutableStateFlow(0L)
     private val ui = MutableStateFlow(UiToggles())
-    private val requestedMonth = savedStateHandle.get<String>("monthId")?.let(JakartaMonth::parse)
+    // A drill-down route must still obey the one-year wall: clamp instead of requesting an
+    // out-of-window month the backend would reject.
+    private val requestedMonth = savedStateHandle.get<String>("monthId")
+        ?.let(JakartaMonth::parse)
+        ?.let { window().clamp(it) }
 
     private data class UiToggles(
         val showSuggestions: Boolean = false,
@@ -98,7 +106,8 @@ class AnalysisViewModel @Inject constructor(
         }
         viewModelScope.launch {
             val ownerId = sessions.current()?.ownerId
-            month.value = requestedMonth ?: ownerId?.let { resolveInitialMonth(it) }
+            month.value = requestedMonth
+                ?: ownerId?.let { window().clamp(resolveInitialMonth(it)) }
         }
     }
 
@@ -174,9 +183,16 @@ class AnalysisViewModel @Inject constructor(
             }
         }
 
-    fun previousMonth() = month.update { it?.previous() }
+    /** The rolling one-year window the arrows are bounded by (DRAFT-RET-01/02). */
+    fun window(): RetentionWindow = RetentionWindow.of(clock)
 
-    fun nextMonth() = month.update { it?.next() }
+    fun previousMonth() = month.update { current ->
+        current?.takeIf(window()::canGoEarlier)?.previous() ?: current
+    }
+
+    fun nextMonth() = month.update { current ->
+        current?.takeIf(window()::canGoLater)?.next() ?: current
+    }
 
     fun showObservations() = ui.update { it.copy(showSuggestions = false) }
 

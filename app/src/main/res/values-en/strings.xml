@@ -464,6 +464,7 @@
     <string name="detail_actions_server_partial">Server mode: categories and transaction details are saved to the server. Internal transfer and refund links remain read-only.</string>
     <string name="detail_confidence_hint">The 0.60 review threshold covers parser/import confidence — it is not a model accuracy probability.</string>
     <string name="detail_suggestion_unconfirmed">This category is an AI suggestion and has not been confirmed. Pick a category to confirm it.</string>
+    <string name="month_selector_partial">partial</string>
     <string name="update_status_title">Update status</string>
     <string name="update_status_open">Open update status</string>
     <string name="update_status_close">Close update status</string>
@@ -471,7 +472,9 @@
     <string name="update_status_indicator_checking">Checking</string>
     <string name="update_status_indicator_saving">Saving</string>
     <string name="update_status_indicator_categorizing">Categorizing</string>
+    <string name="update_status_indicator_fetching">Taking history</string>
     <string name="update_status_indicator_waiting">Waiting</string>
+    <string name="update_status_indicator_review">Needs review</string>
     <string name="update_status_indicator_offline">Offline</string>
     <string name="update_status_indicator_attention">Needs attention</string>
     <string name="update_status_indicator_succeeded">Up to date</string>
@@ -508,6 +511,8 @@
     <string name="update_status_sync_retry">Try again</string>
     <string name="update_status_sync_running">Syncing</string>
     <string name="update_status_sync_period">Period: %1$s</string>
+    <string name="update_status_retention_window">History available: %1$s to %2$s.</string>
+    <string name="update_status_retention_partial">Only part of %1$s falls inside this one-year range.</string>
     <string name="update_status_sync_progress">Page %1$d of %2$d</string>
     <string name="update_status_sync_conflict">A sync is already running. This panel will show its progress.</string>
     <string name="update_status_stage_checking">Checking the email range...</string>
@@ -517,6 +522,7 @@
     <string name="update_status_matched">Matching emails in this import: %1$d</string>
     <string name="update_status_cd_pending">Some transactions are saved on the device but not yet acknowledged by the server.</string>
     <string name="update_status_cd_attention">There is something that needs attention.</string>
+    <string name="update_status_cd_review">Some transactions need a review.</string>
     <string name="update_status_reason_partial">This email range is not finished yet. Saved data stays safe; the next check continues the rest.</string>
     <string name="update_status_reason_storage">The check status could not be saved permanently, so progress is not recorded. Try again when device storage is available.</string>
     <string name="update_status_reason_pending_snapshot">Some saved transactions are not on the server yet. The upload is retried before progress is considered complete.</string>

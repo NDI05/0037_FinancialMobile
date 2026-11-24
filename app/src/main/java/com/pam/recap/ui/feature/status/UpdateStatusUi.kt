@@ -78,11 +78,25 @@ data class UpdateStatusUi(
     val isActive: Boolean get() = headline.isActive
     val hasBacklog: Boolean get() = categoryPending > 0
     val needsAttention: Boolean get() = attention.isNotEmpty()
+
+    /**
+     * Rows the user still has to look at, as opposed to a failed run. Only review rows make the
+     * short status read "Perlu tinjauan"; a revoked permission or a broken cursor is a different
+     * problem and must not be disguised as a review task.
+     */
+    val needsReview: Boolean
+        get() = attention.any { it.code in REVIEW_CODES }
+
     /** Any per-run count worth a line in the panel; zero everywhere is a clean run. */
     val hasRunCounts: Boolean get() = savedCount > 0 || duplicateCount > 0 || skippedCount > 0 || unresolvedCount > 0
     val hasDefiniteProgress: Boolean get() = (pagesExpected ?: 0) > 0
     /** True whenever the trigger should be disabled: this attempt or a concurrent pipeline run. */
     val syncBusy: Boolean get() = syncRunning || syncConflict || isActive
+
+    private companion object {
+        /** Codes that mean "a human must decide", not "something broke". */
+        val REVIEW_CODES = setOf("unresolved_items")
+    }
 }
 
 /**
@@ -110,7 +124,7 @@ object UpdateStatusMapper {
             if (sync.unresolvedCount > 0) add(AttentionItem("unresolved_items", AttentionItem.Scope.TRANSACTIONS))
             category.errorCode?.let { add(AttentionItem(it, AttentionItem.Scope.CATEGORIES)) }
         }.distinctBy { it.scope to it.code }
-        val headline = headline(sync, category, online, attention)
+        val headline = headline(sync, category, online, attention, session)
         return UpdateStatusUi(
             headline = headline,
             online = online,
@@ -146,11 +160,15 @@ object UpdateStatusMapper {
         category: CategoryQueueSnapshot,
         online: Boolean,
         attention: List<AttentionItem>,
+        session: SyncSessionState,
     ): UpdateHeadline = when {
         attention.isNotEmpty() -> UpdateHeadline.NEEDS_ATTENTION
         !online -> UpdateHeadline.OFFLINE
         sync.pendingUpload -> UpdateHeadline.SAVING
-        sync.phase == SyncPhase.SYNCING -> UpdateHeadline.CHECKING
+        // A real import run is "taking history", not merely "checking".
+        sync.phase == SyncPhase.SYNCING -> UpdateHeadline.FETCHING
+        // The user's tap was accepted but the pipeline has not reported its fetch phase yet.
+        session.running -> UpdateHeadline.CHECKING
         category.phase == CategoryQueuePhase.RUNNING -> UpdateHeadline.CATEGORIZING
         // A queued transaction is "waiting", never "done": the row exists but has no category yet.
         category.pending > 0 -> UpdateHeadline.WAITING
