@@ -48,8 +48,8 @@ Kode DRAFT di bawah hanya identitas draf; bukan FR/NFR resmi yang sudah berlaku.
 
 ## 3. Impact map untuk revisi SRS berikut
 
-- Scope/non-goals: ubah background sync dari deferred pada dokumen historis menjadi
-  scope auto-sync bertahap; Gmail Push/OAuth tetap opsi terpisah.
+- Scope: ubah background sync dari deferred menjadi auto-sync bertahap. Addendum §7
+  menetapkan Gmail API dengan OAuth dan Pub/Sub sebagai target pengganti IMAP.
 - Use case impor: tambah foreground/background trigger, first sync versus delta,
   owner/mailbox coordination, retry/recovery dan catch-up.
 - Arsitektur/sequence: Android WorkManager → IMAP/parser → journal/upload Go;
@@ -129,3 +129,21 @@ Detail orkestrasi, batas biaya, dan acceptance ada di
 [rencana delivery terbaru](../plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md#8-addendum-24-november-2026--workflow-setahun).
 Usulan bahasa dan batas pemilih bulan pada UI ada di
 [CR-006](CR_006_DRAFT_SYNC_UI_CATEGORY_REVIEW.md).
+
+## 7. Addendum 24 November 2026 — Gmail API menggantikan IMAP
+
+Pemilik memilih **Gmail API dengan OAuth read-only dan Gmail Push melalui Cloud Pub/Sub**.
+Transport dan parser yang ada tetap menjadi baseline WIP sampai kesiapan cutover dibuktikan.
+Rencana implementasi ada di
+[§9 rencana sinkronisasi](../plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md#9-addendum-migrasi-imap-ke-gmail-api).
+
+| ID draf | Calon perubahan | Dampak SRS v0.5 |
+|---|---|---|
+| DRAFT-GAPI-01 | Setelah login PAM, owner memberi izin Gmail melalui layar OAuth Google. Go mengaitkan satu mailbox terverifikasi ke owner. Simpan token OAuth dalam penyimpanan server terenkripsi. UI aktif memakai alur OAuth. | FR-06/09/10, FR-54/55 dan NFR-14. FR-08 historis tetap menjadi catatan perubahan. Koneksi IMAP lama perlu otorisasi baru untuk pindah. |
+| DRAFT-GAPI-02 | Go menjalankan backfill 1 tahun dengan Gmail API. Raw MIME diproses sementara dalam memori Go untuk ekstraksi, lalu disimpan hanya hasil normalisasi. Pertahankan import bertahap, checkpoint, buffer penerimaan, dan tanggal transaksi WIB. | FR-11/12/16–20, BR-01/05, DR-03/05 dan trust boundary arsitektur. Diperlukan disclosure baru karena pemrosesan email berpindah ke backend. |
+| DRAFT-GAPI-03 | Gmail `watch` dan Cloud Pub/Sub memicu delta owner-scoped melalui `history.list`. Status cakupan membedakan backfill, delta, dan retry. Penyimpanan tetap dapat berjalan saat aplikasi ditutup selama izin, koneksi akun, dan backend tersedia. | DRAFT-AS-02 historis menjadi fallback sebelum cutover. Tambahkan renewal watch, pemulihan cursor, penjadwalan rekonsiliasi, dan keputusan lifecycle logout. |
+| DRAFT-GAPI-04 | Migrasi harus mencocokkan identitas transaksi lama yang dibuat lewat IMAP dengan kandidat Gmail API tanpa membuat duplikat atau menimpa koreksi pengguna. Hentikan watch dan invalidasi kerja pada disconnect, withdrawal, atau deletion. | FR-05/18/25/67, DR-01/02 dan acceptance account lifecycle. Perlakuan sesi PAM yang kedaluwarsa dibedakan dari logout eksplisit dan pencabutan izin Gmail. |
+| DRAFT-GAPI-05 | Sinkronisasi push hanya dinyatakan tersedia setelah pilot membuktikan pengiriman event nyata, pengisian histori, isolasi owner, dan pemulihan. Hosting, kuota/biaya, OAuth verification, serta keamanan Google dievaluasi sesuai jenis rilis. | NFR-17/18/19/22/26, gate real-data readiness dan revisi panduan UAT. Consent `GMAIL_READ`, `AI_CATEGORIZATION`, dan `AI_PROCESSING` tetap terpisah. |
+
+Draf ini merencanakan perubahan lokasi pemrosesan dan siklus hidup kredensial. Versi SRS
+resmi, notice baru, serta migrasi akses akun nyata mengikuti proses persetujuan pemilik.
