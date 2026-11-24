@@ -835,7 +835,7 @@ PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
 ### Hasil gate fresh (auditor independen, HEAD `6cc0f2a`)
 
 - Go `test ./... -count=1` PASS 8/8 paket, 127 test top-level; `go vet` bersih.
-- Android debug **533 test/74 suite/0 gagal**, assessment **543/75/0 gagal** (setelah hardening & state lokal pencarian admin `4860808`);
+- Android debug **536 test/74 suite/0 gagal**, assessment **546/75/0 gagal** (setelah hardening & state lokal pencarian admin `4860808`, + audit aksesibilitas 3 layar);
   `:app:lintDebug` 0 error, 112 warning, 1 hint.
 - UAT API owner (read-only): 49 baris November 2026 tanpa duplikat setelah repair 13 baris;
   label merchant berupa nama usaha; 40 baris uncategorized di-enqueue, job `NEEDS_REVIEW`
@@ -859,6 +859,11 @@ PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
   field secara lokal, pencarian live kini menyaring 9→1 tanpa *Muat ulang*, filter status
   SUSPENDED 9→1, dan SUSPENDED via dialog UI terbukti (DB rev 3).
   [UAT_PM_QA_2026-11-24.md](evidence/UAT_PM_QA_2026-11-24.md) §2.8, `ui_split/40`–`42`.
+- Audit aksesibilitas otomatis (24 Nov, `8f426bd`): helper Compose
+  `assertEveryClickableControlIsLabeled` dijalankan pada layar Admin, panel lampiran, dan detail
+  transaksi — **0 kontrol terlihat tanpa teks/content-desc**; lint kategori aksesibilitas 0
+  issue. Batas: TalkBack, font scale, dan switch access **NOT RUN** manual.
+  [UAT_ACCESSIBILITY_2026-11-24.md](evidence/UAT_ACCESSIBILITY_2026-11-24.md).
 
 ### Keputusan gate PM (24 November 2026)
 
@@ -876,9 +881,10 @@ penutupan per sprint: [GATE_DECISIONS_S2_S4_2026-11-24.md](delivery/GATE_DECISIO
 - **S4 = PARTIAL.** C16–C20 (termasuk konflik dan retry hapus lampiran di perangkat,
   QA doc §2.7), C21/C22/C24, C23 (API+UI, termasuk SUSPENDED via dialog), C25 (API + UI:
   pencarian live, filter peran/status, USER ditolak — QA doc §2.8), dan **Buat Analisis**
-  (Azure 200, `AVAILABLE/CURRENT`, UI "ANALISIS TERSIMPAN") sudah terbukti. Sisa bukti
-  UI: C20 konteks/owner-scope dan guard last-admin C24 di perangkat; cursor C25 lintas
-  halaman hanya API/unit karena daftar UAT < page size.
+  (Azure 200, `AVAILABLE/CURRENT`, UI "ANALISIS TERSIMPAN") sudah terbukti; aksesibilitas
+  otomatis 3 layar inti lulus audit semantik. Sisa bukti UI: C20 konteks/owner-scope dan guard
+  last-admin C24 di perangkat; cursor C25 lintas halaman hanya API/unit karena daftar UAT <
+  page size; aksesibilitas **manual** (TalkBack/font scale/switch access) NOT RUN.
 - **S5 tetap terbuka:** merge/deploy, hosting/backup, benchmark berlabel, mailbox produksi.
 
 ### Batas yang tidak diklaim

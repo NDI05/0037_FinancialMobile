@@ -19,6 +19,7 @@ import com.pam.recap.domain.repository.AdminRole
 import com.pam.recap.domain.repository.AdminStatus
 import com.pam.recap.domain.repository.ServerAdminAccount
 import com.pam.recap.domain.repository.ServerAdminInvitation
+import com.pam.recap.testing.assertEveryClickableControlIsLabeled
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -315,6 +316,15 @@ class AdminScreenTest {
         compose.onNodeWithContentDescription(text(R.string.admin_deactivate)).performClick()
         compose.onNodeWithText(text(R.string.admin_deactivate_confirm)).performClick()
         assertEquals(1, confirmed)
+    }
+
+    @Test
+    fun `every clickable control exposes an accessible label`() {
+        compose.setContent {
+            AdminScreenContent(state = adminState(listOf(account())))
+        }
+
+        compose.assertEveryClickableControlIsLabeled("Admin")
     }
 
     @Test

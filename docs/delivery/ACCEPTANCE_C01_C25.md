@@ -89,6 +89,10 @@ bukan data pemilik.
   terlarang), **503 test assessment** hijau di merged head, `lintAssessment` 0 error, APK
   sha256 `fa0d224e…`; batas: foreground-only sync, tanpa `applicationIdSuffix` (tidak bisa
   coexist dengan debug), tanpa data finansial lokal.
+- S4 aksesibilitas: **PASS otomatis** — audit semantik Compose pada layar Admin, panel
+  lampiran, dan detail transaksi tidak menemukan kontrol terlihat tanpa nama
+  ([UAT_ACCESSIBILITY_2026-11-24.md](../evidence/UAT_ACCESSIBILITY_2026-11-24.md)); TalkBack
+  penuh, font scale, dan switch access tetap **NOT RUN**.
 - Tidak ada baris di matriks ini yang diberi PASS tanpa menyebut bukti dan batasnya.
 
 ## Addendum 23 November 2026 (malam) — revamp UI sinkronisasi + alasan kategori
@@ -118,9 +122,10 @@ dan diverifikasi ulang.
 
 Dokumen rekonsiliasi lengkap + rekomendasi gate:
 [UAT_PM_QA_2026-11-24.md](../evidence/UAT_PM_QA_2026-11-24.md). Test JVM fresh 24 Nov pada
-HEAD `4860808` (+ hardening & state lokal field pencarian admin): `:app:testDebugUnitTest` **533 tes /
-74 suite, 0 failure** dan `testAssessmentUnitTest` **542 tes / 75 suite, 0 failure** (angka 513/523 adalah snapshot
-`4dacad7`, bukan HEAD, dan tidak dipakai sebagai klaim final). Rincian mentah:
+HEAD `8f426bd` (+ hardening & state lokal pencarian admin, + audit aksesibilitas 3 layar):
+`:app:testDebugUnitTest` **536 tes / 74 suite, 0 failure** dan `testAssessmentUnitTest`
+**546 tes / 75 suite, 0 failure** (angka 513/523 adalah snapshot `4dacad7`, bukan HEAD, dan
+tidak dipakai sebagai klaim final). Rincian mentah:
 `docs/evidence/assets/pm_qa_2026-11-24/{s3_api,s4_admin,ui}/` dan
 [UAT_ASSESSMENT_2026-11-24.md](../evidence/UAT_ASSESSMENT_2026-11-24.md).
 Backend: terisolasi `:18092` (DB sementara, akun sintetis), kecuali walk UI yang memakai UAT

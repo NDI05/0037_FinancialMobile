@@ -17,6 +17,7 @@ import com.pam.recap.domain.usecase.UpdateTransactionCategoryUseCase
 import com.pam.recap.domain.usecase.UpdateTransactionNoteUseCase
 import com.pam.recap.testing.FakeAnalysisRepository
 import com.pam.recap.testing.FakeSessionRepository
+import com.pam.recap.testing.assertEveryClickableControlIsLabeled
 import com.pam.recap.testing.FakeSummaryRepository
 import com.pam.recap.testing.FakeTransactionRepository
 import com.pam.recap.testing.fixedClock
@@ -85,6 +86,16 @@ class TransactionDetailScreenTest {
             composeRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.waitForIdle()
+    }
+
+    @Test
+    fun `every clickable control exposes an accessible label`() {
+        val server = RecordingServerFinanceRepository().apply { transactionRow = row }
+        val vm = viewModel(server)
+        setContent(vm)
+        composeRule.waitUntil(5_000) { vm.state.value.metadataEditable }
+
+        composeRule.assertEveryClickableControlIsLabeled("Detail transaksi")
     }
 
     @Test

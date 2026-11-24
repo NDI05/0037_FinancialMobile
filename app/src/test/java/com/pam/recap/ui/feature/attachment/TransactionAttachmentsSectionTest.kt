@@ -39,6 +39,7 @@ import com.pam.recap.domain.repository.ServerCategory
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.ServerTransactionPage
 import com.pam.recap.testing.FakeSessionRepository
+import com.pam.recap.testing.assertEveryClickableControlIsLabeled
 import java.io.File
 import java.util.Locale
 import kotlin.time.Instant
@@ -205,6 +206,20 @@ class TransactionAttachmentsSectionTest {
             compose.onNodeWithText("text/plain · 900 B").assertExists()
             compose.onNodeWithText(text(R.string.attachments_only_local)).assertExists()
         }
+    }
+
+    @Test
+    fun `every clickable control exposes an accessible label`() {
+        val png = attachment(id = "att_1", fileName = "kwitansi.png")
+        render(
+            AttachmentUiState(
+                isLoading = false,
+                serverEnabled = true,
+                attachments = listOf(png),
+            ),
+        )
+
+        compose.assertEveryClickableControlIsLabeled("Lampiran")
     }
 
     @Test
