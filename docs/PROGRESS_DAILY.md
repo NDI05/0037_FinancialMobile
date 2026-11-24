@@ -235,3 +235,13 @@ tetap ditolak 429 `sync_cooldown`. Perilaku ini sekarang dikunci di
 coalesce dan menghasilkan penanda pending baru. Gate backend (vet/build/test/race) PASS; runtime
 loopback dibangun ulang dari `00bb515` (`vcs.modified=false`, `/readyz=200`, 0 ERROR/FATAL).
 
+### Verifikasi ulang harness kontrak pada HEAD (ronde 15)
+
+Harness black-box `scripts/qa/gmail/contract_e2e.py` dijalankan ulang pada HEAD `00bb515`
+(port terisolasi 18099, backend fake-provider): **PASS=82, FAIL=0, exit 0**. Semua skenario
+hijau — `normal` (backfill 12/12, delta sekali tanpa duplikat, restart melanjutkan),
+`history_expired` (404 dipulihkan tanpa kehilangan transaksi), dan `rate_limit` (429 tidak
+menjadikan akun FAILED permanen, retry/backoff terlihat). Cek polling tetap `watchCalls=0`,
+`stopCalls=0`, `categoryCalls=0`, `POST /v1/internal/gmail/push` 404. Ini mempertahankan G27
+setelah commit test terakhir; tidak menggantikan G25/G36/G29/G37.
+
