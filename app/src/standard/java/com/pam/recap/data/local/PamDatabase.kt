@@ -7,7 +7,9 @@ import androidx.room.TypeConverters
 /**
  * PAM's single Room database, schema version 2 (§4), SQLCipher-encrypted (NFR-16).
  *
- * v2 drops the retired budget plan/limit tables (CR-008); [MIGRATION_1_2] removes them in place.
+ * v2 stops declaring the retired budget plan/limit entities (CR-008). Their tables and rows are
+ * kept in place as legacy data by [MIGRATION_1_2]: the app never uses them again, but the upgrade
+ * does not destroy what the owner already stored (SRS v0.7 §3).
  *
  * `exportSchema = true` writes `app/schemas/…1.json`, which is committed: any later schema change
  * must ship a migration, and `fallbackToDestructiveMigration` is never used in release.
