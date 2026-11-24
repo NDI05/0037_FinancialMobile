@@ -12,6 +12,14 @@ rollback**; sinkron manual masuk antrean job Go durable; recovery `history.list`
 status UI tidak lagi nyangkut "Menghubungkan". Tabel gate di bawah sudah memakai hasil fresh
 Android/backend serta UAT perangkat FIXTURE.
 
+Revisi 24 November 2026 (ronde 5): **verifikasi ulang gate teknis** pada HEAD dokumen
+`pam-app@42823e8` / backend `240ecd7` (kode aplikasi tetap `e67380a`/`71013f5`, sesudahnya hanya
+dokumen + skrip verifikasi). Hasil fresh: backend `go vet ./...`, `go build ./...`,
+`go test ./... -count=1`, dan `go test -race auth/gmail/httpapi/store` **PASS**; Android
+`testDebugUnitTest` **678 tes/88 suite/0 gagal**, `lintDebug` **0 error/123 warning/1 hint**,
+`assembleDebug` **PASS** (APK 47.992.939 B, sha256 `8ce4763c…`). Status gate di bawah **tidak
+berubah**: G25/G29/G36 tetap NOT RUN/open menunggu input pemilik.
+
 ## 1. Pasangan build yang diverifikasi
 
 | Komponen | Repo | Branch | HEAD | Status `main` |
