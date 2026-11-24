@@ -245,3 +245,11 @@ menjadikan akun FAILED permanen, retry/backoff terlihat). Cek polling tetap `wat
 `stopCalls=0`, `categoryCalls=0`, `POST /v1/internal/gmail/push` 404. Ini mempertahankan G27
 setelah commit test terakhir; tidak menggantikan G25/G36/G29/G37.
 
+### Verifikasi integritas data live (ronde 16)
+
+Pemeriksaan agregat DB UAT: **914** transaksi dengan **914** `source_ref_hash` unik, **37** batch
+dengan **37** `request_hash` unik, cakupan **12 bulan kontigu** (Des 2025–Nov 2026), dan total per
+bulan yang menjumlah tepat 914. Rekonsiliasi §3 cocok: Nov 40+38=78, Okt 53+28=81, Sep 0+79=79,
+bulan lain sama dengan angka impor, sehingga 145 baris pra-ada (38+28+79) terjelaskan. Bukti
+ditambahkan ke `docs/evidence/GMAIL_LIVE_IMPORT_2026-11-24.md` §6.
+

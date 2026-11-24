@@ -150,3 +150,19 @@ Kesimpulan: tidak ada tanda auto-merge/penautan Google (identitas 0), tidak ada 
 menggantung, dan tidak ada jejak Pub/Sub — cocok dengan mode polling Rp0. Gate **G36** (SSO live
 dari Run Android Studio) dan **G29/G37** (Rp0) tetap menunggu pemilik.
 
+## 6. Verifikasi integritas data live (agregat, 24 Nov 2026 ~21:30 WIB)
+
+Pemeriksaan langsung DB UAT privat (angka saja; tanpa email/ID/token/merchant/nominal):
+
+| Pemeriksaan | Hasil | Arti |
+|---|---|---|
+| Baris transaksi | **914** | basis G25 |
+| `source_ref_hash` unik | **914 / 914** (0 duplikat) | dedupe sealed bekerja; tidak ada baris ganda |
+| Import batch | **37**, `request_hash` unik **37/37** | tidak ada batch dobel setelah retry/restart |
+| Cakupan bulan | **12 bulan kontigu**: 2025-12 s.d. 2026-11 | jendela retensi setahun penuh |
+| Jumlah per bulan | Des 144, Jan 83, Feb 48, Mar 69, Apr 97, Mei 52, Jun 73, Jul 55, Agu 55, Sep 79, Okt 81, Nov 78 | Σ = **914** |
+| Rekonsiliasi §3 | Nov 40+38=78; Okt 53+28=81; Sep 0+79=79; bulan lain = angka `diimpor` | 145 baris pra-ada (38+28+79) terjelaskan; 769 impor baru + 145 = 914 |
+
+Tidak ada bulan bolong, tidak ada batch/transaksi duplikat, dan angka cocok dengan tabel §3 —
+konsisten dengan penyebab "145 baris pra-ada" (backfill parsial sebelum reset buku sinkronisasi).
+
