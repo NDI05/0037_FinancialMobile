@@ -38,7 +38,7 @@
     <string name="analysis_sug_savings_target">Set aside at least %1$s as next month\'s savings target.</string>
     <string name="analysis_sug_review_uncategorized">Review the %1$s uncategorized transactions to make the recap more accurate.</string>
     <string name="analysis_sug_keep_on_track">Cash flow this month is balanced; keep the same pattern.</string>
-    <string name="analysis_sug_no_data">Import this month\'s email first so a budget suggestion can be made.</string>
+    <string name="analysis_sug_no_data">Import this month\'s email first so a suggestion can be made.</string>
 
     <string name="analysis_limit_aggregate_only">Only aggregate numbers are sent to the analysis provider.</string>
     <string name="analysis_limit_email_derived">Totals come from notification email, not from a bank ledger.</string>
@@ -279,7 +279,7 @@
     <string name="analysis_consent_missing">AI analysis consent has not been granted, so an analysis cannot be generated yet.</string>
     <string name="analysis_open_consent">Open consent</string>
     <string name="analysis_empty_title">No analysis yet</string>
-    <string name="analysis_empty_body">Generate an analysis to see evidence-linked observations and budget suggestions. The recap stays readable without it.</string>
+    <string name="analysis_empty_body">Generate an analysis to see evidence-linked observations and suggestions. The recap stays readable without it.</string>
     <string name="analysis_generate">Generate analysis</string>
     <string name="analysis_regenerate">Regenerate analysis</string>
     <string name="analysis_tab_observations">Observations</string>
@@ -318,8 +318,8 @@
     <string name="deletion_title">Delete data</string>
     <string name="deletion_eyebrow">Data deletion</string>
     <string name="deletion_headline">Remove every local PAM record.</string>
-    <string name="deletion_retention">Local data is kept for at most 24 months. Deleting removes transactions, summaries, analyses, budget plans, import history and the mailbox connection immediately from this device.</string>
-    <string name="deletion_what_removed">Removed: transactions, summaries, analyses, budget plans, import history, the mailbox connection and private notes.</string>
+    <string name="deletion_retention">Local data is kept for at most 24 months. Deleting removes transactions, summaries, analyses, import history and the mailbox connection immediately from this device.</string>
+    <string name="deletion_what_removed">Removed: transactions, summaries, analyses, import history, the mailbox connection and private notes.</string>
     <string name="deletion_what_stays">Cannot be removed here: the original email in your inbox. PAM never stored it, so there is nothing to delete there.</string>
     <string name="deletion_reauth_done">Re-verification complete. You can continue with the deletion.</string>
     <string name="deletion_password_label">Account password for server verification</string>

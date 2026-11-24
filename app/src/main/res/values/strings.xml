@@ -43,7 +43,7 @@
     <string name="analysis_sug_savings_target">Sisihkan minimal %1$s sebagai target tabungan bulan depan.</string>
     <string name="analysis_sug_review_uncategorized">Tinjau %1$s transaksi tanpa kategori agar ringkasan lebih akurat.</string>
     <string name="analysis_sug_keep_on_track">Arus kas bulan ini seimbang; pertahankan pola yang sama.</string>
-    <string name="analysis_sug_no_data">Impor email bulan ini dulu agar saran anggaran bisa dibuat.</string>
+    <string name="analysis_sug_no_data">Impor email bulan ini dulu agar saran bisa dibuat.</string>
 
     <!-- Limitations every report must state (FR-36). -->
     <string name="analysis_limit_aggregate_only">Hanya angka agregat yang dikirim ke penyedia analisis.</string>
@@ -298,7 +298,7 @@
     <string name="analysis_consent_missing">Persetujuan analisis AI belum diberikan, jadi analisis belum bisa dibuat.</string>
     <string name="analysis_open_consent">Buka persetujuan</string>
     <string name="analysis_empty_title">Belum ada analisis</string>
-    <string name="analysis_empty_body">Buat analisis untuk melihat observasi berbasis bukti dan saran anggaran. Ringkasan tetap bisa dibaca tanpa analisis.</string>
+    <string name="analysis_empty_body">Buat analisis untuk melihat observasi berbasis bukti dan saran. Ringkasan tetap bisa dibaca tanpa analisis.</string>
     <string name="analysis_generate">Buat analisis</string>
     <string name="analysis_regenerate">Buat ulang analisis</string>
     <string name="analysis_tab_observations">Observasi</string>
@@ -308,7 +308,6 @@
     <string name="analysis_stale_body">Analisis ini dibuat dari revisi %1$d, sedangkan data bulan ini sudah di revisi %2$d. Buat ulang analisis agar sesuai data terbaru.</string>
     <string name="analysis_stale_dependency_body">Analisis ini dibuat dari data yang sejak itu sudah berubah (revisi %1$d), meskipun nomor revisi bulan tetap. Buat ulang analisis agar sesuai data terbaru.</string>
 
-    <!-- Budget -->
     <string name="category_more_hint">Menampilkan %1$d kategori dari %2$d yang diperiksa; persempit pencarian untuk melihat sisanya.</string>
 
     <!-- Settings -->
@@ -342,8 +341,8 @@
     <string name="deletion_title">Hapus data</string>
     <string name="deletion_eyebrow">Penghapusan data</string>
     <string name="deletion_headline">Hapus semua data lokal PAM.</string>
-    <string name="deletion_retention">Data lokal disimpan paling lama 24 bulan. Menghapus berarti transaksi, ringkasan, analisis, rencana anggaran, riwayat impor, dan koneksi kotak masuk dihapus segera dari perangkat ini.</string>
-    <string name="deletion_what_removed">Yang dihapus: transaksi, ringkasan, analisis, rencana anggaran, riwayat impor, koneksi kotak masuk, dan catatan pribadi.</string>
+    <string name="deletion_retention">Data lokal disimpan paling lama 24 bulan. Menghapus berarti transaksi, ringkasan, analisis, riwayat impor, dan koneksi kotak masuk dihapus segera dari perangkat ini.</string>
+    <string name="deletion_what_removed">Yang dihapus: transaksi, ringkasan, analisis, riwayat impor, koneksi kotak masuk, dan catatan pribadi.</string>
     <string name="deletion_what_stays">Yang tidak bisa dihapus dari sini: email asli di kotak masuk Anda. PAM tidak pernah menyimpannya, jadi tidak ada yang perlu dihapus di sana.</string>
     <string name="deletion_reauth_done">Verifikasi ulang selesai. Anda bisa melanjutkan penghapusan.</string>
     <string name="deletion_password_label">Kata sandi akun untuk verifikasi server</string>
