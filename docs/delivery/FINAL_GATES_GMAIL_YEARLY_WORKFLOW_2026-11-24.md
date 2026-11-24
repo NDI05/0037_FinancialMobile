@@ -55,8 +55,9 @@ v0.7, pensiun tiga modul, dan status gate pemilik ada di dokumen terpisah
 final di [AUDIT_V07_FINAL_2026-11-24](../evidence/AUDIT_V07_FINAL_2026-11-24.md) (P0=0, P1=0,
 P2 ditutup/disposisi, P3 dokumen direkonsiliasi). Gate Gmail/retensi pada dokumen ini tetap
 berlaku sebagai riwayat ronde 7; angka 678/88 dan APK `5368c92f…` adalah snapshot ronde 7,
-diganti angka final v0.7 **608 tes/87 suite/0 gagal**, lint **0 error/117 warning/1 hint**, APK
-`e7a1f4af…` (fingerprint) pada `a629c41`.
+diganti angka final v0.7 **613 tes/88 suite/0 gagal**, lint **0 error/117 warning/1 hint**, APK
+`ef34261b…` (fingerprint) pada `b885555`; angka `a629c41` (608/87, APK `e7a1f4af…`) tetap
+dicatat sebagai build UAT awal sebelum penutupan P2 audit final.
 
 ## 1. Pasangan build yang diverifikasi
 

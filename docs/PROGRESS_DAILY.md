@@ -502,3 +502,18 @@ Masih NOT RUN/OPEN (milik owner): G14 drill hapus/restore data pemilik, G24 merg
 G29/G37 audit GCP Rp0, Run literal Android Studio, onboarding Gmail (Lewati/Tautkan + consent),
 email Livin baru saat aplikasi tertutup. Bukti gate: [gate akhir v0.7](delivery/FINAL_GATES_SRS_V07_2026-11-24.md).
 
+### Penutupan P2 audit final — 24 November 2026 (WIB, lanjutan)
+
+Audit independen final (`docs/evidence/AUDIT_V07_FINAL_2026-11-24.md`) menemukan 2 P2 baru:
+copy privasi catatan mengklaim "hanya di perangkat" padahal catatan tersimpan di server akun
+(terenkripsi), dan identitas retry pending legacy (5 field) tidak pernah cocok dengan format
+baru (6 field) sehingga berisiko baris manual ganda saat upgrade. Keduanya ditutup di
+**`b885555`**: copy id+en diperbaiki (termasuk `account_body_register`/`account_body_sign_in`),
+`ManualPendingActionStore.matchesDraft` membandingkan field draft dengan normalisasi note kosong,
+plus 5 tes retry identity baru (legacy key dipertahankan, note beda = key baru, retry pasca-POST
+gagal memakai key sama). Gate fresh `--rerun-tasks` pada `b885555`: **613 tes / 88 suite /
+0 gagal**, lint **0 error / 117 warning / 1 hint**, `assembleDebug` lulus (APK 47.628.443 B
+sha256 `ef34261b…`, fingerprint build). UAT perangkat dengan APK ini mengulang simpan manual +
+memastikan copy catatan baru tampil. Bukti gate diperbarui di
+[gate akhir v0.7](delivery/FINAL_GATES_SRS_V07_2026-11-24.md).
+

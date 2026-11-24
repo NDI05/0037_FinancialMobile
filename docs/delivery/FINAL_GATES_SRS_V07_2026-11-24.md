@@ -9,11 +9,11 @@ diklaim PASS. Bukti rinci di [FINAL_UAT_SRS_V07_2026-11-24.md](../evidence/FINAL
 
 | Komponen | Nilai |
 |---|---|
-| Android | branch `feat/c2-android`, HEAD **`a629c41`** (pushed `8eae86e..a629c41`; `b56e28f` catatan+tanggal manual, `8eae86e` penutupan P2/P3, `a629c41` refresh daftar setelah simpan manual) |
+| Android | branch `feat/c2-android`, HEAD **`b885555`** (= origin; `a629c41` refresh daftar setelah simpan manual + `b885555` penutupan P2 audit final: copy privasi catatan dan identitas retry legacy) |
 | Backend | branch `integration/2026-11-24`, HEAD **`dd5bc88`** (== `origin`), 21 migrasi tidak berubah |
 | `main` | Android `main` **tidak disentuh**; backend `main` **tidak disentuh**; tanpa force-push |
 | Varian Android | `debug` (`com.pam.recap.debug`), konfigurasi `app`, perangkat fisik `105397ba0507` (portrait 1080×2400, font 100%) |
-| APK UAT | **48.819.325 byte**, sha256 `e7a1f4afcb40261c65ada103963d9c56fa5bb261a7a2018341f5142acf82dde4`; dipasang dengan `adb -s 105397ba0507 install -r` (**bukan** tombol Run Android Studio) |
+| APK UAT | 48.819.325 byte sha256 `e7a1f4af…` (build `a629c41`, dipakai UAT awal) dan **47.628.443 byte sha256 `ef34261b…`** (build `b885555`, dipasang ulang via `adb install -r`); byte tidak deterministik — fingerprint build |
 | Backend runtime | `~/.config/pam/uat-runtime/pam-api-loopback` rebuild dari `dd5bc88`, `127.0.0.1:18090` + `adb reverse`, `/readyz` ready; DB `~/.config/pam/pam-gmail-uat.db` (akun UAT sintetis) |
 | Profil provider UAT | Gmail nyata (`google`); kategori LLM nonaktif (`CATEGORY_LLM_ENABLED=false` → enqueue 503 by config); Analisis `LLM_PROVIDER=fake` (bukan Azure berbayar) |
 
@@ -21,9 +21,9 @@ Gate teknis pada pasangan ini:
 
 | Gate | Hasil |
 |---|---|
-| Android `:app:testDebugUnitTest` | **608 tes / 87 suite / 0 gagal** (602 sebelum lane v0.7 + 6 tes baru refresh; suite SSO/retensi/manual/analisis tetap lulus) |
+| Android `:app:testDebugUnitTest` | **613 tes / 88 suite / 0 gagal** (fresh `--rerun-tasks` pada `b885555`; 608 tes pada `a629c41` + 5 tes retry identity) |
 | Android `:app:lintDebug` | **0 error / 117 warning / 1 hint** |
-| Android `:app:assembleDebug` | **BUILD SUCCESSFUL**; APK debug 48.819.325 byte, sha256 `e7a1f4af…` (fingerprint build; byte tidak deterministik antar-build — lihat kebijakan di [FINAL_BUILD_GATES_2026-11-24.md](../evidence/FINAL_BUILD_GATES_2026-11-24.md)) |
+| Android `:app:assembleDebug` | **BUILD SUCCESSFUL** (`b885555`); APK debug 47.628.443 byte, sha256 `ef34261b…` (fingerprint build; byte tidak deterministik antar-build) |
 | Backend `./scripts/go.sh vet ./...` | **PASS** (`dd5bc88`, pm_go_vet.log) |
 | Backend `./scripts/go.sh build ./...` | **PASS** |
 | Backend `./scripts/go.sh test ./... -count=1` | **PASS**; 11 paket `ok`, termasuk `internal/httpapi` (23,5 dtk), `internal/gmail` (3,7 dtk), `internal/store`, `internal/retention`, `internal/analysis` |
@@ -75,11 +75,11 @@ Gate teknis pada pasangan ini:
 |---|---|---|---|
 | Android v0.7 (`/tmp/AUDIT_V07_ANDROID.md`, disalin ke `docs/evidence/`) | P0=0, P1=0, **P2=3, P3=3** (provider-call cap, dokumentasi/tes, guard coverage EMPTY+manual, dll.) | `1d41f72` cap provider, `2e6fdea` dokumen+tes, `8eae86e` penutupan P2/P3 (walk UI + unit test) | **608 tes / 0 gagal**, lint 0 error; audit final putaran 2 (task-24) memverifikasi closure |
 | Backend v0.7 (`/tmp/AUDIT_V07_BACKEND.md`) | **PASS** untuk pensiun modul, retensi, klasifikasi, dedupe | Perbaikan coverage EMPTY/FAILED `dd5bc88` | `internal/analysis` + `internal/httpapi` tests PASS; runtime `/v1/analyses` 200 |
+| Audit final (P2 baru, `AUDIT_V07_FINAL_2026-11-24.md`) | P2-1 copy privasi catatan menyatakan "hanya di perangkat" padahal tersimpan server; P2-2 identitas retry legacy 5-field vs 6-field berisiko duplikat | `b885555`: copy id+en diperbaiki (termasuk `account_body_register`/`sign_in`); `ManualPendingActionStore.matchesDraft` membandingkan field draft dengan normalisasi note kosong | Gate fresh `b885555`: **613 tes/88 suite/0 gagal**, lint **0 error/117 warning/1 hint**; UAT perangkat copy baru + simpan manual diulang |
 | UAT PM menemukan regresi daftar basi | Daftar Transaksi tidak memuat baris baru sampai pindah bulan | `a629c41` hand-off `SavedStateHandle` + refresh page-1 | UAT ulang di HP fisik: baris langsung muncul 2× (dengan/tanpa catatan) |
 | UAT PM mencurigai tanggal hilang | Ternyata form manual dapat di-scroll; baris Tanggal/KATEGORI di bawah fold | Tidak ada perubahan (bukan cacat) | Gulir form menampilkan `Tanggal 24 Nov 2026` + chips kategori |
 
-Laporan audit final independen putaran terakhir: `docs/evidence/AUDIT_V07_FINAL_2026-11-24.md`
-(lihat ringkasan verdict di sana; tidak ada temuan P0/P1 yang terbuka pada saat dokumen ini ditulis).
+Laporan audit final independen putaran terakhir: `docs/evidence/AUDIT_V07_FINAL_2026-11-24.md` (P0=0, P1=0; P2=2 ditutup di `b885555`; P3 dokumen direkonsiliasi pada commit dokumen sesudahnya).
 
 ## 5. Git, artefak, dan kebersihan branch
 
