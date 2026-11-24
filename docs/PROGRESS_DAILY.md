@@ -214,3 +214,14 @@ lewat `isBridgeFieldLine`; keduanya punya regresi. Nit dokumen diperbaiki: prove
 dijelaskan sebagai backfill parsial pasca-perbaikan parser (bukan pass pertama `imported=0`), dan
 G20 kembali menyebut **21 migrasi**. Gate backend `c69cf57` vet/build/test/race PASS;
 runtime loopback dibangun ulang. Gate tetap **29 PASS / 4 PARTIAL / 5 NOT RUN**.
+
+### UAT tombol "Sinkronkan sekarang" dari HP fisik (24 Nov 2026, ronde 10)
+
+HP owner ternyata sudah login dan tertaut Gmail; alur antrian diuji langsung dari perangkat.
+Bottom sheet "Status pembaruan" menampilkan status Menunggu, 12/12 bulan selesai, dan tombol
+**Sinkronkan sekarang**. Dua ketukan menghasilkan `POST /v1/gmail/sync` **202**, UI berpindah
+Menunggu → Mengambil riwayat → Sedang sinkron → Menunggu, `gmail_sync_pass` mencatat
+`connections=1, failures=0`, tanpa WARN/ERROR, dan jumlah transaksi tetap **914** (idempoten,
+tanpa duplikat). Notice "Kategori: Koneksi terputus" teridentifikasi sebagai respons 503 lama
+sebelum restart terakhir, bukan kegagalan baru. Bukti ini memperkuat G25; **G36 (SSO Google + Run
+dari Android Studio) dan G29/G37 (Rp0) tetap menunggu pemilik**.

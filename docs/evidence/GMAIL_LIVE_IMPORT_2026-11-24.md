@@ -100,3 +100,23 @@ merchant/nominal), bukan kegagalan impor diam-diam; alasannya tercatat per pesan
   destruktif pada data owner dan **belum dilakukan**; perlu persetujuan pemilik. Baris lama tetap
   valid dari sisi nominal/tanggal/dedupe (`source_ref_hash` unik), hanya label merchant pada
   templat tertentu yang berpotensi kurang bersih.
+
+## 4. Verifikasi tombol "Sinkronkan sekarang" dari HP fisik (24 Nov 2026, 21:05–21:15 WIB)
+
+Aplikasi debug pada HP owner (`com.pam.recap.debug`, `1.0.0-debug`) sudah login dan tertaut Gmail,
+jadi alur antrian bisa diuji langsung dari perangkat (bukan hanya curl/harness).
+
+| Langkah | Bukti |
+|---|---|
+| Bottom sheet "Status pembaruan" | Menampilkan "Sinkron server Gmail", status **Menunggu**, "Bulan selesai: 12 dari 12", jadwal sinkron berikutnya, dan tombol **Sinkronkan sekarang** |
+| Ketuk "Sinkronkan sekarang" (2×) | `POST /v1/gmail/sync` → **202 Accepted** (masuk antrian), sesuai desain queue + coalesce |
+| Transisi UI | Menunggu → **Mengambil riwayat** → **Sedang sinkron** → kembali **Menunggu** dengan tombol aktif |
+| Log server selama sinkron | `gmail_sync_pass` tiap menit: `connections=1, backfills=0, deltas=0/1, events=0, failures=0`; **0 WARN/ERROR** |
+| Jumlah transaksi tersimpan | **914** sebelum dan sesudah kedua sinkron (idempoten, tanpa duplikat) |
+| Cooldown/queue | Ketukan berulang tidak membuat job paralel; job tetap satu dan selesai kembali ke idle |
+
+Catatan: notice "Kategori: Koneksi terputus" pada sheet adalah respons 503 lama
+(`/v1/category-jobs`, 19:55–20:24 WIB, sebelum restart terakhir); setelah restart tidak ada 503
+kategori baru. Bukti ini memperkuat G25 (Gmail live + tombol manual dari HP) tetapi **bukan**
+G36 (SSO Google + Run literal dari Android Studio) maupun G29/G37 (GCP Rp0), yang tetap menunggu
+pemilik.
