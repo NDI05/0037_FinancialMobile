@@ -26,6 +26,16 @@ sealed interface PamDestination {
     @Serializable
     data object GmailConnect : PamDestination
 
+    /**
+     * Server-side Gmail OAuth link (contract `0037-Backend-Financial` §1–§4). The optional status/
+     * reason come from the `pam://gmail/connected` deep link handled by MainActivity.
+     */
+    @Serializable
+    data class GmailLink(
+        val status: String? = null,
+        val reason: String? = null,
+    ) : PamDestination
+
     @Serializable
     data class Overview(val monthId: String? = null) : PamDestination
 

@@ -25,6 +25,7 @@ Usage:
 """
 import argparse
 import json
+import os
 import secrets
 import socket
 import sqlite3
@@ -201,7 +202,7 @@ def main():
     try:
         wait_ready(port, proc, logpath)
         api = Api()
-        password = "isolated-synthetic-password"
+        password = os.environ.get("PAM_SMOKE_PASSWORD") or secrets.token_urlsafe(18)
         email = f"category.verify.{secrets.token_hex(6)}@pam-uat.test"
         api.request(port, "/v1/accounts", "POST",
                     {"email": email, "password": password, "displayName": "Synthetic verify",

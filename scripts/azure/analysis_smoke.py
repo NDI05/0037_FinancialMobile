@@ -234,7 +234,7 @@ def run_primary(binary, profile, args):
         wait_ready(port, proc, logpath)
         api = Api()
         email = f"analysis.smoke.{secrets.token_hex(6)}@pam-uat.test"
-        password = "isolated-synthetic-password"
+        password = os.environ.get("PAM_SMOKE_PASSWORD") or secrets.token_urlsafe(18)
         api.request(port, "/v1/accounts", "POST",
                     {"email": email, "password": password, "displayName": "Synthetic smoke",
                      "inviteCode": "isolated-synthetic"}, expect=201)
@@ -406,7 +406,7 @@ def run_ceiling(binary, profile, args):
         wait_ready(port, proc, logpath)
         api = Api()
         email = f"analysis.ceiling.{secrets.token_hex(6)}@pam-uat.test"
-        password = "isolated-synthetic-password"
+        password = os.environ.get("PAM_SMOKE_PASSWORD") or secrets.token_urlsafe(18)
         api.request(port, "/v1/accounts", "POST",
                     {"email": email, "password": password, "displayName": "Synthetic smoke",
                      "inviteCode": "isolated-synthetic"}, expect=201)
