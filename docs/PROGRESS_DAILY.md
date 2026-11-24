@@ -320,3 +320,17 @@ Tidak ada perubahan status gate: **38 gate — 29 PASS, 4 PARTIAL, 5 NOT RUN**. 
 - Gate tidak berubah: **38 baris — 29 PASS / 4 PARTIAL / 5 NOT RUN**. Tidak ada temuan kode baru;
   sisa pekerjaan tetap G36 (SSO + Run pemilik), G29/G37 (Rp0), G24 (merge/deploy/SRS), G14 (hapus
   retensi nyata) — semuanya menunggu input/izin pemilik.
+
+### Preflight kesiapan Run — ronde 21 (24 Nov 2026 21:37 WIB)
+
+`scripts/verify/uat_readiness.sh --backend-url http://127.0.0.1:18090 --serial 105397ba0507
+--apk app/build/outputs/apk/debug/app-debug.apk` → **exit 0**, semua prasyarat otomatis **OK**:
+adb, `/readyz`, nonce SSO (200 = aktif), rute `/v1/gmail/status` terpasang, client ID SSO
+terkonfigurasi (nilai tidak dicetak), base URL cocok, HP terhubung, Play Services ada, paket
+`com.pam.recap.debug` terpasang, `adb reverse tcp:18090` OK, APK memuat client ID Web OAuth.
+Satu-satunya butir manual: **GCP Rp0 (Billing tidak tertaut)**.
+
+Tidak ada perubahan owner sejak ronde sebelumnya: APK belum di-Run ulang (lastUpdateTime
+19:28:04), 0 panggilan `/v1/auth/google`, `google_identities=0`. Gate tidak berubah:
+38 baris — 29 PASS / 4 PARTIAL / 5 NOT RUN. Langkah pemilik tinggal menekan **Run** konfigurasi
+`app` di Android Studio, login Google, lalu menautkan Gmail lewat sheet onboarding.
