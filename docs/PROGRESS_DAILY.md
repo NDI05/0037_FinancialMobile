@@ -262,3 +262,12 @@ terkonfigurasi (nilai tidak dicetak), base URL backend cocok, HP terhubung, Play
 debug terpasang, `adb reverse tcp:18090`, dan APK memuat Web OAuth client ID. Hanya GCP Rp0 yang
 tetap manual. CR-007 DRAFT-GM-13 juga diperbarui dengan penutupan P3 audit ronde 3 (`c69cf57`).
 
+### Gate Android + higiene profil privat (ronde 18)
+
+Gate Android dijalankan ulang pada HEAD `4562b21`: `testDebugUnitTest`, `lintDebug`, `assembleDebug`
+**BUILD SUCCESSFUL** (mayoritas task up-to-date karena hanya dokumen yang berubah). Hasil tersimpan:
+**678 tes/0 gagal**, lint **0 error/123 warning**, APK debug **47.992.939 byte** sha256
+`5368c92f…` — sama persis dengan bukti G19. Higiene profil privat diverifikasi: `~/.config/pam`
+dan `uat-runtime` **700**, semua `.env`/`.db` **600**, dan tidak ada nilai mirip-secret
+(`GOCSPX-`, `ya29.`, refresh token) yang terlacak di kedua repo.
+
