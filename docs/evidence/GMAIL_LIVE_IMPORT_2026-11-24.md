@@ -119,7 +119,7 @@ Catatan semantik cooldown (diverifikasi 24 Nov 21:15–21:19): penanda `sync_req
 saat job manual yang dipicu selesai (`ClearGmailSyncRequest`), sehingga ketukan **setelah** sync
 selesai kembali diterima (202) — ini perilaku desain, bukan pelanggaran throttle. Respons **429**
 `sync_cooldown` hanya muncul bila permintaan datang saat penanda masih aktif (job belum selesai);
-jalur itu tetap dicakup harness kontrak (G26), karena tombol UI dinonaktifkan ("Sedang sinkron")
+jalur itu tetap dicakup harness kontrak (G26), karena tombol UI dinonaktifkan ("Sedang sinkron") selama job berjalan sehingga tidak bisa dipicu dari layar; semantik pasca-drain sekarang dikunci unit test `TestManualSyncCooldownThenCoalesces` (commit `00bb515`).
 selama job berjalan sehingga tidak bisa dipicu dari layar. Total 7 permintaan manual 21:00–21:19:
 semua **202**, `failures=0`, tanpa WARN/ERROR, jumlah tetap **914**.
 

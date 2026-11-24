@@ -225,3 +225,13 @@ Menunggu → Mengambil riwayat → Sedang sinkron → Menunggu, `gmail_sync_pass
 tanpa duplikat). Notice "Kategori: Koneksi terputus" teridentifikasi sebagai respons 503 lama
 sebelum restart terakhir, bukan kegagalan baru. Bukti ini memperkuat G25; **G36 (SSO Google + Run
 dari Android Studio) dan G29/G37 (Rp0) tetap menunggu pemilik**.
+
+### Kunci semantik cooldown (ronde 14)
+
+UAT HP menunjukkan penanda cooldown dihapus setelah job manual selesai, sehingga ketukan
+"Sinkronkan sekarang" berikutnya diterima (202), sedangkan permintaan saat job masih berjalan
+tetap ditolak 429 `sync_cooldown`. Perilaku ini sekarang dikunci di
+`TestManualSyncCooldownThenCoalesces` (`00bb515`): setelah drain, `RequestSync` baru bukan
+coalesce dan menghasilkan penanda pending baru. Gate backend (vet/build/test/race) PASS; runtime
+loopback dibangun ulang dari `00bb515` (`vcs.modified=false`, `/readyz=200`, 0 ERROR/FATAL).
+
