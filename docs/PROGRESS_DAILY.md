@@ -468,3 +468,37 @@ verifikasi UI simpan→daftar **NOT RUN** karena sesi server akun emulator sudah
 server berakhir. Masuk ulang") dan tidak ada data November 2026 di akun itu; UAT perangkat tetap
 menunggu build ini dipasang ulang oleh Lead. Catatan: "tanggal tidak terlihat" pada form manual
 bukan bug (form bisa di-scroll) dan tidak diubah.
+
+### Gate akhir PM SRS v0.7 — 24 November 2026 (WIB)
+
+Pasangan build: Android `feat/c2-android` **`a629c41`** (== origin) dan backend
+`integration/2026-11-24` **`dd5bc88`** (== origin). APK debug 48.819.325 byte sha256
+`e7a1f4af…` dipasang di HP fisik `105397ba0507` dengan `adb install -r` (bukan tombol Run),
+backend runtime rebuild `dd5bc88` di `127.0.0.1:18090` + `adb reverse`, DB UAT sintetis,
+Gmail provider nyata, kategori LLM nonaktif, Analisis provider fake.
+
+Hasil UAT yang dicoba (detail di [UAT akhir](evidence/FINAL_UAT_SRS_V07_2026-11-24.md)):
+
+- Entri manual FR-26 lengkap: nominal/keterangan/catatan opsional/penghitung karakter/tanggal;
+  simpan 201 lalu daftar **langsung** memuat `Selasa, 24 Nov / Manual / Rp3.000` tanpa pindah
+  bulan (regresi daftar basi sebelum `a629c41` terulang 2× lalu hilang). Catatan tersimpan
+  (`note=catatan-final-v07`, ciphertext 57 B) dan baris uji dihapus kembali (DELETE 204,
+  ringkasan kembali Rp32.443,73).
+- Pensiun tiga modul terbukti dari UI dan API: tidak ada entri anggaran/lampiran/admin;
+  `/v1/budget-plans*`, `/v1/attachments*`, `/v1/admin/*` **404** semua method dengan token
+  valid; tabel/baris/migrasi dan file lampiran lama tidak dihapus.
+- Analisis tersimpan/terbaca setelah `dd5bc88` (200, Observasi/BATASAN/Buat ulang); FR-32
+  kartu KELUAR→Transaksi arah Keluar→back Ringkasan; sheet Status pembaruan hanya `GET` saat
+  dibuka, percobaan terakhir vs terakhir berhasil terpisah, `13/13`, tombol Sinkronkan ada.
+- G36 login/logout/relogin di build final: `DELETE /v1/sessions` 204 → picker Google →
+  `POST /v1/auth/google` 200 → `/v1/me` 200 → Ringkasan; 914 baris tetap unik, tanpa duplikat.
+
+Gate teknis: Android **608 tes / 87 suite / 0 gagal**, lint **0 error / 117 warning / 1 hint**,
+`:app:assembleDebug` lulus; backend `vet`/`build`/`test ./... -count=1` **PASS** (11 paket).
+Audit independen v0.7: Android P0/P1 nol dengan P2/P3 ditutup (`8eae86e`), backend PASS;
+audit final putaran 2 di `docs/evidence/AUDIT_V07_FINAL_2026-11-24.md`.
+
+Masih NOT RUN/OPEN (milik owner): G14 drill hapus/restore data pemilik, G24 merge/deploy/SRS,
+G29/G37 audit GCP Rp0, Run literal Android Studio, onboarding Gmail (Lewati/Tautkan + consent),
+email Livin baru saat aplikasi tertutup. Bukti gate: [gate akhir v0.7](delivery/FINAL_GATES_SRS_V07_2026-11-24.md).
+

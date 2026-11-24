@@ -46,6 +46,18 @@ kini tes memverifikasi pemetaan `PAM_GOOGLE_SSO_CLIENT_ID` → `PAM_GOOGLE_SSO_E
 
 Revisi 24 November 2026 (ronde 24): **login Google nyata di HP fisik terbukti** pada 21:49–21:50 WIB — nonce SSO dikonsumsi sebelum verifikasi, sesi PAM diterbitkan (`/v1/me` 200), `google_identities` menjadi 1, dan 914 transaksi tetap unik (0 duplikat) setelah logout→login ulang. Bukti perangkat: `MainActivity` resumed + picker Credential Manager di HP. Tombol **Run literal** belum terbukti (`lastUpdateTime` tetap 19:28:04, build lama terpasang), begitu pula onboarding Gmail dan persistensi email saat app tertutup; karena itu **G36 berubah dari NOT RUN menjadi PARTIAL** (bukan PASS). Bukti agregat: [SSO_LIVE_PHONE](../evidence/SSO_LIVE_PHONE_2026-11-24.md).
 
+Revisi 24 November 2026 (ronde 25 — **gate akhir SRS v0.7**): pasangan build yang berlaku untuk
+penutupan putaran ini adalah Android `feat/c2-android@a629c41` dan backend
+`integration/2026-11-24@dd5bc88` (+ `1da82ec` dokumen kontrak pasca-audit). Rincian requirement
+v0.7, pensiun tiga modul, dan status gate pemilik ada di dokumen terpisah
+[FINAL_GATES_SRS_V07_2026-11-24](FINAL_GATES_SRS_V07_2026-11-24.md); UAT perangkat final di
+[FINAL_UAT_SRS_V07_2026-11-24](../evidence/FINAL_UAT_SRS_V07_2026-11-24.md); audit independen
+final di [AUDIT_V07_FINAL_2026-11-24](../evidence/AUDIT_V07_FINAL_2026-11-24.md) (P0=0, P1=0,
+P2 ditutup/disposisi, P3 dokumen direkonsiliasi). Gate Gmail/retensi pada dokumen ini tetap
+berlaku sebagai riwayat ronde 7; angka 678/88 dan APK `5368c92f…` adalah snapshot ronde 7,
+diganti angka final v0.7 **608 tes/87 suite/0 gagal**, lint **0 error/117 warning/1 hint**, APK
+`e7a1f4af…` (fingerprint) pada `a629c41`.
+
 ## 1. Pasangan build yang diverifikasi
 
 | Komponen | Repo | Branch | HEAD | Status `main` |

@@ -60,3 +60,22 @@ Login Google nyata di HP + penerbitan sesi PAM + binding identitas **terbukti** 
 menghasilkan duplikasi data; sisa sub-butir G36 (Run literal, onboarding Gmail, persistensi email
 saat app tertutup) belum diuji. Gate dihitung **PARTIAL** — bukan PASS — sampai pemilik menekan
 **Run** dan melengkapi sub-butir tersebut.
+
+## 6. Adendum build final SRS v0.7 — 24 November 2026 (WIB)
+
+Putaran verifikasi akhir memakai **build final** `feat/c2-android@a629c41` + backend
+`integration/2026-11-24@dd5bc88`, dipasang di HP fisik `105397ba0507` dengan
+`adb -s 105397ba0507 install -r app/build/outputs/apk/debug/app-debug.apk` (**bukan** tombol Run).
+APK 48.819.325 byte sha256 `e7a1f4af…`; backend runtime `dd5bc88` di `127.0.0.1:18090` via
+`adb reverse`, `/readyz` ready, DB UAT sintetis.
+
+| Langkah | Bukti |
+|---|---|
+| Pengaturan → **Keluar** | `DELETE /v1/sessions` → **204**; sesi perangkat berakhir dan layar login tampil (tanpa error) |
+| Tombol **Masuk** → **Masuk dengan Google** | `GET /v1/auth/google/nonce` → 200; picker Credential Manager tampil; `POST /v1/auth/google` → **200** (rute SSO tercatat `{unknown}` oleh middleware); `GET /v1/me` → **200** |
+| Setelah login | Ringkasan November 2026 termuat; `GET /v1/gmail/status`, `/v1/transactions`, `/v1/categories`, `/v1/summaries/2026-11` sukses; 914 baris tetap unik (tanpa auto-create/merge/duplikat) |
+| Pengaturan | Akun sendiri tampil (email sintetis UAT), "Akun Google tertaut", Gmail untuk impor Livin; tidak ada administrasi pengguna |
+
+Sub-butir G36 yang **masih** NOT RUN tidak berubah: tombol **Run** literal Android Studio,
+onboarding Gmail (Lewati/Tautkan + consent) pada akun uji, dan email Livin baru yang tiba saat
+aplikasi tertutup. Karena itu G36 tetap **PARTIAL/PASS-login** — bukan PASS penuh.

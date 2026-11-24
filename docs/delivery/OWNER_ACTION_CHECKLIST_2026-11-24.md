@@ -2,7 +2,7 @@
 
 Dokumen ini merangkum satu-satunya pekerjaan yang tersisa. Semua prasyarat otomatis sudah
 diverifikasi siap (`scripts/verify/uat_readiness.sh` → exit 0; backend `00bb515`, Android
-`8824fff`, APK sha256 `5368c92f…`, DB live 914 transaksi / 21 job COMPLETE).
+`8824fff`, APK sha256 `5368c92f…`, DB live 914 transaksi / 21 job COMPLETE). Untuk putaran SRS v0.7, pasangan build yang berlaku adalah Android `a629c41` + backend `dd5bc88` ([gate v0.7](FINAL_GATES_SRS_V07_2026-11-24.md), [UAT final](../evidence/FINAL_UAT_SRS_V07_2026-11-24.md)); status gate pemilik di bawah tidak berubah.
 
 ## 1. G36 — UAT SSO Google + tombol Run Android Studio
 
