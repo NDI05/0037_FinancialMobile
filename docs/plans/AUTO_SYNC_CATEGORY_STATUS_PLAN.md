@@ -310,9 +310,12 @@ Ukur waktu penyimpanan, waktu tampil di Android, dan waktu kategori selesai seca
 
 ## 10. Google SSO dan onboarding Gmail
 
-**Status 24 November 2026** — rancangan disetujui untuk masuk backlog. Implementasi dan UAT
-SSO belum dijalankan. Gunakan [CR-007](../changes/CR_007_DRAFT_GMAIL_API_YEARLY_WORKFLOW.md)
-untuk calon requirement resmi.
+**Status 24 November 2026** — **implementasi selesai di fixture/unit** (`pam-app@e67380a`,
+backend `71013f5`): Credential Manager, verifikasi ID token Go (RS256/JWKS,
+issuer/audience/expiry/nonce sekali pakai), penautan unik-atomik, onboarding Gmail + Lewati.
+UAT akun Google nyata, Gmail live, dan gate Rp0 **NOT RUN (owner)**; bukti polling FIXTURE
+tetap berlaku untuk lingkup fixture. Lihat [CR-007](../changes/CR_007_DRAFT_GMAIL_API_YEARLY_WORKFLOW.md)
+dan [matriks gate](../delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md).
 
 1. **Masuk dengan Google** menjadi pilihan utama. Android memakai Credential Manager.
    Backend Go memvalidasi ID token dan membuat sesi PAM dengan mekanisme access/refresh

@@ -16,18 +16,18 @@ Android/backend serta UAT perangkat FIXTURE.
 
 | Komponen | Repo | Branch | HEAD | Status `main` |
 |---|---|---|---|---|
-| Android | [`NDI05/0037_FinancialMobile`](https://github.com/NDI05/0037_FinancialMobile) (publik) | `feat/c2-android` | `a7abb14` (kode final; sesudahnya hanya commit dokumen/evidence `fc509a0` + commit dokumen ini) | `c10ca67`, dilindungi (tanpa force-push/delete) |
-| Backend | [`NDI05/0037-Backend-Financial`](https://github.com/NDI05/0037-Backend-Financial) (privat) | `integration/2026-11-24` | `1290910` (kode + perbaikan audit ronde 4; sesudahnya hanya dokumen) | `327d876`, belum diubah |
+| Android | [`NDI05/0037_FinancialMobile`](https://github.com/NDI05/0037_FinancialMobile) (publik) | `feat/c2-android` | `e67380a` (kode final + tindak lanjut P2 audit SSO; sesudahnya hanya commit dokumen/evidence) | `c10ca67`, dilindungi (tanpa force-push/delete) |
+| Backend | [`NDI05/0037-Backend-Financial`](https://github.com/NDI05/0037-Backend-Financial) (privat) | `integration/2026-11-24` | `71013f5` (kode + perbaikan audit SSO ronde 1; sesudahnya hanya dokumen) | `327d876`, belum diubah |
 
 Verifikasi fresh pada pasangan ini (24 November 2026):
 
 | Artefak | Hasil |
 |---|---|
-| Android `:app:testDebugUnitTest` | **639 tes / 83 suite / 0 gagal** |
-| Android `:app:lintDebug` | **0 error / 120 warning** |
-| Android `:app:assembleDebug` | **PASS**; APK debug **46.433.080 byte**, sha256 `7efc1803…` (build final `7f218ed`, dibangun 24 Nov 2026 17:28 WIB; build UAT awal `a7abb14` sha256 `93b69cc0…`) |
-| Backend `vet` + `build` + `test ./... -count=1` | **PASS** semua paket; `-race` pada `internal/gmail`, `internal/store`, `internal/httpapi` **PASS** |
-| Migrasi DB baru | 20 migrasi (`001`–`020`) |
+| Android `:app:testDebugUnitTest` | **678 tes / 88 suite / 0 gagal** (640 tes lama + 38 tes SSO) |
+| Android `:app:lintDebug` | **0 error / 123 warning / 1 hint** |
+| Android `:app:assembleDebug` | **PASS**; APK debug **47.992.939 byte**, sha256 `1a4c8ddf…` (build final `e67380a`, dibangun 24 Nov 2026 18:02 WIB; APK gate dibangun tanpa `PAM_GOOGLE_SSO_CLIENT_ID` sehingga tombol SSO tersembunyi — bukan bukti UI SSO) |
+| Backend `vet` + `build` + `test ./... -count=1` | **PASS** semua paket; `-race` pada `internal/auth`, `internal/gmail`, `internal/store`, `internal/httpapi` **PASS** |
+| Migrasi DB baru | 21 migrasi (`001`–`021`, termasuk `google_identities` dan nonce SSO) |
 | QA E2E kontrak polling §9 (provider fake) | **PASS=82, FAIL=0, exit 0** |
 | UAT perangkat fisik FIXTURE | **PASS** alur terkontrol (lihat G28) |
 | Gmail live / consent Google / Pub/Sub nyata / Rp0 | **NOT RUN (owner)** / **OPEN** |
@@ -93,12 +93,21 @@ lingkungan/kredensial atau sengaja menunggu pemilik.
 | G28. UAT perangkat fisik FIXTURE | HP fisik `105397ba0507` (varian debug, `adb reverse tcp:18090`), backend `1290910` profil fixture: tautkan Gmail, backfill 12/12, panel status server, manual sync 202 + drain, cooldown 429 + hitungan mundur UI, delta saat app ditutup, restart backend tidak menggandakan, rekonsiliasi UI vs DB | [UAT perangkat FIXTURE](../evidence/GMAIL_POLLING_UAT_PHONE_2026-11-24.md) butir 1–10 **PASS** pada build awal `a7abb14` + **smoke build final `7f218ed`** (instal ulang, sheet "Menunggu" 12/12, tap → `202` → drain) + aset `docs/evidence/assets/gmail_polling_uat/`; penyimpangan dicatat (bukan Gmail live) | **PASS** (alur terkontrol) | Gmail live/consent nyata tetap G25; penyimpangan kecil UI "Perlu perhatian" dicatat di evidence |
 | G29. Target biaya GCP Rp0 | Desain default polling tanpa Pub/Sub/endpoint publik/verifier OIDC; target Rp0 untuk pilot | Default config polling + tidak ada resource GCP berbayar di jalur default | **NOT RUN / OPEN** (owner) | Billing GCP masih tertaut; pemilik harus memverifikasi tagihan/kuota nyata sebelum gate Rp0 boleh PASS |
 
+| G30. Google SSO Android (Credential Manager) | Tombol **Masuk dengan Google** utama, picker akun selalu tampil (`autoSelect=false`), ID token tidak masuk log/intent/state, `GoogleSignInGateway` dapat di-fake, fitur aman tersembunyi bila client ID kosong | Tes unit/Compose Android `GoogleSso*`; BuildConfig tanpa client ID → APK gate tidak memuat string client; [GOOGLE_SSO_OWNER_SETUP](../GOOGLE_SSO_OWNER_SETUP.md) | **PASS** (fixture/unit) | UAT HP akun Google nyata = G36 |
+| G31. Verifikasi ID token Go | RS256-only (tolak `none`/HMAC), `kid` + JWKS cache/rotasi, iss whitelist `accounts.google.com`, aud = `GOOGLE_SSO_CLIENT_ID`, skew exp/nbf/iat, nonce claim cocok, token kedaluwarsa/salah ditolak 401 | Tes `internal/auth/google_test.go`; handler `POST /v1/auth/google` → sesi PAM existing + `googleLinked:true`; [AUDIT SSO ronde 1](../evidence/AUDIT_SSO_R1_2026-11-24.md) | **PASS** (unit/HTTP) | Butuh Web Client ID nyata untuk live |
+| G32. Nonce sekali pakai & replay | Nonce 32 byte base64url TTL 600 dtk, dikonsumsi **sebelum** verifikasi secara atomik; replay/kedaluwarsa ditolak; nonce tidak owner-scoped dan tidak dapat dipakai dua kali | Tes store nonce + HTTP replay; audit ronde 1 mengonfirmasi consume-before-verify | **PASS** | Rate limit nonce endpoint dicatat sebagai risiko INFO (belum ada) |
+| G33. Penautan akun lama (unik, atomik, tanpa auto-merge) | `google_identities` PK(issuer,subject) + UNIQUE(owner_id), FK cascade; link idempoten; konflik lintas owner 409 `google_identity_conflict`; akun sudah tertaut 409 `google_already_linked`; akun nonaktif 403; race owner sama tepat satu pemenang (tanpa 500); email sama beda `sub` tidak merge; transaksi/Gmail/role/owner utuh | Tes store + HTTP baru `TestConcurrentGoogleLinkSameOwnerDifferentSubjects`, `TestGoogleSSOSameEmailDifferentSubjectsDoNotMerge`; migrasi 021 diuji upgrade 020→021 | **PASS** (unit/HTTP) | UAT login ulang akun lama = G36 |
+| G34. Onboarding Gmail pasca-login | Tawaran "Tautkan Gmail untuk impor Livin" bila Gmail belum tertaut; akun Google sama/berbeda; consent `gmail.readonly` terpisah dari identitas Google dan AI; tombol **Lewati** per-owner (DataStore) tidak memblokir sesi/transaksi manual | Tes ViewModel/Compose onboarding + skip persisten; kontrak Gmail existing (G26/G27) | **PASS** (fixture/unit) | Consent/backfill live = G25/G36 |
+| G35. Audit SSO independen | Verifier, nonce, link atomik, no-merge, tidak ada kebocoran token, docs jujur, gate terpisah; tanpa akses kredensial nyata | [AUDIT SSO ronde 1](../evidence/AUDIT_SSO_R1_2026-11-24.md): PASS teknis, 0 P0/P1, 8 P2; tindak lanjut P2 ditutup di `e67380a` (Android) + `71013f5` (backend) | **PASS** | Audit ronde 2 fokus P2 = commit dokumen ini |
+| G36. UAT SSO HP fisik + Run Android Studio | Login Google nyata, link akun lama tanpa duplikat, skip onboarding, tautkan Gmail + consent, email Livin baru tersimpan saat app tertutup; dijalankan dari tombol Run | Belum dapat dijalankan: butuh Web Client ID, OAuth Android client (package `com.pam.recap.debug` + SHA-1 debug), akun Google uji di HP, dan Run literal pemilik | **NOT RUN** (owner) | Input owner tercantum di §4 |
+| G37. Gate SSO/Gmail live/Rp0 terpisah | SSO, Gmail live, dan Rp0 dilaporkan terpisah; Rp0 hanya PASS setelah Billing dilepas **dan** UAT live lulus; tanpa Cloud Identity Platform/Pub/Sub/paid service di jalur default | Kode tidak menambah layanan berbayar (audit ronde 1); Billing belum dilepas; tidak ada kredensial Google nyata | **NOT RUN / OPEN** (owner) | Sama dengan G25/G29 untuk lingkup live/Rp0 |
+
 ### Akuntansi gate final
 
-Total **30 gate**: **22 PASS, 4 PARTIAL, 4 NOT RUN**.
-- PASS: G1, G2, G4b, G5, G6, G7, G8, G9, G10, G11, G12, G13, G15, G16, G19, G20, G21, G22, G23, G26, G27, G28.
+Total **38 gate**: **28 PASS, 4 PARTIAL, 6 NOT RUN**.
+- PASS: G1, G2, G4b, G5, G6, G7, G8, G9, G10, G11, G12, G13, G15, G16, G19, G20, G21, G22, G23, G26, G27, G28, G30, G31, G32, G33, G34, G35.
 - PARTIAL: G3 (drill rollback), G4 (proteksi `main` backend), G17 (retire IMAP penuh), G18 (TalkBack/lebar layar final).
-- NOT RUN (owner): G14 (hapus/restore data nyata), G24 (merge/deploy/SRS), G25 (Gmail live), G29 (GCP Rp0 / OPEN).
+- NOT RUN (owner): G14 (hapus/restore data nyata), G24 (merge/deploy/SRS), G25 (Gmail live), G29 (GCP Rp0 / OPEN), G36 (UAT SSO HP + Run), G37 (gate live/Rp0 terpisah).
 
 Tidak ada gate FAIL. Angka ini tidak boleh dibaca sebagai kelulusan proyek: merge/deploy, Gmail live,
 dan Rp0 masih milik pemilik.
@@ -132,3 +141,13 @@ dan Rp0 masih milik pemilik.
 4. Jadwalkan drill rollback (G3) dan drill hapus/restore retensi (G14) pada salinan DB.
 5. Putuskan penonaktifan penuh jalur IMAP (G17) setelah rollback teruji.
 6. Merge ke `main`/deploy dan revisi SRS resmi hanya setelah 1–5 selesai.
+7. **Untuk gate SSO (G30–G37)**: daftarkan OAuth **Android** client untuk package
+   `com.pam.recap.debug` + SHA-1 debug `FE:38:71:AB:6A:DC:D2:E5:B3:68:96:DE:59:84:D3:08:5F:27:C6:30`
+   (SHA-256 `B3:9A:3C:FC:78:CF:EB:2E:AA:E3:9A:F0:B7:E1:7A:A5:31:7C:5D:92:43:E1:CA:13:C0:7D:1D:12:C2:D6:25:BC`),
+   isi **Web Client ID** (bukan secret) ke `PAM_GOOGLE_SSO_CLIENT_ID`/`GOOGLE_SSO_CLIENT_ID`, dan
+   siapkan akun Google uji yang sudah login di HP. Rahasia (client secret Gmail, password, OTP)
+   **tidak boleh** dikirim ke chat/repo.
+8. Jalankan tombol **Run** Android Studio pada HP fisik pemilik untuk G36: login Google, link akun
+   lama (tanpa duplikat), skip onboarding, tautkan Gmail + consent, dan verifikasi email Livin baru
+   tersimpan saat aplikasi tertutup. Gate SSO (**G36**), Gmail live (**G25**), dan Rp0 (**G29/G37**)
+   dilaporkan terpisah; fixture bukan bukti live.
