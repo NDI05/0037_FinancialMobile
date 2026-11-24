@@ -14,15 +14,11 @@ import com.pam.recap.domain.model.SummaryFreshness
 import com.pam.recap.domain.model.ParseStatus
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionSource
-import com.pam.recap.domain.repository.AttachmentDraft
-import com.pam.recap.domain.repository.AttachmentPatch
 import com.pam.recap.domain.repository.CategoryDrainResult
 import com.pam.recap.domain.repository.CategoryEnqueueResult
 import com.pam.recap.domain.repository.ManualTransactionDraft
 import com.pam.recap.domain.repository.CategoryDraft
 import com.pam.recap.domain.repository.CategoryPatch
-import com.pam.recap.domain.repository.ServerAttachment
-import com.pam.recap.domain.repository.ServerAttachmentPage
 import com.pam.recap.domain.repository.ServerBudgetPlan
 import com.pam.recap.domain.repository.ServerBudgetPlanPage
 import com.pam.recap.domain.repository.ServerCategory
@@ -47,18 +43,6 @@ class ServerFinanceRepositoryImpl @Inject constructor(
     private val api: PamApiClient,
     private val endpoints: BackendEndpoints,
 ) : ServerFinanceRepository {
-
-    private companion object {
-        val ATTACHMENT_SHA256 = Regex("^[0-9a-f]{64}$")
-        val ATTACHMENT_MIME_TYPES = setOf(
-            "application/pdf",
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "image/heic",
-        )
-        const val ATTACHMENT_MAX_BYTES = 10L * 1024 * 1024
-    }
 
     override val isEnabled: Boolean get() = endpoints.isEnabled
 
@@ -198,105 +182,6 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         totalLimitMinor = totalLimitMinor,
         revision = revision,
         attributes = attributes.orEmpty(),
-    )
-
-    override suspend fun attachments(
-        ownerId: String,
-        transactionId: String,
-        mimeType: String?,
-        query: String,
-        limit: Int,
-        cursor: String?,
-    ): Outcome<ServerAttachmentPage> = when (val result = api.attachments(ownerId, transactionId, mimeType, query, limit, cursor)) {
-        is Outcome.Success -> Outcome.Success(
-            ServerAttachmentPage(
-                items = result.value.items.map { it.toServer() },
-                nextCursor = result.value.nextCursor?.takeIf { it.isNotBlank() },
-            ),
-        )
-        is Outcome.Failure -> result
-    }
-
-    override suspend fun createAttachment(
-        ownerId: String,
-        draft: AttachmentDraft,
-    ): Outcome<ServerAttachment> {
-        attachmentDraftError(draft)?.let { return Outcome.Failure(AppError.Validation(it)) }
-        val body = RemoteAttachmentWrite(
-            transactionId = draft.transactionId,
-            fileName = draft.fileName,
-            mimeType = draft.mimeType,
-            sizeBytes = draft.sizeBytes,
-            sha256 = draft.sha256.lowercase(),
-            storageRef = draft.storageRef,
-            deviceRef = draft.deviceRef,
-            localFileId = draft.localFileId,
-            attributes = draft.attributes,
-        )
-        return when (val result = api.createAttachment(ownerId, body)) {
-            is Outcome.Success -> Outcome.Success(result.value.toServer())
-            is Outcome.Failure -> result
-        }
-    }
-
-    override suspend fun patchAttachment(
-        ownerId: String,
-        attachmentId: String,
-        patch: AttachmentPatch,
-    ): Outcome<ServerAttachment> = when (
-        val result = api.patchAttachment(
-            ownerId,
-            attachmentId,
-            RemoteAttachmentPatch(
-                revision = patch.revision,
-                fileName = patch.fileName,
-                storageRef = patch.storageRef,
-                attributes = patch.attributes,
-            ),
-        )
-    ) {
-        is Outcome.Success -> Outcome.Success(result.value.toServer())
-        is Outcome.Failure -> result
-    }
-
-    override suspend fun deleteAttachment(
-        ownerId: String,
-        attachmentId: String,
-        revision: Int?,
-    ): Outcome<Unit> = api.deleteAttachment(ownerId, attachmentId, revision)
-
-    private fun attachmentDraftError(draft: AttachmentDraft): String? {
-        if (draft.transactionId.isBlank()) return "attachment_transaction_required"
-        if (draft.fileName.isBlank() || draft.fileName.length > 255) return "attachment_file_name_invalid"
-        if (draft.mimeType !in ATTACHMENT_MIME_TYPES) return "attachment_mime_invalid"
-        if (draft.sizeBytes !in 1..ATTACHMENT_MAX_BYTES) return "attachment_size_invalid"
-        if (!ATTACHMENT_SHA256.matches(draft.sha256.lowercase())) return "attachment_sha256_invalid"
-        if (!isRelativeStorageRef(draft.storageRef)) return "attachment_storage_ref_invalid"
-        return null
-    }
-
-    /** Mirrors the server rule: no absolute/traversal/URL storage refs. */
-    private fun isRelativeStorageRef(ref: String): Boolean {
-        if (ref.isBlank() || ref.length > 512) return false
-        if (ref.startsWith("/") || ref.startsWith("~") || ref.startsWith(".")) return false
-        if (ref.contains('\\') || ref.contains("://") || ref.contains("%2e", ignoreCase = true)) return false
-        return ref.split('/').none { it == ".." || it == "." || it.isEmpty() }
-    }
-
-    private fun RemoteAttachment.toServer(): ServerAttachment = ServerAttachment(
-        id = id,
-        transactionId = transactionId,
-        fileName = fileName,
-        mimeType = mimeType,
-        sizeBytes = sizeBytes,
-        sha256 = sha256.lowercase(),
-        storageRef = storageRef,
-        deviceRef = deviceRef,
-        localFileId = localFileId,
-        attributes = attributes.orEmpty(),
-        revision = revision,
-        createdAt = createdAt?.let { runCatching { Instant.parse(it) }.getOrNull() },
-        updatedAt = updatedAt?.let { runCatching { Instant.parse(it) }.getOrNull() },
     )
 
     override suspend fun createManual(

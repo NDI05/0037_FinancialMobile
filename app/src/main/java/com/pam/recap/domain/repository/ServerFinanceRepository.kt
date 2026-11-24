@@ -185,37 +185,6 @@ interface ServerFinanceRepository {
         reassignTo: String? = null,
     ): Outcome<Unit> = Outcome.Failure(AppError.Configuration("backend_category_write_not_supported"))
 
-    // ---- S4 attachments (metadata only; file bytes never leave the device) ----
-
-    suspend fun attachments(
-        ownerId: String,
-        transactionId: String,
-        mimeType: String? = null,
-        query: String = "",
-        limit: Int = 50,
-        cursor: String? = null,
-    ): Outcome<ServerAttachmentPage> =
-        Outcome.Failure(AppError.Configuration("backend_attachments_not_supported"))
-
-    suspend fun createAttachment(
-        ownerId: String,
-        draft: AttachmentDraft,
-    ): Outcome<ServerAttachment> =
-        Outcome.Failure(AppError.Configuration("backend_attachments_not_supported"))
-
-    suspend fun patchAttachment(
-        ownerId: String,
-        attachmentId: String,
-        patch: AttachmentPatch,
-    ): Outcome<ServerAttachment> =
-        Outcome.Failure(AppError.Configuration("backend_attachments_not_supported"))
-
-    suspend fun deleteAttachment(
-        ownerId: String,
-        attachmentId: String,
-        revision: Int? = null,
-    ): Outcome<Unit> = Outcome.Failure(AppError.Configuration("backend_attachments_not_supported"))
-
     suspend fun budgetPlan(ownerId: String, month: JakartaMonth): Outcome<ServerBudgetPlan> =
         Outcome.Failure(AppError.Configuration("backend_budget_not_supported"))
 
@@ -353,44 +322,3 @@ interface ServerFinanceRepository {
 
 }
 
-/** One attachment metadata row for a transaction. The bytes stay in private app storage. */
-data class ServerAttachment(
-    val id: String,
-    val transactionId: String,
-    val fileName: String,
-    val mimeType: String,
-    val sizeBytes: Long,
-    val sha256: String,
-    val storageRef: String,
-    val deviceRef: String? = null,
-    val localFileId: String? = null,
-    val attributes: Map<String, String> = emptyMap(),
-    val revision: Int = 0,
-    val createdAt: Instant? = null,
-    val updatedAt: Instant? = null,
-)
-
-/** Create payload; [storageRef] is a relative path and [sha256] is 64 lowercase hex characters. */
-data class AttachmentDraft(
-    val transactionId: String,
-    val fileName: String,
-    val mimeType: String,
-    val sizeBytes: Long,
-    val sha256: String,
-    val storageRef: String,
-    val deviceRef: String? = null,
-    val localFileId: String? = null,
-    val attributes: Map<String, String> = emptyMap(),
-)
-
-data class AttachmentPatch(
-    val revision: Int,
-    val fileName: String? = null,
-    val storageRef: String? = null,
-    val attributes: Map<String, String>? = null,
-)
-
-data class ServerAttachmentPage(
-    val items: List<ServerAttachment> = emptyList(),
-    val nextCursor: String? = null,
-)

@@ -38,7 +38,6 @@ import com.pam.recap.ui.components.amountLabel
 import com.pam.recap.ui.components.moneyToneColor
 import com.pam.recap.ui.components.ConsentSwitchRow
 import com.pam.recap.ui.components.DynamicFieldsEditor
-import com.pam.recap.ui.feature.attachment.TransactionAttachmentsSection
 import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassCard
 import com.pam.recap.ui.components.GlassTopBar
@@ -77,8 +76,6 @@ fun TransactionDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: TransactionDetailViewModel = hiltViewModel(),
-    /** Attachment panel; injected so previews/screenshot tests can render without Hilt. */
-    attachments: @Composable () -> Unit = { TransactionAttachmentsSection() },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val transaction = state.transaction
@@ -409,9 +406,6 @@ fun TransactionDetailScreen(
                 )
             }
 
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                attachments()
-            }
         }
     }
 

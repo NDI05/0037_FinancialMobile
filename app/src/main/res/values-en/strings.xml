@@ -623,26 +623,6 @@
     <string name="action_remove">Remove</string>
     <string name="settings_categories_body">Manage transaction categories, including your own.</string>
 
-    <string name="attachments_title">Attachments</string>
-    <string name="attachments_add">Add attachment</string>
-    <string name="attachments_empty">No attachments yet.</string>
-    <string name="attachments_offline">Attachments are available after signing in to a server account.</string>
-    <string name="attachments_uploading">Saving attachment…</string>
-    <string name="attachments_saved">Attachment saved.</string>
-    <string name="attachments_load_more">Load more attachments</string>
-    <string name="attachments_delete_title">Delete attachment?</string>
-    <string name="attachments_delete_body">The server metadata is deleted and the local copy is removed with it. The original file is never uploaded.</string>
-    <string name="attachments_delete_confirm">Delete attachment</string>
-    <string name="attachments_conflict">This attachment changed. Reload, then try again.</string>
-    <string name="attachments_error_generic">The attachment could not be processed.</string>
-    <string name="attachments_picker_missing">The file cannot be read.</string>
-    <string name="attachments_only_local">This file stays on the device; only metadata is synced.</string>
-    <string name="attachments_search_hint">Search attachment name</string>
-    <string name="attachments_search_empty">No attachments match this search.</string>
-    <string name="attachments_rename_action">Rename attachment</string>
-    <string name="attachments_rename_field">File name</string>
-    <string name="attachments_rename_invalid">File name is invalid: it cannot be blank, must be at most 255 characters, and cannot contain slashes or control characters.</string>
-    <string name="attachments_renamed">Attachment renamed.</string>
     <string name="budget_history_eyebrow">Saved plans</string>
     <string name="budget_history_load">Load plan history</string>
     <string name="budget_history_body">%1$d plans from %2$s to %3$s.</string>
