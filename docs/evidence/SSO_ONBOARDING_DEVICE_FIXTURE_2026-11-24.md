@@ -48,3 +48,18 @@ Kontrak Gmail polling dijalankan ulang black-box pada backend integrasi `138b5c3
 port terisolasi 18099): **PASS=82, FAIL=0, exit 0** — 3 skenario (`normal`, `history_expired`,
 `rate_limit`), termasuk backfill 12/12, coalesce/cooldown, restart-safe, dan tanpa `watch/stop`.
 Artinya lane Gmail tidak teregresi oleh integrasi SSO; ini tetap bukti fixture, bukan Gmail live.
+
+## Validasi skrip kesiapan terhadap backend Go nyata
+
+`scripts/verify/uat_readiness.sh` juga dijalankan terhadap backend Go integrasi yang benar-benar
+dinyalakan (profil fixture, port isolasi 18091, SSO sengaja mati):
+
+- `/readyz` → `200` (OK)
+- `/v1/auth/google/nonce` → `503 google_sso_disabled` (dilaporkan BELUM, benar untuk profil tanpa client ID)
+- `/v1/gmail/status` → `401` tanpa token (dilaporkan OK: rute terpasang)
+- HP `105397ba0507` terdeteksi, Play Services OK, paket debug terpasang, `adb reverse` belum ada
+
+Exit `2` dengan daftar prasyarat kurang — sesuai harapan. Ini memvalidasi skrip terhadap rute
+backend nyata, bukan hanya server HTTP tiruan. Temuan higiene: proses backend lama
+(`/tmp/pam-be-merged`, PID 33035, 23 Nov) masih mendengarkan port 18091 dan sudah dihentikan +
+binary-nya dihapus.
