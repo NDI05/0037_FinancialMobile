@@ -14,7 +14,7 @@ status menunjuk bukti atau alasan NOT RUN.
 | Backend | [`NDI05/0037-Backend-Financial`](https://github.com/NDI05/0037-Backend-Financial) (privat) | `integration/2026-11-24` | `40c4c31` (kode `f1625b5`) | `327d876`, belum diubah |
 
 Commit kode Android pada laporan ini adalah `19e6860` (APK yang diuji); sesudahnya hanya
-commit dokumentasi/evidence. HEAD branch saat laporan ditutup: `d05a57b`.
+commit dokumentasi/evidence (HEAD branch bergerak tanpa mengubah APK).
 
 Kedua repo punya Git root sendiri; tidak ada subtree/submodule. Android dibangun dari clone repo
 Android saja (tidak ada source server di tree: `git ls-files | grep '^backend-go/'` = 0).
@@ -77,7 +77,7 @@ lingkungan/kredensial atau sengaja menunggu pemilik.
 - Split: `docs/evidence/UAT_BACKEND_SPLIT_2026-11-24.md`, `AUDIT_BACKEND_SPLIT_2026-11-24.md`,
   `docs/delivery/BACKEND_SPLIT_2026-11-24.md` (termasuk rollback dan URL).
 - Gmail API: `0037-Backend-Financial/docs/GMAIL_API.md` (kontrak implementasi),
-  [GMAIL_API_CONTRACT](../GMAIL_API_CONTRACT.md), `AUDIT_GMAIL_API_2026-11-24.md`,
+  [GMAIL_API_CONTRACT](https://github.com/NDI05/0037-Backend-Financial/blob/integration/2026-11-24/docs/GMAIL_API_CONTRACT.md), `AUDIT_GMAIL_API_2026-11-24.md`,
   `GMAIL_UI_2026-11-24.md`.
 - Retensi: `0037-Backend-Financial/docs/RETENTION_POLICY_IMPLEMENTATION.md`,
   `AUDIT_RETENTION_INTEGRATION_2026-11-24.md`, `RETENTION_UI_2026-11-24.md`.
