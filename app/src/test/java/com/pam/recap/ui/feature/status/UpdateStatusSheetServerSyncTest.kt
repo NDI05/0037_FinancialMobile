@@ -19,6 +19,7 @@ import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.GmailSyncProgress
 import com.pam.recap.domain.model.GmailSyncState
 import com.pam.recap.ui.theme.PamTheme
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import org.junit.Assert.assertEquals
@@ -115,6 +116,24 @@ class UpdateStatusSheetServerSyncTest {
             .assertIsDisplayed()
         compose.onNodeWithText(context.getString(R.string.update_status_sync_running))
             .assertHasNoClickAction()
+    }
+
+    @Test
+    fun `the last attempt and the last success are two separate lines`() {
+        setSheet(
+            GmailServerSyncUi(
+                available = true,
+                syncState = GmailSyncState.IDLE,
+                lastAttemptAt = now - 2.hours,
+                lastSuccessAt = now - 26.hours,
+                observedAt = now,
+            ),
+        )
+
+        compose.onNodeWithText(context.getString(R.string.update_status_last_attempt))
+            .assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.update_status_server_last_success))
+            .assertIsDisplayed()
     }
 
     @Test
