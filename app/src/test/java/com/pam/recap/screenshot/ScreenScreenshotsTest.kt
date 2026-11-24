@@ -260,7 +260,7 @@ class ScreenScreenshotsTest {
                 GmailConnection(
                     ownerId = ownerId,
                     state = GmailConnectionState.CONNECTED,
-                    mailboxLabel = "andhika.pratama@gmail.com",
+                    mailboxLabel = "pengguna.uji@example.test",
                     scope = GmailConnection.READONLY_SCOPE,
                     connectedAt = now,
                     lastImportAt = now,
@@ -673,8 +673,8 @@ class ScreenScreenshotsTest {
             FakeSessionRepository(
                 Session(
                     ownerId = owner,
-                    displayName = "Andhika Pratama",
-                    mailboxLabel = "andhika.pratama@gmail.com",
+                    displayName = "Pengguna Uji",
+                    mailboxLabel = "pengguna.uji@example.test",
                     signedInAt = now,
                     isDemo = false,
                     googleLinked = false,
@@ -807,8 +807,8 @@ class ScreenScreenshotsTest {
     private class DemoSessions(private val ownerId: String, private val now: Instant) : SessionRepository {
         private val session = Session(
             ownerId = ownerId,
-            displayName = "Andhika Pratama",
-            mailboxLabel = "andhika.pratama@gmail.com",
+            displayName = "Pengguna Uji",
+            mailboxLabel = "pengguna.uji@example.test",
             signedInAt = now,
             isDemo = true,
         )

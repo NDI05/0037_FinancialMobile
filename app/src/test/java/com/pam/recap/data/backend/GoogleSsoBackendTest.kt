@@ -267,6 +267,30 @@ class GoogleSsoBackendTest {
         assertEquals(false, linked.value)
     }
 
+    @Test
+    fun `unexpected nonce failure reports the real status code`() = runTest {
+        // Audit P2-2: the fallback used to yield the literal text `backend_${call.code}`.
+        server.enqueue(errorResponse(500, "internal_error"))
+        val error = (repository().googleNonce() as Outcome.Failure).error
+
+        assertEquals("backend_500", (error as AppError.Network).debugDetail)
+        assertTrue("detail must not be the literal template", !error.debugDetail!!.contains("$"))
+    }
+
+    @Test
+    fun `unexpected linked-flag failure reports the real status code`() = runTest {
+        server.enqueue(googleSessionResponse())
+        val repository = repository()
+        repository.googleSignIn("id-token", "n-1")
+        server.takeRequest()
+
+        server.enqueue(errorResponse(502, "bad_gateway"))
+        val error = (repository.googleLinked(OWNER) as Outcome.Failure).error
+
+        assertEquals("backend_502", (error as AppError.Network).debugDetail)
+        assertTrue("detail must not be the literal template", !error.debugDetail!!.contains("$"))
+    }
+
     private class XorSecretStore : WrappedSecretStore {
         override fun wrap(plainSecret: ByteArray): String =
             Base64.encodeToString(

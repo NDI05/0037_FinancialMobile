@@ -306,7 +306,7 @@ class BackendSessionRepositoryImpl @Inject constructor(
                     }
                 }
                 503 -> Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
-                else -> Outcome.Failure(AppError.Network("backend_${'$'}{call.code}"))
+                else -> Outcome.Failure(AppError.Network("backend_${call.code}"))
             }
         }
     }
@@ -375,7 +375,7 @@ class BackendSessionRepositoryImpl @Inject constructor(
                 403 -> Outcome.Failure(AppError.Validation(AppErrorRules.ACCOUNT_INACTIVE))
                 429 -> Outcome.Failure(AppError.RateLimited(call.errorCode))
                 503 -> Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
-                else -> Outcome.Failure(AppError.Network("backend_${'$'}{call.code}"))
+                else -> Outcome.Failure(AppError.Network("backend_${call.code}"))
             }
         }
     }
@@ -418,7 +418,7 @@ class BackendSessionRepositoryImpl @Inject constructor(
                 403 -> Outcome.Failure(AppError.Validation(AppErrorRules.ACCOUNT_INACTIVE))
                 429 -> Outcome.Failure(AppError.RateLimited(call.errorCode))
                 503 -> Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
-                else -> Outcome.Failure(AppError.Network("backend_${'$'}{call.code}"))
+                else -> Outcome.Failure(AppError.Network("backend_${call.code}"))
             }
         }
     }
@@ -434,7 +434,7 @@ class BackendSessionRepositoryImpl @Inject constructor(
             val call = call("GET", endpoint, null, bearer)
                 ?: return@withContext Outcome.Failure(AppError.Network("backend_unreachable"))
             if (call.code !in 200..299) {
-                return@withContext Outcome.Failure(AppError.Network("backend_${'$'}{call.code}"))
+                return@withContext Outcome.Failure(AppError.Network("backend_${call.code}"))
             }
             val body = runCatching {
                 json.decodeFromString(MeGoogleFlag.serializer(), call.payload)

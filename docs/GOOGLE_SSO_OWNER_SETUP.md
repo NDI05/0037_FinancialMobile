@@ -108,7 +108,7 @@ kontrak:
 
 - `GET /v1/auth/google/nonce` → `200 {"nonce","expiresAt","expiresInSeconds"}` saat aktif,
   `503 {"code":"google_sso_disabled"}` saat nonaktif.
-- `POST /v1/auth/google` → `201` sesi yang identik dengan `POST /v1/sessions` + `googleLinked:true`.
+- `POST /v1/auth/google` → `200` sesi yang identik dengan `POST /v1/sessions` + `googleLinked:true`.
 - `POST /v1/auth/google/link` → `200 {"linked":true,"googleLinked":true}` untuk akun yang sudah
   login email/PAM; `409 google_identity_conflict` / `409 google_already_linked` bila bentrok.
 - `GET /v1/me` boleh menyertakan `googleLinked` (opsional; Android juga menyimpan flag lokal
@@ -145,7 +145,7 @@ sudah tertaut — login email/PAM tetap bisa dipakai.
 | 2 | Tekan tombol Google, pilih akun penguji yang sudah tertaut | Masuk ke aplikasi; sesi PAM tersimpan; tidak ada ID token di log |
 | 3 | Buka dialog Google lalu batalkan | Tetap di layar Akun, tanpa banner error |
 | 4 | Login email/PAM pada akun yang belum tertaut, tekan Tautkan Google | Kartu berubah "Google tertaut"; data/transaksi/Gmail tidak berubah |
-| 5 | Ulangi langkah 2 setelah login SSO | Masuk langsung tanpa memilih ulang akun bila sesi Google masih valid |
+| 5 | Ulangi langkah 2 setelah login SSO | Picker akun Google **selalu** tampil (by design: `autoSelect=false`, tidak ada pemilihan senyap); pilih akun yang sama, lalu masuk tanpa kata sandi. Akun yang sudah pernah dipakai muncul di daftar |
 | 6 | Build tanpa client ID, buka layar Akun | Tombol Google tidak ada; login email/PAM tetap normal |
 | 7 | Akun tanpa Gmail tertaut setelah login | Sheet "Tautkan Gmail untuk impor Livin" muncul; "Lewati" diingat per owner |
 | 8 | Login akun owner lain di perangkat yang sama | Sheet onboarding muncul lagi untuk owner tersebut |
