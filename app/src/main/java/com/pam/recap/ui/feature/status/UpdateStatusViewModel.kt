@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.time.JakartaMonth
+import com.pam.recap.core.time.RetentionWindow
 import com.pam.recap.domain.repository.NetworkMonitor
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.CategoryStatusHolder
@@ -53,8 +54,12 @@ class UpdateStatusViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collect { ownerId ->
                     month.value = if (ownerId == null) null else {
-                        runCatching { resolveInitialMonth(ownerId) }
-                            .getOrElse { clock.currentMonth() }
+                        // Never offer a period outside the rolling year the server serves; a stale
+                        // local month would only come back as `outside_retention`.
+                        window().clamp(
+                            runCatching { resolveInitialMonth(ownerId) }
+                                .getOrElse { clock.currentMonth() },
+                        )
                     }
                 }
         }
@@ -62,6 +67,9 @@ class UpdateStatusViewModel @Inject constructor(
 
     /** Hosts the sheet's relative labels; a single read per open, never a ticking counter. */
     fun now(): kotlin.time.Instant = clock.now()
+
+    /** The rolling one-year window the current period belongs to, evaluated on the owner's clock. */
+    fun window(): RetentionWindow = RetentionWindow.of(clock)
 
     /** Starts (or joins) the one manual sync flight. Idempotent while a run is active. */
     fun syncNow() {

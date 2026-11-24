@@ -37,6 +37,7 @@ fun UpdateStatusActionProvider(content: @Composable () -> Unit) {
     var sheetOpen by remember { mutableStateOf(false) }
     // Freeze "now" when the sheet opens instead of re-reading it on every recomposition.
     val openedAt = remember(sheetOpen) { viewModel.now() }
+    val retention = remember(sheetOpen) { viewModel.window() }
 
     CompositionLocalProvider(
         LocalUpdateStatusAction provides { modifier ->
@@ -51,6 +52,7 @@ fun UpdateStatusActionProvider(content: @Composable () -> Unit) {
                 now = openedAt,
                 onDismiss = { sheetOpen = false },
                 onSyncNow = viewModel::syncNow,
+                retention = retention,
             )
         }
     }

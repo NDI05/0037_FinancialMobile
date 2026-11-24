@@ -75,7 +75,7 @@ fun UpdateStatusPill(
     // At very large text the transient word no longer fits next to the screen title; the icon keeps
     // the state visible and the content description keeps it audible.
     val showLabel = LocalDensity.current.fontScale < 1.5f && !reducedMotion
-    val label = stringResource(status.headline.labelRes())
+    val label = stringResource(status.labelRes())
     val spoken = spokenStatus(status, label)
     val tint = status.headline.tint()
     val token = "${status.headline}:${status.syncAttempt}:${status.attemptToken()}"
@@ -138,7 +138,17 @@ private fun spokenStatus(status: UpdateStatusUi, label: String): String {
     val details = buildList {
         if (!status.online) add(stringResource(R.string.update_status_indicator_offline))
         if (status.pendingUpload) add(stringResource(R.string.update_status_cd_pending))
-        if (status.needsAttention) add(stringResource(R.string.update_status_cd_attention))
+        if (status.needsAttention) {
+            add(
+                stringResource(
+                    if (status.needsReview) {
+                        R.string.update_status_cd_review
+                    } else {
+                        R.string.update_status_cd_attention
+                    },
+                ),
+            )
+        }
     }
     return if (details.isEmpty()) "$open: $label" else "$open: $label. ${details.joinToString(". ")}"
 }
@@ -147,9 +157,19 @@ private fun spokenStatus(status: UpdateStatusUi, label: String): String {
 private fun UpdateStatusUi.attemptToken(): Int =
     headline.ordinal * 31 + (if (pendingUpload) 1 else 0) + (if (online) 0 else 2)
 
+/**
+ * A review backlog is a different short label from a failed run, so the word above the icon never
+ * claims an error when the data is merely waiting for a human.
+ */
+private fun UpdateStatusUi.labelRes(): Int = when {
+    headline == UpdateHeadline.NEEDS_ATTENTION && needsReview -> R.string.update_status_indicator_review
+    else -> headline.labelRes()
+}
+
 private fun UpdateHeadline.labelRes(): Int = when (this) {
     UpdateHeadline.NEEDS_ATTENTION -> R.string.update_status_indicator_attention
-    UpdateHeadline.CHECKING, UpdateHeadline.FETCHING -> R.string.update_status_indicator_checking
+    UpdateHeadline.CHECKING -> R.string.update_status_indicator_checking
+    UpdateHeadline.FETCHING -> R.string.update_status_indicator_fetching
     UpdateHeadline.SAVING -> R.string.update_status_indicator_saving
     UpdateHeadline.CATEGORIZING -> R.string.update_status_indicator_categorizing
     UpdateHeadline.WAITING -> R.string.update_status_indicator_waiting

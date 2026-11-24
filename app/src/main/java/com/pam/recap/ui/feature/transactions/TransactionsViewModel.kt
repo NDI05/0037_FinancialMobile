@@ -5,7 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
+import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.time.JakartaMonth
+import com.pam.recap.core.time.RetentionWindow
+import com.pam.recap.core.time.SystemClockProvider
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.model.Transaction
@@ -99,6 +102,7 @@ class TransactionsViewModel @Inject constructor(
     private val transactions: TransactionRepository,
     private val resolveInitialMonth: ResolveInitialMonthUseCase,
     private val activeMonth: ActiveMonthStore = ActiveMonthStore(),
+    private val clock: ClockProvider = SystemClockProvider(),
     private val server: ServerFinanceRepository? = null,
 ) : ViewModel() {
 
@@ -198,7 +202,11 @@ class TransactionsViewModel @Inject constructor(
                 )
             }.collect { input -> requestLoad(input) }
         }
-        val requestedMonth = savedStateHandle.get<String>("monthId")?.let(JakartaMonth::parse)
+        val requestedMonth = savedStateHandle.get<String>("monthId")
+            ?.let(JakartaMonth::parse)
+            // A route is not a way around the retention window: an out-of-window `monthId` lands on
+            // the nearest reachable month instead of producing an `outside_retention` request.
+            ?.let { window().clamp(it) }
         viewModelScope.launch {
             if (requestedMonth != null) {
                 // A drill-down ("Lihat semua" / category shortcut) carries its own explicit month.
@@ -209,7 +217,7 @@ class TransactionsViewModel @Inject constructor(
             // (instead of reading a snapshot) removes the cold-start race that left the tab on a
             // null month with an empty list (UAT 24 Nov, S2.P0 nav).
             val ownerId = sessions.observe().filterNotNull().first().ownerId
-            month.value = activeMonth.current(ownerId) ?: resolveInitialMonth(ownerId)
+            month.value = window().clamp(activeMonth.current(ownerId) ?: resolveInitialMonth(ownerId))
         }
         // One period across tabs: a month chosen on Ringkasan (or below) is followed here, and a
         // month changed in this list is published back for the other screen.
@@ -218,8 +226,9 @@ class TransactionsViewModel @Inject constructor(
                 val picked = selection ?: return@collect
                 val ownerId = sessions.current()?.ownerId ?: return@collect
                 if (picked.ownerId != ownerId) return@collect
-                if (month.value != picked.month && requestedMonth == null) {
-                    month.value = picked.month
+                val pickedMonth = window().clamp(picked.month)
+                if (month.value != pickedMonth && requestedMonth == null) {
+                    month.value = pickedMonth
                 }
             }
         }
@@ -555,9 +564,20 @@ class TransactionsViewModel @Inject constructor(
         val reviewReasons: List<String> = emptyList(),
     )
 
-    fun previousMonth() = shiftMonth { it.previous() }
+    /** The rolling one-year window the arrows are bounded by (DRAFT-RET-01/02). */
+    fun window(): RetentionWindow = RetentionWindow.of(clock)
 
-    fun nextMonth() = shiftMonth { it.next() }
+    fun previousMonth() {
+        val current = month.value ?: return
+        if (!window().canGoEarlier(current)) return
+        shiftMonth { it.previous() }
+    }
+
+    fun nextMonth() {
+        val current = month.value ?: return
+        if (!window().canGoLater(current)) return
+        shiftMonth { it.next() }
+    }
 
     private fun shiftMonth(transform: (JakartaMonth) -> JakartaMonth) {
         val next = month.value?.let(transform) ?: return

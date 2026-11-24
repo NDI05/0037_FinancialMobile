@@ -62,6 +62,7 @@
     <string name="action_save">Simpan</string>
     <string name="action_next">Berikutnya</string>
     <string name="action_previous">Sebelumnya</string>
+    <string name="month_selector_partial">sebagian</string>
     <string name="action_see_all">Lihat semua</string>
     <string name="status_loading">Memuat</string>
     <string name="status_loading_data">Memuat data</string>
@@ -499,11 +500,13 @@
     <string name="update_status_close">Tutup status pembaruan</string>
     <string name="update_status_indicator_idle">Belum diperbarui</string>
     <string name="update_status_indicator_checking">Memeriksa</string>
+    <string name="update_status_indicator_fetching">Mengambil riwayat</string>
     <string name="update_status_indicator_saving">Menyimpan</string>
     <string name="update_status_indicator_categorizing">Mengategorikan</string>
-    <string name="update_status_indicator_waiting">Menunggu</string>
+    <string name="update_status_indicator_waiting">Menunggu AI</string>
     <string name="update_status_indicator_offline">Offline</string>
     <string name="update_status_indicator_attention">Perlu perhatian</string>
+    <string name="update_status_indicator_review">Perlu tinjauan</string>
     <string name="update_status_indicator_succeeded">Terbaru</string>
     <string name="update_status_section_data">Data transaksi</string>
     <string name="update_status_section_categories">Kategori</string>
@@ -544,6 +547,8 @@
     <string name="update_status_sync_retry">Coba lagi</string>
     <string name="update_status_sync_running">Sedang sinkron</string>
     <string name="update_status_sync_period">Periode: %1$s</string>
+    <string name="update_status_retention_window">Riwayat yang bisa diakses: %1$s sampai %2$s.</string>
+    <string name="update_status_retention_partial">Bulan %1$s hanya tercakup sebagian pada rentang setahun ini.</string>
     <string name="update_status_sync_progress">Halaman %1$d dari %2$d</string>
     <string name="update_status_sync_conflict">Pemeriksaan lain sedang berjalan. Progresnya tampil di panel ini.</string>
     <string name="update_status_stage_checking">Memeriksa email Livin…</string>
@@ -553,6 +558,7 @@
     <string name="update_status_matched">Email cocok pada impor ini: %1$d</string>
     <string name="update_status_cd_pending">Ada transaksi yang belum diakui server.</string>
     <string name="update_status_cd_attention">Ada hal yang perlu perhatian.</string>
+    <string name="update_status_cd_review">Ada transaksi yang perlu ditinjau.</string>
     <string name="category_manage_title">Kategori</string>
     <string name="category_manage_eyebrow">Kategori transaksi</string>
     <string name="category_manage_body">Kategori bawaan terlindungi. Kategori buatan sendiri bisa diubah atau dihapus tanpa memindahkan transaksi ke kategori lain.</string>

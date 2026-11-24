@@ -1,6 +1,7 @@
 package com.pam.recap.ui.feature.transactions
 
 import androidx.lifecycle.SavedStateHandle
+import com.pam.recap.core.time.RetentionWindow
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
 import com.pam.recap.testing.FakeSessionRepository
@@ -17,6 +18,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -56,6 +58,7 @@ class TransactionsTabMonthTest {
             transactions = repo,
             resolveInitialMonth = ResolveInitialMonthUseCase(repo, fixedClock(testNow)),
             activeMonth = store,
+            clock = fixedClock(testNow),
         )
     }
 
@@ -103,6 +106,40 @@ class TransactionsTabMonthTest {
         assertEquals(previousMonth, store.current("u_owner"))
         val settled = withTimeout(5_000) { vm.state.first { it.month == previousMonth } }
         assertEquals(previousMonth, settled.month)
+    }
+
+    @Test
+    fun `the forward arrow stops at the current month`() = runTest {
+        val vm = viewModel()
+        withTimeout(5_000) { vm.state.first { it.month == testMonth } }
+
+        vm.nextMonth()
+
+        assertEquals(testMonth, vm.state.value.month)
+        assertFalse(vm.window().canGoLater(testMonth))
+    }
+
+    @Test
+    fun `the back arrow stops at the oldest month of the rolling year`() = runTest {
+        val oldest = RetentionWindow.of(fixedClock(testNow).now()).oldest
+        val vm = viewModel(SavedStateHandle(mapOf("monthId" to oldest.id())))
+        withTimeout(5_000) { vm.state.first { it.month == oldest } }
+
+        vm.previousMonth()
+
+        assertEquals(oldest, vm.state.value.month)
+        assertFalse(vm.window().canGoEarlier(oldest))
+    }
+
+    @Test
+    fun `a route month outside the rolling year is clamped instead of queried`() = runTest {
+        val oldest = RetentionWindow.of(fixedClock(testNow).now()).oldest
+        val tooOld = oldest.minusMonths(2)
+
+        val vm = viewModel(SavedStateHandle(mapOf("monthId" to tooOld.id())))
+
+        val settled = withTimeout(5_000) { vm.state.first { it.month != null } }
+        assertEquals(oldest, settled.month)
     }
 
     @Test

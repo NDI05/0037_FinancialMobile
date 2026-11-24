@@ -18,7 +18,7 @@ import kotlin.time.Instant
  * local time, and [searchRange] widens that window so emails whose event time sits on either
  * edge are still fetched (ingestion buffer, OI-05).
  */
-data class JakartaMonth(val year: Int, val month: Int) {
+data class JakartaMonth(val year: Int, val month: Int) : Comparable<JakartaMonth> {
 
     init {
         require(month in 1..MONTHS_PER_YEAR) { "month out of range: $month" }
@@ -79,6 +79,10 @@ data class JakartaMonth(val year: Int, val month: Int) {
 
     /** First day of the month as a Jakarta local date. */
     fun firstDay(): LocalDate = LocalDate(year, month, 1)
+
+    /** Chronological order, so window bounds can be expressed as ordinary comparisons. */
+    override fun compareTo(other: JakartaMonth): Int =
+        compareValuesBy(this, other, { it.year }, { it.month })
 
     override fun toString(): String = id()
 
