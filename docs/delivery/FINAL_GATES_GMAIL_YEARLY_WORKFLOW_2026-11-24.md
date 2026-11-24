@@ -13,6 +13,9 @@ status menunjuk bukti atau alasan NOT RUN.
 | Android | [`NDI05/0037_FinancialMobile`](https://github.com/NDI05/0037_FinancialMobile) (publik) | `feat/c2-android` | `19e6860` | `c10ca67`, dilindungi (tanpa force-push/delete) |
 | Backend | [`NDI05/0037-Backend-Financial`](https://github.com/NDI05/0037-Backend-Financial) (privat) | `integration/2026-11-24` | `f1625b5` | `327d876`, belum diubah |
 
+Commit kode Android pada laporan ini adalah `19e6860` (APK yang diuji); sesudahnya hanya
+commit dokumentasi/evidence. HEAD branch saat laporan ditutup: `d05a57b`.
+
 Kedua repo punya Git root sendiri; tidak ada subtree/submodule. Android dibangun dari clone repo
 Android saja (tidak ada source server di tree: `git ls-files | grep '^backend-go/'` = 0).
 Backend dijalankan dari clone repo backend dengan `./scripts/go.sh` (toolchain Go di
