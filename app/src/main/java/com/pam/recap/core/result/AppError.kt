@@ -122,4 +122,16 @@ object AppErrorRules {
     const val GMAIL_DISABLED = "gmail_disabled"
     const val GMAIL_NOT_CONNECTED = "gmail_not_connected"
     const val SYNC_COOLDOWN = "sync_cooldown"
+
+    // Google SSO (contract: /v1/auth/google*). The backend codes are stable; the UI turns each one
+    // into a different next step instead of one generic "sign-in failed".
+    const val GOOGLE_SSO_DISABLED = "google_sso_disabled"
+    const val GOOGLE_INVALID_TOKEN = "google_invalid_token"
+    const val GOOGLE_IDENTITY_NOT_LINKED = "google_identity_not_linked"
+    const val GOOGLE_IDENTITY_CONFLICT = "google_identity_conflict"
+    const val GOOGLE_ALREADY_LINKED = "google_already_linked"
+    const val ACCOUNT_INACTIVE = "account_inactive"
+    /** Device-side: Credential Manager was cancelled or unavailable, not a backend refusal. */
+    const val GOOGLE_SIGN_IN_CANCELLED = "google_sign_in_cancelled"
+    const val GOOGLE_PLAY_SERVICES_UNAVAILABLE = "google_play_services_unavailable"
 }

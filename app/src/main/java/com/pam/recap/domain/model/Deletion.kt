@@ -51,6 +51,11 @@ data class Session(
     val signedInAt: Instant,
     /** OI-01: true when the app runs against bundled fixtures instead of a real mailbox. */
     val isDemo: Boolean,
+    /**
+     * `GET /v1/me` `googleLinked`: the PAM account has a Google identity to sign in with. Same
+     * session, same owner and role — linking changes only how the next sign-in starts.
+     */
+    val googleLinked: Boolean = false,
 )
 
 /**

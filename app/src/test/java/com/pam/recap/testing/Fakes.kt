@@ -3,8 +3,12 @@ import com.pam.recap.domain.model.DemoPurge
 import com.pam.recap.domain.repository.DemoDataMaintenance
 import com.pam.recap.domain.repository.DemoDataPort
 import com.pam.recap.domain.model.GmailCredential
+import com.pam.recap.domain.model.GoogleIdToken
+import com.pam.recap.domain.model.GoogleNonce
+import com.pam.recap.domain.model.GoogleSignInResult
 import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.domain.repository.GmailCredentialValidator
+import com.pam.recap.domain.repository.GoogleSignInGateway
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.domain.model.Session
@@ -436,8 +440,52 @@ class FakeAccountRepository(
     override val isBackendEnabled: Boolean = true,
     var result: Outcome<Session>? = null,
     private val session: Session? = null,
+    var googleSsoEnabled: Boolean = false,
 ) : AccountRepository {
     val calls = mutableListOf<String>()
+    var googleNonceResult: Outcome<GoogleNonce> = Outcome.Success(GoogleNonce(nonce = "nonce-fake"))
+    var googleSignInResult: Outcome<Session>? = null
+    var googleLinkResult: Outcome<Unit> = Outcome.Success(Unit)
+
+    /** Null means "read the linked flag from [sessionStore]", like `/v1/me` would after linking. */
+    var googleLinkedResult: Outcome<Boolean>? = null
+    var linkedOwner: String? = null
+
+    /**
+     * Optional session store: the real adapter writes the session through it, so tests that assert
+     * "the session was saved" wire one here instead of duplicating that logic.
+     */
+    var sessionStore: SessionRepository? = null
+
+    override val isGoogleSsoEnabled: Boolean get() = googleSsoEnabled
+
+    override suspend fun googleNonce(): Outcome<GoogleNonce> {
+        calls += "googleNonce"
+        return googleNonceResult
+    }
+
+    override suspend fun googleSignIn(idToken: String, nonce: String): Outcome<Session> {
+        calls += "googleSignIn:$nonce"
+        val result = googleSignInResult ?: Outcome.Failure(
+            AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED),
+        )
+        if (result is Outcome.Success) sessionStore?.signIn(result.value)
+        return result
+    }
+
+    override suspend fun googleLink(idToken: String, nonce: String): Outcome<Unit> {
+        calls += "googleLink:$nonce"
+        if (googleLinkResult is Outcome.Success) {
+            sessionStore?.current()?.ownerId?.let { sessionStore?.setGoogleLinked(it, true) }
+        }
+        return googleLinkResult
+    }
+
+    override suspend fun googleLinked(ownerId: String): Outcome<Boolean> {
+        calls += "googleLinked:$ownerId"
+        googleLinkedResult?.let { return it }
+        return Outcome.Success(sessionStore?.current()?.googleLinked ?: false)
+    }
 
     override suspend fun register(
         email: String,
@@ -486,6 +534,10 @@ class NoopBackendDeletionSync : BackendDeletionSync {
 class FakeSessionRepository(initial: Session? = null) : SessionRepository {
     private val flow = MutableStateFlow(initial)
     val seededOwners = mutableSetOf<String>()
+    val skippedGmailOwners = mutableSetOf<String>()
+    val googleLinkedOwners = mutableSetOf<String>().apply {
+        if (initial?.googleLinked == true) add(initial.ownerId)
+    }
 
     override fun observe(): Flow<Session?> = flow
     override suspend fun current(): Session? = flow.value
@@ -505,6 +557,35 @@ class FakeSessionRepository(initial: Session? = null) : SessionRepository {
 
     override suspend fun clearDemoSeeded(ownerId: String) {
         seededOwners -= ownerId
+    }
+
+    override suspend fun setGoogleLinked(ownerId: String, linked: Boolean) {
+        if (linked) googleLinkedOwners += ownerId else googleLinkedOwners -= ownerId
+        flow.value = flow.value?.takeIf { it.ownerId == ownerId }?.copy(googleLinked = linked)
+            ?: flow.value
+    }
+
+    override suspend fun isGmailOnboardingSkipped(ownerId: String): Boolean =
+        ownerId in skippedGmailOwners
+
+    override suspend fun skipGmailOnboarding(ownerId: String) {
+        skippedGmailOwners += ownerId
+    }
+}
+
+/**
+ * Google SSO double: no Play Services, no Credential Manager. Tests drive the outcome and can see
+ * which nonce was requested.
+ */
+class FakeGoogleSignInGateway(
+    override var isAvailable: Boolean = true,
+) : GoogleSignInGateway {
+    var result: GoogleSignInResult = GoogleSignInResult.Success(GoogleIdToken("id-token-fake"))
+    val nonces = mutableListOf<String>()
+
+    override suspend fun requestIdToken(nonce: String): GoogleSignInResult {
+        nonces += nonce
+        return result
     }
 }
 

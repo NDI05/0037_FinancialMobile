@@ -1,6 +1,9 @@
 package com.pam.recap.domain.repository
 
+import com.pam.recap.core.result.AppError
+import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
+import com.pam.recap.domain.model.GoogleNonce
 import com.pam.recap.domain.model.Session
 
 /**
@@ -31,4 +34,32 @@ interface AccountRepository {
 
     /** Clears the local profile (the server session is revoked by `SignOutUseCase`). */
     suspend fun signOut()
+
+    // --- Google SSO (contract: /v1/auth/google*). Defaults keep doubles compiling and make the
+    // feature look unavailable unless a real implementation opts in. ---
+
+    /** True only when `PAM_GOOGLE_SSO_CLIENT_ID` is configured in this build. */
+    val isGoogleSsoEnabled: Boolean get() = false
+
+    /** Single-use challenge for the Google ID token; issued by the PAM backend, never locally. */
+    suspend fun googleNonce(): Outcome<GoogleNonce> =
+        Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
+
+    /**
+     * Exchanges a Google ID token for a PAM session. On success the session is stored through the
+     * exact same path as [login] (wrapped backend token + local profile), so nothing downstream
+     * needs a separate SSO branch.
+     */
+    suspend fun googleSignIn(idToken: String, nonce: String): Outcome<Session> =
+        Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
+
+    /**
+     * Attaches a Google identity to the *current* account. It must not change the owner, role,
+     * transactions or Gmail link.
+     */
+    suspend fun googleLink(idToken: String, nonce: String): Outcome<Unit> =
+        Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
+
+    suspend fun googleLinked(ownerId: String): Outcome<Boolean> =
+        Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
 }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DeleteOutline
@@ -70,6 +71,8 @@ fun SettingsScreen(
     onOpenDeletion: () -> Unit,
     onOpenAdmin: () -> Unit,
     onSignedOut: () -> Unit,
+    /** Opens the signed-in "Akun" editor (Google link state + Gmail shortcut). */
+    onOpenAccount: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -161,6 +164,12 @@ fun SettingsScreen(
                 )
             }
 
+            SettingsRow(
+                icon = Icons.Rounded.AccountCircle,
+                title = stringResource(R.string.settings_account),
+                subtitle = stringResource(R.string.settings_account_row),
+                onClick = onOpenAccount,
+            )
             SettingsRow(
                 icon = Icons.Rounded.Shield,
                 title = stringResource(R.string.settings_consent_history),

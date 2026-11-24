@@ -45,6 +45,7 @@ class SessionRepositoryImpl @Inject constructor(
                 ?: prefs.remove(SessionKeys.DISPLAY_NAME)
             session.mailboxLabel?.let { prefs[SessionKeys.MAILBOX_LABEL] = it }
                 ?: prefs.remove(SessionKeys.MAILBOX_LABEL)
+            prefs[SessionKeys.GOOGLE_LINKED] = session.googleLinked
         }
     }
 
@@ -67,7 +68,25 @@ class SessionRepositoryImpl @Inject constructor(
             prefs.remove(SessionKeys.MAILBOX_LABEL)
             prefs.remove(SessionKeys.SIGNED_IN_AT)
             prefs.remove(SessionKeys.IS_DEMO)
+            prefs.remove(SessionKeys.GOOGLE_LINKED)
         }
+    }
+
+    override suspend fun setGoogleLinked(ownerId: String, linked: Boolean): Unit =
+        withContext(ioDispatcher) {
+            dataStore.edit { prefs ->
+                if (prefs[SessionKeys.OWNER_ID] != ownerId) return@edit
+                prefs[SessionKeys.GOOGLE_LINKED] = linked
+            }
+        }
+
+    override suspend fun isGmailOnboardingSkipped(ownerId: String): Boolean =
+        withContext(ioDispatcher) {
+            dataStore.data.first()[SessionKeys.gmailOnboardingSkipped(ownerId)] == true
+        }
+
+    override suspend fun skipGmailOnboarding(ownerId: String): Unit = withContext(ioDispatcher) {
+        dataStore.edit { prefs -> prefs[SessionKeys.gmailOnboardingSkipped(ownerId)] = true }
     }
 
     override suspend fun clearDemoSeeded(ownerId: String): Unit = withContext(ioDispatcher) {
@@ -92,6 +111,7 @@ class SessionRepositoryImpl @Inject constructor(
                 ?.let { Instant.fromEpochMilliseconds(it) }
                 ?: Instant.fromEpochMilliseconds(0),
             isDemo = this[SessionKeys.IS_DEMO] ?: false,
+            googleLinked = this[SessionKeys.GOOGLE_LINKED] ?: false,
         )
     }
 }
