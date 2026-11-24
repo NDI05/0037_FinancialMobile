@@ -1,7 +1,8 @@
-# Mandat PM PAM — Gmail API Push, riwayat setahun, dan UAT
+# Mandat PM PAM — Lanjutkan pekerjaan, pisahkan backend, dan selesaikan Gmail API Push
 
-Anda adalah PM teknis proyek PAM. Pimpin implementasi dari baseline aktif sampai
-workflow berikut berjalan pada build gabungan dan setiap gate memiliki bukti.
+Anda adalah PM teknis proyek PAM. Lanjutkan pekerjaan agent yang dihentikan.
+Pimpin pemisahan repositori dan implementasi sampai workflow berjalan pada pasangan
+build yang terverifikasi dan setiap gate memiliki bukti.
 
 Workspace:
 
@@ -15,20 +16,34 @@ otomatis riwayat Livin setahun → satu job kategorisasi otomatis → transaksi 
 masuk lewat Gmail Push, termasuk saat aplikasi ditutup. Riwayat dibatasi setahun
 dan seluruh UI utama menggunakan bahasa Indonesia yang ringkas.
 
-## 1. Baseline dan koordinasi
+Checkpoint saat mandat diperbarui:
+
+| Bagian | Kondisi yang sudah ditemukan |
+|---|---|
+| Git Android | Checkout utama `pam-app`, branch `feat/c2-android`, lokal dan remote sama di `4dbd3dc`. Worktree bersih dan tidak ada worktree tugas aktif. Cek ulang sebelum menulis. |
+| S2–S5 | Bukti P0 navigasi, parser `Penerima`, koreksi merchant, dan Analisis Azure sudah tercatat. S3 direkomendasikan diterima. S2/S4 masih bersyarat menurut keputusan PM. S5 tetap terbuka. Rekonsiliasi dengan bukti terbaru. |
+| Workflow baru | Commit `3f75efc` dan `4dbd3dc` mendokumentasikan impor setahun, retensi, serta Gmail API Push. Pemeriksaan source belum menemukan integrasi OAuth backend dan Pub/Sub yang sudah berjalan. IMAP masih menjadi baseline aktif. |
+| Repositori | `backend-go/` masih berada di repositori Android. `backend/` berisi Node lama untuk interop/rujukan. Beberapa skrip mengasumsikan keduanya berada dalam satu checkout. |
+| Repo backend tujuan | Nama yang diminta **0037 Backend Financial**. Slug GitHub yang diusulkan `0037-Backend-Financial` di namespace yang sama, `NDI05`, jika aksesnya terkonfirmasi. Lookup awal tidak menemukan repo tersebut. Cek ulang untuk membedakan repo belum ada dan repo yang belum dapat diakses. |
+
+## 1. Pulihkan konteks dan koordinasi
 
 - Baca AGENTS.md, README, checkpoint S2–S4, matriks C01–C25, keputusan acceptance
   24 November dan bukti terbaru. Baca SRS v0.5 untuk traceability serta rencana
   AUTO_SYNC_CATEGORY_STATUS_PLAN §8–9 dan draf CR-005/CR-006. Verifikasi Git lokal,
-  remote, worktree, dan WIP. Gunakan HEAD aktual. Pertahankan bukti dan perilaku
-  yang sudah lulus, termasuk navigasi Ringkasan/Transaksi, koreksi merchant, dan
-  Analisis Azure.
+  remote, worktree, stash, checkpoint agent, dan WIP kedua repo. Gunakan HEAD
+  aktual. Jika menemukan patch arsip di luar repo, cek asal dan kesesuaiannya
+  dengan HEAD sebelum mengambil perubahan. Pertahankan navigasi Ringkasan/Transaksi,
+  koreksi merchant, dan Analisis Azure.
+- Buat tabel singkat sebelum mengubah kode berisi target, status, sumber bukti,
+  dan tindakan. Tandai implementasi lokal, ter-push, PASS runtime, atau belum
+  terbukti secara terpisah. Lanjutkan pekerjaan yang sudah ada dari checkpoint.
 - Inventaris subagent yang sudah ada. Pakai ulang Worker/Auditor yang sesuai dan
   lanjutkan dari checkpoint mereka. Saat subagent tidak terpakai atau perlu
   diganti, ambil handoff berisi commit, WIP, bukti dan sisa pekerjaan. Amankan WIP,
   tutup atau arsipkan subagent lama, lalu buat pengganti jika dibutuhkan.
 - Jalankan lane independen secara paralel dengan batas file/kontrak yang jelas:
-  **Go/Gmail** untuk OAuth, parser, backfill, push, dan migrasi identitas;
+  **Go/Gmail** untuk ekstraksi repo backend, OAuth, parser, backfill, push, dan migrasi identitas;
   **Go/AI dan data** untuk job batch, retensi, guard, dan API;
   **Android/QA** untuk UX, navigation, instrumentasi dan UAT. PM menetapkan
   kontrak bersama dan urutan integrasi. Auditor independen memeriksa hasil
@@ -37,7 +52,62 @@ dan seluruh UI utama menggunakan bahasa Indonesia yang ringkas.
 - Pemilik menentukan model dan reasoning effort tiap peran. Catat peran,
   subagent yang dipakai ulang atau ditutup, dan keterbatasan platform.
 
-## 2. Migrasikan koneksi Gmail dari IMAP ke Gmail API
+## 2. Pisahkan backend ke repository 0037 Backend Financial
+
+Kerjakan pemisahan lebih dulu. Sambil menunggu akses repo, Worker lain boleh
+menyiapkan spesifikasi, fixture, pengujian, dan UI yang tidak bergantung pada cutover.
+Letakkan checkout Go sebagai folder saudara `pam-app`, misalnya
+`0037-Backend-Financial`, supaya kedua repo mempunyai root Git sendiri.
+
+| Repositori | Isi akhir |
+|---|---|
+| **Android** — repo PAM yang sekarang (`NDI05/0037_FinancialMobile`) | Compose, klien API, konfigurasi endpoint, build dan tes Android, SRS, dan dokumentasi produk. Build dapat dijalankan dari clone Android sendiri. |
+| **Go** — **0037 Backend Financial** | Source Go dari `backend-go/`, modul dan toolchain, API, semua migrasi, tes, CI, contoh konfigurasi tanpa secret, serta skrip operasi/QA server yang relevan. Build dan tes Go dapat dijalankan dari clone ini sendiri. |
+
+1. Periksa apakah repo tujuan sudah tersedia dan siapa pemiliknya. Jika belum ada
+   dan hak membuat repo pada namespace tujuan tersedia, buat repo khusus dengan
+   nama tersebut. Gunakan visibilitas yang ditetapkan pemilik, dengan privat
+   sebagai default jika belum ditetapkan. Jangan membuat duplikat atau
+   memindahkan ke akun personal bila akses organisasi belum ada. Catat URL
+   Android dan Go serta branch awal yang diotorisasi.
+2. Ambil baseline source dari HEAD aktif yang sudah diverifikasi. Lakukan
+   ekstraksi di clone/worktree terisolasi. Pertahankan riwayat backend jika
+   pemisahan bisa dilakukan dengan aman. Jika memakai snapshot terverifikasi,
+   catat hash asal dan alasan agar audit bisa menelusurinya. Periksa isi dan
+   riwayat yang akan dipush. Sertakan semua migrasi Go yang sudah ada, termasuk
+   migrasi identitas Gmail 016. Pertahankan kontrak API, identitas transaksi, dan
+   format data yang bisa dibaca dari baseline sebelumnya.
+3. Pindahkan wrapper Go, launcher UAT, dan skrip uji backend yang dibutuhkan.
+   Audit `scripts/go.sh`, `scripts/dev.sh`, launcher REAL-UAT, smoke Azure,
+   dan fixture interop. Ubah helper Android agar menerima endpoint backend yang
+   sudah berjalan atau path repo Go secara eksplisit bila diperlukan. Perbarui
+   README, referensi API, contoh konfigurasi, dan CI masing-masing. Catat versi
+   atau sumber kontrak yang diuji bersama dan pemilik perubahan kontraknya.
+4. Gunakan contoh env dan DB sintetis untuk clean-clone test. Secret OAuth,
+   Turso dan Azure, JWT/encryption key, DB, dump, log, binary, patch arsip,
+   serta data owner tetap berada di penyimpanan privat masing-masing.
+   Untuk uji terhadap data UAT yang diotorisasi, pakai profil privat yang ada.
+   Gunakan key dan migrasi yang kompatibel agar akun, kategori, sesi, dan
+   rekonsiliasi transaksi tidak berubah hanya karena repo dipisah.
+5. Buktikan Go build/test/vet dan `/healthz` serta `/readyz` dari repo baru.
+   Uji kompatibilitas API dari APK Android debug yang dibuat dari repo Android
+   sendiri. Gunakan data sintetis dan catat pasangan SHA Android/Go.
+   Pertahankan port UAT `18090` bila masih dipakai, dengan base URL yang sesuai
+   untuk emulator atau perangkat fisik. Pindahkan launcher aktif setelah
+   parity terbukti. Uji rollback ke pasangan build baseline.
+6. Setelah repo Go ter-push dan parity terverifikasi, keluarkan source
+   `backend-go/` dari tree aktif Android lewat commit normal. Periksa semua
+   pemanggil yang tersisa. Pindahkan atau arsipkan backend Node lama di luar
+   tree aktif Android setelah dependency interop/rollback diamankan. Satu
+   backend Go menjadi jalur aktif. Pertahankan histori asli tanpa force-push
+   atau rewrite branch bersama. Jika aturan penilaian melarang source backend
+   dalam histori, catat keputusan terpisah sebelum melakukan perubahan histori.
+7. Acceptance pemisahan mencakup dua URL terverifikasi, dua Git root terpisah,
+   Android tanpa source server aktif, dua build independen, login dan pembacaan
+   data dari Go melalui Android, migrasi di DB terisolasi, serta kontrak dan
+   rollback terdokumentasi.
+
+## 3. Migrasikan koneksi Gmail dari IMAP ke Gmail API
 
 1. Buat koneksi OAuth yang dimulai dari sesi PAM aktif dan diselesaikan lewat
    layar persetujuan resmi Google. Pakai alur yang didukung untuk Android dan
@@ -67,7 +137,7 @@ dan seluruh UI utama menggunakan bahasa Indonesia yang ringkas.
    Password di alur baru. Pensiunkan UI, scheduler, vault dan dependency
    IMAP pada build target setelah rollback teruji.
 
-## 3. Impor awal satu tahun dan sinkronisasi push
+## 4. Impor awal satu tahun dan sinkronisasi push
 
 1. Setelah koneksi dan consent tervalidasi, mulailah satu job impor otomatis.
    Tangkap cursor awal dan batas snapshot. Telusuri rentang setahun berdasarkan
@@ -104,7 +174,7 @@ dan seluruh UI utama menggunakan bahasa Indonesia yang ringkas.
    secara bertahap dalam batas retensi jika cursor tidak dapat dilanjutkan.
    Hasil keuangan selalu berasal dari transaksi yang dikonfirmasi Go.
 
-## 4. Kategorisasi Azure yang hemat dan Analisis yang tetap berfungsi
+## 5. Kategorisasi Azure yang hemat dan Analisis yang tetap berfungsi
 
 - Buat **satu job logis** kategorisasi riwayat setelah tahap impor awal
   tercatat selesai. Jika impor parsial, mulai dari baris yang sudah diakui
@@ -128,7 +198,7 @@ dan seluruh UI utama menggunakan bahasa Indonesia yang ringkas.
   Gmail API sebelum pengujian akun asli dengan Azure. Kerjakan bukti sintetis
   sambil menunggu persetujuan atau verifikasi yang diperlukan.
 
-## 5. Retensi setahun dan UI ringkas
+## 6. Retensi setahun dan UI ringkas
 
 - Gunakan satu tahun bergulir berbasis tanggal transaksi Asia/Jakarta.
   Draf mendefinisikan awal hari ini dikurangi satu tahun kalender sampai
@@ -152,10 +222,10 @@ dan seluruh UI utama menggunakan bahasa Indonesia yang ringkas.
   dibutuhkan, termasuk penjelasan izin dan retensi. Pertahankan TalkBack,
   48 dp, font 200%, serta 360/393/412 dp.
 
-## 6. Pengujian dan penutupan
+## 7. Pengujian dan penutupan
 
 - Jalankan Android dan Go unit/integrasi serta regresi lint/build pada
-  commit gabungan. Cakup dua owner, consent, scope, callback replay,
+  pasangan commit akhir yang terverifikasi. Cakup dua owner, consent, scope, callback replay,
   isolasi token, duplicate/missed push, cursor expired, crash/resume,
   migrasi identitas IMAP, filter periode, batas biaya dan override USER.
 - Jalankan build dari **Run di Android Studio** dengan profil yang menunjuk
@@ -178,13 +248,14 @@ dan seluruh UI utama menggunakan bahasa Indonesia yang ringkas.
   termasuk drill-down navigasi, konteks lampiran, dan filter/cursor admin
   apabila belum tertutup. Pertahankan bukti yang masih sah dan catat gate
   baru secara terpisah. UAT, hosting, backup/restore, benchmark kategori,
-  utang format email, dan approval Google memiliki bukti masing-masing.
+  utang format email, dan approval Google memiliki bukti masing-masing. Catat
+  verifikasi Android dengan backend yang berjalan dari repo terpisah.
 - Perbarui checkpoint, matriks acceptance, README, PROGRESS_DAILY, dan draf
   revisi SRS. SRS resmi direvisi sesudah pemilik memintanya. Push setiap
-  commit ke branch kerja. Setelah audit dan integrasi terotorisasi, cek
-  remote, tutup worktree, dan hapus branch tugas lokal/remote dengan aman.
-  Lindungi main dan WIP. Merge develop/main, cutover, dan deploy mengikuti
-  otorisasi pemilik.
+  commit ke branch kerja yang sesuai pada masing-masing repo. Setelah audit
+  dan integrasi terotorisasi, cek remote, tutup worktree, dan hapus branch
+  tugas lokal/remote dengan aman. Lindungi main dan WIP pada kedua repo.
+  Merge develop/main, cutover, dan deploy mengikuti otorisasi pemilik.
 - Teruskan pekerjaan independen ketika akses eksternal belum tersedia.
   Laporkan secara spesifik gate yang menunggu Google Cloud, hosting, akun
   uji, atau tindakan pemilik, disertai bukti yang sudah ada. Jangan menutup
@@ -194,6 +265,7 @@ dan seluruh UI utama menggunakan bahasa Indonesia yang ringkas.
 
 Berikan tabel **Gate | Implementasi | Bukti | Status | Sisa**, dengan keputusan
 PASS/PARTIAL/FAIL/NOT RUN per skenario. Sertakan hasil pilot dan status produksi,
-commit remote, subagent yang dipakai ulang atau ditutup, serta branch/worktree.
+URL dan SHA remote kedua repo, cara build dari clone bersih, bukti kompatibilitas,
+subagent yang dipakai ulang atau ditutup, serta branch/worktree.
 Jelaskan latensi email → Go → Android, hasil koreksi duplikat IMAP, penggunaan
 Azure, hasil verifikasi retensi, dan daftar jalur IMAP yang sudah dipensiunkan.
