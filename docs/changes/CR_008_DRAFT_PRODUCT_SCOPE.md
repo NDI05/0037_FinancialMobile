@@ -23,4 +23,4 @@ Keputusan pemilik pada 24 November 2026. Perubahan cakupan produk dicatat untuk 
 
 Saat menyusun revisi konsolidasi, selaraskan cakupan, FR/NFR/DR dan kriteria penerimaan terkait, daftar layar, peran, model data, diagram, dan matriks akademik. Gunakan jejak revisi untuk menandai requirement yang dipensiunkan. Fitur atau entitas pengganti memerlukan keputusan tersendiri.
 
-Catatan ini merekam keputusan produk. Perubahan DOCX/PDF, pembersihan Android/Go, migrasi atau penghapusan data, dan uji regresi ditangani pada tahap lanjutan dengan pemetaan persyaratan dan rencana transisi yang telah ditinjau.
+Keputusan produk sudah dikonsolidasikan dalam [draf SRS v0.7 DOCX](../specifications/PAM_SRS_v0.7_Personal_Finance_Draft.docx) dan [PDF](../specifications/PAM_SRS_v0.7_Personal_Finance_Draft.pdf). Pemetaan D.5, D.6, dan D.9 serta pendaftaran akun baru tetap sebagai isu terbuka. Perubahan Android dan Go, migrasi atau penghapusan data, dan uji regresi mengikuti rencana transisi yang telah ditinjau.
