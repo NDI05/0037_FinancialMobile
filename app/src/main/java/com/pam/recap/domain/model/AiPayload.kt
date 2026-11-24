@@ -25,7 +25,6 @@ data class AiAggregatePayload(
     val nonIdrExcludedCount: Int,
     val categoryTotals: List<AiCategoryTotal>,
     val priorMonth: AiPriorMonthTotals? = null,
-    val plan: AiPlanSummary? = null,
 ) {
     companion object {
         const val SCHEMA_VERSION: Int = 1
@@ -46,7 +45,6 @@ data class AiAggregatePayload(
             "nonIdrExcludedCount",
             "categoryTotals",
             "priorMonth",
-            "plan",
             "categoryCode",
             "amountMinor",
             "limitMinor",
@@ -71,14 +69,6 @@ data class AiPriorMonthTotals(
     val monthId: String,
     val expenseMinor: Long,
     val incomeMinor: Long,
-)
-
-/** FR-42/FR-45: the plan envelope, again amounts-only. */
-@Serializable
-data class AiPlanSummary(
-    val expectedIncomeMinor: Long,
-    val plannedSavingsMinor: Long,
-    val categoryLimitTotals: List<AiCategoryTotal>,
 )
 
 /** Provider-agnostic raw output of an [AnalysisEngine]; validated before it is published. */

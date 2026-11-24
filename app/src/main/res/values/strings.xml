@@ -101,7 +101,6 @@
     <string name="error_month_has_no_data">Belum ada data untuk bulan ini.</string>
     <string name="error_analysis_rejected">Analisis tidak dapat dipublikasikan.</string>
     <string name="error_analysis_not_eligible">Data belum cukup untuk analisis.</string>
-    <string name="error_budget_gap_negative">Rencana anggaran tidak valid.</string>
     <string name="error_reauth_required">Verifikasi ulang diperlukan sebelum menghapus.</string>
     <string name="error_deletion_in_progress">Penghapusan sedang berjalan.</string>
     <string name="error_description_required">Keterangan wajib diisi.</string>
@@ -310,48 +309,7 @@
     <string name="analysis_stale_dependency_body">Analisis ini dibuat dari data yang sejak itu sudah berubah (revisi %1$d), meskipun nomor revisi bulan tetap. Buat ulang analisis agar sesuai data terbaru.</string>
 
     <!-- Budget -->
-    <string name="budget_plan_freshness_current">Rencana server · revisi %1$d</string>
-    <string name="budget_plan_freshness_unsaved">Rencana belum disimpan ke server</string>
-    <string name="budget_plan_freshness_stale">Rencana di server sudah berubah</string>
-    <string name="budget_conflict_message">Rencana ini sudah diubah di tempat lain. Muat data terbaru sebelum menyimpan lagi.</string>
-    <string name="budget_reload_latest">Muat data terbaru</string>
-    <string name="budget_summary_coverage_complete">Ringkasan server: lengkap</string>
-    <string name="budget_summary_coverage_partial">Ringkasan server: sebagian</string>
-    <string name="budget_summary_coverage_empty">Ringkasan server: kosong</string>
-    <string name="budget_summary_coverage_failed">Ringkasan server: gagal</string>
-    <string name="budget_summary_generated">Ringkasan diperbarui %1$s</string>
-    <string name="budget_summary_outdated">Ringkasan dihitung sebelum perubahan terakhir; angka aktual mungkin tertinggal.</string>
-    <string name="budget_summary_freshness_current">Ringkasan server terkini.</string>
-    <string name="budget_summary_freshness_stale">Ringkasan server sudah usang; angka aktual mungkin belum termasuk perubahan terakhir.</string>
-    <string name="budget_summary_freshness_historical">Ringkasan ini berasal dari arsip, bukan bulan berjalan; angka aktual tidak diperbarui.</string>
-    <string name="budget_summary_refresh">Perbarui ringkasan</string>
-    <string name="budget_summary_refresh_failed">Ringkasan gagal diperbarui; angka di layar belum tentu terbaru.</string>
-    <string name="budget_delete_plan">Hapus rencana</string>
-    <string name="budget_delete_title">Hapus rencana anggaran ini?</string>
-    <string name="budget_delete_body">Rencana di server akan dihapus dan editor kembali menampilkan usulan yang belum disimpan. Tindakan ini tidak memindahkan uang.</string>
-    <string name="budget_history_eyebrow">Rencana tersimpan</string>
-    <string name="budget_history_load">Muat riwayat rencana</string>
-    <string name="budget_history_body">%1$d rencana pada %2$s sampai %3$s.</string>
-    <string name="budget_history_empty">Belum ada rencana pada %1$s sampai %2$s.</string>
-    <string name="budget_history_item">%1$s · revisi %2$d</string>
-    <string name="budget_history_item_detail">limit %1$s · selisih %2$s</string>
-    <string name="budget_history_truncated">Menampilkan %1$d rencana terbaru; persempit rentang bulan untuk melihat sisanya.</string>
     <string name="category_more_hint">Menampilkan %1$d kategori dari %2$d yang diperiksa; persempit pencarian untuk melihat sisanya.</string>
-    <string name="budget_plan_deleted">Rencana di server sudah dihapus. Nilai di bawah adalah usulan yang belum disimpan.</string>
-    <string name="budget_title">Rencana anggaran</string>
-    <string name="budget_eyebrow">Rencana bulan depan</string>
-    <string name="budget_seeded_label">Nilai awal berdasarkan rata-rata historis</string>
-    <string name="budget_income_label">Perkiraan pemasukan</string>
-    <string name="budget_savings_label">Target tabungan</string>
-    <string name="budget_shortfall">Rencana ini kurang %1$s. Kurangi batas kategori atau target tabungan.</string>
-    <string name="budget_feasible">Rencana ini menyisakan %1$s setelah tabungan dan batas kategori.</string>
-    <string name="budget_limits_eyebrow">Batas per kategori</string>
-    <string name="budget_save">Simpan rencana</string>
-    <string name="budget_no_money_movement">Menyimpan rencana tidak memindahkan uang apa pun.</string>
-    <string name="budget_comparison_eyebrow">Realisasi vs rencana</string>
-    <string name="budget_actual_savings">Sisa bulan ini</string>
-    <string name="budget_transfers_excluded">Transfer antar rekening tidak dihitung sebagai pengeluaran.</string>
-    <string name="budget_limit_of">%1$s dari %2$s</string>
 
     <!-- Settings -->
     <string name="settings_mailbox_eyebrow">Kotak masuk</string>
@@ -366,7 +324,6 @@
     <string name="settings_consent_ai">Analisis AI</string>
     <string name="settings_consent_history">Riwayat persetujuan</string>
     <string name="settings_consent_history_body">Lihat setiap keputusan beserta versi pemberitahuan dan waktunya.</string>
-    <string name="settings_budget_body">Atur batas pengeluaran bulan depan.</string>
     <string name="settings_delete">Hapus semua data</string>
     <string name="settings_delete_body">Hapus data lokal setelah verifikasi ulang.</string>
     <string name="settings_sign_out">Keluar</string>

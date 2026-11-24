@@ -4,7 +4,6 @@ import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.AccountIdentity
 import com.pam.recap.domain.model.AiAggregatePayload
-import com.pam.recap.domain.model.BudgetPlan
 import com.pam.recap.domain.model.GmailConnectionState
 import com.pam.recap.domain.model.MailboxWatermark
 import com.pam.recap.domain.model.MonthlySummary
@@ -171,7 +170,6 @@ interface AiPayloadSource {
     fun build(
         summary: MonthlySummary,
         previousMonth: MonthlySummary?,
-        plan: BudgetPlan?,
     ): AiAggregatePayload
 }
 

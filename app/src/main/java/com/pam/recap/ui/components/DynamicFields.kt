@@ -79,7 +79,7 @@ fun dynamicFieldRuleRes(rule: String): Int = when (rule) {
 }
 
 /**
- * Reusable attribute editor for categories, transactions, budgets and attachments. It only edits
+ * Reusable attribute editor for categories and transactions. It only edits
  * text pairs; validation happens in the owning ViewModel via [DynamicFieldRules].
  */
 @Composable

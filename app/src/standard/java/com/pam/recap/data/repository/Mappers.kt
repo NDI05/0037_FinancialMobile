@@ -4,8 +4,6 @@ import com.pam.recap.core.money.Money
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.core.util.PamJson
 import com.pam.recap.data.local.AnalysisEntity
-import com.pam.recap.data.local.BudgetLimitEntity
-import com.pam.recap.data.local.BudgetPlanEntity
 import com.pam.recap.data.local.ConsentEntity
 import com.pam.recap.data.local.DeletionRequestEntity
 import com.pam.recap.data.local.GmailConnectionEntity
@@ -17,7 +15,6 @@ import com.pam.recap.data.local.SummaryCategoryTotalEntity
 import com.pam.recap.data.local.TransactionEntity
 import com.pam.recap.domain.model.Analysis
 import com.pam.recap.domain.model.AnalysisUsage
-import com.pam.recap.domain.model.BudgetPlan
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.CategoryTotal
 import com.pam.recap.domain.model.Consent
@@ -31,7 +28,6 @@ import com.pam.recap.domain.model.SkippedCandidate
 import com.pam.recap.domain.model.Suggestion
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.ValidationOutcome
-import com.pam.recap.domain.model.ValueOrigin
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -354,54 +350,6 @@ fun Analysis.toEntity(): AnalysisEntity = AnalysisEntity(
     },
     createdAt = createdAt,
 )
-
-// --- Budget ---------------------------------------------------------------------------------
-
-@Serializable
-internal data class ValueOriginsDto(val origins: Map<String, String> = emptyMap())
-
-fun BudgetPlanEntity.toDomain(limits: List<BudgetLimitEntity>): BudgetPlan = BudgetPlan(
-    id = id,
-    ownerId = ownerId,
-    month = JakartaMonth.parse(monthId) ?: JakartaMonth.of(updatedAt),
-    expectedIncome = expectedIncome,
-    plannedSavings = plannedSavings,
-    limits = limits.mapNotNull { limit ->
-        limit.categoryCode.let { it to limit.amount }
-    }.toMap(),
-    gap = gap,
-    revision = revision,
-    valueOrigins = PamJson.decodeFromString(ValueOriginsDto.serializer(), valueOriginsJson)
-        .origins
-        .mapNotNull { (code, origin) ->
-            val category = Category.fromCode(code) ?: return@mapNotNull null
-            val value = runCatching { ValueOrigin.valueOf(origin) }.getOrNull() ?: return@mapNotNull null
-            category to value
-        }
-        .toMap(),
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-)
-
-fun BudgetPlan.toEntity(): BudgetPlanEntity = BudgetPlanEntity(
-    id = id,
-    ownerId = ownerId,
-    monthId = month.id(),
-    expectedIncome = expectedIncome,
-    plannedSavings = plannedSavings,
-    gap = gap,
-    revision = revision,
-    valueOriginsJson = PamJson.encodeToString(
-        ValueOriginsDto.serializer(),
-        ValueOriginsDto(valueOrigins.mapKeys { (category, _) -> category.code }.mapValues { (_, origin) -> origin.name }),
-    ),
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-)
-
-fun BudgetPlan.limitEntities(): List<BudgetLimitEntity> = limits.map { (category, amount) ->
-    BudgetLimitEntity(planId = id, categoryCode = category, amount = amount)
-}
 
 // --- Consent / connection / deletion --------------------------------------------------------
 

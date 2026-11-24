@@ -7,7 +7,6 @@ import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.testing.FakeAnalysisRepository
 import com.pam.recap.testing.FakeAppPasswordVault
-import com.pam.recap.testing.FakeBudgetRepository
 import com.pam.recap.testing.FakeGmailConnectionRepository
 import com.pam.recap.testing.FakeImportRepository
 import com.pam.recap.testing.FakeSessionRepository
@@ -46,8 +45,7 @@ class SignOutUseCaseTest {
             transactions = FakeTransactionRepository(),
             summaries = FakeSummaryRepository(),
             analyses = FakeAnalysisRepository(),
-            budgets = FakeBudgetRepository(),
-            imports = FakeImportRepository(),
+                        imports = FakeImportRepository(),
             backendSessions = backend,
             appPasswordVault = FakeAppPasswordVault(),
             clock = fixedClock(Instant.parse("2026-03-01T02:00:00Z")),
@@ -73,8 +71,7 @@ class SignOutUseCaseTest {
             transactions = FakeTransactionRepository(),
             summaries = FakeSummaryRepository(),
             analyses = FakeAnalysisRepository(),
-            budgets = FakeBudgetRepository(),
-            imports = FakeImportRepository(),
+                        imports = FakeImportRepository(),
             backendSessions = RecordingBackendSessions(),
             appPasswordVault = vault,
             clock = fixedClock(Instant.parse("2026-03-01T02:00:00Z")),

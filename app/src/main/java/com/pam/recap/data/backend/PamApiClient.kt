@@ -146,12 +146,6 @@ class PamApiClient @Inject constructor(
             RemoteTransaction.serializer())
     }
 
-    suspend fun deleteBudget(ownerId: String, monthId: String): Outcome<Unit> {
-        val endpoint = config.endpoint("/v1/budget-plans/$monthId")
-            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
-        return requestNoContent(ownerId, Request.Builder().url(endpoint).delete())
-    }
-
     suspend fun deleteTransaction(
         ownerId: String,
         transactionId: String,
@@ -190,35 +184,6 @@ class PamApiClient @Inject constructor(
             .apply { reassignTo?.takeIf { it.isNotBlank() }?.let { addQueryParameter("reassignTo", it) } }
             .build()
         return requestNoContent(ownerId, Request.Builder().url(url).delete())
-    }
-
-    suspend fun budget(ownerId: String, monthId: String): Outcome<RemoteBudgetPlan> =
-        get(ownerId, "/v1/budget-plans/$monthId", RemoteBudgetPlan.serializer())
-
-    suspend fun saveBudget(ownerId: String, monthId: String, body: RemoteBudgetWrite):
-        Outcome<RemoteBudgetPlan> {
-        val encoded = json.encodeToString(RemoteBudgetWrite.serializer(), body)
-        return send(ownerId, "PUT", "/v1/budget-plans/$monthId", encoded, null,
-            RemoteBudgetPlan.serializer())
-    }
-
-    /** C15 inclusive period search over stored plans, newest first. */
-    suspend fun budgetPlans(
-        ownerId: String,
-        from: String,
-        to: String,
-        limit: Int = 50,
-        cursor: String? = null,
-    ): Outcome<RemoteBudgetPlanPage> {
-        val base = config.endpoint("/v1/budget-plans")
-            ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
-        val url = base.toHttpUrl().newBuilder()
-            .addQueryParameter("from", from)
-            .addQueryParameter("to", to)
-            .addQueryParameter("limit", limit.coerceIn(1, 100).toString())
-            .apply { cursor?.takeIf { it.isNotBlank() }?.let { addQueryParameter("cursor", it) } }
-            .build()
-        return request(ownerId, Request.Builder().url(url).get(), RemoteBudgetPlanPage.serializer())
     }
 
     suspend fun latestAnalysis(ownerId: String, monthId: String): Outcome<RemoteAnalysis> =
@@ -644,39 +609,6 @@ data class RemoteTransactionCreate(
     val merchantLabel: String? = null,
     val note: String? = null,
     val attributes: Map<String, String>? = null,
-)
-
-@Serializable
-data class RemoteBudgetPlan(
-    val monthId: String,
-    val expectedIncomeMinor: Long,
-    val plannedSavingsMinor: Long,
-    val limits: List<RemoteBudgetLimit> = emptyList(),
-    val revision: Int,
-    val gapMinor: Long = 0,
-    /** Period-search rows carry the summed limits; single-plan reads may omit it. */
-    val totalLimitMinor: Long = 0,
-    /** Older servers omit the field; the domain treats absence as no attributes. */
-    val attributes: Map<String, String>? = null,
-)
-
-@Serializable
-data class RemoteBudgetLimit(val categoryId: String, val amountMinor: Long)
-
-@Serializable
-data class RemoteBudgetPlanPage(
-    val plans: List<RemoteBudgetPlan> = emptyList(),
-    val nextCursor: String? = null,
-)
-
-@Serializable
-data class RemoteBudgetWrite(
-    val expectedIncomeMinor: Long,
-    val plannedSavingsMinor: Long,
-    val limits: List<RemoteBudgetLimit> = emptyList(),
-    /** The editor is authoritative: the sent map replaces the stored attribute set. */
-    val attributes: Map<String, String> = emptyMap(),
-    val revision: Int,
 )
 
 @Serializable

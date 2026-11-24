@@ -3,7 +3,6 @@ package com.pam.recap.domain.repository
 import com.pam.recap.core.money.Money
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.Analysis
-import com.pam.recap.domain.model.BudgetPlan
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.CategoryOrigin
 import com.pam.recap.domain.model.Consent
@@ -171,18 +170,6 @@ interface AnalysisRepository {
 
     /** FR-04: consent withdrawn ⇒ older reports become historical, never deleted silently. */
     suspend fun markAllHistorical(ownerId: String)
-
-    suspend fun deleteAll(ownerId: String)
-}
-
-/** FR-42/FR-44 budget plan storage. */
-interface BudgetRepository {
-
-    fun observeActive(ownerId: String, month: JakartaMonth): Flow<BudgetPlan?>
-
-    suspend fun active(ownerId: String, month: JakartaMonth): BudgetPlan?
-
-    suspend fun save(plan: BudgetPlan)
 
     suspend fun deleteAll(ownerId: String)
 }

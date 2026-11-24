@@ -92,7 +92,6 @@
     <string name="error_month_has_no_data">There is no data for this month yet.</string>
     <string name="error_analysis_rejected">The analysis could not be published.</string>
     <string name="error_analysis_not_eligible">There is not enough data to analyse.</string>
-    <string name="error_budget_gap_negative">The budget plan is not valid.</string>
     <string name="error_reauth_required">Re-verification is required before deleting.</string>
     <string name="error_deletion_in_progress">Deletion is already in progress.</string>
     <string name="error_description_required">A description is required.</string>
@@ -290,40 +289,6 @@
     <string name="analysis_stale_body">This analysis was generated from revision %1$d, but this month is now at revision %2$d. Regenerate the analysis so it matches the latest data.</string>
     <string name="analysis_stale_dependency_body">This analysis was built from data that has changed since (revision %1$d), even though the month revision number did not move. Regenerate the analysis to match the latest data.</string>
 
-    <string name="budget_plan_freshness_current">Server plan · revision %1$d</string>
-    <string name="budget_plan_freshness_unsaved">Plan not saved to the server yet</string>
-    <string name="budget_plan_freshness_stale">The server plan changed</string>
-    <string name="budget_conflict_message">This plan was changed elsewhere. Load the latest data before saving again.</string>
-    <string name="budget_reload_latest">Load latest data</string>
-    <string name="budget_summary_coverage_complete">Server summary: complete</string>
-    <string name="budget_summary_coverage_partial">Server summary: partial</string>
-    <string name="budget_summary_coverage_empty">Server summary: empty</string>
-    <string name="budget_summary_coverage_failed">Server summary: failed</string>
-    <string name="budget_summary_generated">Summary updated %1$s</string>
-    <string name="budget_summary_outdated">The summary was computed before the latest changes; actuals may lag behind.</string>
-    <string name="budget_summary_freshness_current">Server summary is current.</string>
-    <string name="budget_summary_freshness_stale">The server summary is stale; actuals may not include the latest changes.</string>
-    <string name="budget_summary_freshness_historical">This summary is archived, not the current month; actuals are not updated.</string>
-    <string name="budget_summary_refresh">Refresh summary</string>
-    <string name="budget_summary_refresh_failed">Refreshing the summary failed; the numbers on screen may not be current.</string>
-    <string name="budget_delete_plan">Delete plan</string>
-    <string name="budget_delete_title">Delete this budget plan?</string>
-    <string name="budget_delete_body">The server plan will be deleted and the editor will show an unsaved suggestion again. This moves no money.</string>
-    <string name="budget_plan_deleted">The server plan was deleted. The values below are an unsaved suggestion.</string>
-    <string name="budget_title">Budget plan</string>
-    <string name="budget_eyebrow">Next month\'s plan</string>
-    <string name="budget_seeded_label">Starting values based on historical averages</string>
-    <string name="budget_income_label">Expected income</string>
-    <string name="budget_savings_label">Savings target</string>
-    <string name="budget_shortfall">This plan is %1$s short. Lower a category limit or the savings target.</string>
-    <string name="budget_feasible">This plan leaves %1$s after savings and category limits.</string>
-    <string name="budget_limits_eyebrow">Per-category limits</string>
-    <string name="budget_save">Save plan</string>
-    <string name="budget_no_money_movement">Saving a plan does not move any money.</string>
-    <string name="budget_comparison_eyebrow">Actual vs plan</string>
-    <string name="budget_actual_savings">Left this month</string>
-    <string name="budget_transfers_excluded">Own-account transfers are not counted as spending.</string>
-    <string name="budget_limit_of">%1$s of %2$s</string>
 
     <string name="settings_mailbox_eyebrow">Mailbox</string>
     <string name="settings_last_import">Last import</string>
@@ -337,7 +302,6 @@
     <string name="settings_consent_ai">AI analysis</string>
     <string name="settings_consent_history">Consent history</string>
     <string name="settings_consent_history_body">See every decision with its notice version and timestamp.</string>
-    <string name="settings_budget_body">Set next month\'s spending limits.</string>
     <string name="settings_delete">Delete all data</string>
     <string name="settings_delete_body">Remove local data after re-verification.</string>
     <string name="settings_sign_out">Sign out</string>
@@ -623,13 +587,6 @@
     <string name="action_remove">Remove</string>
     <string name="settings_categories_body">Manage transaction categories, including your own.</string>
 
-    <string name="budget_history_eyebrow">Saved plans</string>
-    <string name="budget_history_load">Load plan history</string>
-    <string name="budget_history_body">%1$d plans from %2$s to %3$s.</string>
-    <string name="budget_history_empty">No plan yet from %1$s to %2$s.</string>
-    <string name="budget_history_item">%1$s · revision %2$d</string>
-    <string name="budget_history_item_detail">limit %1$s · gap %2$s</string>
-    <string name="budget_history_truncated">Showing the latest %1$d plans; narrow the month range to see the rest.</string>
     <string name="category_more_hint">Showing %1$d of %2$d scanned categories; narrow the search to see the rest.</string>
 
     <!-- Gmail OAuth link (contract 0037-Backend-Financial §1–§4). No token/password is asked here. -->

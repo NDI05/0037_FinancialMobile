@@ -7,7 +7,6 @@ import com.pam.recap.core.result.SafeLogger
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.Analysis
 import com.pam.recap.domain.model.AnalysisStatus
-import com.pam.recap.domain.model.BudgetPlan
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.CategoryOrigin
 import com.pam.recap.domain.model.Consent
@@ -28,7 +27,6 @@ import com.pam.recap.domain.model.TransactionFilter
 import com.pam.recap.domain.model.TransactionPage
 import com.pam.recap.data.backend.BackendEndpoints
 import com.pam.recap.domain.repository.AnalysisRepository
-import com.pam.recap.domain.repository.BudgetRepository
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.DeletionRepository
 import com.pam.recap.domain.repository.GmailConnectionRepository
@@ -56,7 +54,7 @@ import kotlin.time.Instant
 /**
  * S4.4 Room-free adapters for the assessment variant.
  *
- * The assessment build is the *server-backed* variant: finance data, categories, budgets and
+ * The assessment build is the *server-backed* variant: finance data, categories and
  * imports are read/written through [com.pam.recap.domain.repository.ServerFinanceRepository].
  * Local persistence exists only where the app genuinely needs something durable without Room:
  * - the import outbox in [AssessmentOutbox] (upload-journal snapshot across restarts),
@@ -537,29 +535,6 @@ class AssessmentAnalysisRepository @Inject constructor() : AnalysisRepository {
     }
 
     private fun key(ownerId: String, monthId: String): String = "$ownerId|$monthId"
-}
-
-/** Session-scoped budget cache; the server plan is authoritative when configured. */
-@Singleton
-class AssessmentBudgetRepository @Inject constructor() : BudgetRepository {
-
-    private val plans = MutableStateFlow<Map<String, BudgetPlan>>(emptyMap())
-
-    override fun observeActive(ownerId: String, month: JakartaMonth): Flow<BudgetPlan?> =
-        plans.map { it[key(ownerId, month)] }
-
-    override suspend fun active(ownerId: String, month: JakartaMonth): BudgetPlan? =
-        plans.value[key(ownerId, month)]
-
-    override suspend fun save(plan: BudgetPlan) {
-        plans.value = plans.value + (key(plan.ownerId, plan.month) to plan)
-    }
-
-    override suspend fun deleteAll(ownerId: String) {
-        plans.value = plans.value.filterKeys { !it.startsWith("$ownerId|") }
-    }
-
-    private fun key(ownerId: String, month: JakartaMonth): String = "$ownerId|${month.id()}"
 }
 
 /**

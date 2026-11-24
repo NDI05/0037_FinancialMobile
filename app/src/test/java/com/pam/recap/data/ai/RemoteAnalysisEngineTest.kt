@@ -313,7 +313,6 @@ class RemoteAnalysisEngineTest {
             AiCategoryTotal(categoryCode = "housing", amountMinor = 90_000_000, transactionCount = 2),
         ),
         priorMonth = null,
-        plan = null,
     )
 
     private class StubBackendSessions : BackendSessionRepository {

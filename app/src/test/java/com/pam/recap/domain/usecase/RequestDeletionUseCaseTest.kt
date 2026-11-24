@@ -8,7 +8,6 @@ import com.pam.recap.domain.repository.BackendDeletionAck
 import com.pam.recap.domain.repository.BackendDeletionSync
 import com.pam.recap.testing.FakeAnalysisRepository
 import com.pam.recap.testing.FakeAppPasswordVault
-import com.pam.recap.testing.FakeBudgetRepository
 import com.pam.recap.testing.FakeConsentRepository
 import com.pam.recap.testing.FakeDeletionRepository
 import com.pam.recap.testing.FakeGmailConnectionRepository
@@ -90,8 +89,7 @@ class RequestDeletionUseCaseTest {
         transactions = FakeTransactionRepository(),
         summaries = FakeSummaryRepository(),
         analyses = FakeAnalysisRepository(),
-        budgets = FakeBudgetRepository(),
-        imports = FakeImportRepository(),
+                imports = FakeImportRepository(),
         consents = FakeConsentRepository(),
         gmailConnection = FakeGmailConnectionRepository(),
         sessions = sessions,

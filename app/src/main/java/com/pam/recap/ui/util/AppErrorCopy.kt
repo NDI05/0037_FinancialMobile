@@ -21,7 +21,6 @@ fun appErrorRes(error: AppError): Int = when (error) {
         com.pam.recap.core.result.AppErrorRules.MONTH_HAS_NO_DATA -> R.string.error_month_has_no_data
         com.pam.recap.core.result.AppErrorRules.ANALYSIS_REJECTED -> R.string.error_analysis_rejected
         com.pam.recap.core.result.AppErrorRules.ANALYSIS_NOT_ELIGIBLE -> R.string.error_analysis_not_eligible
-        com.pam.recap.core.result.AppErrorRules.BUDGET_GAP_NEGATIVE -> R.string.error_budget_gap_negative
         com.pam.recap.core.result.AppErrorRules.REAUTH_REQUIRED -> R.string.error_reauth_required
         com.pam.recap.core.result.AppErrorRules.DELETION_IN_PROGRESS -> R.string.error_deletion_in_progress
         com.pam.recap.core.result.AppErrorRules.DESCRIPTION_REQUIRED -> R.string.error_description_required

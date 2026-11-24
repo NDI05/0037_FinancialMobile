@@ -15,7 +15,6 @@ import com.pam.recap.domain.repository.AutoSyncScheduler
 import com.pam.recap.domain.repository.SyncCursorStore
 import com.pam.recap.testing.FakeAnalysisRepository
 import com.pam.recap.testing.FakeAppPasswordVault
-import com.pam.recap.testing.FakeBudgetRepository
 import com.pam.recap.testing.FakeDeletionRepository
 import com.pam.recap.testing.FakeGmailConnectionRepository
 import com.pam.recap.testing.FakeImportRepository
@@ -133,8 +132,7 @@ class AccountLifecycleCancellationTest {
             transactions = transactions,
             summaries = FakeSummaryRepository(),
             analyses = FakeAnalysisRepository(),
-            budgets = FakeBudgetRepository(),
-            imports = FakeImportRepository(),
+                        imports = FakeImportRepository(),
             consents = com.pam.recap.testing.FakeConsentRepository(),
             gmailConnection = FakeGmailConnectionRepository(),
             sessions = sessions,

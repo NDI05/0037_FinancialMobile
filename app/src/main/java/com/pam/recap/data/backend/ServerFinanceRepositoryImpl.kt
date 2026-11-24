@@ -19,8 +19,6 @@ import com.pam.recap.domain.repository.CategoryEnqueueResult
 import com.pam.recap.domain.repository.ManualTransactionDraft
 import com.pam.recap.domain.repository.CategoryDraft
 import com.pam.recap.domain.repository.CategoryPatch
-import com.pam.recap.domain.repository.ServerBudgetPlan
-import com.pam.recap.domain.repository.ServerBudgetPlanPage
 import com.pam.recap.domain.repository.ServerCategory
 import com.pam.recap.domain.repository.ServerCategoryPage
 import com.pam.recap.domain.repository.ServerImportCandidate
@@ -108,60 +106,6 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         reassignTo: String?,
     ): Outcome<Unit> = api.deleteCategory(ownerId, categoryId, reassignTo)
 
-    override suspend fun budgetPlan(
-        ownerId: String,
-        month: JakartaMonth,
-    ): Outcome<ServerBudgetPlan> = when (val result = api.budget(ownerId, month.id())) {
-        is Outcome.Success -> Outcome.Success(result.value.toServer())
-        is Outcome.Failure -> result
-    }
-
-    override suspend fun saveBudgetPlan(
-        ownerId: String,
-        month: JakartaMonth,
-        expectedIncomeMinor: Long,
-        plannedSavingsMinor: Long,
-        limitsByCategoryId: Map<String, Long>,
-        revision: Int,
-        attributes: Map<String, String>,
-    ): Outcome<ServerBudgetPlan> = when (
-        val result = api.saveBudget(
-            ownerId,
-            month.id(),
-            RemoteBudgetWrite(
-                expectedIncomeMinor,
-                plannedSavingsMinor,
-                limitsByCategoryId.map { (id, amount) -> RemoteBudgetLimit(id, amount) },
-                attributes,
-                revision,
-            ),
-        )
-    ) {
-        is Outcome.Success -> Outcome.Success(result.value.toServer())
-        is Outcome.Failure -> result
-    }
-
-    override suspend fun deleteBudgetPlan(ownerId: String, month: JakartaMonth): Outcome<Unit> =
-        api.deleteBudget(ownerId, month.id())
-
-    override suspend fun budgetPlans(
-        ownerId: String,
-        from: JakartaMonth,
-        to: JakartaMonth,
-        limit: Int,
-        cursor: String?,
-    ): Outcome<ServerBudgetPlanPage> = when (
-        val result = api.budgetPlans(ownerId, from.id(), to.id(), limit, cursor)
-    ) {
-        is Outcome.Success -> Outcome.Success(
-            ServerBudgetPlanPage(
-                items = result.value.plans.map { it.toServer() },
-                nextCursor = result.value.nextCursor,
-            ),
-        )
-        is Outcome.Failure -> result
-    }
-
     private fun RemoteCategoryItem.toServer() = ServerCategory(
         id = id,
         code = code,
@@ -171,17 +115,6 @@ class ServerFinanceRepositoryImpl @Inject constructor(
         color = color,
         attributes = attributes.orEmpty(),
         revision = revision,
-    )
-
-    private fun RemoteBudgetPlan.toServer() = ServerBudgetPlan(
-        monthId = monthId,
-        expectedIncomeMinor = expectedIncomeMinor,
-        plannedSavingsMinor = plannedSavingsMinor,
-        limitsByCategoryId = limits.associate { it.categoryId to it.amountMinor },
-        gapMinor = gapMinor,
-        totalLimitMinor = totalLimitMinor,
-        revision = revision,
-        attributes = attributes.orEmpty(),
     )
 
     override suspend fun createManual(

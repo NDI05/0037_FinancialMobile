@@ -64,7 +64,7 @@ class ContractBridgeTest {
                 clock = fixedClock(now),
             )
             val comparison = compute.withComparison(owner, JakartaMonth(2026, 2))
-            val payload = AiPayloadBuilder().build(comparison.summary, comparison.previousMonth, plan = null)
+            val payload = AiPayloadBuilder().build(comparison.summary, comparison.previousMonth)
             built = AnalysisRequest(
                 ownerId = owner,
                 monthId = "2026-02",

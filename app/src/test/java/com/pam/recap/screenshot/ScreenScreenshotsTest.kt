@@ -41,7 +41,6 @@ import com.pam.recap.domain.repository.DemoDataPort
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.AddManualEntryUseCase
 import com.pam.recap.domain.usecase.AnalysisValidator
-import com.pam.recap.domain.usecase.ComparePlanToActualUseCase
 import com.pam.recap.domain.usecase.ComputeMonthlySummaryUseCase
 import com.pam.recap.domain.usecase.ConnectGmailUseCase
 import com.pam.recap.domain.usecase.DisconnectGmailUseCase
@@ -55,16 +54,13 @@ import com.pam.recap.domain.usecase.RequestAnalysisUseCase
 import com.pam.recap.domain.usecase.RequestDeletionUseCase
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
 import com.pam.recap.domain.usecase.RetryImportUseCase
-import com.pam.recap.domain.usecase.SaveBudgetPlanUseCase
 import com.pam.recap.domain.usecase.SignInUseCase
 import com.pam.recap.domain.usecase.SignOutUseCase
-import com.pam.recap.domain.usecase.SuggestBudgetPlanUseCase
 import com.pam.recap.domain.usecase.UpdateTransactionCategoryUseCase
 import com.pam.recap.domain.usecase.UpdateTransactionNoteUseCase
 import com.pam.recap.domain.usecase.WithdrawAiConsentUseCase
 import com.pam.recap.testing.FakeAccountRepository
 import com.pam.recap.testing.FakeAnalysisRepository
-import com.pam.recap.testing.FakeBudgetRepository
 import com.pam.recap.testing.FakeConsentRepository
 import com.pam.recap.testing.FakeGoogleSignInGateway
 import com.pam.recap.testing.FakeSessionRepository
@@ -86,8 +82,6 @@ import com.pam.recap.testing.fixedClock
 import com.pam.recap.ui.feature.analysis.AnalysisScreen
 import com.pam.recap.ui.feature.analysis.AnalysisViewModel
 import com.pam.recap.ui.feature.transactions.RecordingServerFinanceRepository
-import com.pam.recap.ui.feature.budget.BudgetPlanScreen
-import com.pam.recap.ui.feature.budget.BudgetPlanViewModel
 import com.pam.recap.ui.feature.consent.ConsentScreen
 import com.pam.recap.ui.feature.consent.ConsentViewModel
 import com.pam.recap.ui.feature.entry.ManualEntryScreen
@@ -165,7 +159,6 @@ class ScreenScreenshotsTest {
     private val imports = FakeImportRepository()
     private val connections = FakeGmailConnectionRepository()
     private val analyses = FakeAnalysisRepository()
-    private val budgets = FakeBudgetRepository()
     private val deletion = FakeDeletionRepository()
     private val consents = FakeConsentRepository(
         listOf(
@@ -232,7 +225,6 @@ class ScreenScreenshotsTest {
         validator = AnalysisValidator(),
         consents = consents,
         analyses = analyses,
-        budgets = budgets,
         payloadSource = AiPayloadBuilder(),
         // The real engine and the real resource copy, so the screenshot shows shipped text.
         onDeviceEngine = OnDeviceAnalysisEngine(
@@ -417,45 +409,6 @@ class ScreenScreenshotsTest {
     }
 
     // ---------------------------------------------------------------------------------------
-    // 05 Budget plan, 05b the same screen at 200 % font scale
-    // ---------------------------------------------------------------------------------------
-    @Test
-    fun budget() {
-        val viewModel = BudgetPlanViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("monthId" to "2026-03")),
-            sessions = sessions,
-            budgets = budgets,
-            suggestPlan = SuggestBudgetPlanUseCase(computeSummary, clock),
-            savePlan = SaveBudgetPlanUseCase(budgets, clock),
-            comparePlan = ComparePlanToActualUseCase(budgets, computeSummary),
-            resolveInitialMonth = resolveMonth,
-            clock = clock,
-        )
-
-        shot("05-budget") {
-            BudgetPlanScreen(onBack = {}, viewModel = viewModel)
-        }
-    }
-
-    @Test
-    fun budgetAtTwoHundredPercentFont() {
-        val viewModel = BudgetPlanViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("monthId" to "2026-03")),
-            sessions = sessions,
-            budgets = budgets,
-            suggestPlan = SuggestBudgetPlanUseCase(computeSummary, clock),
-            savePlan = SaveBudgetPlanUseCase(budgets, clock),
-            comparePlan = ComparePlanToActualUseCase(budgets, computeSummary),
-            resolveInitialMonth = resolveMonth,
-            clock = clock,
-        )
-
-        shot("05b-budget-fontscale200", fontScale = 2f) {
-            BudgetPlanScreen(onBack = {}, viewModel = viewModel)
-        }
-    }
-
-    // ---------------------------------------------------------------------------------------
     // 06 Settings
     // ---------------------------------------------------------------------------------------
     @Test
@@ -474,8 +427,7 @@ class ScreenScreenshotsTest {
                 transactions = transactions,
                 summaries = summaries,
                 analyses = analyses,
-                budgets = budgets,
-                imports = imports,
+                        imports = imports,
                 backendSessions = NoopBackendSessionRepository(),
                 appPasswordVault = noopVault,
                 clock = clock,
@@ -509,8 +461,7 @@ class ScreenScreenshotsTest {
                 transactions = transactions,
                 summaries = summaries,
                 analyses = analyses,
-                budgets = budgets,
-                imports = imports,
+                        imports = imports,
                 backendSessions = NoopBackendSessionRepository(),
                 appPasswordVault = noopVault,
                 clock = clock,
@@ -554,8 +505,7 @@ class ScreenScreenshotsTest {
                 transactions = transactions,
                 summaries = summaries,
                 analyses = analyses,
-                budgets = budgets,
-                imports = imports,
+                        imports = imports,
                 consents = consents,
                 gmailConnection = connections,
                 sessions = sessions,

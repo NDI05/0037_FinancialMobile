@@ -54,31 +54,6 @@ interface AnalysisDao {
     suspend fun deleteAll(ownerId: String)
 }
 
-/** FR-42/FR-44 budget plans and their per-category limits. */
-@Dao
-interface BudgetDao {
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertPlan(plan: BudgetPlanEntity)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertLimits(limits: List<BudgetLimitEntity>)
-
-    @Query("DELETE FROM budget_limits WHERE planId = :planId")
-    suspend fun deleteLimits(planId: String)
-
-    @Query("SELECT * FROM budget_plans WHERE ownerId = :ownerId AND monthId = :monthId LIMIT 1")
-    suspend fun findPlan(ownerId: String, monthId: String): BudgetPlanEntity?
-
-    @Query("SELECT * FROM budget_plans WHERE ownerId = :ownerId AND monthId = :monthId LIMIT 1")
-    fun observePlan(ownerId: String, monthId: String): Flow<BudgetPlanEntity?>
-
-    @Query("SELECT * FROM budget_limits WHERE planId = :planId")
-    suspend fun limitsFor(planId: String): List<BudgetLimitEntity>
-
-    @Query("DELETE FROM budget_plans WHERE ownerId = :ownerId")
-    suspend fun deleteAll(ownerId: String)
-}
 
 /** FR-03/FR-49 consent ledger. */
 @Dao

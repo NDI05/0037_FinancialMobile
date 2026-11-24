@@ -15,7 +15,6 @@ import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.BackendSessionRepository
 import com.pam.recap.testing.FakeAnalysisRepository
 import com.pam.recap.testing.FakeAppPasswordVault
-import com.pam.recap.testing.FakeBudgetRepository
 import com.pam.recap.testing.FakeGmailConnectionRepository
 import com.pam.recap.testing.FakeImportRepository
 import com.pam.recap.testing.FakeSessionRepository
@@ -74,8 +73,7 @@ class PendingJournalCleanupTest {
             transactions = FakeTransactionRepository(),
             summaries = FakeSummaryRepository(),
             analyses = FakeAnalysisRepository(),
-            budgets = FakeBudgetRepository(),
-            imports = FakeImportRepository(),
+                        imports = FakeImportRepository(),
             backendSessions = RecordingBackendSessions(),
             appPasswordVault = FakeAppPasswordVault(),
             clock = fixedClock(Instant.parse("2026-11-23T00:00:00Z")),

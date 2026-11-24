@@ -8,7 +8,6 @@ import com.pam.recap.core.result.getOrNull
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.AiAggregatePayload
 import com.pam.recap.domain.model.AiCategoryTotal
-import com.pam.recap.domain.model.AiPlanSummary
 import com.pam.recap.domain.model.AiPriorMonthTotals
 import com.pam.recap.domain.model.AnalysisStatus
 import com.pam.recap.domain.model.Category
@@ -32,7 +31,7 @@ import javax.inject.Singleton
  * S2.5 server-mode analysis source. The stored analysis and the monthly summary both come from the
  * backend, so the screen renders the server's canonical `freshness`/`currentRevision` instead of a
  * locally computed summary (which is empty in server mode). Regeneration builds the aggregate
- * payload from the same server summary + prior month + budget plan and posts it through the remote
+ * payload from the same server summary + prior month and posts it through the remote
  * engine, which owns the Idempotency-Key and the consent error mapping.
  */
 @Singleton
@@ -85,8 +84,7 @@ class ServerAnalysisRepositoryImpl @Inject constructor(
         }
         val previous = finance.summary(ownerId, month.previous()).getOrNull()
             ?.takeIf { it.hasData }
-        val plan = runCatching { planSummary(ownerId, month) }.getOrNull()
-        val payload = ServerAnalysisPayload.assemble(summary, previous, plan)
+        val payload = ServerAnalysisPayload.assemble(summary, previous)
         val request = AnalysisRequest(
             ownerId = ownerId,
             monthId = month.id(),
@@ -99,39 +97,11 @@ class ServerAnalysisRepositoryImpl @Inject constructor(
         }
     }
 
-    /** Budget plan is optional: a missing plan, unknown category or failed read simply omits it. */
-    private suspend fun planSummary(ownerId: String, month: JakartaMonth): AiPlanSummary? {
-        val plan = when (val result = api.budget(ownerId, month.id())) {
-            is Outcome.Success -> result.value
-            is Outcome.Failure -> return null
-        }
-        if (plan.limits.isEmpty()) {
-            return AiPlanSummary(
-                expectedIncomeMinor = plan.expectedIncomeMinor,
-                plannedSavingsMinor = plan.plannedSavingsMinor,
-                categoryLimitTotals = emptyList(),
-            )
-        }
-        val categories = when (val result = api.categories(ownerId, limit = 100)) {
-            is Outcome.Success -> result.value.categories
-            is Outcome.Failure -> return null
-        }
-        val codes = categories.associate { it.id to it.code }
-        val limits = plan.limits.mapNotNull { limit ->
-            val code = codes[limit.categoryId] ?: return@mapNotNull null
-            AiCategoryTotal(categoryCode = code, amountMinor = limit.amountMinor, transactionCount = 0)
-        }
-        return AiPlanSummary(
-            expectedIncomeMinor = plan.expectedIncomeMinor,
-            plannedSavingsMinor = plan.plannedSavingsMinor,
-            categoryLimitTotals = limits,
-        )
-    }
 }
 
 /**
- * S2.5: aggregate payload assembled from the canonical server responses (summary, prior month,
- * optional plan). Kept as a pure function so the wire-to-payload mapping is unit tested without a
+ * S2.5: aggregate payload assembled from the canonical server responses (summary, prior month).
+ * Kept as a pure function so the wire-to-payload mapping is unit tested without a
  * live backend. The server re-derives canonical numbers from its own rows; this only has to be a
  * faithful, allow-listed projection of what the device received.
  */
@@ -139,7 +109,6 @@ internal object ServerAnalysisPayload {
     fun assemble(
         summary: com.pam.recap.domain.model.MonthlySummary,
         previous: com.pam.recap.domain.model.MonthlySummary?,
-        plan: AiPlanSummary?,
     ): AiAggregatePayload = AiAggregatePayload(
         schemaVersion = AiAggregatePayload.SCHEMA_VERSION,
         monthId = summary.month.id(),
@@ -167,7 +136,6 @@ internal object ServerAnalysisPayload {
                 incomeMinor = it.classifiedIncome.minor,
             )
         },
-        plan = plan,
     )
 }
 

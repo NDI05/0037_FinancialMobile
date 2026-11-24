@@ -69,7 +69,7 @@ class AnalysisValidator @Inject constructor() {
 
     /**
      * Every amount the provider may legitimately mention: the payload metrics, each category
-     * total, the prior month, the plan and the provider's own *structured* suggestion amounts.
+     * total, the prior month and the provider's own *structured* suggestion amounts.
      */
     private fun allowedAmounts(payload: AiAggregatePayload, analysis: RawAnalysis): Set<Long> = buildSet {
         add(0L)
@@ -82,11 +82,6 @@ class AnalysisValidator @Inject constructor() {
         payload.priorMonth?.let {
             add(kotlin.math.abs(it.expenseMinor))
             add(kotlin.math.abs(it.incomeMinor))
-        }
-        payload.plan?.let { plan ->
-            add(plan.expectedIncomeMinor)
-            add(plan.plannedSavingsMinor)
-            plan.categoryLimitTotals.forEach { add(kotlin.math.abs(it.amountMinor)) }
         }
         analysis.suggestions.forEach { suggestion ->
             suggestion.suggestedAmountMinor?.let { add(kotlin.math.abs(it)) }

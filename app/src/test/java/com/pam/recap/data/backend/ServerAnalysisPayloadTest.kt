@@ -2,7 +2,6 @@ package com.pam.recap.data.backend
 
 import com.pam.recap.core.money.Money
 import com.pam.recap.core.time.JakartaMonth
-import com.pam.recap.domain.model.AiPlanSummary
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.CategoryTotal
 import com.pam.recap.domain.model.CoverageStatus
@@ -12,7 +11,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import kotlin.time.Instant
 
-/** S2.5: regeneration payload is a faithful projection of the server summary + prior month + plan. */
+/** S2.5: regeneration payload is a faithful projection of the server summary + prior month. */
 class ServerAnalysisPayloadTest {
 
     private val month = JakartaMonth.of(Instant.parse("2026-11-19T02:15:20Z"))
@@ -49,7 +48,7 @@ class ServerAnalysisPayloadTest {
 
     @Test
     fun `the payload copies the server summary numbers`() {
-        val payload = ServerAnalysisPayload.assemble(summary(currentRevision = 4), null, null)
+        val payload = ServerAnalysisPayload.assemble(summary(currentRevision = 4), null)
 
         assertEquals("2026-11", payload.monthId)
         assertEquals(1, payload.schemaVersion)
@@ -62,7 +61,6 @@ class ServerAnalysisPayloadTest {
         assertEquals("food", payload.categoryTotals.single().categoryCode)
         assertEquals(1_200_000L, payload.categoryTotals.single().amountMinor)
         assertNull(payload.priorMonth)
-        assertNull(payload.plan)
     }
 
     @Test
@@ -70,7 +68,6 @@ class ServerAnalysisPayloadTest {
         val payload = ServerAnalysisPayload.assemble(
             summary(),
             summary(month = previousMonth, revision = 9, grossOutflow = 1_500_000, classifiedExpense = 1_100_000),
-            null,
         )
 
         assertEquals("2026-10", payload.priorMonth?.monthId)
@@ -78,17 +75,4 @@ class ServerAnalysisPayloadTest {
         assertEquals(5_000_000L, payload.priorMonth?.incomeMinor)
     }
 
-    @Test
-    fun `the budget plan is included when the server supplied one`() {
-        val plan = AiPlanSummary(
-            expectedIncomeMinor = 5_000_000,
-            plannedSavingsMinor = 1_000_000,
-            categoryLimitTotals = emptyList(),
-        )
-
-        val payload = ServerAnalysisPayload.assemble(summary(), null, plan)
-
-        assertEquals(5_000_000L, payload.plan?.expectedIncomeMinor)
-        assertEquals(1_000_000L, payload.plan?.plannedSavingsMinor)
-    }
 }

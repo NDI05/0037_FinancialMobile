@@ -5,12 +5,12 @@ import androidx.room.Room
 import com.pam.recap.core.security.DatabasePassphraseProvider
 import com.pam.recap.data.local.AnalysisDao
 import com.pam.recap.data.local.AppMetadataDao
-import com.pam.recap.data.local.BudgetDao
 import com.pam.recap.data.local.ConsentDao
 import com.pam.recap.data.local.DeletionDao
 import com.pam.recap.data.local.GmailConnectionDao
 import com.pam.recap.data.local.ImportJobDao
 import com.pam.recap.data.local.MonthlySummaryDao
+import com.pam.recap.data.local.MIGRATION_1_2
 import com.pam.recap.data.local.PamDatabase
 import com.pam.recap.data.local.SkippedCandidateDao
 import com.pam.recap.data.local.TransactionDao
@@ -43,7 +43,7 @@ object DatabaseModule {
         val factory = SupportOpenHelperFactory(passphraseProvider.passphrase())
         return Room.databaseBuilder(context, PamDatabase::class.java, PamDatabase.DATABASE_NAME)
             .openHelperFactory(factory)
-            .addMigrations()
+            .addMigrations(MIGRATION_1_2)
             .build()
     }
 
@@ -64,9 +64,6 @@ object DatabaseModule {
 
     @Provides
     fun provideAnalysisDao(database: PamDatabase): AnalysisDao = database.analysisDao()
-
-    @Provides
-    fun provideBudgetDao(database: PamDatabase): BudgetDao = database.budgetDao()
 
     @Provides
     fun provideConsentDao(database: PamDatabase): ConsentDao = database.consentDao()

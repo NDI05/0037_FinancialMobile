@@ -15,7 +15,6 @@ import com.pam.recap.domain.model.ImportState
 import com.pam.recap.domain.model.ParseStatus
 import com.pam.recap.domain.model.RedactionReason
 import com.pam.recap.domain.model.TransactionSource
-import com.pam.recap.domain.model.ValueOrigin
 import kotlin.time.Instant
 
 /**
@@ -132,10 +131,4 @@ class Converters {
     fun toDeletionState(value: String?): DeletionState? =
         value?.let { runCatching { DeletionState.valueOf(it) }.getOrNull() }
 
-    @TypeConverter
-    fun fromValueOrigin(value: ValueOrigin?): String? = value?.name
-
-    @TypeConverter
-    fun toValueOrigin(value: String?): ValueOrigin? =
-        value?.let { runCatching { ValueOrigin.valueOf(it) }.getOrNull() }
 }

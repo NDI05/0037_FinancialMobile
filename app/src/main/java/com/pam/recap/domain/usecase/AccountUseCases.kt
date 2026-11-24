@@ -23,7 +23,6 @@ import com.pam.recap.domain.repository.BackendDeletionSync
 import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.data.security.ImportUploadJournal
 import com.pam.recap.domain.repository.BackendSessionRepository
-import com.pam.recap.domain.repository.BudgetRepository
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.DeletionRepository
 import com.pam.recap.domain.repository.DemoDataPort
@@ -98,7 +97,6 @@ class SignOutUseCase @Inject constructor(
     private val transactions: TransactionRepository,
     private val summaries: SummaryRepository,
     private val analyses: AnalysisRepository,
-    private val budgets: BudgetRepository,
     private val imports: ImportRepository,
     private val backendSessions: BackendSessionRepository,
     private val appPasswordVault: AppPasswordVault,
@@ -128,7 +126,6 @@ class SignOutUseCase @Inject constructor(
         transactions.deleteAll(ownerId)
         summaries.deleteAll(ownerId)
         analyses.deleteAll(ownerId)
-        budgets.deleteAll(ownerId)
         imports.deleteAll(ownerId)
         // Durable sync state is per owner: cancel queued work, drop the cursor and clear the status
         // so nothing from this session can be reported as a success for the next one.
@@ -262,7 +259,6 @@ class RequestDeletionUseCase @Inject constructor(
     private val transactions: TransactionRepository,
     private val summaries: SummaryRepository,
     private val analyses: AnalysisRepository,
-    private val budgets: BudgetRepository,
     private val imports: ImportRepository,
     private val consents: ConsentRepository,
     private val gmailConnection: GmailConnectionRepository,
@@ -329,8 +325,7 @@ class RequestDeletionUseCase @Inject constructor(
             transactions.deleteAll(ownerId)
             summaries.deleteAll(ownerId)
             analyses.deleteAll(ownerId)
-            budgets.deleteAll(ownerId)
-            imports.deleteAll(ownerId)
+                imports.deleteAll(ownerId)
             gmailConnection.deleteAll(ownerId)
             consents.deleteAll(ownerId)
             appPasswordVault.clear(ownerId)

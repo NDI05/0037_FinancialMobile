@@ -14,13 +14,11 @@ import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.CategoryDrainResult
 import com.pam.recap.domain.repository.CategoryEnqueueResult
 import com.pam.recap.domain.repository.ManualTransactionDraft
-import com.pam.recap.domain.repository.ServerBudgetPlanPage
 import com.pam.recap.domain.repository.ServerCategory
 import com.pam.recap.domain.repository.ServerCategoryJob
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.ServerImportCandidate
 import com.pam.recap.domain.repository.ServerImportCounts
-import com.pam.recap.domain.repository.ServerBudgetPlan
 import com.pam.recap.domain.repository.ServerImportJob
 import com.pam.recap.domain.repository.ServerTransactionPage
 import com.pam.recap.domain.repository.TransactionPatch
@@ -64,14 +62,6 @@ internal open class RecordingServerFinanceRepository : ServerFinanceRepository {
     var updateOutcome: Outcome<Transaction>? = null
     var deleteOutcome: Outcome<Unit>? = null
 
-    var budgetPlanOutcome: Outcome<ServerBudgetPlan>? = null
-    var savePlanOutcome: ((ServerBudgetPlan) -> Outcome<ServerBudgetPlan>)? = null
-    val savedPlans = mutableListOf<ServerBudgetPlan>()
-    var deletePlanOutcome: Outcome<Unit>? = null
-    /** C15: period-search response and the windows the editor asked for. */
-    var budgetPlansOutcome: Outcome<ServerBudgetPlanPage>? = null
-    val budgetPlanQueries = mutableListOf<Triple<String, String, Int>>()
-    val deletedPlanMonths = mutableListOf<String>()
     var summaryOutcome: Outcome<MonthlySummary>? = null
 
     private val writeSignals = CompletableDeferred<Unit>()
@@ -164,48 +154,6 @@ internal open class RecordingServerFinanceRepository : ServerFinanceRepository {
 
     override suspend fun summary(ownerId: String, month: JakartaMonth): Outcome<MonthlySummary> =
         summaryOutcome ?: Outcome.Failure(AppError.NotFound("summary"))
-
-    override suspend fun budgetPlan(ownerId: String, month: JakartaMonth): Outcome<ServerBudgetPlan> =
-        budgetPlanOutcome ?: Outcome.Failure(AppError.Configuration("backend_budget_not_supported"))
-
-    override suspend fun saveBudgetPlan(
-        ownerId: String,
-        month: JakartaMonth,
-        expectedIncomeMinor: Long,
-        plannedSavingsMinor: Long,
-        limitsByCategoryId: Map<String, Long>,
-        revision: Int,
-        attributes: Map<String, String>,
-    ): Outcome<ServerBudgetPlan> {
-        val submitted = ServerBudgetPlan(
-            monthId = month.id(),
-            expectedIncomeMinor = expectedIncomeMinor,
-            plannedSavingsMinor = plannedSavingsMinor,
-            limitsByCategoryId = limitsByCategoryId,
-            gapMinor = expectedIncomeMinor - plannedSavingsMinor - limitsByCategoryId.values.sum(),
-            revision = revision,
-            attributes = attributes,
-        )
-        savedPlans += submitted
-        return savePlanOutcome?.invoke(submitted)
-            ?: Outcome.Success(submitted.copy(revision = revision + 1))
-    }
-
-    override suspend fun deleteBudgetPlan(ownerId: String, month: JakartaMonth): Outcome<Unit> {
-        deletedPlanMonths += month.id()
-        return deletePlanOutcome ?: Outcome.Success(Unit)
-    }
-
-    override suspend fun budgetPlans(
-        ownerId: String,
-        from: JakartaMonth,
-        to: JakartaMonth,
-        limit: Int,
-        cursor: String?,
-    ): Outcome<ServerBudgetPlanPage> {
-        budgetPlanQueries += Triple(from.id(), to.id(), limit)
-        return budgetPlansOutcome ?: Outcome.Success(ServerBudgetPlanPage(emptyList()))
-    }
 
     override suspend fun createManual(
         ownerId: String,

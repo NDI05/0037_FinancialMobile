@@ -24,7 +24,6 @@ import com.pam.recap.domain.repository.AnalysisEngine
 import com.pam.recap.domain.repository.AnalysisEngineConfiguration
 import com.pam.recap.domain.repository.AnalysisRequest
 import com.pam.recap.testing.FakeAnalysisRepository
-import com.pam.recap.testing.FakeBudgetRepository
 import com.pam.recap.testing.FakeConsentRepository
 import com.pam.recap.testing.FakeGmailConnectionRepository
 import com.pam.recap.testing.FakeImportRepository
@@ -133,8 +132,7 @@ class RequestAnalysisUseCaseTest {
         validator = AnalysisValidator(),
         consents = consents,
         analyses = analyses,
-        budgets = FakeBudgetRepository(),
-        payloadSource = AiPayloadBuilder(),
+                payloadSource = AiPayloadBuilder(),
         onDeviceEngine = onDevice,
         remoteEngine = remote,
         remoteConfiguration = remoteConfiguration,

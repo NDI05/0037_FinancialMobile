@@ -82,7 +82,7 @@ fun ConsentSwitchRow(
 }
 
 /**
- * Labelled number field used by the budget editor and manual entry. Kept as a component so the
+ * Labelled number field used by manual entry. Kept as a component so the
  * amortised glass styling and the 48 dp target are identical everywhere.
  */
 @Composable

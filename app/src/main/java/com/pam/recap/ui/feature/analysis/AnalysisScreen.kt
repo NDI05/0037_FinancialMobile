@@ -285,7 +285,7 @@ internal fun AnalysisFreshnessHeader(analysis: Analysis, summary: MonthlySummary
     if (analysis.freshnessAgainst(summary) == SummaryFreshness.STALE) {
         val currentRevision = summary?.currentRevision ?: analysis.inputRevision
         // B-2: the server can report STALE without a revision bump when the dependency hash moved
-        // (prior month, categories, budget plan or an import job). Say that instead of printing
+        // (prior month, categories or an import job). Say that instead of printing
         // two identical revision numbers.
         val text = if (analysis.inputRevision < currentRevision) {
             stringResource(R.string.analysis_stale_body, analysis.inputRevision, currentRevision)

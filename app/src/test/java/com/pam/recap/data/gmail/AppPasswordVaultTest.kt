@@ -10,7 +10,6 @@ import com.pam.recap.data.gmail.LivinTemplateRegistry
 import com.pam.recap.domain.model.GmailConnectionState
 import com.pam.recap.domain.repository.AppPasswordVault
 import com.pam.recap.testing.FakeAnalysisRepository
-import com.pam.recap.testing.FakeBudgetRepository
 import com.pam.recap.testing.FakeGmailConnectionRepository
 import com.pam.recap.testing.FakeImportRepository
 import com.pam.recap.testing.FakeSessionRepository

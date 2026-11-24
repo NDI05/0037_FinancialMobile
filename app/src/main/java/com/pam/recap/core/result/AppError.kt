@@ -105,7 +105,6 @@ object AppErrorRules {
     const val MONTH_HAS_NO_DATA = "month_has_no_data"
     const val ANALYSIS_NOT_ELIGIBLE = "analysis_not_eligible"
     const val ANALYSIS_REJECTED = "analysis_rejected"
-    const val BUDGET_GAP_NEGATIVE = "budget_gap_negative"
     const val DELETION_IN_PROGRESS = "deletion_in_progress"
     const val REAUTH_REQUIRED = "reauth_required"
     const val DESCRIPTION_REQUIRED = "description_required"

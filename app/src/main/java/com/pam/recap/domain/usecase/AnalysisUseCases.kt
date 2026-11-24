@@ -24,7 +24,6 @@ import com.pam.recap.domain.repository.AnalysisEngineConfiguration
 import com.pam.recap.domain.repository.AnalysisRepository
 import com.pam.recap.domain.repository.AnalysisRequest
 import com.pam.recap.domain.repository.BackendSummarySync
-import com.pam.recap.domain.repository.BudgetRepository
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.GmailConnectionRepository
 import javax.inject.Inject
@@ -48,7 +47,6 @@ class RequestAnalysisUseCase @Inject constructor(
     private val validator: AnalysisValidator,
     private val consents: ConsentRepository,
     private val analyses: AnalysisRepository,
-    private val budgets: BudgetRepository,
     private val payloadSource: AiPayloadSource,
     @param:OnDeviceEngine private val onDeviceEngine: AnalysisEngine,
     @param:RemoteEngine private val remoteEngine: AnalysisEngine,
@@ -82,7 +80,6 @@ class RequestAnalysisUseCase @Inject constructor(
         }
 
         val engine = if (remoteConfiguration.isConfigured) remoteEngine else onDeviceEngine
-        val plan = budgets.active(ownerId, month)
 
         val cached = analyses.latest(ownerId, month.id())
         if (!regenerate && cached != null &&
@@ -97,7 +94,7 @@ class RequestAnalysisUseCase @Inject constructor(
             return Outcome.Success(cached)
         }
 
-        val payload = payloadSource.build(summary, comparison.previousMonth, plan)
+        val payload = payloadSource.build(summary, comparison.previousMonth)
         val request = AnalysisRequest(
             ownerId = ownerId,
             monthId = month.id(),

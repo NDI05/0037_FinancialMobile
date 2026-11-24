@@ -1,7 +1,6 @@
 package com.pam.recap.di
 
 import com.pam.recap.data.assessment.AssessmentAnalysisRepository
-import com.pam.recap.data.assessment.AssessmentBudgetRepository
 import com.pam.recap.data.assessment.AssessmentConsentRepository
 import com.pam.recap.data.assessment.AssessmentDeletionRepository
 import com.pam.recap.data.assessment.AssessmentGmailConnectionRepository
@@ -9,7 +8,6 @@ import com.pam.recap.data.assessment.AssessmentImportRepository
 import com.pam.recap.data.assessment.AssessmentSummaryRepository
 import com.pam.recap.data.assessment.AssessmentTransactionRepository
 import com.pam.recap.domain.repository.AnalysisRepository
-import com.pam.recap.domain.repository.BudgetRepository
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.DeletionRepository
 import com.pam.recap.domain.repository.GmailConnectionRepository
@@ -43,9 +41,6 @@ abstract class AssessmentRepositoryModule {
 
     @Binds
     abstract fun bindAnalysisRepository(impl: AssessmentAnalysisRepository): AnalysisRepository
-
-    @Binds
-    abstract fun bindBudgetRepository(impl: AssessmentBudgetRepository): BudgetRepository
 
     @Binds
     abstract fun bindConsentRepository(impl: AssessmentConsentRepository): ConsentRepository

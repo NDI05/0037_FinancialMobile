@@ -73,7 +73,7 @@ data class JakartaMonth(val year: Int, val month: Int) : Comparable<JakartaMonth
         return result
     }
 
-    /** Inclusive sequence ending at [this], oldest first; used by budget historical averages. */
+    /** Inclusive sequence ending at [this], oldest first; used by period windows. */
     fun previousMonths(count: Int): List<JakartaMonth> =
         (count downTo 1).map { minusMonths(it) }.reversed()
 

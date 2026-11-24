@@ -131,25 +131,6 @@ class PamApiClientTest {
     }
 
     @Test
-    fun `budget period search sends the inclusive window and parses plans`() = runTest {
-        server.enqueue(
-            json(
-                200,
-                """{"plans":[{"monthId":"2026-11","expectedIncomeMinor":1000,
-                   "plannedSavingsMinor":0,"limits":[],"revision":2,
-                   "totalLimitMinor":700,"gapMinor":300}]}""",
-            ),
-        )
-        val result = client.budgetPlans("u_1", "2025-12", "2026-11", limit = 12) as Outcome.Success
-        val request = server.takeRequest()
-        assertEquals("/v1/budget-plans?from=2025-12&to=2026-11&limit=12", request.path)
-        assertEquals("2026-11", result.value.plans.single().monthId)
-        // P3-6: the period-search row carries the summed limit and gap the history card renders.
-        assertEquals(700L, result.value.plans.single().totalLimitMinor)
-        assertEquals(300L, result.value.plans.single().gapMinor)
-    }
-
-    @Test
     fun `gmail status maps a runtime disabled backend to its own rule`() = runTest {
         server.enqueue(
             json(503, """{"code":"gmail_disabled","message":"Gmail integration is not enabled"}"""),

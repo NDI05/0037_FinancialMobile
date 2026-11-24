@@ -5,7 +5,9 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
 /**
- * PAM's single Room database, schema version 1 (§4), SQLCipher-encrypted (NFR-16).
+ * PAM's single Room database, schema version 2 (§4), SQLCipher-encrypted (NFR-16).
+ *
+ * v2 drops the retired budget plan/limit tables (CR-008); [MIGRATION_1_2] removes them in place.
  *
  * `exportSchema = true` writes `app/schemas/…1.json`, which is committed: any later schema change
  * must ship a migration, and `fallbackToDestructiveMigration` is never used in release.
@@ -19,13 +21,11 @@ import androidx.room.TypeConverters
         MonthlySummaryEntity::class,
         SummaryCategoryTotalEntity::class,
         AnalysisEntity::class,
-        BudgetPlanEntity::class,
-        BudgetLimitEntity::class,
         ConsentEntity::class,
         GmailConnectionEntity::class,
         DeletionRequestEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -42,8 +42,6 @@ abstract class PamDatabase : RoomDatabase() {
     abstract fun monthlySummaryDao(): MonthlySummaryDao
 
     abstract fun analysisDao(): AnalysisDao
-
-    abstract fun budgetDao(): BudgetDao
 
     abstract fun consentDao(): ConsentDao
 

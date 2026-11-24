@@ -19,7 +19,6 @@ import com.pam.recap.data.gmail.LivinQueryBuilder
 import com.pam.recap.data.gmail.LivinTemplateRegistry
 import com.pam.recap.data.seed.LivinFixtures
 import com.pam.recap.domain.model.Analysis
-import com.pam.recap.domain.model.BudgetPlan
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.CategoryOrigin
 import com.pam.recap.domain.model.Consent
@@ -37,7 +36,6 @@ import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionFilter
 import com.pam.recap.domain.model.TransactionPage
 import com.pam.recap.domain.repository.AnalysisRepository
-import com.pam.recap.domain.repository.BudgetRepository
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.DeletionRepository
 import com.pam.recap.domain.repository.GmailConnectionRepository
