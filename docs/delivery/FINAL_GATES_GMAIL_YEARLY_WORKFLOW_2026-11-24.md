@@ -44,6 +44,8 @@ Revisi 24 November 2026 (ronde 7): **verifikasi ulang gate teknis** setelah UAT 
 kini tes memverifikasi pemetaan `PAM_GOOGLE_SSO_CLIENT_ID` → `PAM_GOOGLE_SSO_ENABLED`. Status gate
 **tidak berubah**: G25 PASS (live, akun pilot owner), G29/G36/G37 NOT RUN/OPEN atas pemilik.
 
+Revisi 24 November 2026 (ronde 24): **login Google nyata di HP fisik terbukti** pada 21:49–21:50 WIB — nonce SSO dikonsumsi sebelum verifikasi, sesi PAM diterbitkan (`/v1/me` 200), `google_identities` menjadi 1, dan 914 transaksi tetap unik (0 duplikat) setelah logout→login ulang. Bukti perangkat: `MainActivity` resumed + picker Credential Manager di HP. Tombol **Run literal** belum terbukti (`lastUpdateTime` tetap 19:28:04, build lama terpasang), begitu pula onboarding Gmail dan persistensi email saat app tertutup; karena itu **G36 berubah dari NOT RUN menjadi PARTIAL** (bukan PASS). Bukti agregat: [SSO_LIVE_PHONE](../evidence/SSO_LIVE_PHONE_2026-11-24.md).
+
 ## 1. Pasangan build yang diverifikasi
 
 | Komponen | Repo | Branch | HEAD | Status `main` |
@@ -134,19 +136,19 @@ lingkungan/kredensial atau sengaja menunggu pemilik.
 | G33. Penautan akun lama (unik, atomik, tanpa auto-merge) | `google_identities` PK(issuer,subject) + UNIQUE(owner_id), FK cascade; link idempoten; konflik lintas owner 409 `google_identity_conflict`; akun sudah tertaut 409 `google_already_linked`; akun nonaktif 403; race owner sama tepat satu pemenang (tanpa 500); email sama beda `sub` tidak merge; transaksi/Gmail/role/owner utuh | Tes store + HTTP baru `TestConcurrentGoogleLinkSameOwnerDifferentSubjects`, `TestGoogleSSOSameEmailDifferentSubjectsDoNotMerge`; migrasi 021 diuji upgrade 020→021 | **PASS** (unit/HTTP) | UAT login ulang akun lama = G36 |
 | G34. Onboarding Gmail pasca-login | Tawaran "Tautkan Gmail untuk impor Livin" bila Gmail belum tertaut; akun Google sama/berbeda; consent `gmail.readonly` terpisah dari identitas Google dan AI; tombol **Lewati** per-owner (DataStore) tidak memblokir sesi/transaksi manual | Tes ViewModel/Compose onboarding + skip persisten; kontrak Gmail existing (G26/G27); **uji HP fisik fixture** 24 Nov 18:30 WIB: sheet tawaran + Lewati tampil, sesi tetap aktif, Gmail `connected=false`, skip persisten setelah restart — [bukti perangkat](../evidence/SSO_ONBOARDING_DEVICE_FIXTURE_2026-11-24.md) | **PASS** (fixture/unit + HP fixture) | Consent/backfill live = G25/G36 |
 | G35. Audit SSO independen | Verifier, nonce, link atomik, no-merge, tidak ada kebocoran token, docs jujur, gate terpisah; tanpa akses kredensial nyata | [AUDIT SSO ronde 1](../evidence/AUDIT_SSO_R1_2026-11-24.md): PASS teknis, 0 P0/P1, 8 P2; tindak lanjut P2 ditutup di `e67380a` (Android) + `71013f5` (backend) | **PASS** | Audit ronde 2 fokus P2: [AUDIT_SSO_R2](../evidence/AUDIT_SSO_R2_2026-11-24.md) |
-| G36. UAT SSO HP fisik + Run Android Studio | Login Google nyata, link akun lama tanpa duplikat, skip onboarding, tautkan Gmail + consent, email Livin baru tersimpan saat app tertutup; dijalankan dari tombol Run | Prasyarat live sudah diverifikasi (nonce `200` + bentuk `nonce/expiresAt/expiresInSeconds`; ID token palsu → `401 google_invalid_token`; link tanpa sesi → `401`; preflight perangkat/SSO **exit 0**; `google_identities` masih 0). Login Google nyata + link akun + tombol Run tetap belum dijalankan karena butuh interaksi pemilik | **NOT RUN** (owner) | Input owner tercantum di §4 |
+| G36. UAT SSO HP fisik + Run Android Studio | Login Google nyata, link akun lama tanpa duplikat, skip onboarding, tautkan Gmail + consent, email Livin baru tersimpan saat app tertutup; dijalankan dari tombol Run | **Login Google nyata + sesi PAM + binding identitas terbukti di HP fisik** pada 24 Nov 21:49–21:50 WIB: nonce dikonsumsi sebelum verifikasi, `google_identities` menjadi 1 (issuer `accounts.google.com`), `/v1/me` 200, 914 transaksi tetap unik (0 duplikat) setelah logout→login ulang, `auth_sessions` aktif; bukti perangkat: `MainActivity` resumed + `mLastPausedActivity` = picker Credential Manager. Belum terbukti: tombol **Run literal** (`lastUpdateTime` tetap 19:28:04 → build UAT lama via `adb install`), onboarding Gmail tautkan/skip + consent, dan email Livin baru saat app tertutup. Bukti agregat: [SSO_LIVE_PHONE](../evidence/SSO_LIVE_PHONE_2026-11-24.md) | **PARTIAL** (owner) | Run literal + onboarding Gmail + persistensi email tetap di §4 |
 | G37. Gate SSO/Gmail live/Rp0 terpisah | SSO, Gmail live, dan Rp0 dilaporkan terpisah; Rp0 hanya PASS setelah Billing dilepas **dan** UAT live lulus; tanpa Cloud Identity Platform/Pub/Sub/paid service di jalur default | Kode tidak menambah layanan berbayar (audit ronde 1); Billing belum dilepas; tidak ada kredensial Google nyata | **NOT RUN / OPEN** (owner) | Sama dengan G25/G29 untuk lingkup live/Rp0 |
 
 ### Akuntansi gate final
 
-Total **38 gate**: **29 PASS, 4 PARTIAL, 5 NOT RUN**.
+Total **38 gate**: **29 PASS, 5 PARTIAL, 4 NOT RUN**.
 - PASS: G1, G2, G4b, G5, G6, G7, G8, G9, G10, G11, G12, G13, G15, G16, G19, G20, G21, G22, G23, **G25 (live owner)**, G26, G27, G28, G30, G31, G32, G33, G34, G35.
-- PARTIAL: G3 (drill rollback), G4 (proteksi `main` backend), G17 (retire IMAP penuh), G18 (TalkBack/lebar layar final).
-- NOT RUN (owner): G14 (hapus/restore data nyata), G24 (merge/deploy/SRS), G29 (GCP Rp0 / OPEN), G36 (UAT SSO HP + Run), G37 (gate live/Rp0 terpisah).
+- PARTIAL: G3 (drill rollback), G4 (proteksi `main` backend), G17 (retire IMAP penuh), G18 (TalkBack/lebar layar final), G36 (SSO live HP: login+binding PASS; Run literal/onboarding/persistensi app-tertutup belum).
+- NOT RUN (owner): G14 (hapus/restore data nyata), G24 (merge/deploy/SRS), G29 (GCP Rp0 / OPEN), G37 (gate live/Rp0 terpisah).
 
 Tidak ada gate FAIL. Angka ini tidak boleh dibaca sebagai kelulusan proyek: Gmail live sudah PASS
-untuk akun pilot owner (G25), tetapi **SSO live (G36)**, **Rp0 (G29/G37)**, merge/deploy, dan revisi
-SRS resmi masih milik pemilik.
+untuk akun pilot owner (G25), dan login Google nyata di HP sudah terbukti (G36 PARTIAL; Run literal +
+onboarding Gmail belum), tetapi **Rp0 (G29/G37)**, merge/deploy, dan revisi SRS resmi masih milik pemilik.
 
 ## 3. Bukti kunci (jalur file)
 

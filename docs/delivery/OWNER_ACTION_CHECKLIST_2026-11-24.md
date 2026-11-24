@@ -10,6 +10,11 @@ Prasyarat (sudah siap): Web Client ID terpasang di `local.properties`/`PAM_GOOGL
 SHA-1 debug `com.pam.recap.debug` terdaftar pada OAuth Android client, backend berjalan di
 `127.0.0.1:18090`, `adb reverse tcp:18090 tcp:18090` aktif, HP `105397ba0507` terhubung.
 
+**Sudah terbukti 24 Nov 21:49–21:50 WIB:** login Google nyata dari HP + sesi PAM terbit + binding
+identitas + 914 transaksi tetap unik (0 duplikat), dengan bukti perangkat `MainActivity` resumed
+dan picker Credential Manager — lihat [SSO_LIVE_PHONE](../evidence/SSO_LIVE_PHONE_2026-11-24.md).
+Sisa G36: tombol **Run literal**, onboarding Gmail (tautkan/skip), dan email baru saat app tertutup.
+
 Langkah:
 1. Buka proyek `pam-app` di Android Studio, pilih konfigurasi **app**, tekan **Run** pada HP fisik.
 2. Di aplikasi: tekan **Masuk dengan Google**, pilih akun Google uji pada picker.

@@ -347,3 +347,26 @@ Verifikasi ronde 23: tidak ada aktivitas owner baru (APK masih `lastUpdateTime 1
 0 panggilan `/v1/auth/google`, `google_identities=0`); `/readyz=200`, 0 ERROR/FATAL,
 `gmail_sync_pass failures=0`, DB 914 transaksi / 21 job COMPLETE. Gate tidak berubah:
 38 baris — 29 PASS / 4 PARTIAL / 5 NOT RUN.
+
+### Bukti SSO live di HP fisik — ronde 24 (24 Nov 2026, 21:49–21:50 WIB)
+
+Ditemukan **login Google nyata pada HP fisik** yang sebelumnya tidak terdeteksi pada sapuan ronde
+20–23: jendela 21:49:50–21:50:26 WIB memuat `GET` nonce SSO `200` (rute tanpa nama pada log),
+`POST` autentikasi Google `200` (~200 ms) dengan nonce **dikonsumsi sebelum verifikasi**, `GET
+/v1/me` `200`, `DELETE /v1/sessions` `204` (logout), lalu nonce + autentikasi + `/v1/me` `200`
+untuk sesi kedua; aplikasi kemudian memuat `/v1/gmail/status`, `/v1/transactions`,
+`/v1/categories`, `/v1/import-jobs`, `/v1/summaries`.
+
+Bukti perangkat: `dumpsys activity` menampilkan `com.pam.recap.debug/com.pam.recap.MainActivity`
+visible/resumed dan `mLastPausedActivity` = `androidx.credentials.playservices.HiddenActivity`
+(picker Credential Manager). Agregat DB: `google_identities=1` (issuer `accounts.google.com`,
+dibuat 21:49:57,50), `users=1`, 914 transaksi dengan 914 `source_ref_hash` unik (0 duplikat),
+`gmail_connections=1` (koneksi pilot lama), `auth_sessions` aktif setelah login ulang.
+
+**Status gate berubah:** G36 dari **NOT RUN → PARTIAL** — login Google nyata + sesi PAM + binding
+identitas terbukti; belum terbukti: tombol **Run literal** (`lastUpdateTime` tetap 19:28:04, build
+via `adb install`), onboarding Gmail tautkan/skip + consent, dan email Livin baru saat app
+tertutup. Gate tally: **38 gate — 29 PASS / 5 PARTIAL / 4 NOT RUN** (PARTIAL: G3, G4, G17, G18,
+G36; NOT RUN: G14, G24, G29, G37). Bukti agregat:
+[SSO_LIVE_PHONE](evidence/SSO_LIVE_PHONE_2026-11-24.md); dokumen gate, README, traceability, dan
+CR-007 diselaraskan. Tidak ada perubahan kode.

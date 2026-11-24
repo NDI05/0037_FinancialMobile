@@ -3,7 +3,7 @@
 Dokumen ini memetakan setiap butir mandat PM ke implementasi, bukti uji, dan gate yang
 bersangkutan. Status gate lengkap ada di
 [`FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md`](FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md);
-angka final: **29 PASS / 4 PARTIAL / 5 NOT RUN**.
+angka final: **29 PASS / 5 PARTIAL / 4 NOT RUN**.
 
 ## Backend Go (mode polling Rp0)
 
@@ -43,7 +43,7 @@ angka final: **29 PASS / 4 PARTIAL / 5 NOT RUN**.
 
 | Gate | Status | Aksi |
 |---|---|---|
-| **G36** UAT SSO HP fisik + Run literal Android Studio | NOT RUN | Tekan **Run** konfigurasi `app` di Android Studio pada HP `105397ba0507`, login Google, lalu tautkan akun lama lewat sheet "Tautkan Gmail untuk impor Livin" |
+| **G36** UAT SSO HP fisik + Run literal Android Studio | PARTIAL | Login Google nyata + sesi PAM + binding identitas **sudah terbukti** di HP fisik 24 Nov 21:49–21:50 WIB ([bukti agregat](../evidence/SSO_LIVE_PHONE_2026-11-24.md)). Sisa: tekan **Run** literal konfigurasi `app` (build sekarang dari `adb install`, `lastUpdateTime` 19:28:04), lalu uji onboarding Gmail tautkan/skip |
 | **G29 / G37** GCP Rp0 | OPEN | Lepas Billing dari project pilot, verifikasi tidak ada resource berbayar; `gcloud` tidak tersedia di host sehingga tidak bisa diperiksa agen |
 | **G24** Merge/deploy/SRS resmi | NOT RUN | Keputusan pemilik (branch integrasi siap) |
 | **G14** Hapus data nyata (retensi) | NOT RUN | Keputusan pemilik atas data live 914 baris |
