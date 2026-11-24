@@ -862,6 +862,9 @@ PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
 
 ### Keputusan gate PM (24 November 2026)
 
+Lembar keputusan bertabel (Sprint/Gate · Perubahan · Bukti · Status · Sisa) beserta audit
+penutupan per sprint: [GATE_DECISIONS_S2_S4_2026-11-24.md](delivery/GATE_DECISIONS_S2_S4_2026-11-24.md).
+
 - **S2 = PARTIAL (kondisional).** Perbaikan P0 dan bukti unit/integrasi lengkap, tetapi
   acceptance varian final di perangkat pemilik (Run Android Studio) dan bukti drill-down-after
   dengan data belum ada; klaim dedupe re-import via `sourceRef` tidak boleh dibaca PASS karena
