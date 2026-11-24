@@ -334,3 +334,16 @@ Tidak ada perubahan owner sejak ronde sebelumnya: APK belum di-Run ulang (lastUp
 19:28:04), 0 panggilan `/v1/auth/google`, `google_identities=0`. Gate tidak berubah:
 38 baris — 29 PASS / 4 PARTIAL / 5 NOT RUN. Langkah pemilik tinggal menekan **Run** konfigurasi
 `app` di Android Studio, login Google, lalu menautkan Gmail lewat sheet onboarding.
+
+### Checklist aksi pemilik — ronde 23
+
+Ditambahkan `docs/delivery/OWNER_ACTION_CHECKLIST_2026-11-24.md` (ditautkan dari README) berisi
+langkah penutupan empat gate yang tersisa: (1) G36 Run Android Studio + login Google + link/skip
+Gmail, (2) G29/G37 cek/lepas Billing dan konfirmasi Rp0, (3) G24 keputusan CR-005/006/007 lalu
+merge/deploy/revisi SRS, (4) G14 drill hapus retensi pada salinan DB. Checklist menegaskan
+prasyarat otomatis siap (preflight exit 0) dan batasan sesi (tanpa `gcloud`, tombol Run manual).
+
+Verifikasi ronde 23: tidak ada aktivitas owner baru (APK masih `lastUpdateTime 19:28:04`,
+0 panggilan `/v1/auth/google`, `google_identities=0`); `/readyz=200`, 0 ERROR/FATAL,
+`gmail_sync_pass failures=0`, DB 914 transaksi / 21 job COMPLETE. Gate tidak berubah:
+38 baris — 29 PASS / 4 PARTIAL / 5 NOT RUN.
