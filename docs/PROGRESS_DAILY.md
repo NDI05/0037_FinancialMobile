@@ -377,9 +377,8 @@ Pengerjaan `task-15` di branch `feat/c2-android` (HEAD `e4ff68c`, push `a86bded.
 
 - **Pensiun CR-008**: administrasi pengguna, lampiran transaksi (termasuk kamera, izin file,
   FileProvider) dan perencanaan anggaran dihapus dari navigasi, DI, Settings, strings dan tes.
-  Form Tambah Transaksi manual tetap lengkap tanpa file. Room dinaikkan v1→v2; `MIGRATION_1_2`
-  menghapus `budget_limits`/`budget_plans`, schema v1 dipertahankan dan v2 ditambahkan.
-  Commit `ee80ca4`, `ecdca26`, `e7614bc`.
+  Form Tambah Transaksi manual tetap lengkap tanpa file. Room dinaikkan v1→v2; schema v1
+  dipertahankan dan v2 ditambahkan. Commit `ee80ca4`, `ecdca26`, `e7614bc`.
 - **FR-32**: kartu Masuk/Keluar Ringkasan membuka destinasi Transaksi dengan `direction`
   `CREDIT`/`DEBIT` + bulan, dibaca ViewModel sebagai filter lokal dan diteruskan ke server;
   drill-down mendapat back ke Ringkasan. Param `bank` disiapkan tetapi belum diterapkan karena
@@ -393,10 +392,17 @@ Pengerjaan `task-15` di branch `feat/c2-android` (HEAD `e4ff68c`, push `a86bded.
 - **Copy**: janji "saran anggaran"/"rencana anggaran" dihapus dari analisis dan penghapusan data;
   satu-satunya "budget" tersisa adalah reason code classifier `update_status_reason_budget`.
   Commit `e4ff68c`.
+- **Koreksi migrasi non-destruktif (SRS v0.7 §3)**: `MIGRATION_1_2` tidak lagi menghapus tabel.
+  `budget_limits`/`budget_plans` tetap tersimpan sebagai skema legacy yatim yang tidak dibaca/
+  ditulis UI; pemilik dapat memutuskan pembersihannya kelak lewat keputusan terpisah. Data
+  transaksi/kategori/settings tidak disentuh. Tes migrasi baru membangun DB v1 nyata dari artefak
+  schema, mengisi transaksi + kategori + settings + baris anggaran, menjalankan migrasi lewat Room,
+  lalu memverifikasi semua baris utuh dan Room bisa melayani query setelah upgrade.
 
-Gate fresh pada HEAD `e4ff68c`: `:app:testDebugUnitTest` **586 tes / 82 suite / 0 gagal**
-(jumlah suite turun karena tes modul yang dipensiunkan ikut dihapus), `:app:lintDebug`
-**0 error / 115 warning / 1 hint**, `:app:assembleDebug` lulus (APK debug **47.610.363 byte**,
-sha256 `53b9e9e90d589d16ca6ddaf92ebe7707015587465d3d147bb2f83ebbb101261d`). UAT emulator/HP untuk
-lane ini **NOT RUN**.
+Gate fresh pada commit kode `1acc835` (setelah koreksi migrasi): `:app:testDebugUnitTest`
+**587 tes / 83 suite / 0 gagal** (satu suite migrasi baru; jumlah suite tetap lebih rendah dari
+baseline karena tes modul yang dipensiunkan ikut dihapus), `:app:lintDebug` **0 error / 115
+warning / 1 hint**, `:app:assembleDebug` lulus (APK debug **47.742.524 byte**, sha256
+`4b852c377e2a3b4f52ea65e0c1e810f6967fc6f06024703dd7cf1328ef13a298`). UAT emulator/HP untuk lane
+ini **NOT RUN**.
 
