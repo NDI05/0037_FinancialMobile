@@ -486,10 +486,8 @@ class ScreenScreenshotsTest {
             SettingsScreen(
                 onOpenGmailLink = {},
                 onOpenConsentHistory = {},
-                onOpenBudget = {},
                 onOpenCategories = {},
                 onOpenDeletion = {},
-                onOpenAdmin = {},
                 onSignedOut = {},
                 viewModel = viewModel,
             )
@@ -523,10 +521,8 @@ class ScreenScreenshotsTest {
             SettingsScreen(
                 onOpenGmailLink = {},
                 onOpenConsentHistory = {},
-                onOpenBudget = {},
                 onOpenCategories = {},
                 onOpenDeletion = {},
-                onOpenAdmin = {},
                 onSignedOut = {},
                 viewModel = viewModel,
             )

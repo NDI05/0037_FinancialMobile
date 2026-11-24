@@ -34,7 +34,6 @@ import com.pam.recap.R
 import com.pam.recap.ui.components.BottomNavBar
 import com.pam.recap.ui.components.BottomNavItem
 import com.pam.recap.ui.feature.analysis.AnalysisScreen
-import com.pam.recap.ui.feature.budget.BudgetPlanScreen
 import com.pam.recap.ui.feature.category.CategoryManagementScreen
 import com.pam.recap.ui.feature.consent.ConsentScreen
 import com.pam.recap.ui.feature.entry.ManualEntryScreen
@@ -45,7 +44,6 @@ import com.pam.recap.ui.feature.overview.OverviewScreen
 import com.pam.recap.ui.feature.settings.ConsentHistoryScreen
 import com.pam.recap.ui.feature.settings.DataDeletionScreen
 import com.pam.recap.ui.feature.settings.SettingsScreen
-import com.pam.recap.ui.feature.admin.AdminScreenRoot
 import com.pam.recap.ui.feature.transactions.TransactionDetailScreen
 import com.pam.recap.ui.feature.transactions.TransactionsScreen
 import com.pam.recap.ui.feature.account.AccountMode
@@ -219,18 +217,12 @@ fun PamNavHost(
                 )
             }
 
-            composable<PamDestination.BudgetPlan> {
-                BudgetPlanScreen(onBack = { navController.popBackStack() })
-            }
-
             composable<PamDestination.Settings> {
                 SettingsScreen(
                     onOpenGmailLink = { navController.navigate(PamDestination.GmailLink()) },
                     onOpenConsentHistory = { navController.navigate(PamDestination.ConsentHistory) },
-                    onOpenBudget = { navController.navigate(PamDestination.BudgetPlan()) },
                     onOpenCategories = { navController.navigate(PamDestination.CategoryManagement) },
                     onOpenDeletion = { navController.navigate(PamDestination.DataDeletion) },
-                    onOpenAdmin = { navController.navigate(PamDestination.Admin) },
                     onOpenAccount = { navController.navigate(PamDestination.AccountSettings) },
                     onSignedOut = { navController.replaceWith(PamDestination.Welcome) },
                 )
@@ -238,10 +230,6 @@ fun PamNavHost(
 
             composable<PamDestination.CategoryManagement> {
                 CategoryManagementScreen(onBack = { navController.popBackStack() })
-            }
-
-            composable<PamDestination.Admin> {
-                AdminScreenRoot(onBack = { navController.popBackStack() })
             }
 
             composable<PamDestination.ConsentHistory> {

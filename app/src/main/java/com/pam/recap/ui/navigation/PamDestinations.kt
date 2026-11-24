@@ -57,9 +57,6 @@ sealed interface PamDestination {
     data class Analysis(val monthId: String? = null) : PamDestination
 
     @Serializable
-    data class BudgetPlan(val monthId: String? = null) : PamDestination
-
-    @Serializable
     data object CategoryManagement : PamDestination
 
     @Serializable
@@ -78,10 +75,6 @@ sealed interface PamDestination {
 
     @Serializable
     data object DataDeletion : PamDestination
-
-    /** S4.2 admin account management; the screen itself gates on the server role. */
-    @Serializable
-    data object Admin : PamDestination
 
     companion object {
         /** Tab keys used by the bottom bar; they are technical ids, not user copy. */

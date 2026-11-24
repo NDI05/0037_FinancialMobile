@@ -20,9 +20,7 @@ import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Logout
-import androidx.compose.material.icons.rounded.ManageAccounts
 import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -66,10 +64,8 @@ import com.pam.recap.ui.util.appErrorRes
 fun SettingsScreen(
     onOpenGmailLink: () -> Unit,
     onOpenConsentHistory: () -> Unit,
-    onOpenBudget: () -> Unit,
     onOpenCategories: () -> Unit,
     onOpenDeletion: () -> Unit,
-    onOpenAdmin: () -> Unit,
     onSignedOut: () -> Unit,
     /** Opens the signed-in "Akun" editor (Google link state + Gmail shortcut). */
     onOpenAccount: () -> Unit = {},
@@ -177,12 +173,6 @@ fun SettingsScreen(
                 onClick = onOpenConsentHistory,
             )
             SettingsRow(
-                icon = Icons.Rounded.Savings,
-                title = stringResource(R.string.budget_title),
-                subtitle = stringResource(R.string.settings_budget_body),
-                onClick = onOpenBudget,
-            )
-            SettingsRow(
                 icon = Icons.Rounded.Category,
                 title = stringResource(R.string.category_manage_title),
                 subtitle = stringResource(R.string.settings_categories_body),
@@ -250,12 +240,6 @@ fun SettingsScreen(
                 )
             }
 
-            SettingsRow(
-                icon = Icons.Rounded.ManageAccounts,
-                title = stringResource(R.string.admin_title),
-                subtitle = stringResource(R.string.settings_admin_row),
-                onClick = onOpenAdmin,
-            )
             SettingsRow(
                 icon = Icons.Rounded.DeleteOutline,
                 title = stringResource(R.string.settings_delete),
