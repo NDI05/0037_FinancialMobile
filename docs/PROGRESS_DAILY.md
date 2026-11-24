@@ -406,3 +406,30 @@ warning / 1 hint**, `:app:assembleDebug` lulus (APK debug **47.742.524 byte**, s
 `4b852c377e2a3b4f52ea65e0c1e810f6967fc6f06024703dd7cf1328ef13a298`). UAT emulator/HP untuk lane
 ini **NOT RUN**.
 
+
+### Tindak lanjut audit independen Android (24 November 2026, 23.00 WIB)
+
+Audit independen `/tmp/AUDIT_V07_ANDROID.md` (P0=0, P1=0, P2=3, P3=3) ditindaklanjuti pada
+branch `feat/c2-android` commit kode `b56e28f`:
+
+- **P2-2 FR-26 catatan opsional**: form manual mendapat field catatan multiline (batas 500
+  karakter yang sama dengan detail), disimpan lewat `ManualTransactionDraft.note`, ikut dalam
+  identitas idempotensi pending action (payload lama 7-field tetap terbaca dengan catatan kosong),
+  dan tetap sah bila kosong. Detail transaksi sudah menampilkan catatan yang tersimpan.
+- **P2-3 NFR-15 batas tanggal**: panah tanggal manual dijepit ke [lantai jendela setahun, hari ini
+  WIB]; panah nonaktif di kedua ujung; draft yang termuat di luar rentang ditolak saat simpan
+  dengan pesan id+en `manual_date_out_of_window` (mapping `INVALID_DATE` baru). Tes batas
+  mencakup hari ini, besok, lantai jendela, sehari sebelum lantai, akhir bulan, dan leap day
+  (2028-02-29 → lantai 2027-02-28).
+- **P3-a**: `PLAN_VALUE_NEGATIVE` beserta string id/en dan mapping copy-nya dihapus.
+- **P3-b**: `error_account_inactive` tidak lagi menyebut admin PAM; diarahkan ke dukungan PAM.
+- **P3-c**: log ini dan README disinkronkan dengan gate terbaru. Ukuran/sha256 APK dicatat sebagai
+  **fingerprint build, bukan invariant deterministik** — auditor independen memperoleh
+  ukuran/hash berbeda dari build ulang pada commit yang sama.
+- **P2-1 FR-32 bank filter TIDAK diimplementasikan**: dicatat sebagai keputusan produk terblokir
+  di [CR-008](changes/CR_008_DRAFT_PRODUCT_SCOPE.md); model/API belum punya dimensi bank dan
+  parameter route diterima-tidak-dipakai.
+
+Gate fresh pada commit kode `b56e28f`: `:app:testDebugUnitTest` **602 tes / 85 suite / 0 gagal`,
+`:app:lintDebug` **0 error / 117 warning / 1 hint**, `:app:assembleDebug` lulus (APK debug **48.819.325** byte,
+sha256 `3c5f6b70fe3e0dc1979c62184a3a271f4360b52ad0f1c25b5287dd55613d656e`, fingerprint non-deterministik). UAT perangkat/emulator lane ini **NOT RUN**.

@@ -24,3 +24,9 @@ Keputusan pemilik pada 24 November 2026. Perubahan cakupan produk dicatat untuk 
 Saat menyusun revisi konsolidasi, selaraskan cakupan, FR/NFR/DR dan kriteria penerimaan terkait, daftar layar, peran, model data, diagram, dan matriks akademik. Gunakan jejak revisi untuk menandai requirement yang dipensiunkan. Fitur atau entitas pengganti memerlukan keputusan tersendiri.
 
 Keputusan produk sudah dikonsolidasikan dalam [draf SRS v0.7 DOCX](../specifications/PAM_SRS_v0.7_Personal_Finance_Draft.docx) dan [PDF](../specifications/PAM_SRS_v0.7_Personal_Finance_Draft.pdf). Pemetaan D.5, D.6, dan D.9 serta pendaftaran akun baru tetap sebagai isu terbuka. Perubahan Android dan Go, migrasi atau penghapusan data, dan uji regresi mengikuti rencana transisi yang telah ditinjau.
+
+## Catatan FR-32 — dimensi bank belum applicable (24 November 2026)
+
+Audit independen lane Android menandai filter `bank` sebagai temuan P2 yang **terblokir keputusan produk**, bukan cacat implementasi. Model `Transaction` dan kontrak API saat ini tidak memiliki dimensi bank, sehingga kartu Masuk/Keluar hanya membuka daftar Transaksi terfilter arah (`CREDIT`/`DEBIT`) dan bulan. Parameter `bank` pada route Transaksi diterima tetapi tidak dipakai; tidak ada field, data, atau nilai bank yang dikarang di klien.
+
+Filter multi-bank baru relevan bila pemilik memutuskan mengaktifkan cakupan multi-bank bertahap (SRS v0.7 §3.3, §3.12, dan FR-75). Sampai keputusan itu ada, scope tetap tertutup: tidak ada perubahan backend, tidak ada field baru pada model/DB, dan tidak ada migrasi data. Bila diaktifkan kelak, keputusan tersebut memerlukan CR terpisah beserta perubahan kontrak, model, dan tes.
