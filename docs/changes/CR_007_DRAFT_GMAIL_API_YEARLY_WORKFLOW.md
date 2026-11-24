@@ -1,7 +1,7 @@
 # CR-007 — Draf revisi SRS untuk Google SSO, Gmail API, dan workflow setahun
 
 Tanggal: **24 November 2026**. Revisi desain mencakup polling 15 menit dan onboarding Google SSO.
-Status: **draf untuk konsolidasi SRS; BELUM diterapkan**. Full SRS resmi tetap v0.5;
+Status: **draf untuk konsolidasi SRS; BELUM diterapkan**. Full SRS resmi tetap v0.5; Revisi 24 November 2026 (ronde 6): Gmail live **PASS untuk akun pilot owner**; SSO live dan Rp0 tetap NOT RUN/OPEN.
 file DOCX/PDF, requirement ID resmi, dan version history tidak berubah oleh CR ini.
 Nomor versi berikutnya dan nomor FR/NFR final belum ditetapkan.
 
@@ -57,10 +57,10 @@ tertutup secara andal dan menambah permukaan kredensial di perangkat.
 | DRAFT-SSO-01 | Android memulai **Masuk dengan Google** melalui Credential Manager. Go memvalidasi tanda tangan ID token, issuer, audience, expiry, dan nonce sebelum menerbitkan sesi PAM. Identitas disimpan sebagai pasangan issuer dan `sub`. | **IMPLEMENTED (fixture/unit)** `pam-app@e67380a`, backend `71013f5`: Credential Manager `GetGoogleIdOption` (picker selalu tampil, tanpa auto-select) + verifier Go RS256-only dengan JWKS cache/rotate, iss whitelist, aud = Web Client ID, skew exp/nbf/iat, dan nonce sekali pakai (consume-before-verify, replay ditolak). Tes: `internal/auth`, `internal/httpapi`, Android `GoogleSsoBackendTest`/Compose. UAT HP akun Google nyata **NOT RUN (owner)**. |
 | DRAFT-SSO-02 | Akun lama menautkan identitas Google setelah autentikasi PAM. Penautan unik, atomik, dan mempertahankan owner, transaksi, role, serta koneksi Gmail. Email sama tidak memicu penggabungan. Pembuatan akun baru tetap tunduk pada undangan dan kebijakan akun yang berlaku. | **IMPLEMENTED (fixture/unit)** migrasi 021 `google_identities` PK(issuer,subject) + UNIQUE(owner_id) dengan FK cascade; `POST /v1/auth/google/link` idempoten, konflik lintas owner → 409, akun nonaktif → 403, penautan bersamaan owner sama tepat satu pemenang dan satu 409 (tanpa 500), email sama beda `sub` tidak merge; tes memastikan transaksi/koneksi Gmail owner tidak berubah. Login ulang akun lama + UAT HP akun Google nyata **NOT RUN (owner)**. |
 | DRAFT-SSO-03 | Setelah SSO, tawarkan akses `gmail.readonly` kepada pengguna yang belum menautkan Gmail. Gmail boleh memakai akun sama atau berbeda. Consent Gmail terpisah dari identitas Google dan akses AI. Lewati, tolak, atau cabut Gmail tetap memungkinkan akses PAM dan transaksi manual. | **PARTIAL**: onboarding Gmail pasca-login + tombol Lewati per-owner (persisten DataStore), non-blocking, dan consent Gmail/AI terpisah sudah diimplementasi serta diuji unit/Compose; consent Google nyata, backfill setahun, dan pencabutan akses di HP akun nyata **NOT RUN (owner)**. Bukti polling FIXTURE tetap berlaku untuk lingkup fixture. |
-| DRAFT-SSO-04 | Profil pilot memakai Google Sign-In langsung, Gmail API standar, dan backend Go yang tersedia. Gate Rp0 membutuhkan project tanpa Billing tertaut dan alur live yang lulus. | **NOT RUN (owner)**. Kode tidak menambah Cloud Identity Platform/Pub/Sub/layanan berbayar dan desain default tetap polling; tetapi Billing project masih tertaut, akun Google/Gmail live belum diuji, dan gate Rp0 tetap **OPEN**. SSO, Gmail live, dan Rp0 dilaporkan sebagai gate terpisah. |
+| DRAFT-SSO-04 | Profil pilot memakai Google Sign-In langsung, Gmail API standar, dan backend Go yang tersedia. Gate Rp0 membutuhkan project tanpa Billing tertaut dan alur live yang lulus. | **PARTIAL**: Gmail live sudah **PASS untuk akun pilot owner** (polling 12/12 bulan, 914 transaksi unik, 0 duplikat; `GMAIL_LIVE_IMPORT_2026-11-24.md`); login Google nyata (**G36**) dan gate **Rp0** (Billing masih tertaut) tetap **NOT RUN/OPEN**. Kode tidak menambah Cloud Identity Platform/Pub/Sub/layanan berbayar dan desain default tetap polling. SSO, Gmail live, dan Rp0 dilaporkan sebagai gate terpisah. |
 | DRAFT-GM-01 | Owner menautkan Gmail dari sesi PAM aktif; server membuat `state` acak sekali pakai (TTL ≤10 menit) terikat owner + PKCE S256; callback menukar code, menyimpan refresh token terenkripsi, dan selalu mengembalikan owner ke app lewat deep link `pam://gmail/connected` dengan kode alasan aman | Kontrak §1–2; E2E fake `normal/history_expired/rate_limit` (`docs/evidence/GMAIL_CONTRACT_E2E_2026-11-24.md`); UAT perangkat FIXTURE butir 2 (`docs/evidence/GMAIL_POLLING_UAT_PHONE_2026-11-24.md`); tes `internal/gmail` |
 | DRAFT-GM-02 | Hanya satu koneksi Gmail ACTIVE per owner; sambung ulang dengan akun lain mencabut token lama sebelum mengganti (dan menghentikan watch hanya bila mode push aktif); scope minimum `gmail.readonly`; status tidak pernah menampilkan token/email penuh | Kontrak §3; tes isolasi owner A/B; E2E status termask tanpa token/message id |
-| DRAFT-GM-03 | **Default polling 15 menit**: worker memanggil `history.list` tiap `GMAIL_DELTA_INTERVAL_SECONDS=900` dan backfill bertahap; **tidak ada** `users.watch`, `users.stop`, webhook push, atau verifier OIDC pada mode default; delta berjalan **selama backend hidup**, aplikasi boleh tertutup | Default config backend (`GMAIL_MODE=polling`, delta 900 dtk); E2E: `watchCalls=0`, `stopCalls=0`, `POST /v1/internal/gmail/push` → 404 (82/82 PASS); UAT FIXTURE butir 7 (app force-stop, delta tersimpan) |
+| DRAFT-GM-03 | **Default polling 15 menit**: worker memanggil `history.list` tiap `GMAIL_DELTA_INTERVAL_SECONDS=900` dan backfill bertahap; **tidak ada** `users.watch`, `users.stop`, webhook push, atau verifier OIDC pada mode default; delta berjalan **selama backend hidup**, aplikasi boleh tertutup | Default config backend (`GMAIL_MODE=polling`, delta 900 dtk); E2E: `watchCalls=0`, `stopCalls=0`, `POST /v1/internal/gmail/push` → 404 (82/82 PASS); UAT FIXTURE butir 7 (app force-stop, delta tersimpan) ; **live**: backfill 12/12 bulan pada mailbox nyata hanya lewat polling (tanpa Pub/Sub), `sync_state=idle` setelah selesai |
 | DRAFT-GM-04 | Push + `users.watch` + Pub/Sub hanya **opt-in rollback**: aktif hanya bila `GMAIL_MODE=push` dan topik/audience/service account dikonfigurasi; event push diverifikasi OIDC, durable, dedupe; tanpa topik tidak ada webhook/verifier | Tes push (JWT valid/invalid/expired, replay, NEEDS_REAUTH) pada mode push; gate live Pub/Sub **NOT RUN (owner)** |
 | DRAFT-GM-05 | "Sinkronkan sekarang" menulis permintaan ke **antrean job Go durable**: `202 {"queued":true,"coalesced":...}`; cooldown 60 detik → `429 {"code":"sync_cooldown","retryable":true,"retryAfterSeconds":N}`; permintaan aktif memicu `coalesced`; dedupe; job/permintaan lanjut setelah backend restart dan marker dibersihkan saat drain | Kontrak §9.3; E2E `manual sync 202 → 429`, restart lanjut tanpa duplikat; UAT FIXTURE butir 5–6 (202 + drain "Menunggu", 429 + hitungan mundur); perbaikan audit ronde 4 (`1290910`) |
 | DRAFT-GM-06 | Backfill awal 12 bulan bergulir WIB diproses **bertahap** (halaman per run dibatasi), **mengalah pada delta**, bulan berjalan lebih dulu; checkpoint per batch; email lintas bulan dirutekan ke bulan transaksi (bukan bulan kedatangan); transaksi di luar jendela retensi ditolak eksplisit | `GMAIL_BACKFILL_MONTHS=12`, `GMAIL_MAX_PAGES_PER_RUN`; E2E `months_done=12/12`; UAT FIXTURE butir 3 (12/12, 27 transaksi sintetis) |
@@ -69,6 +69,7 @@ tertutup secara andal dan menambah permukaan kredensial di perangkat.
 | DRAFT-GM-09 | Rate limit/429 provider tidak boleh memarkir owner di `FAILED` permanen atau meminta reauth; retry internal terbatas (maks 3, exponential) dan status tetap jujur (`last_error_code`, `last_attempt_at`, `next_sync_at`); Gmail nonaktif → `503 gmail_disabled`, belum tertaut → `409 gmail_not_connected`, grant dicabut → `409 gmail_needs_reauth` | E2E skenario `rate_limit` (bukan error permanen, `needs_reauth=false`); kontrak §9.3; tes config/handler |
 | DRAFT-GM-10 | Status sinkron server diproyeksikan untuk UI: `connected`, email termask, `scope`, `sync_state` (`idle/backfill/delta/error`), `progress{phase,month,months_done,months_total,pages_done}`, `last_attempt_at`, `last_success_at`, `next_sync_at`, `sync_requested_at`, `last_error_code`, `needs_reauth`; `watch_expires_at` null/absen pada polling | Kontrak §3/§9.2; E2E pemeriksaan bentuk status; UAT FIXTURE butir 4 (panel "Sinkron server Gmail") |
 | DRAFT-GM-11 | Consent **Gmail**, **AI kategorisasi**, dan **AI analisis** terpisah; menolak satu consent tidak mematikan yang lain; layar tautkan menjelaskan status server dengan jujur (tanpa CTA menyesatkan saat Gmail nonaktif) | Tes consent UI/backend; UAT FIXTURE profil fixture dengan consent AI nonaktif |
+| DRAFT-GM-13 | Parser Livin harus menerima **templat produksi**, bukan hanya fixture: label boleh berada di baris sendiri (`Penerima` lalu nilai di baris berikutnya) dan tanggal boleh memakai nama/abreviasi bulan Indonesia (`Okt`, `Agu`, `Des`, …) dengan waktu terpisah (`pkl … WIB`) | Live ronde 6: backfill awal mengimpor 0 karena bentuk produksi; perbaikan backend `5df6be6` + `c98527b` dengan regresi `TestParseLivinStacked*`/`TestParseLivinIndonesianMonthAbbreviation`; setelah itu 914 transaksi unik, 0 duplikat |
 | DRAFT-GM-12 | **Target biaya GCP Rp0** untuk pemakaian pilot: jalur default tidak memerlukan Pub/Sub topic/subscription, Cloud Run/endpoint publik, atau verifikasi OIDC; backfill/delta cukup memakai kuota Gmail API gratis yang relevan | Default config polling; gate **Rp0 OPEN**: Billing masih tertaut dan pemakaian nyata belum diukur — **NOT RUN (owner)** |
 | DRAFT-RT-01 | Data keuangan disimpan dalam jendela bergulir satu tahun WIB; permintaan di luar jendela ditolak `400 outside_retention` dengan metadata jendela, bukan error server | migrasi 018 + guard backend; [RETENTION_POLICY_IMPLEMENTATION](https://github.com/NDI05/0037-Backend-Financial/blob/integration/2026-11-24/docs/RETENTION_POLICY_IMPLEMENTATION.md) |
 | DRAFT-RT-02 | Sweep retensi default report-only (hanya audit agregat); penghapusan memerlukan flag `RETENTION_DELETE_ENABLED`, token internal, dan konfirmasi literal; budget plan dikecualikan | Tes store/httpapi; gate hapus data nyata **NOT RUN (owner)** |
@@ -100,13 +101,15 @@ tertutup secara andal dan menambah permukaan kredensial di perangkat.
 
 1. Merge `feat/c2-android`/`integration/2026-11-24` ke `main` repo masing-masing dan deployment;
    saat ini hanya branch yang dipush.
-2. Siapkan Web OAuth client UAT dan test user Gmail. Verifikasi package dan SHA-1
-   Android OAuth client untuk Google SSO. Untuk produksi, periksa ketentuan restricted scope
-   dan assessment yang berlaku. Topik dan subscription Pub/Sub diperlukan bila mode push dipakai.
+2. Web OAuth client UAT, redirect loopback, dan test user Gmail sudah terbukti dipakai pada UAT
+   Gmail live 24 November 2026. Masih perlu verifikasi package + SHA-1 Android OAuth client untuk
+   **SSO live** (G36); lalu periksa ketentuan restricted scope dan assessment untuk produksi.
+   Topik dan subscription Pub/Sub hanya diperlukan bila mode push opt-in dipakai.
 3. Memverifikasi target biaya **Rp0** (Billing saat ini masih tertaut) dan mengukur kuota Gmail API
    pada akun pilot.
 4. Rotasi client secret/service account dan pemasangan kredensial di lingkungan UAT.
-5. Akun pilot untuk E2E Gmail live dan izin UAT pada data nyata.
+5. Akun pilot Gmail live sudah dipakai pada UAT 24 November 2026 (izin data nyata dari pemilik);
+   sisanya login Google nyata untuk SSO (G36) dan verifikasi Rp0 (G29/G37).
 6. Keputusan menghentikan jalur app-password perangkat sepenuhnya setelah rollback teruji.
 
 ## 5. Batas draf dan status bukti
@@ -114,23 +117,33 @@ tertutup secara andal dan menambah permukaan kredensial di perangkat.
 Status implementasi per 24 November 2026:
 
 - **Google SSO dan onboarding Gmail terpadu**: implementasi selesai di fixture/unit
-  (`pam-app@e67380a`, backend `71013f5`; lihat DRAFT-SSO-01..04). UAT akun Google nyata,
-  Gmail live, dan gate Rp0 **NOT RUN (owner)**. Bukti polling di bawah mendahului
-  perubahan login ini.
-- Android `feat/c2-android` HEAD `a7abb14`: unit debug **639 tes/83 suite/0 gagal**,
-  `lintDebug` **0 error/120 warning**, `assembleDebug` PASS, APK debug 46.433.025 byte.
-- Backend `integration/2026-11-24` HEAD `1290910`: `vet`/`build`/`test ./... -count=1` PASS,
-  `-race` Gmail/store/httpapi PASS; perbaikan audit ronde 4 mencakup pembersihan marker
-  `sync_requested_at`, kontrak 429, fase kegagalan, dan `409 gmail_needs_reauth`.
+  (`pam-app@e67380a`, backend `71013f5`; lihat DRAFT-SSO-01..04). **Gmail live sudah PASS untuk
+  akun pilot owner** (polling 12/12 bulan, 914 transaksi unik, 0 duplikat; perbaikan parser
+  `5df6be6`/`c98527b`). UAT login **Google nyata (G36)** dan gate **Rp0 (G29/G37)** tetap
+  **NOT RUN/OPEN**. Bukti polling FIXTURE di bawah berlaku untuk lingkup fixture saja.
+- Android `feat/c2-android` HEAD `edd7570` (kode aplikasi tidak berubah sejak `e67380a`), verifikasi
+  fresh ronde 7: unit debug **678 tes/88 suite/0 gagal/0 dilewati**, `lintDebug`
+  **0 error/123 warning**, `assembleDebug` PASS (APK debug 47.992.939 byte, sha256 `5368c92f…`;
+  build UAT memakai `local.properties` owner sehingga Web OAuth client ID masuk `BuildConfig`).
+  Tes `GoogleSsoAccountSourceTest` diperbaiki agar mengikuti client ID yang benar-benar
+  dikonfigurasi (sebelumnya mengasumsikan checkout tanpa client ID).
+- Backend `integration/2026-11-24` HEAD `4244f4f`, verifikasi fresh ronde 7: `vet`/`build`/
+  `test ./... -count=1` PASS (10 paket), `-race` auth/gmail/httpapi/store PASS; perbaikan
+  akumulatif ronde 4–6 mencakup marker `sync_requested_at`, kontrak 429, fase kegagalan,
+  `409 gmail_needs_reauth`, label/waktu stacked, dan bulan Indonesia.
 - Kontrak polling §9 diverifikasi black-box dengan provider fake: **PASS=82, FAIL=0**
   (`docs/evidence/GMAIL_CONTRACT_E2E_2026-11-24.md`), termasuk backfill 12/12, sync 202→429,
   restart tanpa duplikat, recovery history 404, dan rate limit tidak permanen.
 - UAT perangkat fisik FIXTURE: **PASS** alur terkontrol (`docs/evidence/GMAIL_POLLING_UAT_PHONE_2026-11-24.md`),
   termasuk delta saat app ditutup, manual sync + cooldown, dan restart backend. Ini **bukan**
   bukti Gmail live.
+- UAT Gmail live akun pilot owner: **PASS (G25)** — backfill 12/12 COMPLETE, 914 transaksi unik,
+  0 baris duplikat, rate limit ditangani backoff; bukti agregat
+  (`docs/evidence/GMAIL_LIVE_IMPORT_2026-11-24.md`).
+- Matriks gate: **29 PASS, 4 PARTIAL, 5 NOT RUN** (38 gate), tanpa FAIL.
 
-Gate yang **NOT RUN (owner)**: Gmail live/consent Google nyata, Web OAuth client + test user,
-topik Pub/Sub nyata (hanya bila push opt-in dipakai), Azure nyata, dan **GCP Rp0** (Billing masih
-tertaut ⇒ gate OPEN). Tombol **Run** Android Studio secara literal juga **NOT RUN** (instalasi UAT
+Gate yang **NOT RUN (owner)**: login Google nyata (**G36**), topik Pub/Sub nyata (hanya bila push
+opt-in dipakai), Azure nyata, hapus/restore data nyata (G14), dan **GCP Rp0** (G29/G37; Billing
+masih tertaut). Tombol **Run** Android Studio secara literal juga **NOT RUN** (instalasi UAT
 memakai `adb install -r`); lihat penyimpangan di evidence UAT. Draf ini tidak menyatakan SRS
-resmi berubah dan tidak mengklaim Gmail live atau Rp0 PASS.
+resmi berubah dan tidak mengklaim SSO live atau Rp0 PASS.

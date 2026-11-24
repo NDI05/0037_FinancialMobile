@@ -35,6 +35,15 @@ menjadi PASS (live, akun pilot owner)**; G29/G37 (Rp0) tetap OPEN dan **G36 (SSO
 Run pemilik) tetap NOT RUN** karena login Google nyata belum dicoba. Gate Gmail live dan SSO
 dilaporkan terpisah sesuai mandat.
 
+Revisi 24 November 2026 (ronde 7): **verifikasi ulang gate teknis** setelah UAT live, dengan
+`local.properties` pemilik aktif (Web OAuth client ID terisi). Hasil fresh: backend `vet`/`build`/
+`test ./... -count=1` (10 paket) dan `-race` auth/gmail/httpapi/store **PASS**; Android
+`testDebugUnitTest` **678 tes/88 suite/0 gagal/0 dilewati**, `lintDebug` **0 error/123 warning**,
+`assembleDebug` **PASS** (APK 47.992.939 B, sha256 `5368c92f…`). Satu tes diperbaiki:
+`GoogleSsoAccountSourceTest` mengasumsikan checkout tanpa client ID sehingga gagal di mesin UAT;
+kini tes memverifikasi pemetaan `PAM_GOOGLE_SSO_CLIENT_ID` → `PAM_GOOGLE_SSO_ENABLED`. Status gate
+**tidak berubah**: G25 PASS (live, akun pilot owner), G29/G36/G37 NOT RUN/OPEN atas pemilik.
+
 ## 1. Pasangan build yang diverifikasi
 
 | Komponen | Repo | Branch | HEAD | Status `main` |

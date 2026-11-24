@@ -149,3 +149,16 @@ Livin nyata tersimpan tanpa duplikat**: backfill **12/12 bulan COMPLETE**, **914
 RUN. Bukti agregat: [GMAIL_LIVE_IMPORT](../evidence/GMAIL_LIVE_IMPORT_2026-11-24.md). Tidak ada
 alamat email, nominal, merchant, ID pesan, atau token yang ditulis ke repo/chat; data owner tetap
 di profil lokalnya.
+
+### Verifikasi ulang gate + perbaikan tes SSO (24 Nov 2026, ronde 7)
+
+Setelah Gmail live PASS, gate teknis dijalankan ulang dengan `local.properties` pemilik aktif:
+backend `vet`/`build`/`test ./... -count=1` dan `-race` auth/gmail/httpapi/store **PASS**
+(HEAD `4244f4f`); Android `testDebugUnitTest` **678 tes/88 suite/0 gagal**, `lintDebug`
+**0 error/123 warning**, `assembleDebug` PASS (APK 47.992.939 B, sha256 `5368c92f…`). Ditemukan
+satu tes rapuh: `GoogleSsoAccountSourceTest` mengasumsikan unit-test build tanpa Web OAuth client
+ID, padahal mesin UAT owner mengisinya di `local.properties`; tes kini memverifikasi pemetaan
+konfigurasi (client ID terisi ⇔ SSO aktif), bukan nilai khusus satu mesin. CR-007 diperbarui:
+DRAFT-SSO-04 menjadi PARTIAL (Gmail live PASS; SSO/Rp0 terbuka), DRAFT-GM-13 ditambah untuk
+templat produksi Livin, dan status bukti ronde 7 dicatat. Gate tetap **29 PASS / 4 PARTIAL /
+5 NOT RUN**; G36 (SSO Google nyata + Run pemilik) dan G29/G37 (Rp0) menunggu pemilik.
