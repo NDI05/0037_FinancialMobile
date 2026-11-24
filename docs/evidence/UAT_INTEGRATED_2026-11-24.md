@@ -23,7 +23,8 @@ bukan pernyataan tentang gate live Google.
 | 6 | Analisis dengan consent belum diberikan | `06_analisis.png`: penjelasan agregat + CTA "Buka persetujuan"; tidak ada panggilan provider | PASS |
 | 7 | Layar Tautkan Gmail saat `GMAIL_ENABLED=false` | `07_gmail_disabled.png`: "Server PAM belum mengaktifkan tautan Gmail…", tanpa CTA connect menyesatkan, ledger izin/retensi tampil | PASS |
 | 8 | Entri IMAP lama tidak lagi tampil di Pengaturan | APK final dipasang ulang (`app-debug.apk`, sha256 `e5cba1dc…`): `08_pengaturan_final.png`+dump menunjukkan hanya "Tautkan Gmail lewat browser", label cakupan "Email Livin hanya-baca (tanpa akses tulis)", tanpa tombol "Kelola kotak masuk" | PASS |
-| 9 | TalkBack/48 dp/font 200%/360–412 dp pada HEAD ini | Bukti aksesibilitas sebelumnya: [UAT_ACCESSIBILITY_2026-11-24](UAT_ACCESSIBILITY_2026-11-24.md); tidak diulang pada pasangan build ini | PARTIAL |
+| 9 | Font 200% + lebar 360 dp pada APK final | `09_font200_ringkasan.png`/`10_font200_360dp_transaksi.png` + dump: Ringkasan dan Transaksi tetap menampilkan data, tanpa crash/kehilangan konten; `wm density 480` (1080 px = 360 dp), `font_scale 2.0` | PASS (otomatis) |
+| 9b | TalkBack/48 dp/393–412 dp pada HEAD ini | Bukti aksesibilitas sebelumnya: [UAT_ACCESSIBILITY_2026-11-24](UAT_ACCESSIBILITY_2026-11-24.md); walk TalkBack manual di APK final belum diulang | PARTIAL |
 | 10 | OAuth Google nyata, Pub/Sub nyata, backfill akun pilot | Tidak ada kredensial Google di lingkungan ini | NOT RUN |
 | 11 | Hapus data retensi nyata + restore | Hanya DB sintetis; tidak menyentuh DB owner | NOT RUN |
 
