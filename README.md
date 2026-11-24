@@ -52,6 +52,8 @@ harus tampil sebagai keadaan berbeda.
 | S4 | Lampiran, admin, visual dan cutover varian penilaian | Belum lulus gate |
 | S5 | Verifikasi operasional, benchmark, perangkat dan owner UAT | Gate akhir masih terbuka |
 
+Rincian bukti per gate dan sisa pekerjaan pemilik ada di [laporan gate akhir](docs/delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md) (26 gate: 19 PASS, 4 PARTIAL, 3 NOT RUN).
+
 ### Implementasi versus acceptance
 
 | Area | Yang sudah tersedia | Yang masih perlu dibuktikan/diselesaikan |
@@ -60,7 +62,7 @@ harus tampil sebagai keadaan berbeda.
 | Gmail/Livin | **Gmail API**: OAuth dari sesi PAM, refresh token terenkripsi, Pub/Sub push ber-OIDC, `users.watch` + renew/stop, backfill 12 bulan WIB, delta `history.list`, dedupe identitas IMAP→Gmail; jalur IMAP lama disimpan sebagai rollback | Gate live Google (OAuth consent, topik Pub/Sub, push app tertutup) belum dijalankan; verifikasi restricted scope/CASA milik owner |
 | Azure classifier | Adapter, ledger/budget, cache, lease/recovery, caseId mapping dan USER override | Benchmark akurasi berlabel manusia; gate integrasi auto-queue |
 | Auto-sync / batch | Gmail push + worker delta, satu job kategorisasi logis (5 merchant/permintaan, maks 4 batch/2 jam), antrean target 2 jam | Latensi email→Go→Android belum terukur (push nyata belum aktif); due window server sudah diuji |
-| Status UI | Satu sheet status ringkas (Bahasa Indonesia), label job sederhana, rentang retensi setahun + label bulan batas, lampu Gmail "belum tertaut/aktif", UI utama 360–412 dp | Walk TalkBack/font 200% di HEAD final belum diulang; email baru sampai UI tanpa tap menunggu push nyata |
+| Status UI | Satu sheet status ringkas (Bahasa Indonesia), label job sederhana, rentang retensi setahun + label bulan batas, lampu Gmail "belum tertaut/aktif", UI utama 360–412 dp; font 200% + 360 dp diuji di APK final | Walk TalkBack manual dan lebar 393/412 dp di APK final belum diulang; email baru sampai UI tanpa tap menunggu push nyata |
 | Kelengkapan penilaian | Kontrak 25 aksi dan empat entitas tersedia | S3/S4, lampiran/admin, dynamic fields dan audit Room/SQLCipher |
 
 Temuan auto-sync tidak membuka kembali empat defect classifier lama yang sudah ditutup
