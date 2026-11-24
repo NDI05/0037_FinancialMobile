@@ -68,8 +68,10 @@ sebelum reset buku sinkronisasi (bukan data transaksi).
 | Aplikasi | layar utama memanggil `/v1/summary` dan `/v1/transactions` dan menampilkan data tersimpan (HTTP 200, tanpa error) |
 
 **Rekonsiliasi angka.** Run final mengimpor **769** transaksi (jumlah kolom "diimpor" di atas).
-Total tabel **914** karena **145 baris sudah tersimpan** dari percobaan live pertama (sebelum buku
-sinkronisasi di-reset): Nov 38, Okt 28, Sep 79. Baris lama itu tidak dihitung ulang sebagai impor
+Total tabel **914** karena **145 baris sudah tersimpan** dari backfill live **parsial** pada build
+perbaikan parser (`5df6be6`/`c98527b`), sebelum buku sinkronisasi di-reset untuk run final: Nov 38,
+Okt 28, Sep 79. Pass pertama di §1 (`imported=0`) terjadi **sebelum** perbaikan parser, jadi 145
+baris ini bukan hasil pass tersebut; job parsial itu tidak lagi muncul sebagai impor pada run final. Baris lama itu tidak dihitung ulang sebagai impor
 (duplikat), sehingga run final mencatat **79 duplikat pada Sep** — 79 baris Sep yang sama — dan
 769 + 145 = **914**. Semua 914 memiliki `source_ref_hash` unik (0 baris duplikat). Counter
 duplikat per bulan hanya menghitung baris yang **dipindai ulang oleh job run itu**: baris Nov 38
