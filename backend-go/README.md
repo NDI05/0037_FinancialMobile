@@ -58,11 +58,16 @@ credentials exist.
 | `REFRESH_PEPPER` | dev-only value |
 | `DATA_ENCRYPTION_KEY` | dev-only derived key |
 | `DATA_KEY_VERSION` | `1` |
-| `LLM_PROVIDER` | `fake` (`openai` for an OpenAI-compatible endpoint) |
+| `LLM_PROVIDER` | `fake`; `openai` for generic compatible endpoints; `azure` for the UAT Foundry deployment |
 | `UNKNOWN_AI_CALL_COST_USD` | `0.001` conservative cost when the provider omits usage |
 | `INTERNAL_SWEEP_TOKEN` | empty: `/v1/internal/sweep` is closed (404) |
 
 Production refuses short/absent JWT/refresh secrets and a `libsql://` URL without a token.
+Azure analysis requires an HTTPS `LLM_BASE_URL` ending in `/openai/v1`, `LLM_API_KEY`,
+the deployment name in `LLM_MODEL`, and verified `PRICE_PROMPT_PER_1K_USD` and
+`PRICE_COMPLETION_PER_1K_USD`. The UAT launcher reads these from the existing private
+Azure profile. The analysis adapter sends server-computed aggregates after `AI_PROCESSING`
+consent. Categorization uses its own pipeline and limits.
 
 ## Implemented slice
 

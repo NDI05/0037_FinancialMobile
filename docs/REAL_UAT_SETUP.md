@@ -68,19 +68,17 @@ registrasi/login PAM dan memasukkan App Password satu kali bila link belum terse
 Karena alur APK sedang diperbaiki, langkah UI ini memang baru dapat dilakukan setelah build siap.
 Satu handoff autentikasi tidak menjadi alasan SE menghentikan implementasi/test independen.
 
-## 5. Biarkan Ollama dan emulator siap
+## 5. Siapkan Azure dan emulator
 
 ```bash
-ollama list
 adb devices
 ```
 
-Pastikan model `qwen3-vl:8b-instruct` muncul dan emulator berstatus `device`. Buka Ollama bila
-servernya belum berjalan. Model sudah ada; tidak perlu pull/download baru. Konfigurasi REAL-UAT
-memakai adapter OpenAI-compatible pada `http://127.0.0.1:11434/v1`, provider config `openai`,
-bukan provider `fake`. Kata `openai` di sini nama adapter; proses inference tetap Ollama lokal.
-Kesesuaian output JSON/FR-37, latency dan integrasi analisis belum dinyatakan PASS; SE mengujinya.
-Model nyata belum tentu menghasilkan output sah pada setiap request; error harus ditampilkan jujur.
+Pastikan emulator berstatus `device`. Sejak 24 November 2026, REAL-UAT memakai
+`LLM_PROVIDER=azure` untuk Analisis. Launcher mengambil endpoint, deployment, API key, dan
+tarif dari profil privat Azure yang sama dengan classifier. `AI_PROCESSING` mengatur
+analisis agregat dan `AI_CATEGORIZATION` mengatur klasifikasi merchant.
+Jalankan `POST /v1/analyses` untuk menguji provider; `/readyz` mengecek database.
 
 ## 6. Serahkan satu prompt setelah langkah 1–5 siap
 
@@ -92,8 +90,8 @@ backend/.env), port khusus 18090 dan Android REAL-UAT yang jelas terpisah dari Q
 menjalankan migrasi/health/readiness serta tests. Pemilik tidak perlu merakit command backend
 atau membagikan secret ke chat. Database yang diprovision tetap kosong sampai SE menyiapkannya.
 
-Kesiapan yang perlu disampaikan: database berhasil dibuat; file URL/token tersedia; Ollama/
-emulator berjalan; App Password tersedia di password manager. Ini belum bukti koneksi cloud
+Kesiapan yang perlu disampaikan: database berhasil dibuat; file URL/token tersedia; profil Azure
+tersedia dan emulator berjalan; App Password tersedia di password manager. Ini belum bukti koneksi cloud
 atau bug CR-003 selesai. Setelah build siap ada satu input autentikasi langsung oleh pemilik;
 selanjutnya SE melanjutkan implementasi/verifikasi tanpa meminta ulang izin untuk aksi yang
 sudah masuk mandat. Pengujian destructive tetap pada QA sintetis terpisah, bukan REAL-UAT.

@@ -39,8 +39,9 @@ Lanjutkan dari status repo/checkpoint terkini dan jaga perbedaan PASS/PARTIAL/NO
   di [README bagian Android Studio](README.md#b-android-studio-dan-uat-pemilik), dengan
   `PAM_BACKEND_BASE_URL=http://10.0.2.2:18090` di `local.properties` untuk emulator.
   Periksa `BuildConfig` efektif dan `/readyz` dari emulator setelah mengganti konfigurasi.
-- Jalankan backend UAT dengan launcher resmi yang memuat profil privat Turso, classifier
-  Azure, dan provider analisis. Pertahankan batas biaya serta consent. Simpan secret di
+- Jalankan backend UAT dengan launcher resmi yang memuat profil privat Turso dan Azure.
+  Profil UAT pemilik memakai `LLM_PROVIDER=azure` untuk Analisis dan purpose consent
+  terpisah untuk classifier. Pertahankan batas biaya. Simpan secret di
   luar repo dan hindari mencetaknya di log atau laporan.
 - Bukti dari backend fixture, port terisolasi, provider simulasi, atau varian
   `assessment` harus menyebut profilnya. Gate UAT pemilik memakai build dan profil UAT

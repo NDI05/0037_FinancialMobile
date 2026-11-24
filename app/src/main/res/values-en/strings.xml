@@ -276,6 +276,7 @@
     <string name="analysis_disclosure_eyebrow">Before generating an analysis</string>
     <string name="analysis_disclosure_body">Only aggregate numbers are sent: inflow and outflow totals, per-category totals, transaction counts and coverage status. No email content, merchant name, private note or message id.</string>
     <string name="analysis_disclosure_provider">Provider: a deterministic on-device analysis engine (no network). You can use analysis without sending data anywhere.</string>
+    <string name="analysis_disclosure_server_provider">PAM sends an aggregate summary to the analysis provider configured on the server after you grant consent.</string>
     <string name="analysis_consent_missing">AI analysis consent has not been granted, so an analysis cannot be generated yet.</string>
     <string name="analysis_open_consent">Open consent</string>
     <string name="analysis_empty_title">No analysis yet</string>

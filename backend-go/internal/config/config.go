@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -243,8 +244,20 @@ func Load(env map[string]string) (*Config, error) {
 	if cfg.LogLevel != "debug" && cfg.LogLevel != "info" && cfg.LogLevel != "warn" && cfg.LogLevel != "error" {
 		return nil, fmt.Errorf("LOG_LEVEL must be debug|info|warn|error")
 	}
-	if cfg.LLM.Provider != "fake" && cfg.LLM.Provider != "openai" {
-		return nil, fmt.Errorf("LLM_PROVIDER must be fake|openai")
+	switch cfg.LLM.Provider {
+	case "fake", "openai":
+	case "azure":
+		endpoint, err := url.Parse(cfg.LLM.BaseURL)
+		if err != nil || endpoint.Scheme != "https" || endpoint.Hostname() == "" ||
+			endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" ||
+			strings.TrimRight(endpoint.Path, "/") != "/openai/v1" ||
+			strings.TrimSpace(cfg.LLM.APIKey) == "" || get(env, "LLM_MODEL", "") == "" ||
+			get(env, "PRICE_PROMPT_PER_1K_USD", "") == "" || get(env, "PRICE_COMPLETION_PER_1K_USD", "") == "" ||
+			cfg.Limits.PromptPer1K <= 0 || cfg.Limits.CompletionPer1K <= 0 {
+			return nil, fmt.Errorf("invalid Azure analysis configuration: requires HTTPS /openai/v1 endpoint, API key, deployment and verified prices")
+		}
+	default:
+		return nil, fmt.Errorf("LLM_PROVIDER must be fake|openai|azure")
 	}
 	if cfg.LLM.MaxTokens < 1 || cfg.LLM.MaxTokens > 100_000 {
 		return nil, fmt.Errorf("LLM_MAX_OUTPUT_TOKENS must be 1..100000")

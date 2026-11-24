@@ -80,6 +80,7 @@ bukan klaim setiap gate telah lulus pada tanggal tersebut.
 | 21 Nov 2026 | Onboarding, kontrak v0.4, migrasi Go dan baseline C1 | Backend lokal/interop dan emulator subset terdokumentasi | C2 Android dan kelengkapan CRUDS |
 | 22 Nov 2026 | Parser strict, impor Go, consent, SRS v0.5, setup/runtime Azure | Unit/integration dan smoke berkembang per checkpoint; bukan benchmark | Runtime recovery dan Android acceptance saat itu |
 | **23 Nov 2026** | Hari integrasi S2/S3/S4 di `feat/c2-android`: paket P1 recovery, Android acceptance, varian assessment (`99cb3df`), lalu penutupan gap S2–S4 malam: admin C24/C25 (`a512770`), bukti C01 create manual + identitas lost-response (`aa61a7b`), wiring analisis server S2.5 + guard consent (`7337559`); semua paket lewat audit independen; branch tugas/worktree dibersihkan; dokumen merged-head acceptance ditambahkan.; profil UAT Go + Azure + Ollama disamakan dengan Run Android Studio dan aturan agent diperbarui Lanjutan malam: revamp UI sinkronisasi (Ringkasan bersih, judul terpusat, ikon status 48 dp, satu sheet tanpa impor saat dibuka, hasil sama setelah tutup/buka dan minimize) digabung (`9aeea28`) bersama lane kategori (`dda4084`), lalu perbaikan i18n pasca-merge (`a310067`); bukti perangkat merged di [UAT_MERGED_UI_CATEGORY](../evidence/UAT_MERGED_UI_CATEGORY_2026-11-23.md), draf CR_006, matriks/checkpoint diberi addendum.| Android **493 tests/68 class/0 failure** debug + **503 tests/69 class/0 failure** assessment, lint **0 error/115 warning** debug & **0 error/123 warning** assessment, Go test/vet/build/race ok; merged head `7337559`: C01 create UI `POST /v1/transactions` 201 + ringkasan 92/89→93/90, S2.5 CURRENT→STALE→regenerate→CURRENT→dependency-STALE di perangkat, C24/C25 walk teraudit + regresi; APK debug sha256 `6497a406…`, assessment `fa0d224e…`.; build debug sukses, BuildConfig 10.0.2.2:18090, readiness emulator HTTP 200, probe sintetis Ollama HTTP 200 Sebelum fix, lint merged gagal 7 MissingTranslation; setelah `a310067`: debug **509 tests/0 failure**, assessment **519/0**, lint debug **0 error/112 warning**, lint assessment **0 error/120 warning**, assemble debug+assessment PASS (sha256 `0e9169f2…`/`dea936b8…`), Go test/vet/build/race PASS.| **S3 lulus (C01 PASS runtime)**; **S4.1/S4.2/S4.4 lulus** (batas perangkat C24/C25 dan foreground-only assessment dicatat); **S2.5 PASS runtime** (catatan INFO dependency-churn sync); temuan LOW audit tetap follow-up; gate eksternal S5 (mailbox nyata, benchmark, hosting/backup, UAT pemilik, merge/deploy).; smoke UI dari Run Android Studio dan panggilan Azure pada sesi penyelarasan belum dijalankan; **revisi UI sinkronisasi PASS runtime sebagian besar** — bingkai running/progress live, fade label live, TalkBack live, 412 dp+judul panjang, notis nomor referensi detail owner, resume unggahan pending live = PARTIAL/NOT RUN; **alasan kategori tampil PASS runtime** (`classified=0 needsReview=5 failed=0`, 0 panggilan Azure); **kategori AI terklasifikasi pada data owner, precision ≥95%, Buat Analisis via Ollama dengan bulan EMPTY-coverage = NOT RUN**; audit merged awal **FAIL** (lint) lalu diperbaiki.| `e3eeb17`, `94e2f37`, `99cb3df`, `a512770`, `aa61a7b`, `7337559`, plus commit lane di log harian, `9aeea28`, `dda4084`, `a310067`|
+| **24 Nov 2026** | Analisis UAT beralih dari Ollama ke Azure Foundry; aplikasi menjelaskan pemrosesan agregat oleh penyedia server | Smoke Go dengan transaksi sintetis: Analisis HTTP 200 CURRENT, hasil dan cache terbaca; build dan lint debug lulus | UAT tombol Analisis dari Android Studio dan bulan dengan cakupan email kosong |
 
 **[Buka log harian lengkap, commit, bukti, dan template pembaruan →](docs/PROGRESS_DAILY.md)**
 
@@ -93,8 +94,8 @@ flowchart LR
     Gmail[Email Livin / Gmail] -->|IMAP read-only| Android[Android Kotlin / Compose]
     Android -->|REST + sesi JWT| Go[Backend Go]
     Go --> DB[(Turso / libSQL)]
-    Go -->|Merchant minimal + consent| Azure[Azure classifier]
-    Go -->|Agregat yang diizinkan| Analysis[Provider analisis terpisah]
+    Go -->|Merchant tersanitasi + consent kategorisasi| Azure[Microsoft Foundry]
+    Go -->|Agregat + consent analisis| Azure
 ```
 
 Email mentah dan credential Gmail diproses di perangkat. Transaksi server-mode disimpan
@@ -172,12 +173,16 @@ Jika backend UAT belum berjalan, dari root repo jalankan:
 python3 scripts/run_real_uat_with_classifier.py /tmp/pam-android-studio-uat-api
 ```
 
-Launcher membaca profil privat di `~/.config/pam/` untuk Turso, classifier Azure, dan
-analisis Ollama lokal. Pastikan port profilnya `18090`, model Ollama yang tercantum
-di profil tersedia, dan `/readyz` merespons dari emulator. Readiness mengecek database.
+Launcher membaca profil privat di `~/.config/pam/` untuk Turso dan Azure. Untuk profil UAT
+pemilik, gunakan `LLM_PROVIDER=azure` di `real-uat.env`. Launcher memakai deployment Azure
+yang sudah tersedia di `azure-classifier.env` untuk Analisis. Pastikan port profilnya
+`18090` dan `/readyz` merespons dari emulator. Readiness mengecek database.
 Uji tombol **Kategorikan dengan AI** serta **Buat Analisis** secara terpisah di UI Android
-Studio karena keduanya memakai provider dan consent masing-masing. Untuk build CLI UAT,
+Studio karena keduanya punya payload, consent, dan batas pemakaian masing-masing. Untuk build CLI UAT,
 jalankan `./scripts/build.sh :app:assembleDebug` dengan konfigurasi lokal yang sama.
+
+Profil UAT Analisis membatasi biaya aplikasi di USD0,25 per hari, timeout per panggilan
+12 detik, dan maksimal 1.200 token keluaran. Batas classifier tetap terpisah.
 
 Setelah menekan **Run**, masuk ke akun, pilih consent, lalu hubungkan Gmail jika diperlukan.
 Gunakan Gmail **App Password** pada layar koneksi, bukan password utama Gmail. Fixture/demo

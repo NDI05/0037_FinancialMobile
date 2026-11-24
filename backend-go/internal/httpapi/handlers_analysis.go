@@ -148,6 +148,9 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 		regenerations = 1
 	}
 	if providerErr != nil {
+		if s.Config.LLM.Provider == "azure" {
+			s.Log.Warn("Azure analysis rejected", "correlationId", correlationOf(r), "reason", providerErr.Error())
+		}
 		writeError(w, http.StatusBadGateway, "provider_unavailable", "Analysis provider failed", correlationOf(r))
 		return
 	}

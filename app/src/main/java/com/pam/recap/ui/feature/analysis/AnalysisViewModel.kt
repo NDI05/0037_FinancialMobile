@@ -71,6 +71,8 @@ class AnalysisViewModel @Inject constructor(
     private val serverFinance: ServerFinanceRepository,
 ) : ViewModel() {
 
+    val usesServerAnalysis: Boolean get() = serverAnalysis.isEnabled
+
     private val month = MutableStateFlow<JakartaMonth?>(null)
     private val refreshTick = MutableStateFlow(0L)
     private val ui = MutableStateFlow(UiToggles())

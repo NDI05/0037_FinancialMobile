@@ -132,6 +132,7 @@ fun AnalysisScreen(
 
             DisclosureCard(
                 consentGranted = state.aiConsentGranted,
+                usesServerAnalysis = viewModel.usesServerAnalysis,
                 onOpenConsent = onOpenConsent,
             )
 
@@ -190,7 +191,11 @@ fun AnalysisScreen(
 }
 
 @Composable
-private fun DisclosureCard(consentGranted: Boolean, onOpenConsent: () -> Unit) {
+private fun DisclosureCard(
+    consentGranted: Boolean,
+    usesServerAnalysis: Boolean,
+    onOpenConsent: () -> Unit,
+) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         EyebrowText(text = stringResource(R.string.analysis_disclosure_eyebrow))
         Spacer(modifier = Modifier.height(PamSpacing.xs))
@@ -201,7 +206,10 @@ private fun DisclosureCard(consentGranted: Boolean, onOpenConsent: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(PamSpacing.xxs))
         Text(
-            text = stringResource(R.string.analysis_disclosure_provider),
+            text = stringResource(
+                if (usesServerAnalysis) R.string.analysis_disclosure_server_provider
+                else R.string.analysis_disclosure_provider,
+            ),
             style = BodyM,
             color = OnInkMuted,
         )

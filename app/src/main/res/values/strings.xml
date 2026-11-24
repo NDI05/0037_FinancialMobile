@@ -294,6 +294,7 @@
     <string name="analysis_disclosure_eyebrow">Sebelum membuat analisis</string>
     <string name="analysis_disclosure_body">Yang dikirim hanya angka agregat: total pemasukan dan pengeluaran, total per kategori, jumlah transaksi, dan status cakupan. Tidak ada isi email, nama merchant, catatan pribadi, atau ID pesan.</string>
     <string name="analysis_disclosure_provider">Penyedia: mesin analisis deterministik di perangkat (tanpa jaringan). Anda bisa memakai analisis tanpa mengirim data ke mana pun.</string>
+    <string name="analysis_disclosure_server_provider">PAM mengirim ringkasan agregat ke penyedia analisis yang dikonfigurasi di server setelah Anda memberi izin.</string>
     <string name="analysis_consent_missing">Persetujuan analisis AI belum diberikan, jadi analisis belum bisa dibuat.</string>
     <string name="analysis_open_consent">Buka persetujuan</string>
     <string name="analysis_empty_title">Belum ada analisis</string>

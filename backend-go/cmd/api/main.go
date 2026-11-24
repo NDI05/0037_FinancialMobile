@@ -59,8 +59,12 @@ func run() error {
 	// The deterministic provider keeps local runs network-free; the OpenAI-compatible adapter is
 	// used only when explicitly configured (Ollama/OpenAI/OpenRouter).
 	var provider llm.Provider = &llm.Fake{Scenario: cfg.LLM.FakeScenario}
-	if cfg.LLM.Provider == "openai" {
+	switch cfg.LLM.Provider {
+	case "openai":
 		provider = llm.NewOpenAI(cfg.LLM.BaseURL, cfg.LLM.APIKey, cfg.LLM.Model,
+			cfg.LLM.MaxTokens, cfg.LLM.Timeout)
+	case "azure":
+		provider = llm.NewAzure(cfg.LLM.BaseURL, cfg.LLM.APIKey, cfg.LLM.Model, cfg.LLM.MaxInputTokens,
 			cfg.LLM.MaxTokens, cfg.LLM.Timeout)
 	}
 	api := httpapi.New(storeLayer, cfg, issuer, logger, provider)
