@@ -21,31 +21,42 @@ type analysisRequest struct {
 	Payload       json.RawMessage `json:"payload"`
 }
 
+
+// invalidAnalysisRequest writes the contract 400 and records the validation reason, which is a
+// field name only (never the payload or an amount), so a failing client can be diagnosed from the
+// server log without storing owner data.
+func (s *Server) invalidAnalysisRequest(w http.ResponseWriter, r *http.Request, message string) {
+	if s.Log != nil {
+		s.Log.Warn("analysis request rejected", "reason", message, "correlation_id", correlationOf(r))
+	}
+	writeError(w, http.StatusBadRequest, "invalid_request", message, correlationOf(r))
+}
+
 func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 	var body analysisRequest
 	if !decodeJSON(w, r, &body) {
 		return
 	}
 	if _, _, err := store.ParseMonth(body.MonthID); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_request", "monthId must be YYYY-MM", correlationOf(r))
+		s.invalidAnalysisRequest(w, r, "monthId must be YYYY-MM")
 		return
 	}
 	if len(body.Payload) == 0 {
-		writeError(w, http.StatusBadRequest, "invalid_request", "payload is required", correlationOf(r))
+		s.invalidAnalysisRequest(w, r, "payload is required")
 		return
 	}
 	clientPayload, err := analysis.ParseClientPayload(body.Payload)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_request", err.Error(), correlationOf(r))
+		s.invalidAnalysisRequest(w, r, err.Error())
 		return
 	}
 	if clientPayload.MonthID != body.MonthID {
-		writeError(w, http.StatusBadRequest, "invalid_request", "payload.monthId must match monthId", correlationOf(r))
+		s.invalidAnalysisRequest(w, r, "payload.monthId must match monthId")
 		return
 	}
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if idempotencyKey == "" || len(idempotencyKey) > 200 {
-		writeError(w, http.StatusBadRequest, "invalid_request", "Idempotency-Key header is required", correlationOf(r))
+		s.invalidAnalysisRequest(w, r, "Idempotency-Key header is required")
 		return
 	}
 	info, _ := authFrom(r)

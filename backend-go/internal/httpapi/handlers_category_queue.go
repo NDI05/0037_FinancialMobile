@@ -336,7 +336,10 @@ func (s *Server) autoCategoryConsented(r *http.Request) bool {
 // autoCategoryEligible mirrors the manual path: a USER decision, an already-categorized row, an
 // internal transfer or a personal counterparty is never enqueued automatically.
 func autoCategoryEligible(tx store.Transaction) bool {
-	if tx.CategoryOrigin == "USER" {
+	// A USER origin only protects a real decision. Rows that sit in `uncategorized` carry no
+	// category decision (the client stores an imported before-repair row this way), so they stay
+	// eligible; otherwise a repaired merchant label could never be classified.
+	if tx.CategoryOrigin == "USER" && tx.CategoryCode != "" && tx.CategoryCode != "uncategorized" {
 		return false
 	}
 	if tx.CategoryCode != "" && tx.CategoryCode != "uncategorized" {

@@ -96,6 +96,33 @@ func TestAutoCategoryQueueEnqueueNeverCallsProvider(t *testing.T) {
 	}
 }
 
+// TestAutoCategoryQueueReopensUncategorizedUserRow covers the merchant-repair path: a row that was
+// imported with a USER origin but never received a real category must still become classifiable
+// after its merchant label is repaired, otherwise a corrected row stays unclassified forever.
+func TestAutoCategoryQueueReopensUncategorizedUserRow(t *testing.T) {
+	stub := &stubCategory{}
+	h := newCategoryHarness(t, stub)
+	h.register("repair@example.test")
+	token, _ := h.login("repair@example.test")
+	h.grantCategoryConsent(token)
+
+	body := map[string]any{"direction": "DEBIT", "source": "MANUAL", "categoryOrigin": "USER",
+		"amountMinor": 16000, "currency": "IDR", "eventAt": "2026-11-19T02:15:20Z",
+		"fingerprint": "c" + strings.Repeat("0", 31), "parserVersion": "livin-v1",
+		"parserConfidence": 0.9, "description": "Pembayaran", "merchantLabel": "BAKSO UJI"}
+	status, created := h.request("POST", "/v1/transactions", token, body)
+	if status != 201 {
+		t.Fatalf("create transaction=%d %v", status, created)
+	}
+	txID := created["id"].(string)
+
+	status, queued := h.request("POST", "/v1/category-jobs/enqueue", token,
+		map[string]any{"transactionIds": []string{txID}})
+	if status != 200 || queued["queued"].(float64) != 1 {
+		t.Fatalf("uncategorized USER row was not reopened: %d %v", status, queued)
+	}
+}
+
 func (h *harness) categoryID(code string) string {
 	h.t.Helper()
 	var id string
