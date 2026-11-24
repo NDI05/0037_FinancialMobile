@@ -106,6 +106,10 @@ data class TransactionPatch(
      * sent on save replaces the stored attribute set, so an empty map clears it.
      */
     val attributes: Map<String, String> = emptyMap(),
+    /** Merchant-repair CAS proof: the fingerprint the client last read. Server-only replacement. */
+    val expectedFingerprint: String? = null,
+    /** Opaque `UIDVALIDITY:UID`; sent once when the server row predates source references. */
+    val sourceRef: String? = null,
 )
 
 /**

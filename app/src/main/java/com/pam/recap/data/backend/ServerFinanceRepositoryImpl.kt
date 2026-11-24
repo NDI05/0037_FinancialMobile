@@ -388,6 +388,8 @@ class ServerFinanceRepositoryImpl @Inject constructor(
                 note = patch.note,
                 attributes = patch.attributes,
                 revision = patch.revision,
+                expectedFingerprint = patch.expectedFingerprint,
+                sourceRef = patch.sourceRef,
             ),
         )
     ) {

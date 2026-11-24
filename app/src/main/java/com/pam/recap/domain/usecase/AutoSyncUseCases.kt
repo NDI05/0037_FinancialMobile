@@ -126,6 +126,12 @@ class IncrementalSyncUseCase @Inject constructor(
      * retried against a fresh (deduped-to-empty) local job and never reach the server.
      */
     private val journal: ImportUploadJournal? = null,
+    /**
+     * P0 one-shot merchant repair. Optional in tests; production binds it so a successful sync can
+     * correct rows that were imported with a Merchant PAN as the merchant label. Its own durable
+     * marker keeps ordinary syncs from re-reading the month.
+     */
+    private val merchantRepair: MerchantRepairUseCase? = null,
 ) {
 
     private val gate = Mutex()
@@ -542,6 +548,11 @@ class IncrementalSyncUseCase @Inject constructor(
             )
         }
         SafeLogger.counts(TAG, "sync_done", "imported" to job.importedCount, "duplicates" to job.duplicateCount)
+        // One-shot repair of legacy merchant labels, only after the cursor advanced so a repair
+        // failure can never make the financial sync look incomplete. Best effort and fail closed.
+        merchantRepair?.let { repair ->
+            runCatching { repair.runIfNeeded(ownerId, primaryMonth) }
+        }
         if (job.importedCount > 0) {
             // Best effort: a queue failure must not downgrade a successful financial sync, and the
             // worker retries it on its own schedule.

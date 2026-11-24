@@ -192,6 +192,45 @@ class TransactionRepositoryImpl @Inject constructor(
             ) > 0
         }
 
+    override suspend fun applyMerchantRepair(
+        ownerId: String,
+        id: String,
+        expectedFingerprint: String,
+        merchantLabel: String,
+        fingerprint: String,
+        at: Instant,
+    ): Boolean = withContext(ioDispatcher) {
+        database.withTransaction {
+            val changed = transactionDao.updateMerchantRepair(
+                ownerId = ownerId,
+                id = id,
+                expectedFingerprint = expectedFingerprint,
+                merchantLabel = merchantLabel,
+                fingerprint = fingerprint,
+                updatedAtMillis = at.toEpochMilliseconds(),
+            ) > 0
+            if (changed) {
+                val entity = transactionDao.findAnyById(id)
+                if (entity != null) bumpRevisionLocked(ownerId, JakartaMonth.of(entity.eventAt))
+            }
+            changed
+        }
+    }
+
+    override suspend fun metadataValue(ownerId: String, key: String): String? =
+        withContext(ioDispatcher) { metadataDao.value(metadataKey(ownerId, key)) }
+
+    override suspend fun putMetadata(ownerId: String, key: String, value: String): Unit =
+        withContext(ioDispatcher) {
+            metadataDao.upsert(
+                AppMetadataEntity(
+                    key = metadataKey(ownerId, key),
+                    value = value,
+                    updatedAtEpochMillis = clock.nowMillis(),
+                ),
+            )
+        }
+
     override suspend fun monthRevision(ownerId: String, month: JakartaMonth): Int =
         withContext(ioDispatcher) { readRevision(ownerId, month) }
 
@@ -298,4 +337,6 @@ class TransactionRepositoryImpl @Inject constructor(
         "${revisionPrefix(ownerId)}${month.id()}"
 
     private fun revisionPrefix(ownerId: String): String = "revision:$ownerId:"
+
+    private fun metadataKey(ownerId: String, key: String): String = "meta:$ownerId:$key"
 }

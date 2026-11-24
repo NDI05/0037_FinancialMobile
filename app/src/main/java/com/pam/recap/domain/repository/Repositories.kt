@@ -71,6 +71,25 @@ interface TransactionRepository {
 
     suspend fun updateNote(ownerId: String, id: String, note: String?, at: Instant): Boolean
 
+    /**
+     * Applies one verified merchant-label repair to the local row, compare-and-swap on the
+     * fingerprint the caller read. Nothing else (category, note, attributes, status) is touched.
+     * Returns false when the row moved or belongs to another owner.
+     */
+    suspend fun applyMerchantRepair(
+        ownerId: String,
+        id: String,
+        expectedFingerprint: String,
+        merchantLabel: String,
+        fingerprint: String,
+        at: Instant,
+    ): Boolean
+
+    /** Durable bookkeeping value scoped to the owner (the same space month revisions use). */
+    suspend fun metadataValue(ownerId: String, key: String): String?
+
+    suspend fun putMetadata(ownerId: String, key: String, value: String)
+
     /** Monotonic revision of the month's inputs, stored with every summary (FR-33). */
     suspend fun monthRevision(ownerId: String, month: JakartaMonth): Int
 

@@ -142,6 +142,49 @@ func TestMerchantRepairKeepsThirteenRowsAndDedupesReimport(t *testing.T) {
 	}
 }
 
+func TestNoopMerchantRepairStillAppliesSiblingEdits(t *testing.T) {
+	h := newHarness(t)
+	h.register("repair-noop@example.test")
+	token, _ := h.login("repair-noop@example.test")
+	h.grantGmailConsent(token)
+	h.importCandidates(token, "2026-11", "page-1", repairCandidates(1, "", true))
+	row := h.transactionsOf(token, "2026-11")[0]
+	id := row["id"].(string)
+	business := "Warung Nasi Ibu Siti"
+	status, patched := h.request("PATCH", "/v1/transactions/"+id, token, map[string]any{
+		"revision": row["revision"], "expectedFingerprint": row["fingerprint"],
+		"merchantLabel": business, "note": "catatan awal",
+	})
+	if status != 200 || patched["note"] != "catatan awal" {
+		t.Fatalf("first repair with note: %d %#v", status, patched)
+	}
+	fingerprint := patched["fingerprint"].(string)
+
+	// Replaying the identical label (fingerprint/label noop) must not swallow the new note.
+	status, replay := h.request("PATCH", "/v1/transactions/"+id, token, map[string]any{
+		"revision": patched["revision"], "expectedFingerprint": fingerprint,
+		"merchantLabel": business, "note": "catatan kedua",
+	})
+	if status != 200 {
+		t.Fatalf("noop replay with note: %d %#v", status, replay)
+	}
+	if replay["note"] != "catatan kedua" {
+		t.Fatalf("noop replay dropped the note: %#v", replay)
+	}
+	if replay["fingerprint"] != fingerprint {
+		t.Fatalf("noop replay changed the fingerprint: %#v", replay["fingerprint"])
+	}
+
+	// The plain idempotent replay (no sibling edits) still returns the row unchanged.
+	status, plain := h.request("PATCH", "/v1/transactions/"+id, token, map[string]any{
+		"revision": replay["revision"], "expectedFingerprint": fingerprint,
+		"merchantLabel": business,
+	})
+	if status != 200 || plain["revision"] != replay["revision"] || plain["note"] != "catatan kedua" {
+		t.Fatalf("plain noop replay: %d %#v", status, plain)
+	}
+}
+
 func TestMerchantRepairRejectsStaleIdentityAndUnsafeLabels(t *testing.T) {
 	h := newHarness(t)
 	h.register("repair-guards@example.test")

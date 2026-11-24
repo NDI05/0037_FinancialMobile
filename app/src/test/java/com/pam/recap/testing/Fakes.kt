@@ -129,6 +129,27 @@ class FakeTransactionRepository(initial: List<Transaction> = emptyList()) : Tran
     override suspend fun updateNote(ownerId: String, id: String, note: String?, at: Instant): Boolean =
         update(id) { it.copy(note = note) }
 
+    override suspend fun applyMerchantRepair(
+        ownerId: String,
+        id: String,
+        expectedFingerprint: String,
+        merchantLabel: String,
+        fingerprint: String,
+        at: Instant,
+    ): Boolean = update(id) { row ->
+        if (row.fingerprint != expectedFingerprint) row
+        else row.copy(merchantLabel = merchantLabel, fingerprint = fingerprint, updatedAt = at, revision = row.revision + 1)
+    }
+
+    private val metadata = mutableMapOf<String, String>()
+
+    override suspend fun metadataValue(ownerId: String, key: String): String? =
+        metadata["$ownerId:$key"]
+
+    override suspend fun putMetadata(ownerId: String, key: String, value: String) {
+        metadata["$ownerId:$key"] = value
+    }
+
     override suspend fun monthRevision(ownerId: String, month: JakartaMonth): Int =
         revisions["$ownerId:${month.id()}"] ?: 0
 

@@ -717,6 +717,10 @@ data class RemoteTransactionPatch(
     /** Null keeps the stored attributes; a map (including an empty one) replaces them. */
     val attributes: Map<String, String>? = null,
     val revision: Int,
+    /** Merchant-repair identity proof; only sent by the repair path. */
+    val expectedFingerprint: String? = null,
+    /** Opaque `UIDVALIDITY:UID`; adopted once when the server row predates source references. */
+    val sourceRef: String? = null,
 )
 
 @Serializable

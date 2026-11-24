@@ -170,6 +170,33 @@ class AssessmentTransactionRepository @Inject constructor(
         row.copy(note = note, updatedAtMillis = at.toEpochMilliseconds(), revision = row.revision + 1)
     }
 
+    override suspend fun applyMerchantRepair(
+        ownerId: String,
+        id: String,
+        expectedFingerprint: String,
+        merchantLabel: String,
+        fingerprint: String,
+        at: Instant,
+    ): Boolean = mutate(ownerId, id) { row ->
+        if (row.fingerprint != expectedFingerprint) return@mutate row
+        row.copy(
+            merchantLabel = merchantLabel,
+            fingerprint = fingerprint,
+            updatedAtMillis = at.toEpochMilliseconds(),
+            revision = row.revision + 1,
+        )
+    }
+
+    /** Assessment variant keeps no Room metadata, so the repair marker lives in this process only. */
+    private val metadata = mutableMapOf<String, String>()
+
+    override suspend fun metadataValue(ownerId: String, key: String): String? =
+        metadata["$ownerId:$key"]
+
+    override suspend fun putMetadata(ownerId: String, key: String, value: String) {
+        metadata["$ownerId:$key"] = value
+    }
+
     override suspend fun monthRevision(ownerId: String, month: JakartaMonth): Int =
         outbox.monthRevision(ownerId, month)
 

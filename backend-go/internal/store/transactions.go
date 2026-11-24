@@ -332,7 +332,15 @@ func (s *Store) UpdateTransaction(ctx context.Context, ownerID, id string, patch
 			return Transaction{}, err
 		}
 		if repair.noop {
-			return current, nil
+			if !patchHasOtherChanges(patch) {
+				return current, nil
+			}
+			// A replay that also carries unrelated edits must still apply them: only the merchant
+			// label and fingerprint are already stored, everything else in the patch is not.
+			repair = &merchantRepair{
+				merchantLabel: strings.TrimSpace(current.Sensitive.MerchantLabel),
+				fingerprint:   current.Fingerprint,
+			}
 		}
 	}
 	categoryID := current.CategoryID
@@ -454,6 +462,13 @@ func (s *Store) UpdateTransaction(ctx context.Context, ownerID, id string, patch
 		return Transaction{}, err
 	}
 	return s.GetTransaction(ctx, ownerID, id)
+}
+
+// patchHasOtherChanges reports whether a repair patch also edits fields other than the merchant
+// label. A noop repair returns early only when nothing else would change.
+func patchHasOtherChanges(patch TransactionPatch) bool {
+	return patch.CategoryID != nil || patch.Description != nil || patch.Note != nil ||
+		patch.Attributes != nil || patch.IsInternalTransfer != nil || patch.LinkedRefundOf != nil
 }
 
 // merchantRepair is the resolved, verified plan for replacing a stored merchant label.

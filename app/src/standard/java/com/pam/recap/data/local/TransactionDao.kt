@@ -180,6 +180,29 @@ interface TransactionDao {
     suspend fun updateNote(ownerId: String, id: String, note: String?, updatedAtMillis: Long): Int
 
     /**
+     * Merchant-repair write: label and fingerprint only, CAS on the fingerprint that was read, so a
+     * concurrent edit can never be overwritten and category/note/status keep their values.
+     */
+    @Query(
+        """
+        UPDATE transactions
+        SET merchantLabel = :merchantLabel,
+            fingerprint = :fingerprint,
+            updatedAt = :updatedAtMillis,
+            revision = revision + 1
+        WHERE ownerId = :ownerId AND id = :id AND fingerprint = :expectedFingerprint
+        """,
+    )
+    suspend fun updateMerchantRepair(
+        ownerId: String,
+        id: String,
+        expectedFingerprint: String,
+        merchantLabel: String,
+        fingerprint: String,
+        updatedAtMillis: Long,
+    ): Int
+
+    /**
      * NFR-07: totals are folded in SQLite on minor units, so a 10k-row month never has to be
      * materialised just to draw the hero totals. Only POSTED IDR rows count (BR-02/BR-04).
      */

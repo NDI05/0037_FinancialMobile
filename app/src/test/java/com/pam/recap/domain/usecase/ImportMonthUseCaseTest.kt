@@ -353,6 +353,19 @@ class ImportMonthUseCaseTest {
         override suspend fun updateNote(ownerId: String, id: String, note: String?, at: Instant): Boolean =
             replace(id) { it.copy(note = note) }
 
+        override suspend fun applyMerchantRepair(
+            ownerId: String,
+            id: String,
+            expectedFingerprint: String,
+            merchantLabel: String,
+            fingerprint: String,
+            at: Instant,
+        ): Boolean = false
+
+        override suspend fun metadataValue(ownerId: String, key: String): String? = null
+
+        override suspend fun putMetadata(ownerId: String, key: String, value: String) = Unit
+
         override suspend fun monthRevision(ownerId: String, month: JakartaMonth): Int =
             revisions["$ownerId:${month.id()}"] ?: 0
 
