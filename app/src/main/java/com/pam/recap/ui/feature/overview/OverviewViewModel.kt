@@ -18,6 +18,7 @@ import com.pam.recap.domain.repository.TransactionRepository
 import com.pam.recap.domain.usecase.ComputeMonthlySummaryUseCase
 import com.pam.recap.domain.usecase.ReconnectGmailUseCase
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
+import com.pam.recap.ui.selection.ActiveMonthStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -63,6 +65,7 @@ class OverviewViewModel @Inject constructor(
     private val resolveInitialMonth: ResolveInitialMonthUseCase,
     private val server: ServerFinanceRepository? = null,
     private val reconnectGmail: ReconnectGmailUseCase? = null,
+    private val activeMonth: ActiveMonthStore = ActiveMonthStore(),
 ) : ViewModel() {
 
     private val month = MutableStateFlow<JakartaMonth?>(null)
@@ -78,10 +81,24 @@ class OverviewViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            val ownerId = sessions.current()?.ownerId
-            if (ownerId != null) {
-                month.value = resolveInitialMonth(ownerId)
-                reconnectGmail?.let { runCatching { it(ownerId) } }
+            // Wait for the signed-in owner instead of reading a snapshot: the shell can build this
+            // view model before the session is restored, and a null read used to leave Ringkasan
+            // stuck on an unresolved month (same race the Transaksi tab had).
+            val ownerId = sessions.observe().filterNotNull().first().ownerId
+            val resolved = resolveInitialMonth(ownerId)
+            activeMonth.select(ownerId, resolved)
+            month.value = resolved
+            reconnectGmail?.let { runCatching { it(ownerId) } }
+        }
+        // One period across tabs: a month shifted on the Transaksi tab (or a drill-down month the
+        // owner picked there) is followed here instead of Ringkasan keeping a private month.
+        viewModelScope.launch {
+            activeMonth.selection.collect { selection ->
+                val picked = selection ?: return@collect
+                val ownerId = sessions.current()?.ownerId ?: return@collect
+                if (picked.ownerId == ownerId && month.value != picked.month) {
+                    month.value = picked.month
+                }
             }
         }
     }
@@ -153,7 +170,9 @@ class OverviewViewModel @Inject constructor(
     fun nextMonth() = shiftMonth { it.next() }
 
     private fun shiftMonth(transform: (JakartaMonth) -> JakartaMonth) {
-        month.update { current -> current?.let(transform) }
+        val next = month.value?.let(transform) ?: return
+        month.value = next
+        viewModelScope.launch { sessions.current()?.ownerId?.let { activeMonth.select(it, next) } }
     }
 
     private companion object {

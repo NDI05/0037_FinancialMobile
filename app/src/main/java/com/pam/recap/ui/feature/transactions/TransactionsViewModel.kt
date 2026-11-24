@@ -17,6 +17,7 @@ import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.repository.TransactionRepository
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
 import com.pam.recap.ui.components.DayStripCell
+import com.pam.recap.ui.selection.ActiveMonthStore
 import com.pam.recap.ui.util.PamDateFormat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -96,6 +98,7 @@ class TransactionsViewModel @Inject constructor(
     private val sessions: SessionRepository,
     private val transactions: TransactionRepository,
     private val resolveInitialMonth: ResolveInitialMonthUseCase,
+    private val activeMonth: ActiveMonthStore = ActiveMonthStore(),
     private val server: ServerFinanceRepository? = null,
 ) : ViewModel() {
 
@@ -197,8 +200,28 @@ class TransactionsViewModel @Inject constructor(
         }
         val requestedMonth = savedStateHandle.get<String>("monthId")?.let(JakartaMonth::parse)
         viewModelScope.launch {
-            val ownerId = sessions.current()?.ownerId
-            month.value = requestedMonth ?: ownerId?.let { resolveInitialMonth(it) }
+            if (requestedMonth != null) {
+                // A drill-down ("Lihat semua" / category shortcut) carries its own explicit month.
+                month.value = requestedMonth
+                return@launch
+            }
+            // The tab opens on the month the owner is already looking at. Waiting for the session
+            // (instead of reading a snapshot) removes the cold-start race that left the tab on a
+            // null month with an empty list (UAT 24 Nov, S2.P0 nav).
+            val ownerId = sessions.observe().filterNotNull().first().ownerId
+            month.value = activeMonth.current(ownerId) ?: resolveInitialMonth(ownerId)
+        }
+        // One period across tabs: a month chosen on Ringkasan (or below) is followed here, and a
+        // month changed in this list is published back for the other screen.
+        viewModelScope.launch {
+            activeMonth.selection.collect { selection ->
+                val picked = selection ?: return@collect
+                val ownerId = sessions.current()?.ownerId ?: return@collect
+                if (picked.ownerId != ownerId) return@collect
+                if (month.value != picked.month && requestedMonth == null) {
+                    month.value = picked.month
+                }
+            }
         }
     }
 
@@ -532,9 +555,15 @@ class TransactionsViewModel @Inject constructor(
         val reviewReasons: List<String> = emptyList(),
     )
 
-    fun previousMonth() = month.updateValue { it?.previous() }
+    fun previousMonth() = shiftMonth { it.previous() }
 
-    fun nextMonth() = month.updateValue { it?.next() }
+    fun nextMonth() = shiftMonth { it.next() }
+
+    private fun shiftMonth(transform: (JakartaMonth) -> JakartaMonth) {
+        val next = month.value?.let(transform) ?: return
+        month.value = next
+        viewModelScope.launch { sessions.current()?.ownerId?.let { activeMonth.select(it, next) } }
+    }
 
     fun selectDay(day: LocalDate?) {
         selectedDay.value = if (selectedDay.value == day) null else day

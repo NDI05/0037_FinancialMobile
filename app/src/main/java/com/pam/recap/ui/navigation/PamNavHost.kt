@@ -322,19 +322,46 @@ internal fun NavHostController.replaceWith(destination: PamDestination) {
     }
 }
 
+/**
+ * A bottom-bar tap is a top-level move, never a stack restore.
+ *
+ * The previous contract used `popUpTo(Overview) { saveState = true }` + `restoreState = true` for
+ * every tab. Because the tab route and the drill-down route share one destination pattern
+ * (`Transactions` with optional arguments), the saved state of a drill-down could be restored for
+ * a bare tab tap: the bar then re-showed the filtered list, and "Ringkasan" landed on that saved
+ * stack instead of the overview (UAT 24 Nov, S2.P0). Dropping save/restore keeps one entry per
+ * top-level destination, so the tab indicator and the visible screen always agree.
+ */
 private fun NavHostController.navigateTab(destination: PamDestination) {
+    val spec = tabNavigationSpec(destination)
     navigate(destination) {
-        popUpTo(PamDestination.Overview()) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
+        popUpTo(spec.popUpTo) { inclusive = spec.popUpToInclusive }
+        launchSingleTop = spec.launchSingleTop
     }
 }
 
+/** Pure part of [navigateTab], so the "never restore a drill-down" rule is unit-testable. */
+internal data class TabNavigationSpec(
+    val popUpTo: PamDestination,
+    val popUpToInclusive: Boolean,
+    val launchSingleTop: Boolean,
+)
+
+internal fun tabNavigationSpec(target: PamDestination): TabNavigationSpec = TabNavigationSpec(
+    popUpTo = PamDestination.Overview(),
+    popUpToInclusive = false,
+    launchSingleTop = true,
+)
+
 private fun NavHostController.navigateTabFor(key: String) {
-    when (key) {
-        PamDestination.TAB_OVERVIEW -> navigateTab(PamDestination.Overview())
-        PamDestination.TAB_TRANSACTIONS -> navigateTab(PamDestination.Transactions())
-        PamDestination.TAB_ANALYSIS -> navigateTab(PamDestination.Analysis())
-        PamDestination.TAB_SETTINGS -> navigateTab(PamDestination.Settings)
-    }
+    tabTargetFor(key)?.let(::navigateTab)
+}
+
+/** Maps a bottom-bar key to its top-level destination; `null` for an unknown key. */
+internal fun tabTargetFor(key: String): PamDestination? = when (key) {
+    PamDestination.TAB_OVERVIEW -> PamDestination.Overview()
+    PamDestination.TAB_TRANSACTIONS -> PamDestination.Transactions()
+    PamDestination.TAB_ANALYSIS -> PamDestination.Analysis()
+    PamDestination.TAB_SETTINGS -> PamDestination.Settings
+    else -> null
 }
