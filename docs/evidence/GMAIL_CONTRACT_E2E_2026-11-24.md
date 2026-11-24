@@ -16,6 +16,10 @@ Google.
   (`profile+pilot@pam.test`, 30 base transactions across the rolling 12 WIB months + 1 delta
   message), `LLM_PROVIDER=fake`, `CATEGORY_LLM_ENABLED=false`, Azure/analysis disabled.
 - Result: **exit code 0 — PASS=82, FAIL=0, NOT RUN=0.**
+- Re-run after audit round 4/5 fixes: `0037-Backend-Financial` @ **1290910** (same harness,
+  isolated port 18099, fresh DB/fixture) → **PASS=82, FAIL=0, exit 0**. The harness has not yet
+  been extended to assert the new 429 `retryable`/camelCase shape or the cleared marker; those are
+  covered by the Go unit/HTTP tests in `internal/gmail` and `internal/httpapi`.
 
 ## Command
 

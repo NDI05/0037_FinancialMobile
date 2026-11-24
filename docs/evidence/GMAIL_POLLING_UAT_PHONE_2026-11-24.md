@@ -9,8 +9,8 @@ nominal nyata, atau token di dokumen maupun aset.
 
 | Hal | Nilai |
 |---|---|
-| Repo Android | `pam-app`, branch `feat/c2-android`, HEAD `a7abb14` |
-| APK | `app/build/outputs/apk/debug/app-debug.apk`, varian debug, package `com.pam.recap.debug`, 46.433.025 byte, dibangun 24 Nov 2026 17:11 WIB |
+| Repo Android | `pam-app`, branch `feat/c2-android`; UAT penuh pada build `a7abb14`, build final **`7f218ed`** (perbaikan MINOR F2) di-smoke ulang |
+| APK | `app/build/outputs/apk/debug/app-debug.apk`, varian debug, package `com.pam.recap.debug`, 46.433.080 byte; build UAT `a7abb14` 17:08 WIB sha256 `93b69cc0…`, build final `7f218ed` 17:28 WIB sha256 `7efc1803…` |
 | Repo backend | `0037-Backend-Financial`, branch `integration/2026-11-24`, HEAD `1290910` |
 | Binary backend | `/tmp/pam-gmail-uat/bin/pam-api`, dibangun dari `1290910` pukul 17:12 WIB |
 | Perangkat | HP fisik `21061119AG`, serial `105397ba0507`, Android debug via `adb` |
@@ -32,6 +32,9 @@ nominal nyata, atau token di dokumen maupun aset.
 | 8 | Tidak ada duplikat saat aplikasi dibuka kembali | PASS | setelah buka 17:15:39, Ringkasan/Transaksi menampilkan `14:30 · Keluar · Rp9.990` tepat satu kali; total 27 baris |
 | 9 | Restart backend tidak kehilangan data atau menggandakan baris | PASS | restart 17:16:30; `readyz=200`; count tetap 27; `sync_state=idle`, 12/12, `sync_requested_at=null`, `needs_reauth=false` |
 | 10 | Rekonsiliasi jumlah/total server vs Ringkasan/Transaksi | PASS | DB November 2026: 5 baris, total 2.053.001 minor = **Rp20.530,01**; Ringkasan "Rp20.530,01", "5 belum berkategori"; daftar transaksi 5 baris |
+| 11 | Build final `7f218ed` (perbaikan MINOR F2 audit ronde 5) di-smoke ulang di HP yang sama | PASS | `adb install -r` build final 17:28; sheet status "Menunggu", 12/12, "Sinkron berikutnya sekitar 17:31"; tap "Sinkronkan sekarang" → state "Mengambil riwayat"/"Sedang sinkron" → `POST /v1/gmail/sync` **202** (log 17:30:41) → drain "Menunggu" 17:30:51; tidak ada label lengket (`status_sheet_final_build.*`, `manual_sync_settled_build.xml`) |
+
+**Catatan build final.** UAT butir 1–10 dijalankan pada build `a7abb14`; setelah audit ronde 5 menemukan MINOR F2 (hint "Menghubungkan" dapat lengket bila `GET /v1/gmail/status` terus gagal), perbaikan satu baris + tes diterapkan di `7f218ed` dan build final dipasang ulang. Butir 4–5 diverifikasi ulang pada build final (butir 11); delta, cooldown, restart, dan rekonsiliasi tidak berubah karena perbaikan hanya menyentuh cabang kegagalan pembacaan status.
 
 ## 3. Bukti sanitasi
 
@@ -42,6 +45,7 @@ Folder `docs/evidence/assets/gmail_polling_uat/`:
 - `status_cooldown_429.*` — hitungan mundur cooldown 429.
 - `ringkasan_after_delta2.*` — Ringkasan setelah delta kedua (`Rp20.530,01`, 5 belum berkategori).
 - `transactions_after_delta2.*` — daftar transaksi November 2026 (5 baris, `Rp9.990` sekali).
+- `status_sheet_final_build.*`, `manual_sync_accepted_build.png`, `manual_sync_settled_build.xml` — build final `7f218ed`: sheet "Menunggu" 12/12 dan siklus tap → 202 → drain.
 
 Aset berupa dump `uiautomator` dan tangkapan layar aplikasi sintetis; tidak memuat token, email
 nyata, nominal nyata, maupun data pemilik.
@@ -61,3 +65,4 @@ nyata, nominal nyata, maupun data pemilik.
   bagian server Gmail sendiri menunjukkan "Menunggu"/sukses. Dicatat sebagai temuan kecil UI, bukan
   kegagalan sinkronisasi server.
 - Backend UAT hanya loopback; port tidak dibuka ke internet dan tidak ada reverse proxy publik.
+- Temuan MINOR audit ronde 5 yang **tidak** ditutup dan dicatat sebagai backlog non-blocking: F1 (parameter `cutoff` `ClearGmailSyncRequest` belum melindungi request yang datang di tengah run; dampak ≤ satu interval delta), F3 (marker tidak dibersihkan saat disconnect/reconnect dan replay-expiry kedua; UI sudah mengabaikannya), F6 (409 `gmail_needs_reauth` di Android belum dipetakan ke CTA khusus, masih error generik).
