@@ -37,6 +37,7 @@ fun appErrorRes(error: AppError): Int = when (error) {
         com.pam.recap.core.result.AppErrorRules.EMAIL_TAKEN -> R.string.error_email_taken
         com.pam.recap.core.result.AppErrorRules.IMAP_CREDENTIALS_REQUIRED -> R.string.gmail_credentials_required
         com.pam.recap.core.result.AppErrorRules.BROWSER_UNAVAILABLE -> R.string.gmail_link_browser_missing
+        com.pam.recap.core.result.AppErrorRules.GMAIL_DISABLED -> R.string.gmail_link_backend_disabled
         com.pam.recap.core.result.AppErrorRules.NOT_SIGNED_IN -> R.string.error_not_signed_in
         else -> R.string.error_validation
     }

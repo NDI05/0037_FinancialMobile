@@ -149,6 +149,36 @@ class PamApiClientTest {
         assertEquals(300L, result.value.plans.single().gapMinor)
     }
 
+    @Test
+    fun `gmail status maps a runtime disabled backend to its own rule`() = runTest {
+        server.enqueue(
+            json(503, """{"code":"gmail_disabled","message":"Gmail integration is not enabled"}"""),
+        )
+        val result = client.gmailStatus("u_1") as Outcome.Failure
+        // Not AppError.Network("backend_503"): the UI needs to explain that the server has not
+        // enabled Gmail instead of offering a connect button for an outage.
+        assertEquals(AppError.Validation(AppErrorRules.GMAIL_DISABLED), result.error)
+        assertEquals("/v1/gmail/status", server.takeRequest().path)
+    }
+
+    @Test
+    fun `gmail connect start and disconnect parse the contract projection`() = runTest {
+        server.enqueue(
+            json(
+                200,
+                """{"authorization_url":"https://accounts.google.com/o/oauth2/v2/auth?state=s",
+                   "expires_at":"2026-11-24T07:10:00Z"}""",
+            ),
+        )
+        server.enqueue(json(200, """{"disconnected":true}"""))
+        val start = client.gmailConnectStart("u_1") as Outcome.Success
+        assertEquals(
+            "https://accounts.google.com/o/oauth2/v2/auth?state=s",
+            start.value.authorizationUrl.toString(),
+        )
+        assertTrue(client.gmailDisconnect("u_1") is Outcome.Success)
+    }
+
     private fun json(code: Int, body: String) = MockResponse()
         .setResponseCode(code)
         .setHeader("content-type", "application/json")
