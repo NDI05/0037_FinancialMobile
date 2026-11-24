@@ -170,7 +170,9 @@ fun GmailLinkContent(
                 )
             }
 
-            if (state.error != null) {
+            // A runtime-disabled backend is explained inside the card below, so it is not also
+            // shown as a generic failure banner (that would read like a retryable outage).
+            if (state.error != null && !state.backendGmailDisabled) {
                 NoticeBanner(text = stringResource(appErrorRes(state.error)))
             }
 
@@ -194,7 +196,14 @@ fun GmailLinkContent(
 
                 Spacer(modifier = Modifier.height(PamSpacing.sm))
 
-                if (!state.enabled) {
+                if (state.backendGmailDisabled) {
+                    // The server answered `503 gmail_disabled`: no connect/disconnect CTA at all.
+                    Text(
+                        text = stringResource(R.string.gmail_link_backend_disabled),
+                        style = BodyM,
+                        color = OnInkMuted,
+                    )
+                } else if (!state.enabled) {
                     Text(
                         text = stringResource(R.string.gmail_link_server_required),
                         style = BodyM,

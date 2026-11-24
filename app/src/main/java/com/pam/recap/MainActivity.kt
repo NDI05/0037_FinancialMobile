@@ -25,6 +25,7 @@ import com.pam.recap.domain.repository.AutoSyncScheduler
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.AutoCategoryUseCase
 import com.pam.recap.domain.model.GmailLinkResult
+import com.pam.recap.ui.feature.gmail.GmailLinkIntentGate
 import com.pam.recap.domain.usecase.IncrementalSyncUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -42,6 +43,9 @@ class MainActivity : ComponentActivity() {
 
     /** Result of `pam://gmail/connected…`, consumed by the nav host once the gate is Ready. */
     private var gmailLinkResult by mutableStateOf<GmailLinkResult?>(null)
+
+    /** Drops duplicate/replayed callback intents (recreate, duplicate delivery). */
+    private lateinit var gmailLinkIntentGate: GmailLinkIntentGate
 
     @Inject
     lateinit var sessions: SessionRepository
@@ -78,6 +82,9 @@ class MainActivity : ComponentActivity() {
                 WindowManager.LayoutParams.FLAG_SECURE,
             )
         }
+        gmailLinkIntentGate = GmailLinkIntentGate(
+            savedInstanceState?.getString(GmailLinkIntentGate.KEY_HANDLED_INTENT),
+        )
         readGmailLink(intent)
         setContent {
             PamTheme {
@@ -104,12 +111,24 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun readGmailLink(intent: Intent?) {
-        val data = intent?.data ?: return
-        if (data.scheme != "pam" || data.host != "gmail") return
-        if (data.path?.startsWith("/connected") != true) return
-        gmailLinkResult = GmailLinkResult.fromWire(
-            status = data.getQueryParameter("status"),
-            reason = data.getQueryParameter("reason"),
+        val data = intent?.data
+        val result = gmailLinkIntentGate.accept(
+            action = intent?.action,
+            data = data?.toString(),
+            scheme = data?.scheme,
+            host = data?.host,
+            path = data?.path,
+            status = data?.getQueryParameter("status"),
+            reason = data?.getQueryParameter("reason"),
+        ) ?: return
+        gmailLinkResult = result
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(
+            GmailLinkIntentGate.KEY_HANDLED_INTENT,
+            gmailLinkIntentGate.handledKeySnapshot,
         )
     }
 

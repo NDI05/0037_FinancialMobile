@@ -1,8 +1,10 @@
 package com.pam.recap.ui.feature.gmail
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pam.recap.core.result.AppError
+import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.GmailLinkResult
 import com.pam.recap.domain.model.GmailLinkStatus
@@ -35,12 +37,22 @@ data class GmailLinkUiState(
     /** One-shot: the screen opens this URL in the browser/Custom Tab, then consumes it. */
     val authorizationUrl: String? = null,
     val disconnectRequested: Boolean = false,
-)
+) {
+
+    /**
+     * True when the server answered `503 gmail_disabled`: the deployment has not enabled the
+     * feature at all, so a connect button would be a dead end. Distinct from [enabled], which only
+     * describes this build's backend configuration.
+     */
+    val backendGmailDisabled: Boolean
+        get() = (error as? AppError.Validation)?.rule == AppErrorRules.GMAIL_DISABLED
+}
 
 @HiltViewModel
 class GmailLinkViewModel @Inject constructor(
     private val sessions: SessionRepository,
     private val gmail: GmailLinkRepository,
+    private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(GmailLinkUiState(enabled = gmail.isEnabled))
@@ -107,8 +119,18 @@ class GmailLinkViewModel @Inject constructor(
         }
     }
 
-    /** Result of `pam://gmail/connected?status=...&reason=...`; always followed by a refresh. */
+    /**
+     * Result of `pam://gmail/connected?status=...&reason=...`; always followed by a refresh.
+     *
+     * The nav route keeps the result in its arguments, so an activity recreate composes the screen
+     * again with the same values. The handled key lives in [SavedStateHandle] so the banner is
+     * shown once per callback: a replay (duplicate intent / recreate) must not re-banner nor
+     * re-trigger the status refresh.
+     */
     fun onDeepLink(result: GmailLinkResult) {
+        val key = "${result.success}|${result.reason.orEmpty()}"
+        if (savedState.get<String>(KEY_HANDLED_LINK) == key) return
+        savedState[KEY_HANDLED_LINK] = key
         _state.update {
             it.copy(
                 linkResult = result,
@@ -152,5 +174,10 @@ class GmailLinkViewModel @Inject constructor(
                 is Outcome.Failure -> _state.update { it.copy(busy = false, error = result.error) }
             }
         }
+    }
+
+    companion object {
+        /** Saved-state key of the last deep link this view model already presented. */
+        internal const val KEY_HANDLED_LINK = "gmail_link_handled"
     }
 }

@@ -112,4 +112,5 @@ object AppErrorRules {
     const val EMAIL_TAKEN = "email_taken"
     const val IMAP_CREDENTIALS_REQUIRED = "imap_credentials_required"
     const val BROWSER_UNAVAILABLE = "browser_unavailable"
+    const val GMAIL_DISABLED = "gmail_disabled"
 }

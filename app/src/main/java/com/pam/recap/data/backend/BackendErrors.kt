@@ -20,6 +20,9 @@ internal object BackendErrorCodes {
     const val INVALID_ANALYSIS_OUTPUT = "invalid_analysis_output"
     const val RATE_LIMITED = "rate_limited"
     const val DAILY_CEILING_REACHED = "daily_ceiling_reached"
+
+    /** Every Gmail route answers this when the server ships with `GMAIL_ENABLED=false`. */
+    const val GMAIL_DISABLED = "gmail_disabled"
 }
 
 /**
@@ -40,6 +43,10 @@ internal fun backendError(status: Int, code: String?): AppError = when {
         code ?: BackendErrorCodes.RATE_LIMITED,
     )
     status == 400 -> AppError.Validation(AppErrorRules.ANALYSIS_REJECTED)
+    // A runtime-disabled Gmail integration is not a transient outage: the screen needs to say the
+    // server has not enabled linking instead of offering a connect button that cannot work.
+    status == 503 && code == BackendErrorCodes.GMAIL_DISABLED ->
+        AppError.Validation(AppErrorRules.GMAIL_DISABLED)
     status >= 500 -> AppError.Network("backend_$status")
     else -> AppError.Network("backend_$status")
 }

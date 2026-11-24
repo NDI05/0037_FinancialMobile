@@ -12,9 +12,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.performClick
+import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.pam.recap.R
 import com.pam.recap.core.result.AppError
+import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.GmailAuthorization
 import com.pam.recap.domain.model.GmailLinkResult
@@ -120,7 +122,7 @@ class GmailLinkScreenTest {
         val sessions = FakeSessionRepository(
             Session("own_gmail_ui", "PM UI", null, Instant.parse("2026-11-24T00:00:00Z"), false),
         )
-        val viewModel = GmailLinkViewModel(sessions, gmail)
+        val viewModel = GmailLinkViewModel(sessions, gmail, SavedStateHandle())
         compose.setContent {
             GmailLinkScreen(
                 onBack = {},
@@ -283,6 +285,48 @@ class GmailLinkScreenTest {
         compose.onNodeWithText(context.getString(R.string.gmail_link_server_required))
             .assertIsDisplayed()
         compose.onNodeWithTag(GmailLinkTestTags.CONNECT).assertDoesNotExist()
+    }
+
+    @Test
+    fun `runtime disabled backend explains it without a misleading connect button`() {
+        compose.setContent {
+            content(
+                GmailLinkUiState(
+                    enabled = true,
+                    loading = false,
+                    status = null,
+                    error = AppError.Validation(AppErrorRules.GMAIL_DISABLED),
+                ),
+            )
+        }
+        compose.onNodeWithText(context.getString(R.string.gmail_link_backend_disabled))
+            .assertIsDisplayed()
+        compose.onNodeWithTag(GmailLinkTestTags.CONNECT).assertDoesNotExist()
+        compose.onNodeWithTag(GmailLinkTestTags.DISCONNECT).assertDoesNotExist()
+        compose.onNodeWithTag(GmailLinkTestTags.RETRY).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a replayed deep link shows a single banner`() {
+        val gmail = ScreenGmailLinkRepository()
+        val sessions = FakeSessionRepository(
+            Session("own_gmail_ui", "PM UI", null, Instant.parse("2026-11-24T00:00:00Z"), false),
+        )
+        val viewModel = GmailLinkViewModel(sessions, gmail, SavedStateHandle())
+        compose.setContent {
+            GmailLinkScreen(onBack = {}, viewModel = viewModel)
+        }
+        compose.runOnIdle {
+            // Duplicate delivery / activity recreate composes the same callback twice.
+            viewModel.onDeepLink(GmailLinkResult.fromWire("success", null))
+            viewModel.onDeepLink(GmailLinkResult.fromWire("success", null))
+        }
+        compose.waitForIdle()
+        assertEquals(
+            1,
+            compose.onAllNodesWithText(context.getString(R.string.gmail_link_success))
+                .fetchSemanticsNodes().size,
+        )
     }
 
     @Test

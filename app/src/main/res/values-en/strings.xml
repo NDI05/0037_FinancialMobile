@@ -681,4 +681,5 @@
     <string name="gmail_link_never">never</string>
     <string name="gmail_link_browser_missing">No browser is available to open the Gmail consent page.</string>
     <string name="settings_open_gmail_link">Link Gmail through browser</string>
+    <string name="gmail_link_backend_disabled">The PAM server has not enabled Gmail linking, so this feature is not available yet. Try again later.</string>
 </resources>

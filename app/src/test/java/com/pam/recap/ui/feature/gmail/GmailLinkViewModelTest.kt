@@ -1,6 +1,8 @@
 package com.pam.recap.ui.feature.gmail
 
+import androidx.lifecycle.SavedStateHandle
 import com.pam.recap.core.result.AppError
+import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.GmailAuthorization
 import com.pam.recap.domain.model.GmailLinkResult
@@ -35,6 +37,7 @@ class GmailLinkViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private lateinit var gmail: FakeGmailLinkRepository
     private lateinit var sessions: FakeSessionRepository
+    private lateinit var savedState: SavedStateHandle
 
     private val connectedStatus = GmailLinkStatus(
         connected = true,
@@ -52,6 +55,7 @@ class GmailLinkViewModelTest {
         sessions = FakeSessionRepository(
             Session("own_gmail_ui", "PM UI", null, Instant.parse("2026-11-24T00:00:00Z"), false),
         )
+        savedState = SavedStateHandle()
     }
 
     @After
@@ -59,7 +63,7 @@ class GmailLinkViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = GmailLinkViewModel(sessions, gmail)
+    private fun viewModel() = GmailLinkViewModel(sessions, gmail, savedState)
 
     @Test
     fun `not linked shows the unlinked status without pretending the backend failed`() {
@@ -175,7 +179,7 @@ class GmailLinkViewModelTest {
     @Test
     fun `no session never calls the API`() {
         sessions = FakeSessionRepository(null)
-        val vm = GmailLinkViewModel(sessions, gmail)
+        val vm = GmailLinkViewModel(sessions, gmail, SavedStateHandle())
         assertFalse(vm.state.value.signedIn)
         assertFalse(vm.state.value.loading)
         assertEquals(0, gmail.statusCalls)
@@ -184,11 +188,64 @@ class GmailLinkViewModelTest {
     @Test
     fun `a build without a backend disables the action honestly`() {
         gmail = FakeGmailLinkRepository(isEnabled = false)
-        val vm = GmailLinkViewModel(sessions, gmail)
+        val vm = GmailLinkViewModel(sessions, gmail, SavedStateHandle())
         assertFalse(vm.state.value.enabled)
         vm.connect()
         assertNull(vm.state.value.authorizationUrl)
         assertEquals(0, gmail.startCalls)
+    }
+
+    @Test
+    fun `a replayed deep link is presented once and does not refresh again`() {
+        val vm = viewModel()
+        val readsBefore = gmail.statusCalls
+        vm.onDeepLink(GmailLinkResult.fromWire("success", null))
+        assertEquals(readsBefore + 1, gmail.statusCalls)
+        assertEquals(GmailLinkResult(success = true), vm.state.value.linkResult)
+
+        // Duplicate intent / activity recreate composes the same result again.
+        vm.onDeepLink(GmailLinkResult.fromWire("success", null))
+        assertEquals(GmailLinkResult(success = true), vm.state.value.linkResult)
+        assertEquals(readsBefore + 1, gmail.statusCalls)
+    }
+
+    @Test
+    fun `a recreated screen with restored state does not show the banner again`() {
+        gmail.statusResult = Outcome.Success(connectedStatus)
+        val restored = SavedStateHandle(
+            mapOf(GmailLinkViewModel.KEY_HANDLED_LINK to "true|"),
+        )
+        val vm = GmailLinkViewModel(sessions, gmail, restored)
+        val readsBefore = gmail.statusCalls
+        vm.onDeepLink(GmailLinkResult.fromWire("success", null))
+        assertNull(vm.state.value.linkResult)
+        assertEquals(readsBefore, gmail.statusCalls)
+    }
+
+    @Test
+    fun `a different callback after the handled one is still presented`() {
+        val vm = viewModel()
+        vm.onDeepLink(GmailLinkResult.fromWire("error", "state_expired"))
+        vm.onDeepLink(GmailLinkResult.fromWire("error", "access_denied"))
+        assertEquals(
+            GmailLinkResult(success = false, reason = "access_denied"),
+            vm.state.value.linkResult,
+        )
+    }
+
+    @Test
+    fun `a runtime disabled backend is a distinct state without connect airflow`() {
+        gmail.statusResult = Outcome.Failure(AppError.Validation(AppErrorRules.GMAIL_DISABLED))
+        val vm = viewModel()
+        assertTrue(vm.state.value.backendGmailDisabled)
+        assertEquals(AppError.Validation(AppErrorRules.GMAIL_DISABLED), vm.state.value.error)
+    }
+
+    @Test
+    fun `a transient network failure is not mistaken for a disabled backend`() {
+        gmail.statusResult = Outcome.Failure(AppError.Network("backend_503"))
+        val vm = viewModel()
+        assertFalse(vm.state.value.backendGmailDisabled)
     }
 }
 
