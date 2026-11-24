@@ -136,6 +136,17 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 				"Provider usage could not be recorded; the reservation remains", correlationOf(r))
 			return
 		}
+		if providerErr == nil {
+			// One structured line per billable call: prompt/completion are the billed counters,
+			// reasoning is the reported subset of completion tokens. Aggregated payload only.
+			s.Log.Info("analysis provider usage",
+				"correlationId", correlationOf(r),
+				"provider", provider.ID(),
+				"promptTokens", int64OrZero(response.PromptTokens),
+				"completionTokens", int64OrZero(response.CompletionTokens),
+				"reasoningTokens", int64OrZero(response.ReasoningTokens),
+				"totalTokens", int64OrZero(response.TotalTokens))
+		}
 		if providerErr != nil {
 			break
 		}
@@ -182,6 +193,13 @@ func (s *Server) createAnalysis(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, analysisJSON(record, snapshot.DependencyHash, snapshot.Revision))
+}
+
+func int64OrZero(value *int64) int64 {
+	if value == nil {
+		return 0
+	}
+	return *value
 }
 
 func (s *Server) recordProviderUsage(ownerID string, response store.AnalysisResponse) error {

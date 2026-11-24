@@ -75,9 +75,12 @@ class ServerAnalysisRepositoryImpl @Inject constructor(
             is Outcome.Success -> result.value
             is Outcome.Failure -> return result
         }
-        if (!summary.hasData || summary.coverage == CoverageStatus.FAILED ||
-            summary.coverage == CoverageStatus.EMPTY
-        ) {
+        // Only "no transactions at all" means there is nothing to analyse. Email coverage EMPTY or
+        // FAILED is not the same thing: manual transactions still have canonical totals, and the
+        // aggregate payload carries the coverage status so the provider can state the limitation.
+        // Blocking those months made the screen say "Belum ada data untuk bulan ini." while the
+        // month clearly had transactions (S2.D UAT 24 Nov 2026: coverage EMPTY, 90 transactions).
+        if (!summary.hasData) {
             return Outcome.Failure(AppError.Validation(AppErrorRules.MONTH_HAS_NO_DATA))
         }
         val previous = finance.summary(ownerId, month.previous()).getOrNull()

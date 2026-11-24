@@ -1,0 +1,108 @@
+{
+  "purpose": "Isolated API-level category reason-code / cache / consent verification; local stub provider, synthetic accounts only, no owner data",
+  "checks": [
+    {
+      "name": "consent_gate",
+      "pass": true,
+      "detail": "403 consent_required before any provider call"
+    },
+    {
+      "name": "reference_19_digit",
+      "pass": true,
+      "detail": "NEEDS_REVIEW uncategorized reason=merchant_not_identifiable"
+    },
+    {
+      "name": "reference_short_numeric",
+      "pass": true,
+      "detail": "NEEDS_REVIEW uncategorized reason=merchant_not_identifiable"
+    },
+    {
+      "name": "reference_grouped_numeric",
+      "pass": true,
+      "detail": "NEEDS_REVIEW uncategorized reason=merchant_not_identifiable"
+    },
+    {
+      "name": "missing_label",
+      "pass": true,
+      "detail": "NEEDS_REVIEW uncategorized reason=merchant_missing"
+    },
+    {
+      "name": "unsafe_label",
+      "pass": true,
+      "detail": "NEEDS_REVIEW uncategorized reason=unsafe_merchant"
+    },
+    {
+      "name": "no_provider_for_rejected",
+      "pass": true,
+      "detail": "reference/empty/unsafe labels never reached the provider"
+    },
+    {
+      "name": "named_control_classified",
+      "pass": true,
+      "detail": "CLASSIFIED food via provider=azure-openai-compatible model=stub-category-model"
+    },
+    {
+      "name": "control_one_provider_call",
+      "pass": true,
+      "detail": "provider saw exactly ['KOPI UJI']"
+    },
+    {
+      "name": "duplicate_merchants_share_one_case",
+      "pass": true,
+      "detail": "two rows, same merchant -> two CLASSIFIED jobs, one provider call"
+    },
+    {
+      "name": "owner_cache_replay",
+      "pass": true,
+      "detail": "same owner + same merchant -> cache hit, provider calls still 2"
+    },
+    {
+      "name": "cache_is_per_owner",
+      "pass": true,
+      "detail": "second owner same merchant -> one additional provider call, cache not shared"
+    },
+    {
+      "name": "user_override_untouched",
+      "pass": true,
+      "detail": "USER-categorized row -> not_eligible, category/origin unchanged, no call"
+    },
+    {
+      "name": "max_five_ids",
+      "pass": true,
+      "detail": "six transaction ids -> 400 invalid_request"
+    },
+    {
+      "name": "no_trailing_provider_calls",
+      "pass": true,
+      "detail": "still 3 provider calls after the rejected batch"
+    },
+    {
+      "name": "cache_rows_owner_scoped",
+      "pass": true,
+      "detail": "3 cache rows across 2 owners"
+    },
+    {
+      "name": "category_ledger_accounted",
+      "pass": true,
+      "detail": "category_usage: owner attempts=2 usd=0.00005600, global attempts=3 usd=0.00008400, owner attempts=1 usd=0.00002800"
+    }
+  ],
+  "provider_calls": [
+    [
+      "KOPI UJI"
+    ],
+    [
+      "TEH UJI"
+    ],
+    [
+      "TEH UJI"
+    ]
+  ],
+  "environment": {
+    "backend": "isolated Go API on 127.0.0.1:60769",
+    "database": "throwaway SQLite file verify.db",
+    "provider": "local Azure-compatible stub on loopback (no Azure call, no cost)",
+    "app_traffic": "none; API-level verification"
+  },
+  "overall": "PASS"
+}

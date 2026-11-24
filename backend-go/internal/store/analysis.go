@@ -28,6 +28,11 @@ type AnalysisResponse struct {
 	Limitations      []string      `json:"limitations"`
 	PromptTokens     *int64        `json:"promptTokens,omitempty"`
 	CompletionTokens *int64        `json:"completionTokens,omitempty"`
+	// ReasoningTokens and TotalTokens are provider usage details that are logged for budget
+	// evidence only. They are subsets/additions of the billed counters and are not persisted in
+	// the analysis record or returned by the API, so stored budgets stay unchanged.
+	ReasoningTokens *int64 `json:"reasoningTokens,omitempty"`
+	TotalTokens     *int64 `json:"totalTokens,omitempty"`
 }
 
 type AnalysisRecord struct {

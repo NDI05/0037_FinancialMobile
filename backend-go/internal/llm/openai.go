@@ -154,13 +154,26 @@ func (o OpenAI) Analyze(ctx context.Context, payload map[string]any) (store.Anal
 		Usage struct {
 			PromptTokens     *int64 `json:"prompt_tokens"`
 			CompletionTokens *int64 `json:"completion_tokens"`
+			TotalTokens      *int64 `json:"total_tokens"`
+			// Azure gpt-oss bills reasoning tokens inside completion_tokens; the detail is
+			// reported separately so budget evidence can show the split.
+			CompletionTokensDetails *struct {
+				ReasoningTokens *int64 `json:"reasoning_tokens"`
+			} `json:"completion_tokens_details"`
 		} `json:"usage"`
 	}
 	if err := json.Unmarshal(data, &decoded); err != nil || len(decoded.Choices) == 0 {
 		return store.AnalysisResponse{}, fmt.Errorf("provider returned no choices")
 	}
 	var analysis store.AnalysisResponse
-	usage := store.AnalysisResponse{PromptTokens: decoded.Usage.PromptTokens, CompletionTokens: decoded.Usage.CompletionTokens}
+	usage := store.AnalysisResponse{
+		PromptTokens:     decoded.Usage.PromptTokens,
+		CompletionTokens: decoded.Usage.CompletionTokens,
+		TotalTokens:      decoded.Usage.TotalTokens,
+	}
+	if decoded.Usage.CompletionTokensDetails != nil {
+		usage.ReasoningTokens = decoded.Usage.CompletionTokensDetails.ReasoningTokens
+	}
 	if o.azure && decoded.Choices[0].FinishReason != "stop" {
 		return usage, fmt.Errorf("Azure analysis did not finish normally")
 	}
@@ -173,6 +186,7 @@ func (o OpenAI) Analyze(ctx context.Context, payload map[string]any) (store.Anal
 		return usage, fmt.Errorf("provider returned trailing analysis json")
 	}
 	analysis.PromptTokens, analysis.CompletionTokens = usage.PromptTokens, usage.CompletionTokens
+	analysis.ReasoningTokens, analysis.TotalTokens = usage.ReasoningTokens, usage.TotalTokens
 	return analysis, nil
 }
 
