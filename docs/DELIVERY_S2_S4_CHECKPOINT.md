@@ -858,11 +858,14 @@ PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
   acceptance varian final di perangkat pemilik (Run Android Studio) dan bukti drill-down-after
   dengan data belum ada; klaim dedupe re-import via `sourceRef` tidak boleh dibaca PASS karena
   klien belum mengirim `sourceRef` di jalur impor. Gate tetap terbuka sampai Run pemilik.
-- **S3 = PASS API/unit.** C01–C15 lulus sesuai matriks; dua aksi UI (C09/C25) tetap PARTIAL
-  sesuai batas yang sudah dicatat, bukan PASS palsu.
-- **S4 = PARTIAL.** C16–C20 dan C21/C24 lulus dari sesi 23 Nov; C25 UI PARTIAL dan
-  tombol **Buat Analisis** dari UI owner masih 400 (logging alasan sudah ditambahkan; penyebab
-  menunggu percobaan pemilik).
+- **S3 = PASS API/unit + PASS UI untuk aksi ber-UI yang diuji.** C01–C15 lulus sesuai
+  matriks; C09 (guard + reassign), C11, C13 (update + banner konflik), C14 diuji ulang lewat
+  UI 24 Nov; C02/C06–C08/C10/C12/C15 mengandalkan runtime 23 Nov atau API 24 Nov dan tidak
+  dijalankan ulang. Keputusan acceptance final tetap di pemilik.
+- **S4 = PARTIAL.** C16–C20, C21/C22/C24, C23 (API+UI), dan **Buat Analisis** (Azure 200,
+  `AVAILABLE/CURRENT`, UI "ANALISIS TERSIMPAN") sudah terbukti; C25 UI tetap PARTIAL
+  (status SUSPENDED via UI dan cursor lintas halaman belum dijalankan; filter pencarian
+  admin tidak menyaring live).
 - **S5 tetap terbuka:** merge/deploy, hosting/backup, benchmark berlabel, mailbox produksi.
 
 ### Batas yang tidak diklaim
