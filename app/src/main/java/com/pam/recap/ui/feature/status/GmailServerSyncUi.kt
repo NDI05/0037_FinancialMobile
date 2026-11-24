@@ -44,8 +44,12 @@ data class GmailServerSyncUi(
     /** Contract §9.2 `needs_reauth`: only the "Tautkan ulang Gmail" CTA can fix it. */
     val needsReauth: Boolean = false,
     val syncState: GmailSyncState = GmailSyncState.UNKNOWN,
-    /** A manual request is queued but the worker has not reported a phase yet. */
-    val requested: Boolean = false,
+    /**
+     * Clock reading of the last `POST /v1/gmail/sync` ack. Only a short-lived hint: the sheet must
+     * derive its state from [syncState]/[progress], never from the server's `sync_requested_at`
+     * marker (older backends never clear it, which would pin "Menghubungkan" forever).
+     */
+    val requestHintAt: Instant? = null,
     val progress: GmailSyncProgress? = null,
     val lastAttemptAt: Instant? = null,
     val lastSuccessAt: Instant? = null,
@@ -62,6 +66,17 @@ data class GmailServerSyncUi(
     val running: Boolean
         get() = syncState == GmailSyncState.BACKFILL || syncState == GmailSyncState.DELTA
 
+    /**
+     * "Menghubungkan" while a just-enqueued request has not been superseded by a status read yet.
+     * The view model clears the hint on the first status response, and the elapsed-time cap keeps a
+     * stale ack from lingering if that response never arrives.
+     */
+    fun connecting(now: Instant): Boolean {
+        if (running || needsReauth || syncState == GmailSyncState.ERROR) return false
+        val hint = requestHintAt ?: return false
+        return now - hint <= CONNECTING_HINT
+    }
+
     /** Remaining cooldown in whole seconds, or null when the server did not specify one. */
     fun cooldownSeconds(now: Instant): Int? {
         val until = cooldownUntil ?: return null
@@ -73,6 +88,9 @@ data class GmailServerSyncUi(
     fun coolingDown(now: Instant): Boolean = (cooldownSeconds(now) ?: 0) > 0
 
     companion object {
+        /** Upper bound for the "Menghubungkan" hint, even if no status read ever arrives. */
+        val CONNECTING_HINT: kotlin.time.Duration = 20.seconds
+
         /** Gmail not linked (or backend disabled): the sheet keeps the legacy device-sync view. */
         val Hidden: GmailServerSyncUi = GmailServerSyncUi()
     }

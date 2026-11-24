@@ -239,16 +239,27 @@ class PamApiClientTest {
 
     @Test
     fun `gmail sync 429 carries the server cooldown`() = runTest {
+        // Body copied from contract §9.3: camelCase `retryAfterSeconds` plus `retryable`.
         server.enqueue(
             json(
                 429,
-                """{"code":"sync_cooldown","message":"wait","retryable":true,"retryAfterSeconds":45}""",
+                """{"code": "sync_cooldown", "retryable": true, "retryAfterSeconds": 24}""",
             ),
         )
         val result = client.gmailSync("u_1") as Outcome.Failure
         val error = result.error as AppError.RateLimited
         assertEquals(AppErrorRules.SYNC_COOLDOWN, error.debugDetail)
-        assertEquals(45, error.retryAfterSeconds)
+        assertEquals(24, error.retryAfterSeconds)
+    }
+
+    @Test
+    fun `gmail sync 429 also tolerates a legacy snake_case retry delay`() = runTest {
+        server.enqueue(
+            json(429, """{"code":"sync_cooldown","retryable":true,"retry_after_seconds":30}"""),
+        )
+        val result = client.gmailSync("u_1") as Outcome.Failure
+        val error = result.error as AppError.RateLimited
+        assertEquals(30, error.retryAfterSeconds)
     }
 
     @Test

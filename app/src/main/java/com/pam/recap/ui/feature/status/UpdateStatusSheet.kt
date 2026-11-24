@@ -216,7 +216,7 @@ private fun ServerSyncSection(
     val now = state.observedAt ?: fallbackNow
     StatusLine(
         label = stringResource(R.string.update_status_server_state_label),
-        value = serverStateCopy(state),
+        value = serverStateCopy(state, now),
     )
     serverProgressLines(state)
     StatusLine(
@@ -260,9 +260,9 @@ private fun ServerSyncSection(
 
 /** One-line state copy: the worker's phase first, then the pending request, then error/idle. */
 @Composable
-private fun serverStateCopy(state: GmailServerSyncUi): String = when {
+private fun serverStateCopy(state: GmailServerSyncUi, now: Instant): String = when {
     state.running -> stringResource(R.string.update_status_server_state_fetching)
-    state.requested -> stringResource(R.string.update_status_server_state_connecting)
+    state.connecting(now) -> stringResource(R.string.update_status_server_state_connecting)
     state.syncState == GmailSyncState.ERROR -> stringResource(R.string.update_status_server_state_error)
     state.loading -> stringResource(R.string.update_status_server_loading)
     else -> stringResource(R.string.update_status_server_state_waiting)

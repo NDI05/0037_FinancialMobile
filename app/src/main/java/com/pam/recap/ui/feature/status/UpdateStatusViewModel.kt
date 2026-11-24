@@ -146,6 +146,7 @@ class UpdateStatusViewModel @Inject constructor(
                     _serverSync.update {
                         it.copy(
                             busy = false,
+                            requestHintAt = clock.now(),
                             notice = if (result.value.coalesced) {
                                 GmailSyncNotice.COALESCED
                             } else {
@@ -232,7 +233,10 @@ class UpdateStatusViewModel @Inject constructor(
             loading = false,
             needsReauth = status.needsReauth,
             syncState = status.syncState,
-            requested = status.syncRequestedAt != null && !running,
+            // The server marker is deliberately ignored: a stale `sync_requested_at` (older
+            // backends never clear it) must not pin the sheet on "Menghubungkan". The only hint is
+            // the local ack timestamp, and this response supersedes it immediately.
+            requestHintAt = null,
             progress = status.progress,
             lastAttemptAt = status.lastAttemptAt,
             lastSuccessAt = status.lastSuccessAt,

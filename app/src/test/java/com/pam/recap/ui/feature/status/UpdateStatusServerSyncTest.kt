@@ -179,6 +179,60 @@ class UpdateStatusServerSyncTest {
     }
 
     @Test
+    fun `a stale sync_requested_at marker never pins the connecting label`() = sheetTest { vm ->
+        // Older backend: the request drained, but the marker is still in the projection.
+        gmail.statusResult = Outcome.Success(
+            connectedStatus().copy(syncRequestedAt = Instant.parse("2026-11-24T04:00:00Z")),
+        )
+
+        vm.onSheetOpened()
+
+        val opened = vm.serverSync.value
+        assertEquals(GmailSyncState.IDLE, opened.syncState)
+        assertFalse("the server marker alone must not fake an active request", opened.connecting(clock.now()))
+    }
+
+    @Test
+    fun `after a 202 an idle status with the marker still present settles on waiting`() = sheetTest { vm ->
+        vm.onSheetOpened()
+        vm.syncServerNow()
+        assertEquals(1, gmail.requestCalls)
+
+        // The worker is done (idle) yet the old server never cleared sync_requested_at.
+        gmail.statusResult = Outcome.Success(
+            connectedStatus().copy(syncRequestedAt = clock.now()),
+        )
+        vm.refreshServerSync()
+        runCurrent()
+
+        val settled = vm.serverSync.value
+        assertEquals(GmailSyncState.IDLE, settled.syncState)
+        assertFalse(settled.connecting(clock.now()))
+        assertEquals(GmailSyncNotice.QUEUED, settled.notice)
+
+        // A later read where the marker is finally gone must behave identically.
+        clock.instant += 61.seconds
+        gmail.statusResult = Outcome.Success(connectedStatus().copy(syncRequestedAt = null))
+        vm.refreshServerSync()
+        runCurrent()
+        assertFalse(vm.serverSync.value.connecting(clock.now()))
+        assertEquals(GmailSyncState.IDLE, vm.serverSync.value.syncState)
+    }
+
+    @Test
+    fun `a fresh request hint renders connecting only until the status supersedes it`() = sheetTest { vm ->
+        gmail.statusResult = Outcome.Success(connectedStatus())
+        vm.onSheetOpened()
+
+        vm.syncServerNow()
+
+        val afterAck = vm.serverSync.value
+        // The ack-triggered refresh already answered, so the hint must be gone in the same tick.
+        assertFalse(afterAck.connecting(clock.now()))
+        assertEquals(GmailSyncState.IDLE, afterAck.syncState)
+    }
+
+    @Test
     fun `a coalesced ack is reported as coalesced, not queued`() = sheetTest { vm ->
         gmail.syncResult = Outcome.Success(
             GmailSyncRequest(queued = true, coalesced = true),

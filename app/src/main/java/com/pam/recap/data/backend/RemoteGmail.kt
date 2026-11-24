@@ -1,7 +1,9 @@
 package com.pam.recap.data.backend
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNames
 
 /**
  * Wire shapes for the Gmail OAuth endpoints (contract §1–§4 in
@@ -48,11 +50,13 @@ data class RemoteGmailSync(
 )
 
 /** Error envelope that carries the cooldown delay; never parsed for anything but machine fields. */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class RemoteGmailSyncError(
     val code: String? = null,
     val retryable: Boolean = false,
-    val retryAfterSeconds: Int? = null,
+    // Contract §9.3 is camelCase; the alternative name keeps bodies from an older server readable.
+    @JsonNames("retry_after_seconds") val retryAfterSeconds: Int? = null,
 )
 
 @Serializable

@@ -135,6 +135,38 @@ class UpdateStatusSheetServerSyncTest {
     }
 
     @Test
+    fun `a fresh request hint renders the connecting state`() {
+        setSheet(
+            GmailServerSyncUi(
+                available = true,
+                syncState = GmailSyncState.IDLE,
+                requestHintAt = now,
+                observedAt = now,
+            ),
+        )
+
+        compose.onNodeWithText(context.getString(R.string.update_status_server_state_connecting))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `an idle projection without a hint says waiting, never connecting`() {
+        setSheet(
+            GmailServerSyncUi(
+                available = true,
+                syncState = GmailSyncState.IDLE,
+                // A stale marker is not a UI input; only syncState decides here.
+                observedAt = now,
+            ),
+        )
+
+        compose.onNodeWithText(context.getString(R.string.update_status_server_state_waiting))
+            .assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.update_status_server_state_connecting))
+            .assertDoesNotExist()
+    }
+
+    @Test
     fun `cooldown copy counts the remaining seconds and blocks the trigger`() {
         setSheet(
             GmailServerSyncUi(
