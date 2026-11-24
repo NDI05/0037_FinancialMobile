@@ -1,12 +1,12 @@
 # Rencana sinkronisasi otomatis, batch kategori, dan status PAM
 
 Tanggal keputusan: **23 November 2026**.
-Status: **arah disetujui pemilik; PLANNED / acceptance belum dijalankan**.
-Pekerjaan sesi PM ini hanya perencanaan dan draf revisi; tidak mengaktifkan scheduler,
-mengubah runtime/env, atau merevisi SRS resmi. Jangan menganggap kode worker classifier
-yang sedang dikerjakan SE sebagai implementasi sinkronisasi Gmail otomatis ini.
+Status **24 November 2026**: polling Gmail sudah diuji dengan fixture, termasuk pada
+HP fisik. UAT Gmail live dan gate GCP Rp0 masih terbuka. Google SSO dan onboarding
+Gmail terpadu disetujui untuk dirancang di §10. Implementasi dan UAT SSO masih direncanakan.
 
-Draf konsolidasi SRS: [CR-005](../changes/CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md).
+Draf konsolidasi SRS: [CR-005](../changes/CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md) dan
+[CR-007](../changes/CR_007_DRAFT_GMAIL_API_YEARLY_WORKFLOW.md).
 Baseline formal tetap SRS v0.5. Rencana ini menjadi rujukan aktif untuk scope baru;
 penundaan background sync pada roadmap v0.3 adalah historis.
 
@@ -15,19 +15,17 @@ penundaan background sync pada roadmap v0.3 adalah historis.
 - Pengguna tidak perlu menekan Impor untuk pembaruan rutin setelah login, koneksi Gmail
   dan consent yang sesuai tersedia. Impor awal mencakup riwayat setahun sesuai addendum
   §8. Tombol pembaruan manual tetap sarana recovery opsional.
-- Implementasi yang sedang diuji memakai IMAP dan parser di Android. Target migrasi
-  yang diminta pemilik adalah **Gmail API, OAuth read-only, dan Pub/Sub** sesuai §9.
-  Ketentuan IMAP dan WorkManager di bawah mendokumentasikan baseline sebelum cutover.
-- Target pemeriksaan background **setiap 30 menit**, ditambah pemeriksaan saat aplikasi
-  masuk foreground jika data sudah cukup lama. WorkManager bersifat best effort, bukan
-  jaminan realtime, jam pasti, atau tetap berjalan ketika perangkat mati/force-stop.
+- Go menjalankan **polling Gmail API read-only setiap 15 menit** pada jalur utama
+  selama backend hidup. Pub/Sub tersedia sebagai opt-in rollback sesuai §9 dan CR-007.
+  Ketentuan IMAP, WorkManager, dan interval 30 menit dalam bagian historis mendokumentasikan
+  baseline sebelum cutover.
 - Kategorisasi rutin melalui antrean backend dengan target pemrosesan **sekitar 2 jam**,
   maksimal **5 merchant unik berkonteks sama per request**. Impor/penyimpanan finansial
   tidak menunggu model. Rules, pemetaan terkonfirmasi, dan cache diperiksa lebih dahulu.
 - Gunakan komponen status bersama di top bar dan panel rincian. Loading hanya muncul
   ketika pekerjaan benar-benar berjalan, bukan sepanjang menunggu jadwal berikutnya.
-- Gmail API Push masuk rencana implementasi. OAuth, hosting, dan verifikasi kebijakan
-  Google menjadi gate untuk pilot dan rilis sesuai §9.
+- OAuth, kesiapan backend, dan kebijakan Google menjadi gate untuk pilot dan rilis
+  sesuai §9–10. Profil pilot Rp0 memakai polling tanpa layanan GCP berbayar.
 
 ## 2. Dependency dan urutan delivery
 
@@ -228,8 +226,8 @@ dan [CR-006](../changes/CR_006_DRAFT_SYNC_UI_CATEGORY_REVIEW.md).
 
 - Sebelum cutover, baseline IMAP memakai pemeriksaan foreground dan WorkManager dengan
   target 30 menit untuk varian standar. Setelah cutover, Go mengambil delta dari Gmail
-  saat menerima sinyal Pub/Sub dan menjalankan rekonsiliasi terjadwal. Ukur waktu email
-  diterima → transaksi tersimpan → terlihat di aplikasi sebagai metrik UAT.
+  setiap 15 menit pada mode polling. Ukur jeda dari email diterima sampai transaksi
+  tersimpan, lalu sampai transaksi terlihat di aplikasi.
 - Simpan setiap transaksi yang valid segera setelah diakui Go. Antrekan kandidat
   AI satu kali. Untuk draft ini, kirim kelompok yang sudah mencapai batas
   merchant/token jika anggaran tersedia, atau kumpulkan batch hingga jendela
@@ -242,11 +240,8 @@ dan [CR-006](../changes/CR_006_DRAFT_SYNC_UI_CATEGORY_REVIEW.md).
   panggilan dalam kondisi yang sama. Split token, timeout/retry, dan batch terpisah
   menurut waktu dapat mengubah jumlah aktual. Backlog dilanjutkan ketika jatah
   pulih, sementara transaksi tetap bisa dilihat dan dikoreksi.
-- Untuk mendukung pembaruan saat aplikasi tertutup, gunakan Gmail API
-  `watch` → Cloud Pub/Sub → `history.list` sesuai §9. Ukur keterlambatan aktual
-  sebelum menetapkan target waktu pemrosesan.
-  Lihat [jadwal WorkManager](https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started/define-work)
-  dan [Gmail API push](https://developers.google.com/workspace/gmail/api/guides/push).
+- Saat aplikasi tertutup, backend tetap memeriksa `history.list` selama proses Go hidup.
+  Ukur keterlambatan aktual dengan akun pilot. [Sinkronisasi Gmail](https://developers.google.com/workspace/gmail/api/guides/sync)
 
 ### Urutan kerja dan bukti penerimaan
 
@@ -260,45 +255,43 @@ dan [CR-006](../changes/CR_006_DRAFT_SYNC_UI_CATEGORY_REVIEW.md).
 
 ## 9. Addendum migrasi IMAP ke Gmail API
 
-**Target arsitektur** — Android memulai dan menampilkan status tautan melalui OAuth Google.
-Go membaca notifikasi Livin melalui Gmail API, memprosesnya dari memori, dan menyimpan
-transaksi normalisasi di Turso. Pub/Sub memberi sinyal perubahan mailbox ke server.
-Android menampilkan data dari API Go dan menyegarkan layar aktif. Sinyal tersebut membawa
-cursor perubahan, bukan rincian transaksi. Waktu email diterima hingga transaksi dapat
-dibaca dari Go diukur terpisah dari waktu tampil di Android dan waktu selesai kategorisasi.
+Android memulai dan menampilkan status tautan melalui OAuth Google. Go membaca notifikasi
+Livin dari Gmail API, memprosesnya dari memori, dan menyimpan transaksi normalisasi di Turso.
+Polling `history.list` tiap 15 menit menjadi jalur utama. Pada mode push opt-in, sinyal
+Pub/Sub membawa cursor perubahan ke server. Android menampilkan data dari API Go.
+Ukur waktu penyimpanan, waktu tampil di Android, dan waktu kategori selesai secara terpisah.
 
 | Paket | Hasil yang harus dibangun | Bukti penerimaan |
 |---|---|---|
 | GAPI-1 | Kontrak koneksi Gmail OAuth server-side dengan scope hanya baca, consent baru dan status koneksi server. Validasi OAuth `state`, redirect dan binding terhadap sesi PAM. Simpan token dan penanda mailbox secara terenkripsi, dengan isolasi owner dan lingkungan. | Connect, cancel, code/state replay, akun berbeda, expiry, reconnect, revoke dan owner isolation. Persetujuan dicatat sebelum Go mengambil email. |
 | GAPI-2 | Gunakan `messages.list` terfilter sender/subject dan rentang, pagination dan `messages.get` seperlunya. Ambil metadata dulu bila perlu menyaring kandidat. Validasi pengirim, bentuk pesan dan batas MIME di Go. Port perilaku parser dari fixture yang sudah ada, termasuk `Penerima` versus PAN. | Backfill setahun: akar range/metadata, kedua ujung jendela WIB, >1 halaman, resume, partial, duplicate, retry, malformed, email terlambat dan data terlihat setelah tiap commit. Hanya dokumen yang cocok diproses, tanpa fetch ulang massal ketika cursor sehat. |
-| GAPI-3 | Daftarkan `users.watch` dan perbarui sebelum expiry. Worker memproses `history.list` dari checkpoint yang tersimpan, hanya halaman yang dibutuhkan. Jalur push HTTPS memverifikasi autentikasi Pub/Sub dan mengakui pesan setelah pekerjaan disimpan secara durable. | Pemberitahuan pertama, duplikat, out-of-order, page retry, missed push, watch expiry, kuota/rate limit dan `historyId` yang tak berlaku. Buktikan cursor hanya maju sesudah data selesai diproses dan disimpan. |
+| GAPI-3 | Worker polling memproses `history.list` dari checkpoint tersimpan. Backfill dan pemulihan cursor mempertahankan cakupan dalam retensi. Watch, renewal, dan webhook terautentikasi berlaku pada mode push opt-in. | Uji polling kosong, duplikat, retry halaman, kuota, cursor kedaluwarsa, dan kelanjutan setelah restart. Cursor maju sesudah data diproses dan disimpan. Uji missed push dan expiry watch hanya pada mode push. |
 | GAPI-4 | Rekonsiliasi IMAP → Gmail API. Identitas Gmail API dan UID IMAP perlu strategi pemetaan terverifikasi. Jalankan mode bayangan tanpa mutasi saat membandingkan cakupan, lalu aktifkan satu sumber per owner. | Data lama tetap satu kali, kategori USER dan metadata bertahan. Akun lama menautkan ulang lewat OAuth. Ambiguitas ditahan untuk tinjauan. Rollback tidak mengeksekusi dua kolektor sekaligus atau memajukan cursor yang salah. |
 | GAPI-5 | Sambungkan UI Indonesia, riwayat setahun, satu job kategori, retensi, dan status server sesuai §8 dan CR-006. | Run Android Studio dari build gabungan. Owner menautkan akun sendiri, satu email Livin baru tiba saat app tertutup, Go memproses tanpa tap, dan hasil tampil setelah app dibuka. Ukur latensi dan jumlah call/token Azure. |
 
 ### Aturan eksekusi dan migrasi
 
-- Buat `watch` dan catat cursor awal sebelum backfill, atau gunakan strategi yang terbukti
-  menutup celah yang sama. Tampung sinyal baru saat backfill berjalan. Aplikasi Go memproses
-  perubahan dari cursor awal setelah penyimpanan histori aman. Pembaruan cursor harus
-  monoton dan tahan restart. Jangan menganggap `historyId` berurutan tanpa selisih.
-- Autentikasi pesan push dari Google dengan subscription berautentikasi, audience, issuer,
+- Catat cursor awal sebelum backfill. Beri giliran ke delta saat backfill berjalan.
+  Pembaruan cursor harus monoton dan tahan restart. Jangan menganggap `historyId`
+  berurutan tanpa selisih.
+- Pada mode push, autentikasi pesan Google dengan subscription berautentikasi, audience, issuer,
   dan identitas service account yang diharapkan. Resolusi owner berasal dari koneksi Gmail
   di server. Simpan sinyal yang sudah divalidasi sebelum memberi respons ACK. Worker
   menangani pengulangan secara idempotent. Cursor expired atau `404` memicu rekonsiliasi
   terkontrol dalam jendela retensi, dengan checkpoint dan dedup.
-- Pembaruan watch berjalan terjadwal sebelum expiry. Rekonsiliasi ringan berkala
+- Pada mode push, pembaruan watch berjalan terjadwal sebelum expiry. Rekonsiliasi ringan berkala
   menangani event yang terlambat atau hilang. Ukur dan laporkan jatah kuota, jumlah query,
   latency serta kegagalan. Batasi concurrency dan backoff saat Google atau penyedia
   database menolak request. Pencarian Gmail menggunakan epoch seconds dan buffer untuk WIB.
-- Scope yang diusulkan `gmail.readonly` termasuk restricted. Variasi test/publik,
-  OAuth consent screen, verifikasi dan assessment yang berlaku, project Pub/Sub dan
-  endpoint HTTPS yang dapat diakses Google harus dipastikan sebelum menjanjikan rilis.
+- Scope `gmail.readonly` termasuk restricted. Pastikan konfigurasi test/publik, OAuth
+  consent screen, dan verifikasi serta assessment yang berlaku sebelum menjanjikan rilis.
+  Topik Pub/Sub dan endpoint HTTPS publik diperlukan untuk mode push opt-in.
   Penyimpanan raw email, header, PAN, atau source ID mentah di log/Turso tidak diperlukan.
   Cursor operasional diproteksi dengan akses owner-scoped. Azure tetap memakai payload
   kategori atau analisis yang sudah diizinkan. Untuk hasil turunan Gmail API, verifikasi
   ketentuan Limited Use dan disclosure pemrosesan Azure sebelum pilot memakai data asli.
   Gunakan fixture bila transfer data tersebut belum disetujui.
-- Disconnect, withdrawal dan deletion menghentikan watch, menolak kerja baru, dan
+- Disconnect, withdrawal dan deletion menghentikan watch pada mode push, menolak kerja baru, dan
   membersihkan kredensial terkait. Pertahankan aturan logout PAM dari baseline sampai
   keputusan revisi disahkan. Menutup app berbeda dari logout atau mencabut izin Gmail.
 - Setelah UAT, audit rute UI, scheduler, vault App Password, konfigurasi dan dependency IMAP.
@@ -314,3 +307,39 @@ dibaca dari Go diukur terpisah dari waktu tampil di Android dan waktu selesai ka
 - [Sinkronisasi Gmail dan pemulihan history](https://developers.google.com/workspace/gmail/api/guides/sync)
 - [Rentang tanggal pencarian Gmail API](https://developers.google.com/workspace/gmail/api/guides/filtering)
 - [Autentikasi Pub/Sub push](https://docs.cloud.google.com/pubsub/docs/authenticate-push-subscriptions)
+
+## 10. Google SSO dan onboarding Gmail
+
+**Status 24 November 2026** — rancangan disetujui untuk masuk backlog. Implementasi dan UAT
+SSO belum dijalankan. Gunakan [CR-007](../changes/CR_007_DRAFT_GMAIL_API_YEARLY_WORKFLOW.md)
+untuk calon requirement resmi.
+
+1. **Masuk dengan Google** menjadi pilihan utama. Android memakai Credential Manager.
+   Backend Go memvalidasi ID token dan membuat sesi PAM dengan mekanisme access/refresh
+   token yang sudah ada. Untuk akun yang sudah ditautkan, backend menemukan `ownerId`
+   melalui pasangan issuer dan `sub` Google yang tervalidasi.
+2. **Tautkan Gmail untuk impor Livin** tampil setelah login bila Gmail belum tertaut.
+   Pengguna bisa menyetujui scope `gmail.readonly` untuk akun yang sama atau akun Gmail lain.
+   Opsi **Lewati** mempertahankan akses ke fitur manual. Backfill 12 bulan mulai setelah
+   tautan dan consent Gmail berhasil. Consent kategori dan analisis AI tetap terpisah.
+3. **Migrasi akun PAM lama**: pengguna masuk dengan email dan password PAM untuk
+   menautkan identitas Google dari sesi miliknya. Go mempertahankan owner, role, transaksi,
+   dan koneksi Gmail yang ada. Email yang sama tidak mengotorisasi penautan atau pembuatan
+   akun duplikat. Identitas Google yang sudah terikat ke owner lain menghasilkan konflik.
+   Pertahankan aturan undangan, status akun, dan pembatasan admin yang berlaku.
+4. **Profil pilot Rp0**: gunakan Google Sign-In langsung, Gmail API dalam kuota standar,
+   dan backend Go yang sudah tersedia. Hindari produk identitas terkelola dan infrastruktur
+   GCP berbayar. Gate PASS membutuhkan project tanpa Billing tertaut dan UAT nyata.
+   Pada OAuth External / Testing, refresh token Gmail dapat kedaluwarsa setelah 7 hari.
+   Minta pengguna menautkan Gmail ulang sambil mempertahankan sesi dan fitur manual PAM.
+
+| Pekerjaan | Kriteria penerimaan |
+|---|---|
+| Integrasi Credential Manager | Cocokkan package dan SHA-1 varian debug dengan OAuth Android client. Gunakan Web Client ID sebagai audience server. Client secret hanya disimpan di backend. Buktikan login dan batal login dari tombol Run Android Studio pada HP fisik. |
+| Integrasi verifikasi Go | Validasi tanda tangan, issuer, audience, expiry, dan nonce sekali pakai. Penautan identitas unik dan atomik. Uji replay, audience salah, dua klaim bersamaan, akun nonaktif, dan konflik lintas owner. |
+| Migrasi akun lama dan onboarding | Catat owner dan jumlah transaksi sebelum/sesudah penautan. Buktikan login ulang membuka owner yang sama tanpa akun ganda. Uji menolak, melewati, dan mencabut akses Gmail sambil tetap memakai PAM, lalu alur Gmail dengan consent hingga backfill dan delta tampil. |
+| Pengujian biaya dan rilis | Pisahkan bukti fixture, SSO di HP fisik, Gmail live, dan GCP Rp0. Pastikan billing project pilot tidak tertaut. Verifikasi kebijakan scope restricted sebelum rilis publik. |
+
+[Credential Manager](https://developer.android.com/identity/sign-in/credential-manager-siwg)
+· [Otorisasi data pengguna](https://developer.android.com/identity/authorization)
+· [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect)

@@ -1,6 +1,6 @@
-# CR-007 — DRAF revisi SRS: Gmail API, impor setahun, retensi, kategorisasi otomatis
+# CR-007 — Draf revisi SRS untuk Google SSO, Gmail API, dan workflow setahun
 
-Tanggal: **24 November 2026** (revisi desain: polling 15 menit tanpa Pub/Sub).
+Tanggal: **24 November 2026**. Revisi desain mencakup polling 15 menit dan onboarding Google SSO.
 Status: **draf untuk konsolidasi SRS; BELUM diterapkan**. Full SRS resmi tetap v0.5;
 file DOCX/PDF, requirement ID resmi, dan version history tidak berubah oleh CR ini.
 Nomor versi berikutnya dan nomor FR/NFR final belum ditetapkan.
@@ -8,6 +8,7 @@ Nomor versi berikutnya dan nomor FR/NFR final belum ditetapkan.
 Dasar: [mandat PM Gmail API + workflow tahunan](../agent-prompts/PROMPT_PM_GMAIL_API_YEARLY_WORKFLOW.md)
 dan revisi kontrak server §9 per 24 November 2026
 ([GMAIL_API_CONTRACT](https://github.com/NDI05/0037-Backend-Financial/blob/integration/2026-11-24/docs/GMAIL_API_CONTRACT.md)).
+Rancangan SSO dan kriteria uji ada di [rencana sinkronisasi §10](../plans/AUTO_SYNC_CATEGORY_STATUS_PLAN.md#10-google-sso-dan-onboarding-gmail).
 Melengkapi [CR-003](CR_003_GMAIL_SESSION_CATEGORY.md) (koneksi email) dan
 [CR-005](CR_005_DRAFT_AUTO_SYNC_BATCH_STATUS.md) (auto-sync/kategori/status).
 CR ini **menggantikan target transport IMAP/app-password** dan sekaligus
@@ -16,9 +17,10 @@ CR ini **menggantikan target transport IMAP/app-password** dan sekaligus
 
 ## 1. Alasan perubahan
 
-Pemilik menetapkan target: login → tautkan Gmail lewat OAuth Google → impor otomatis riwayat
-Livin setahun → satu job kategorisasi otomatis → transaksi baru masuk otomatis → retensi setahun
-→ seluruh UI utama Bahasa Indonesia ringkas. Mandat juga memisahkan backend Go ke repo
+Pemilik menetapkan **Masuk dengan Google** sebagai jalur utama. Sesudah masuk, pengguna
+dapat menautkan Gmail untuk memulai impor Livin setahun dan pembaruan otomatis.
+PAM memakai satu job kategorisasi logis untuk histori, menyimpan data dalam batas retensi setahun,
+dan memakai Bahasa Indonesia ringkas. Mandat juga memisahkan backend Go ke repo
 **0037 Backend Financial**.
 
 Revisi desain 24 November 2026 menetapkan:
@@ -40,6 +42,10 @@ Revisi desain 24 November 2026 menetapkan:
 5. **Backfill 12 bulan mengalah pada delta**: halaman per batch dibatasi, delta diproses lebih
    dulu, bulan berjalan diprioritaskan.
 6. **Consent Gmail dan consent AI terpisah** (Gmail baca, kategorisasi AI, analisis AI).
+7. **Google SSO dan penautan Gmail berada dalam satu onboarding**. Login membuka sesi PAM.
+   Akses baca Gmail diminta melalui langkah opsional sesudahnya. Pengguna yang melewati
+   langkah tersebut tetap dapat mencatat transaksi manual. Akun PAM lama menautkan
+   identitas Google dari sesi akun yang sudah dimiliki agar data dan aksesnya tetap utuh.
 
 IMAP/app-password tidak lagi menjadi target: tidak dapat memenuhi impor server-side saat app
 tertutup secara andal dan menambah permukaan kredensial di perangkat.
@@ -48,6 +54,10 @@ tertutup secara andal dan menambah permukaan kredensial di perangkat.
 
 | ID draf | Rumusan calon requirement | Trace bukti implementasi |
 |---|---|---|
+| DRAFT-SSO-01 | Android memulai **Masuk dengan Google** melalui Credential Manager. Go memvalidasi tanda tangan ID token, issuer, audience, expiry, dan nonce sebelum menerbitkan sesi PAM. Identitas disimpan sebagai pasangan issuer dan `sub`. | **PLANNED**. Uji login, pembatalan, token salah atau kedaluwarsa, replay, dan restart. |
+| DRAFT-SSO-02 | Akun lama menautkan identitas Google setelah autentikasi PAM. Penautan unik, atomik, dan mempertahankan owner, transaksi, role, serta koneksi Gmail. Email sama tidak memicu penggabungan. Pembuatan akun baru tetap tunduk pada undangan dan kebijakan akun yang berlaku. | **PLANNED**. Uji benturan email, konflik lintas owner, penautan bersamaan, akun nonaktif, dan login ulang ke owner lama. |
+| DRAFT-SSO-03 | Setelah SSO, tawarkan akses `gmail.readonly` kepada pengguna yang belum menautkan Gmail. Gmail boleh memakai akun sama atau berbeda. Consent Gmail terpisah dari identitas Google dan akses AI. Lewati, tolak, atau cabut Gmail tetap memungkinkan akses PAM dan transaksi manual. | **PLANNED**. UAT HP fisik dari Android Studio untuk login, skip, pemberian consent, backfill setahun, dan pencabutan akses. |
+| DRAFT-SSO-04 | Profil pilot memakai Google Sign-In langsung, Gmail API standar, dan backend Go yang tersedia. Gate Rp0 membutuhkan project tanpa Billing tertaut dan alur live yang lulus. | **NOT RUN**. SSO dan Gmail live diuji terpisah dari fixture. |
 | DRAFT-GM-01 | Owner menautkan Gmail dari sesi PAM aktif; server membuat `state` acak sekali pakai (TTL ≤10 menit) terikat owner + PKCE S256; callback menukar code, menyimpan refresh token terenkripsi, dan selalu mengembalikan owner ke app lewat deep link `pam://gmail/connected` dengan kode alasan aman | Kontrak §1–2; E2E fake `normal/history_expired/rate_limit` (`docs/evidence/GMAIL_CONTRACT_E2E_2026-11-24.md`); UAT perangkat FIXTURE butir 2 (`docs/evidence/GMAIL_POLLING_UAT_PHONE_2026-11-24.md`); tes `internal/gmail` |
 | DRAFT-GM-02 | Hanya satu koneksi Gmail ACTIVE per owner; sambung ulang dengan akun lain mencabut token lama sebelum mengganti (dan menghentikan watch hanya bila mode push aktif); scope minimum `gmail.readonly`; status tidak pernah menampilkan token/email penuh | Kontrak §3; tes isolasi owner A/B; E2E status termask tanpa token/message id |
 | DRAFT-GM-03 | **Default polling 15 menit**: worker memanggil `history.list` tiap `GMAIL_DELTA_INTERVAL_SECONDS=900` dan backfill bertahap; **tidak ada** `users.watch`, `users.stop`, webhook push, atau verifier OIDC pada mode default; delta berjalan **selama backend hidup**, aplikasi boleh tertutup | Default config backend (`GMAIL_MODE=polling`, delta 900 dtk); E2E: `watchCalls=0`, `stopCalls=0`, `POST /v1/internal/gmail/push` → 404 (82/82 PASS); UAT FIXTURE butir 7 (app force-stop, delta tersimpan) |
@@ -82,14 +92,17 @@ tertutup secara andal dan menambah permukaan kredensial di perangkat.
 4. Perbaikan audit ronde 4: state tidak lagi tertahan "Menghubungkan" setelah drain, sehingga
    panel mencerminkan proyeksi server (`idle` + `sync_requested_at=null`).
 5. Istilah teknis (IMAP, Pub/Sub, OIDC, token) tidak tampil di UI utama.
+6. Layar masuk mengutamakan **Masuk dengan Google**. Akun lama tetap punya akses masuk
+   untuk migrasi identitas. Setelah login pertama, langkah **Tautkan Gmail untuk impor
+   Livin** menawarkan **Lewati**. Bila akses Gmail kedaluwarsa, tampilkan **Tautkan ulang Gmail**.
 
 ## 4. Keputusan yang masih menunggu pemilik
 
 1. Merge `feat/c2-android`/`integration/2026-11-24` ke `main` repo masing-masing dan deployment;
    saat ini hanya branch yang dipush.
-2. Membuat project/OAuth consent screen/test users/OAuth client Google, mengaktifkan Gmail API,
-   dan menyelesaikan verifikasi restricted scope (CASA) untuk produksi. Pub/Sub topic +
-   subscription + publisher grant **hanya bila** jalur push opt-in akan dipakai.
+2. Siapkan Web OAuth client UAT dan test user Gmail. Verifikasi package dan SHA-1
+   Android OAuth client untuk Google SSO. Untuk produksi, periksa ketentuan restricted scope
+   dan assessment yang berlaku. Topik dan subscription Pub/Sub diperlukan bila mode push dipakai.
 3. Memverifikasi target biaya **Rp0** (Billing saat ini masih tertaut) dan mengukur kuota Gmail API
    pada akun pilot.
 4. Rotasi client secret/service account dan pemasangan kredensial di lingkungan UAT.
@@ -100,6 +113,9 @@ tertutup secara andal dan menambah permukaan kredensial di perangkat.
 
 Status implementasi per 24 November 2026:
 
+- **Google SSO dan onboarding Gmail terpadu**: rancangan disetujui untuk backlog.
+  Implementasi dan acceptance belum dijalankan. Bukti polling di bawah mendahului
+  perubahan login ini.
 - Android `feat/c2-android` HEAD `a7abb14`: unit debug **639 tes/83 suite/0 gagal**,
   `lintDebug` **0 error/120 warning**, `assembleDebug` PASS, APK debug 46.433.025 byte.
 - Backend `integration/2026-11-24` HEAD `1290910`: `vet`/`build`/`test ./... -count=1` PASS,
