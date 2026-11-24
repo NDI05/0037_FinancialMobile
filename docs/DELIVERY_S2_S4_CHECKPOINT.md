@@ -835,7 +835,7 @@ PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
 ### Hasil gate fresh (auditor independen, HEAD `6cc0f2a`)
 
 - Go `test ./... -count=1` PASS 8/8 paket, 127 test top-level; `go vet` bersih.
-- Android debug **531 test/74 suite/0 gagal**, assessment **541/75/0 gagal** (`--rerun-tasks`);
+- Android debug **532 test/74 suite/0 gagal**, assessment **542/75/0 gagal** (setelah hardening pencarian admin);
   `:app:lintDebug` 0 error, 112 warning, 1 hint.
 - UAT API owner (read-only): 49 baris November 2026 tanpa duplikat setelah repair 13 baris;
   label merchant berupa nama usaha; 40 baris uncategorized di-enqueue, job `NEEDS_REVIEW`
@@ -851,6 +851,11 @@ PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
   simpan dengan revisi basi memunculkan banner konflik + "Muat data terbaru", lalu rencana
   dihapus kembali. C13 kini **PASS API + UI**.
   [UAT_PM_QA_2026-11-24.md](evidence/UAT_PM_QA_2026-11-24.md) §2.6.
+- Hardening UI admin (`897e751`): field pencarian tidak dinonaktifkan selama pemuatan halaman
+  (hanya saat aksi `busy`), unit test baru; APK perangkat pemilik dipasang ulang 11:51 dan
+  auto-sync mengirim satu `POST /v1/import-jobs` 201. Temuan QA "pencarian tidak menyaring"
+  tidak tereproduksi dari artefak statis (dump `35` hanya memuat akun `wqa.*`); walk ulang
+  admin belum dijalankan karena sesi admin sintetis tidak aktif.
 
 ### Keputusan gate PM (24 November 2026)
 

@@ -3,8 +3,14 @@
 Bukti diambil langsung pada perangkat pemilik `105397ba0507` dengan APK debug yang terpasang
 pukul 11:08 WIB dari build `0030a43`. Rentang `0030a43..092276e` **tidak mengubah kode
 Android** (`git diff --name-only 0030a43..HEAD | grep -v '^docs/'` hanya berisi backend Go),
-jadi APK terpasang memuat kode Android final. Backend UAT `:18090` adalah binary baru yang
+jadi APK saat itu memuat kode Android final. Backend UAT `:18090` adalah binary baru yang
 memuat perbaikan eligibility `6cc0f2a`/`3b8a038`; `adb reverse tcp:18090` aktif.
+
+Pukul 11:51 WIB APK dipasang ulang di perangkat yang sama dari HEAD `9473064` (satu perubahan
+non-P0: field pencarian admin tidak lagi dinonaktifkan selama pemuatan + unit test). Setelah
+instal: aplikasi membuka Ringkasan dengan sesi pemilik tetap aktif, auto-sync berjalan dan
+mengirim **satu** `POST /v1/import-jobs` 201 (11:51:32) tanpa tap manual — bukti tambahan
+single-flight. Tidak ada perubahan pada alur P0 yang diuji di §1–§4.
 
 Semua angka keuangan, nama merchant asli dan email pemilik **tidak disalin** ke dokumen ini.
 

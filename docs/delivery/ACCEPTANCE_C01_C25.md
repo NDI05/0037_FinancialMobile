@@ -71,7 +71,7 @@ bukan data pemilik.
 | C22 Read list/detail tanpa finance owner lain | **PASS runtime** | Daftar 4 akun, detail editor, tidak ada data keuangan di layar admin | Hanya 4 akun UAT |
 | C23 Update role/status/revision/revocation/audit | **PASS runtime** | Edit nama 200, konflik 409 dengan draf utuh, reload revisi lalu simpan 200; audit `admin.account.update` | Perubahan peran belum dijalankan di perangkat (nama/status sudah) |
 | C24 Delete/deactivate + last-admin guard + revoke | **PASS runtime** | Nonaktifkan akun lain 200 → `SUSPENDED` + seluruh sesi target dicabut; self-deactivate ditolak 400; last-admin guard ditutup test store/HTTP + trigger DB; walk teraudit `a512770` (`UAT_GAP_ADMIN_2026-11-23.md`), regresi merged head lulus | Guard `last_admin` tidak dipicu ulang di perangkat (sengaja, agar sesi admin bukti tidak tercabut) |
-| C25 Search query/role/status/cursor; USER ditolak | **PASS runtime** | Pencarian `andhika` → 1 baris; USER tanpa peran ditolak sebelum request admin; filter peran/status/cursor diuji API/VM; list default server mengecualikan DELETED (commit `daa5f36`); walk teraudit `a512770`, regresi merged head lulus | Filter status di perangkat hanya diamati; cursor butuh >1 halaman; walk perangkat tidak diulang sengaja |
+| C25 Search query/role/status/cursor; USER ditolak | **PASS runtime** | Pencarian `andhika` → 1 baris; USER tanpa peran ditolak sebelum request admin; filter peran/status/cursor diuji API/VM; list default server mengecualikan DELETED (commit `daa5f36`); walk teraudit `a512770`, regresi merged head lulus; field pencarian admin tidak lagi dinonaktifkan selama pemuatan (hardening + unit test, 24 Nov) | Filter status di perangkat hanya diamati; cursor butuh >1 halaman; walk perangkat tidak diulang sengaja |
 
 ## Kesimpulan gate
 
@@ -118,8 +118,8 @@ dan diverifikasi ulang.
 
 Dokumen rekonsiliasi lengkap + rekomendasi gate:
 [UAT_PM_QA_2026-11-24.md](../evidence/UAT_PM_QA_2026-11-24.md). Test JVM fresh 24 Nov pada
-HEAD `6cc0f2a`: `:app:testDebugUnitTest` **531 tes / 74 suite, 0 failure** dan
-`testAssessmentUnitTest` **541 tes / 75 suite, 0 failure** (angka 513/523 adalah snapshot
+HEAD `9473064` (+ hardening field pencarian admin): `:app:testDebugUnitTest` **532 tes /
+74 suite, 0 failure** dan `testAssessmentUnitTest` **542 tes / 75 suite, 0 failure** (angka 513/523 adalah snapshot
 `4dacad7`, bukan HEAD, dan tidak dipakai sebagai klaim final). Rincian mentah:
 `docs/evidence/assets/pm_qa_2026-11-24/{s3_api,s4_admin,ui}/` dan
 [UAT_ASSESSMENT_2026-11-24.md](../evidence/UAT_ASSESSMENT_2026-11-24.md).
