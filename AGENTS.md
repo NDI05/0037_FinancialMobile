@@ -23,9 +23,16 @@ dan menginstruksikan: **setiap commit langsung dipush ke branch kerja yang sama*
 
 ## Delivery aktif
 
-Mandat gabungan S2–S4 berada di `docs/agent-prompts/MANDAT_S2_S4.md`.
-Living checkpoint berada di `docs/DELIVERY_S2_S4_CHECKPOINT.md`.
-Lanjutkan dari status repo/checkpoint terkini dan jaga perbedaan PASS/PARTIAL/NOT RUN.
+Mandat aktif: **pemisahan backend Go + migrasi Gmail API/Pub/Sub** di
+`docs/agent-prompts/PROMPT_PM_GMAIL_API_YEARLY_WORKFLOW.md`. Mandat S2–S4 sebelumnya
+(`docs/agent-prompts/MANDAT_S2_S4.md`, checkpoint `docs/DELIVERY_S2_S4_CHECKPOINT.md`)
+tetap menjadi riwayat keputusan gate dan tidak dibuka ulang tanpa bukti baru.
+
+- Backend Go resmi: repo `NDI05/0037-Backend-Financial` (folder saudara
+  `../0037-Backend-Financial`). Jangan menambahkan source server kembali ke repo Android.
+- Kontrak klien Gmail: `docs/GMAIL_API_CONTRACT.md` di repo backend.
+- Gate baru backend/Gmail dicatat di `docs/delivery/BACKEND_SPLIT_2026-11-24.md` dan
+  evidence masing-masing; keputusan tetap PASS/PARTIAL/FAIL/NOT RUN.
 
 ## Android Studio dan kesetaraan konfigurasi UAT
 

@@ -41,7 +41,7 @@ ui (Compose) → domain (use case/repository interface) ← data (remote REST, l
 - `domain` tetap murni Kotlin: tidak ada OkHttp, Room, Android, atau serialisasi transport.
 - `data/remote/` berisi implementasi REST + DTO; `data/local/` hanya untuk Keystore/DataStore dan
   file privat, **bukan** database transaksi. Room/SQLCipher dihapus dari varian penilaian pada D.
-- API target adalah layanan **Go** (`backend-go/`, Go 1.27.4, `net/http`, `database/sql`, driver
+- API target adalah layanan **Go** (repo terpisah `0037-Backend-Financial`, Go 1.27.4, `net/http`, `database/sql`, driver
   libSQL remote/lokal). Node `backend/` hanya referensi perilaku dan rollback selama migrasi; lihat
   [`13_GO_BACKEND_MIGRATION.md`](13_GO_BACKEND_MIGRATION.md).
 - R1 memakai token Manrope/light warm di `ui/theme`; empat layar B01–B04 menjadi kandidat

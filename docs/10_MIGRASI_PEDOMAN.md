@@ -11,7 +11,7 @@ Dokumen ini adalah rancangan target. Kode pada `fix/onboarding-import-stability`
 | Komponen | Rancangan |
 |---|---|
 | Database demo | Turso Cloud Free, engine libSQL yang kompatibel dengan driver existing |
-| Backend | **Go 1.27.4 + `net/http` + `database/sql`** (`backend-go/`), berjalan di laptop saat pengembangan dan presentasi |
+| Backend | **Go 1.27.4 + `net/http` + `database/sql`** (repo `0037-Backend-Financial`), berjalan di laptop saat pengembangan dan presentasi |
 | Android | Kotlin + Compose + Navigation Compose + MVVM/Hilt, mengakses REST backend |
 | Model | Ollama lokal melalui adapter yang sudah tersedia, dengan analisis deterministik saat layanan model gagal sesuai kontrak |
 | File | Foto/PDF dipilih pengguna dan disalin ke penyimpanan privat Android, metadata disimpan di database |
@@ -111,7 +111,7 @@ duplikat. Gmail nyata dan perangkat fisik masih perlu diuji. Bukti cloud v0.4 ha
 
 ## 8. Skema fisik v0.4 (review draft)
 
-Sumber migrasi untuk database baru adalah **Go** (`backend-go/internal/store/migrations/001–007.sql`
+Sumber migrasi untuk database baru adalah **Go** (repo `0037-Backend-Financial`, `internal/store/migrations/001–007.sql`
 dan `003.triggers.sql`), dijalankan oleh `internal/store/db.go`. SQL 001–002 disalin dari riwayat
 Node yang sudah diterapkan; 003 adalah v0.4 yang sudah diuji Node; 004 menambah idempotensi HTTP,
 snapshot hash analisis dan counter usage; 005 membangun ulang `analyses` agar laporan historis

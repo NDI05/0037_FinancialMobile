@@ -4,7 +4,7 @@ PAM-SRS-001 · CR-002 · diperbarui 21 November 2026.
 
 **Status** — rancangan arsitektur dan kebutuhan. Arahan cloud database gratis dari pemilik telah
 diterima. Lead memilih Turso Cloud Free/libSQL berdasarkan integrasi existing. Pemilik menyetujui
-**pergantian backend ke Go** pada 21 November 2026; implementasi target ada di `backend-go/`.
+**pergantian backend ke Go** pada 21 November 2026; implementasi target ada di repo terpisah `0037-Backend-Financial` (diekstrak dari `backend-go/`).
 Sign-off keseluruhan v0.4 masih terbuka, termasuk lokasi transaksi, offline, retensi dan cutover data
 nyata. [Rancangan teknis](10_MIGRASI_PEDOMAN.md)
 

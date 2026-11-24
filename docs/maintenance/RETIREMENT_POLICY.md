@@ -46,7 +46,22 @@ kontrak aktif tanpa penjelasan.
 Untuk folder besar yang perlu dipensiunkan, gunakan commit terpisah setelah readiness
 terbukti. Jangan memakai cleanup untuk memperluas refactor saat defect kritis masih aktif.
 
-## Backend Node dan Go
+## Retire per 24 November 2026: Node keluar dari tree aktif Android
+
+Keputusan PM (mandat pemisahan repo): source Go pindah ke repo `0037-Backend-Financial`
+(commit `327d876`, ekstraksi subtree dari `0037_FinancialMobile@cd0f91a`). `backend/` Node
+dipindahkan ke arsip filesystem di luar repo pada tanggal yang sama; riwayatnya tetap di Git
+Android (`cd0f91a`) dan dapat dipulihkan dengan `git checkout cd0f91a -- backend/`.
+
+- Alasan: satu backend aktif; Node tidak kompatibel dengan schema terbaru dan hanya
+  referensi/interop.
+- Bukti prasyarat: fixture interop (`fixtures/interop/*.json`) dipindahkan ke repo backend
+  dan tes Go lulus dari repo itu; `go vet`/`build`/`test` PASS dari clone bersih.
+- Kriteria keluar/rollback: arsip Node dipertahankan sampai parity E2E Android↔Go
+  terverifikasi dan pemilik mengotorisasi cutover. Setelah itu hapus arsip fisik; pulihkan
+  source hanya lewat riwayat Git bila diperlukan.
+
+## Backend Node dan Go (historis)
 
 - Jalur implementasi aktif: `backend-go/`.
 - `backend/` Node saat ini masih dicatat sebagai referensi/interop migrasi. Itu tidak

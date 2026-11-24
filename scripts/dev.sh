@@ -3,19 +3,21 @@
 #
 #   1. memastikan ada perangkat (USB atau wireless debugging)
 #   2. memasang tunnel `adb reverse` supaya 127.0.0.1:8080 di HP menuju laptop
-#   3. memastikan backend hidup di port 8080
+#   3. memastikan backend Go (repo sibling 0037-Backend-Financial) hidup di port 8080
 #
 # Tunnel `adb reverse` HILANG setiap kali koneksi perangkat berubah (cabut kabel, pindah ke
 # wireless, HP tidur). Jalankan skrip ini setiap kali itu terjadi, atau sebelum demo.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BACKEND_KIND="${PAM_BACKEND:-go}"
-if [[ "$BACKEND_KIND" == "node" ]]; then
-  LOG="$ROOT/backend/.dev-server.log"
-else
-  LOG="$ROOT/backend-go/.dev-server.log"
+BACKEND_REPO="${PAM_BACKEND_REPO:-$ROOT/../0037-Backend-Financial}"
+if [[ ! -f "$BACKEND_REPO/go.mod" ]]; then
+  echo "Repo backend Go tidak ditemukan di $BACKEND_REPO" >&2
+  echo "Set PAM_BACKEND_REPO=/path/ke/0037-Backend-Financial" >&2
+  exit 1
 fi
+LOG="$BACKEND_REPO/.dev-server.log"
+export PAM_GOROOT="${PAM_GOROOT:-$ROOT/.toolchain/go}"
 
 if [[ "${1:-}" == "--logs" || "${1:-}" == "-l" ]]; then
   if [[ ! -f "$LOG" ]]; then
@@ -56,18 +58,14 @@ if [[ "${PAM_SKIP_BACKEND:-0}" == "1" ]]; then
 elif curl -fsS --max-time 2 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
   echo "  sudah hidup di port $PORT"
 else
-  echo "  menyalakan backend ($BACKEND_KIND)…"
-  if [[ "$BACKEND_KIND" == "node" ]]; then
-    ( cd "$ROOT/backend" && nohup npm start >"$LOG" 2>&1 & )
-  else
-    ( cd "$ROOT/backend-go" && APP_ENV=development PORT="$PORT" nohup "$ROOT/scripts/go.sh" run ./cmd/api >"$LOG" 2>&1 & )
-  fi
+  echo "  menyalakan backend Go dari $BACKEND_REPO…"
+  ( cd "$BACKEND_REPO" && APP_ENV=development PORT="$PORT" nohup "$BACKEND_REPO/scripts/go.sh" run ./cmd/api >"$LOG" 2>&1 & )
   for _ in $(seq 1 30); do
     sleep 1
     if curl -fsS --max-time 2 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then break; fi
   done
   if curl -fsS --max-time 2 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
-    echo "  hidup (log: backend/.dev-server.log — lihat dengan: ./scripts/dev.sh --logs)"
+    echo "  hidup (log: $LOG — lihat dengan: ./scripts/dev.sh --logs)"
   else
     echo "  GAGAL menyala — lihat $LOG" >&2
     exit 1
@@ -85,7 +83,7 @@ fi
 
 echo
 echo "Lihat log backend : ./scripts/dev.sh --logs"
-echo "Hentikan backend  : pkill -f 'go-build.*/exe/api'  (atau pkill -f 'tsx src/server.ts' untuk Node)"
+echo "Hentikan backend  : pkill -f 'go-build.*/exe/api'"
 echo
 echo "Siap. Jalankan aplikasi dari Android Studio atau:"
 echo "  $ADB shell am start -n com.pam.recap.debug/com.pam.recap.MainActivity"

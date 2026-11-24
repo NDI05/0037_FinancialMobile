@@ -19,7 +19,7 @@ server-side contract without any Azure call, any cost, any owner data or the emu
 Needs only the Go API binary; the stub listens on loopback. No secrets, no Azure, no owner DB.
 
 Usage:
-  ./scripts/go.sh build -o /tmp/pam-category-verify-api ./cmd/api   # from backend-go/
+  ./scripts/go.sh build -o /tmp/pam-category-verify-api ./cmd/api   # from repo 0037-Backend-Financial:
   python3 scripts/verify/category_isolated.py --binary /tmp/pam-category-verify-api \
       --out docs/evidence/assets/pm_go_2026-11-24/category_isolated_verification.json
 """

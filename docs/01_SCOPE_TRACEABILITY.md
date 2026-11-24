@@ -32,7 +32,7 @@ lalu — hanya dengan consent terpisah — analisis berbasis bukti dan rencana a
 bank: tanpa saldo, transfer, OCR, API bank, atau klaim kelengkapan ledger.
 
 **Target v0.4.** Transaksi/kategori/anggaran/metadata lampiran/import job disimpan server-side di
-Turso/libSQL, diakses lewat REST dari layanan **Go** (`backend-go/`). Room/SQLCipher keluar dari
+Turso/libSQL, diakses lewat REST dari layanan **Go** (repo `0037-Backend-Financial`). Room/SQLCipher keluar dari
 varian penilaian. Email mentah dan kredensial IMAP tetap di perangkat. AI hanya menerima proyeksi
 agregat. Node `backend/` adalah referensi perilaku dan rollback.
 

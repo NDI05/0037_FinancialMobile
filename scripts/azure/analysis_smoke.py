@@ -15,7 +15,7 @@ No owner database, no owner account, no Ollama. Max provider spend: one small an
 plus one blocked-by-ceiling request (zero provider calls).
 
 Usage:
-  ./scripts/go.sh build -o /tmp/pam-analysis-smoke-api ./cmd/api   # from backend-go/
+  ./scripts/go.sh build -o /tmp/pam-analysis-smoke-api ./cmd/api   # from repo 0037-Backend-Financial:
   python3 scripts/azure/analysis_smoke.py --binary /tmp/pam-analysis-smoke-api \
       --out docs/evidence/assets/pm_go_2026-11-24/azure_analysis_smoke.json
 

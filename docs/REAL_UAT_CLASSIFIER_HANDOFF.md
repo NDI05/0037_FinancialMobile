@@ -9,7 +9,7 @@ No secret, key, token, merchant or transaction identity is stored here.
 - Android endpoint: `http://10.0.2.2:18090`
 - Local launcher (merges private env and enables classifier only for this test process):
   `python3 scripts/run_real_uat_with_classifier.py /tmp/pam-real-uat-api`
-- Build binary first: `cd backend-go && ../scripts/go.sh build -o /tmp/pam-real-uat-api ./cmd/api`
+- Build binary first: `cd ../0037-Backend-Financial && ./scripts/go.sh build -o /tmp/pam-real-uat-api ./cmd/api`
 - Private flag in `~/.config/pam/azure-classifier.env` remains `CATEGORY_LLM_ENABLED=false`; the
   launcher explicitly enables it for the local REAL-UAT process. Stop it to disable cloud calls.
 - Prices used for reservations: Azure gpt-oss-120b GlobalStandard USD0.15/1M input and

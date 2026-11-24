@@ -31,7 +31,7 @@ Evidence ada di `docs/evidence/c2a_proxy_backend_smoke.json` dan `.events.jsonl`
 Dari root `pam-app`
 
 ```bash
-cd backend-go
+cd ../0037-Backend-Financial
 ../scripts/go.sh build -o /tmp/pam-qa-proxy-api ./cmd/api
 cd ..
 python3 scripts/qa/verify_committed_response_proxy.py \

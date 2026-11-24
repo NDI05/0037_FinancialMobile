@@ -80,7 +80,7 @@ bukan klaim setiap gate telah lulus pada tanggal tersebut.
 | 21 Nov 2026 | Onboarding, kontrak v0.4, migrasi Go dan baseline C1 | Backend lokal/interop dan emulator subset terdokumentasi | C2 Android dan kelengkapan CRUDS |
 | 22 Nov 2026 | Parser strict, impor Go, consent, SRS v0.5, setup/runtime Azure | Unit/integration dan smoke berkembang per checkpoint; bukan benchmark | Runtime recovery dan Android acceptance saat itu |
 | **23 Nov 2026** | Hari integrasi S2/S3/S4 di `feat/c2-android`: paket P1 recovery, Android acceptance, varian assessment (`99cb3df`), lalu penutupan gap S2–S4 malam: admin C24/C25 (`a512770`), bukti C01 create manual + identitas lost-response (`aa61a7b`), wiring analisis server S2.5 + guard consent (`7337559`); semua paket lewat audit independen; branch tugas/worktree dibersihkan; dokumen merged-head acceptance ditambahkan.; profil UAT Go + Azure + Ollama disamakan dengan Run Android Studio dan aturan agent diperbarui Lanjutan malam: revamp UI sinkronisasi (Ringkasan bersih, judul terpusat, ikon status 48 dp, satu sheet tanpa impor saat dibuka, hasil sama setelah tutup/buka dan minimize) digabung (`9aeea28`) bersama lane kategori (`dda4084`), lalu perbaikan i18n pasca-merge (`a310067`); bukti perangkat merged di [UAT_MERGED_UI_CATEGORY](../evidence/UAT_MERGED_UI_CATEGORY_2026-11-23.md), draf CR_006, matriks/checkpoint diberi addendum.| Android **493 tests/68 class/0 failure** debug + **503 tests/69 class/0 failure** assessment, lint **0 error/115 warning** debug & **0 error/123 warning** assessment, Go test/vet/build/race ok; merged head `7337559`: C01 create UI `POST /v1/transactions` 201 + ringkasan 92/89→93/90, S2.5 CURRENT→STALE→regenerate→CURRENT→dependency-STALE di perangkat, C24/C25 walk teraudit + regresi; APK debug sha256 `6497a406…`, assessment `fa0d224e…`.; build debug sukses, BuildConfig 10.0.2.2:18090, readiness emulator HTTP 200, probe sintetis Ollama HTTP 200 Sebelum fix, lint merged gagal 7 MissingTranslation; setelah `a310067`: debug **509 tests/0 failure**, assessment **519/0**, lint debug **0 error/112 warning**, lint assessment **0 error/120 warning**, assemble debug+assessment PASS (sha256 `0e9169f2…`/`dea936b8…`), Go test/vet/build/race PASS.| **S3 lulus (C01 PASS runtime)**; **S4.1/S4.2/S4.4 lulus** (batas perangkat C24/C25 dan foreground-only assessment dicatat); **S2.5 PASS runtime** (catatan INFO dependency-churn sync); temuan LOW audit tetap follow-up; gate eksternal S5 (mailbox nyata, benchmark, hosting/backup, UAT pemilik, merge/deploy).; smoke UI dari Run Android Studio dan panggilan Azure pada sesi penyelarasan belum dijalankan; **revisi UI sinkronisasi PASS runtime sebagian besar** — bingkai running/progress live, fade label live, TalkBack live, 412 dp+judul panjang, notis nomor referensi detail owner, resume unggahan pending live = PARTIAL/NOT RUN; **alasan kategori tampil PASS runtime** (`classified=0 needsReview=5 failed=0`, 0 panggilan Azure); **kategori AI terklasifikasi pada data owner, precision ≥95%, Buat Analisis via Ollama dengan bulan EMPTY-coverage = NOT RUN**; audit merged awal **FAIL** (lint) lalu diperbaiki.| `e3eeb17`, `94e2f37`, `99cb3df`, `a512770`, `aa61a7b`, `7337559`, plus commit lane di log harian, `9aeea28`, `dda4084`, `a310067`|
-| **24 Nov 2026** | P0 nav satu-sumber-bulan + parser Livin `Penerima` + repair label merchant; Analisis UAT beralih ke Azure Foundry; walk lampiran (konflik/retry) dan admin (pencarian live/filter status/SUSPENDED) menutup gap UI C18/C19/C23/C25<br>Draf workflow baru: impor awal setahun, antrean AI hemat, retensi, dan UI Indonesia ringkas.<br>Gmail API OAuth + Pub/Sub ditetapkan sebagai target pengganti IMAP dan [mandat PM](docs/agent-prompts/PROMPT_PM_GMAIL_API_YEARLY_WORKFLOW.md) disusun.<br>Mandat lanjutan ditambah pemisahan backend ke repo 0037 Backend Financial. | Test debug 536/74 dan assessment 546/75 lulus (termasuk audit aksesibilitas 3 layar); lint 0 error/112 warning; UAT owner: sync satu job, kategori Azure, detail merchant nama usaha, Buat Analisis 200 tersimpan; bukti UI `ui_split/36`–`38` dan `40`–`42` | Menunggu **Run Android Studio** pemilik untuk varian final dan drill-down-after (S2), sisa bukti UI S4 (C20 konteks, C24 guard, cursor C25), S5 (merge/deploy, backup, benchmark, mailbox produksi)<br>Workflow baru masih draf dan menunggu implementasi serta UAT.<br>Pemisahan repo dan migrasi Gmail API masih dalam rencana. |
+| **24 Nov 2026** | P0 nav satu-sumber-bulan + parser Livin `Penerima` + repair label merchant; Analisis UAT beralih ke Azure Foundry; walk lampiran (konflik/retry) dan admin (pencarian live/filter status/SUSPENDED) menutup gap UI C18/C19/C23/C25<br>Draf workflow baru: impor awal setahun, antrean AI hemat, retensi, dan UI Indonesia ringkas.<br>Gmail API OAuth + Pub/Sub ditetapkan sebagai target pengganti IMAP dan [mandat PM](docs/agent-prompts/PROMPT_PM_GMAIL_API_YEARLY_WORKFLOW.md) disusun.<br>Mandat lanjutan ditambah pemisahan backend ke repo 0037 Backend Financial. | Test debug 536/74 dan assessment 546/75 lulus (termasuk audit aksesibilitas 3 layar); lint 0 error/112 warning; UAT owner: sync satu job, kategori Azure, detail merchant nama usaha, Buat Analisis 200 tersimpan; bukti UI `ui_split/36`–`38` dan `40`–`42` | Menunggu **Run Android Studio** pemilik untuk varian final dan drill-down-after (S2), sisa bukti UI S4 (C20 konteks, C24 guard, cursor C25), S5 (merge/deploy, backup, benchmark, mailbox produksi); parity E2E pemisahan backend dan migrasi Gmail API masih berjalan<br>Workflow baru masih draf dan menunggu implementasi serta UAT.<br>Pemisahan backend dimulai: repo backend `NDI05/0037-Backend-Financial` dibuat (privat), 32 commit riwayat backend diekstrak, bootstrap standalone + CI + kontrak Gmail API dipush (`327d876`); source Go, fixture interop, dan Node lama keluar dari tree Android; verifikasi E2E menunggu. |
 
 **[Buka log harian lengkap, commit, bukti, dan template pembaruan →](docs/PROGRESS_DAILY.md)**
 
@@ -103,12 +103,9 @@ melalui Go; merchant bisnis minimal hanya dikirim ke classifier dengan purpose y
 Payload analisis agregat tidak diperlebar menjadi raw transaksi/email.
 
 ```text
-pam-app/
+pam-app/                 repo Android (klien)
 ├── app/                 Android, Compose UI, domain, data dan tests
-├── backend-go/          Backend aktif: API, store, migrasi dan classifier
-├── backend/             Node lama: referensi/interop; belum dipensiunkan
 ├── scripts/             Wrapper build, QA, dokumen dan utilitas
-├── fixtures/            Fixture sintetis/interop
 ├── docs/
 │   ├── PROGRESS_DAILY.md Log harian dan aturan pencatatan
 │   ├── specifications/  SRS resmi
@@ -120,16 +117,19 @@ pam-app/
 └── AGENTS.md            Instruksi kerja dan commit/push
 ```
 
-**Backend yang dijalankan untuk PAM adalah Go.** Node tidak perlu berjalan bersamaan dan
-bukan jaminan rollback kompatibel dengan schema terbaru. Room/SQLCipher masih bagian
-transisi yang perlu dikeluarkan dari varian penilaian sesuai gate S4.
+**Backend yang dijalankan untuk PAM adalah Go di repositori terpisah**
+[`0037-Backend-Financial`](https://github.com/NDI05/0037-Backend-Financial) (folder saudara
+`../0037-Backend-Financial` saat pengembangan). Server source tidak lagi berada di repo
+Android ini; build Android dari clone repo ini sendiri. Backend Node lama diarsipkan di luar
+tree (lihat [kebijakan retirement](docs/maintenance/RETIREMENT_POLICY.md)). Room/SQLCipher
+masih bagian transisi yang perlu dikeluarkan dari varian penilaian sesuai gate S4.
 
 ## 5. Menjalankan proyek lokal
 
 ### Prasyarat
 
 - Android SDK; minimum perangkat API 26, compile/target SDK 36.
-- JDK 21 dan toolchain Go sesuai `backend-go/go.mod` serta wrapper proyek.
+- JDK 21 untuk Android; Go 1.27.4 di repo backend terpisah (`../0037-Backend-Financial`).
 - Wrapper existing menggunakan `.toolchain/`, `.gradle-home/` dan SDK lokal;
   lokasi alternatif didukung melalui konfigurasi wrapper.
 
@@ -138,18 +138,19 @@ Semua perintah berikut dimulai dari root repository `pam-app`.
 ### A. Backend development terisolasi
 
 ```bash
-cd backend-go
+cd ../0037-Backend-Financial
+PAM_GOROOT=../pam-app/.toolchain/go \
 APP_ENV=development PORT=8080 \
   DATABASE_URL=file:./data/pam-readme-dev.db \
   REGISTRATION_INVITE_CODE=dev-local-only \
   LLM_PROVIDER=fake CATEGORY_LLM_ENABLED=false \
-  ../scripts/go.sh run ./cmd/api
+  ./scripts/go.sh run ./cmd/api
 ```
 
 Perintah ini memakai database development lokal dan classifier nonaktif. Tidak menggunakan
 database UAT pemilik atau membuat panggilan Azure. Kode invite di atas hanya contoh lokal,
-bukan konfigurasi production. Konfigurasi rinci: [backend Go](backend-go/README.md) dan
-[kontrak API](docs/06_BACKEND_CONTRACT.md); beberapa status dalam README backend bersifat historis.
+bukan konfigurasi production. Konfigurasi rinci: README repo backend dan
+[kontrak API](docs/06_BACKEND_CONTRACT.md).
 
 ### B. Android Studio dan UAT pemilik
 
@@ -169,7 +170,8 @@ alamat loopback yang cocok dengan `adb reverse`.
 Jika backend UAT belum berjalan, dari root repo jalankan:
 
 ```bash
-(cd backend-go && ../scripts/go.sh build -o /tmp/pam-android-studio-uat-api ./cmd/api)
+(cd ../0037-Backend-Financial && PAM_GOROOT=../pam-app/.toolchain/go \
+  ./scripts/go.sh build -o /tmp/pam-android-studio-uat-api ./cmd/api)
 python3 scripts/run_real_uat_with_classifier.py /tmp/pam-android-studio-uat-api
 ```
 
