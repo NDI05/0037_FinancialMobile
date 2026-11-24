@@ -253,3 +253,12 @@ bulan yang menjumlah tepat 914. Rekonsiliasi §3 cocok: Nov 40+38=78, Okt 53+28=
 bulan lain sama dengan angka impor, sehingga 145 baris pra-ada (38+28+79) terjelaskan. Bukti
 ditambahkan ke `docs/evidence/GMAIL_LIVE_IMPORT_2026-11-24.md` §6.
 
+### Preflight kesiapan UAT diulang (ronde 17)
+
+`scripts/verify/uat_readiness.sh` dijalankan ulang pada runtime `00bb515` dengan HP fisik
+`105397ba0507` dan APK debug saat ini: **exit 0 — prasyarat otomatis siap**. Semua butir OK:
+adb, `/readyz`, endpoint SSO nonce (200), rute `/v1/gmail/status` (401 tanpa token), client ID SSO
+terkonfigurasi (nilai tidak dicetak), base URL backend cocok, HP terhubung, Play Services, paket
+debug terpasang, `adb reverse tcp:18090`, dan APK memuat Web OAuth client ID. Hanya GCP Rp0 yang
+tetap manual. CR-007 DRAFT-GM-13 juga diperbarui dengan penutupan P3 audit ronde 3 (`c69cf57`).
+
