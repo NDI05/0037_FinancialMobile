@@ -64,4 +64,5 @@ dinyatakan berasal dari build `c98527b` dan hardening hanya rebuild runtime, (d)
 dipersempit ke guard yang benar-benar teruji (`e19477b`).
 
 Gate backend setelah perbaikan: `e19477b` vet/build/test/race **PASS**; runtime loopback
-dibangun ulang dari `e19477b` (`vcs.modified=false`, `/readyz=200`).
+dibangun ulang dari `e19477b` (`vcs.modified=false`, `/readyz=200`). Harness kontrak QA §9
+diulang: **PASS=82, FAIL=0, exit 0**; preflight UAT **exit 0**.
