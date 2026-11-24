@@ -128,3 +128,25 @@ Catatan: notice "Kategori: Koneksi terputus" pada sheet adalah respons 503 lama
 kategori baru. Bukti ini memperkuat G25 (Gmail live + tombol manual dari HP) tetapi **bukan**
 G36 (SSO Google + Run literal dari Android Studio) maupun G29/G37 (GCP Rp0), yang tetap menunggu
 pemilik.
+
+## 5. Audit state DB live (agregat, 24 Nov 2026 ~21:20 WIB)
+
+Diambil langsung dari DB UAT privat (`~/.config/pam/pam-gmail-uat.db`) setelah seluruh sinkron
+manual di §4 selesai. Hanya angka agregat yang dicatat, tanpa email/ID/token/transaksi.
+
+| Pemeriksaan | Hasil | Interpretasi |
+|---|---|---|
+| Migrasi skema | **21** (`sampai 021`) | `google_identities` + nonce SSO sudah dimigrasikan |
+| Transaksi tersimpan | **914**, 1 owner, semua `source=EMAIL` | konsisten dengan G25 |
+| Import batch | **37** | batch per rentang; tanpa duplikat |
+| Sync job | **21** job, **21 COMPLETE**, 0 gagal | antrian manual bertuntas, `sync_requested_at` bersih |
+| `gmail_push_events` | **0** | **mode polling murni, tanpa Pub/Sub** |
+| `google_identities` | **0** | belum ada penautan SSO → G36 memang belum dijalankan |
+| `google_sso_nonces` sisa | **2**, `consumed_at` kosong | ada klien yang mengambil nonce tetapi tidak menyelesaikan `POST /v1/auth/google` |
+| Scope consent Gmail | `openid`, `userinfo.email`, `userinfo.profile`, `gmail.readonly` | sesuai desain impor Livin; consent AI terpisah |
+| Sync berikutnya | dari `last_success_at` (tanpa timer table) | cadence 15 menit restart-safe |
+
+Kesimpulan: tidak ada tanda auto-merge/penautan Google (identitas 0), tidak ada sisa job
+menggantung, dan tidak ada jejak Pub/Sub — cocok dengan mode polling Rp0. Gate **G36** (SSO live
+dari Run Android Studio) dan **G29/G37** (Rp0) tetap menunggu pemilik.
+
