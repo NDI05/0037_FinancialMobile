@@ -359,7 +359,7 @@
     <string name="settings_last_ai">Analisis terakhir</string>
     <string name="settings_never">belum pernah</string>
     <string name="settings_scope">Izin</string>
-    <string name="settings_scope_value">IMAP hanya-baca (tanpa akses tulis)</string>
+    <string name="settings_scope_value">Email Livin hanya-baca (tanpa akses tulis)</string>
     <string name="settings_manage_mailbox">Kelola kotak masuk</string>
     <string name="settings_privacy_eyebrow">Persetujuan</string>
     <string name="settings_consent_gmail">Baca email Livin</string>

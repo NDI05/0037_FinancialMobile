@@ -1,5 +1,31 @@
 # Delivery S2–S4 — living checkpoint
 
+## Addendum 24 November 2026 — Gmail API + workflow setahun + retensi + split backend
+
+Snapshot resmi status per gate ada di
+[Laporan gate akhir](delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md). Ringkasnya:
+
+- Backend Go sekarang berdiri sendiri di
+  [`NDI05/0037-Backend-Financial`](https://github.com/NDI05/0037-Backend-Financial); branch
+  integrasi `integration/2026-11-24` (`f1625b5`) memuat Gmail API (`7376749`) dan retensi
+  (`a05994c`). Android memakai kontrak yang sama; `main` kedua repo belum di-merge.
+- Target Gmail dipindah dari IMAP ke **Gmail API** (OAuth dari sesi PAM, refresh token
+  terenkripsi, Pub/Sub push + OIDC, `users.watch`, backfill 12 bulan WIB, delta `history.list`,
+  dedupe IMAP→Gmail) dan sudah diuji sintetis; gate live Google **NOT RUN** milik owner.
+- Impor tahunan + **satu job kategorisasi** (5 merchant/permintaan, maks 4 batch per 2 jam)
+  diimplementasikan dan diuji; eksekusi riil berbiaya menunggu data/kredensial owner.
+- **Retensi setahun** aktif sebagai kebijakan baca + sweep report-only; penghapusan nyata
+  (`RETENTION_DELETE_ENABLED`) **NOT RUN**. Guard `400 outside_retention` mencakup transaksi,
+  ringkasan, analisis, import, lampiran by-id/list. UI menampilkan bulan batas "sebagian" dan
+  rentang retensi.
+- UI utama Bahasa Indonesia ringkas; entri IMAP lama dihapus dari Pengaturan; kode IMAP masih
+  ada sebagai jalur rollback sampai pemilik menyetujui cutover.
+- UAT pasangan build: [UAT_INTEGRATED](evidence/UAT_INTEGRATED_2026-11-24.md) (8 butir runtime
+  PASS, 3 PARTIAL/NOT RUN). Audit independen terakhir: P0/P1 = 0.
+
+Dokumen di bawah adalah snapshot historis 22–23 November; angka dan klaimnya tidak dinaikkan
+oleh addendum ini.
+
 ## Perencanaan tambahan disetujui — 23 November 2026
 
 Pemilik menyetujui sinkronisasi otomatis target 30 menit, pemeriksaan foreground,

@@ -21,7 +21,6 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material.icons.rounded.ManageAccounts
 import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.MailOutline
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.Icon
@@ -64,7 +63,6 @@ import com.pam.recap.ui.util.appErrorRes
 /** §8 Settings: connection state, consent entry points, privacy actions, sign out. */
 @Composable
 fun SettingsScreen(
-    onOpenGmail: () -> Unit,
     onOpenGmailLink: () -> Unit,
     onOpenConsentHistory: () -> Unit,
     onOpenBudget: () -> Unit,
@@ -131,14 +129,6 @@ fun SettingsScreen(
                     value = stringResource(R.string.settings_scope_value),
                 )
                 Spacer(modifier = Modifier.height(PamSpacing.sm))
-                PillButton(
-                    text = stringResource(R.string.settings_manage_mailbox),
-                    onClick = onOpenGmail,
-                    style = PillButtonStyle.Secondary,
-                    leadingIcon = Icons.Rounded.MailOutline,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(modifier = Modifier.height(PamSpacing.xs))
                 PillButton(
                     text = stringResource(R.string.settings_open_gmail_link),
                     onClick = onOpenGmailLink,

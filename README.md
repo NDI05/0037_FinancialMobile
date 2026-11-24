@@ -57,10 +57,10 @@ harus tampil sebagai keadaan berbeda.
 | Area | Yang sudah tersedia | Yang masih perlu dibuktikan/diselesaikan |
 |---|---|---|
 | Auth dan data server | Go, JWT/refresh, transaksi/list/detail/summary, consent dan koreksi kategori | Acceptance gabungan, seluruh CRUDS dan lifecycle sesuai mandat |
-| Gmail/Livin | IMAP read-only, MIME/parser strict, incremental sync dan cursor | P1 retry otomatis lintas run: local commit belum terunggah dapat terlewat; backlog parser tetap terbuka |
+| Gmail/Livin | **Gmail API**: OAuth dari sesi PAM, refresh token terenkripsi, Pub/Sub push ber-OIDC, `users.watch` + renew/stop, backfill 12 bulan WIB, delta `history.list`, dedupe identitas IMAP→Gmail; jalur IMAP lama disimpan sebagai rollback | Gate live Google (OAuth consent, topik Pub/Sub, push app tertutup) belum dijalankan; verifikasi restricted scope/CASA milik owner |
 | Azure classifier | Adapter, ledger/budget, cache, lease/recovery, caseId mapping dan USER override | Benchmark akurasi berlabel manusia; gate integrasi auto-queue |
-| Auto-sync / batch | WorkManager 30 menit, antrean target 2 jam, endpoint enqueue/drain | Due window/server worker diuji ulang PASS; penutupan lane tertahan P1 recovery upload |
-| Status UI | Pil top bar dan sheet; screenshot/layout dan cold-start E2E terlapor | Email baru sampai server/UI tanpa tap; partial/storage error dan refresh lambat |
+| Auto-sync / batch | Gmail push + worker delta, satu job kategorisasi logis (5 merchant/permintaan, maks 4 batch/2 jam), antrean target 2 jam | Latensi email→Go→Android belum terukur (push nyata belum aktif); due window server sudah diuji |
+| Status UI | Satu sheet status ringkas (Bahasa Indonesia), label job sederhana, rentang retensi setahun + label bulan batas, lampu Gmail "belum tertaut/aktif", UI utama 360–412 dp | Walk TalkBack/font 200% di HEAD final belum diulang; email baru sampai UI tanpa tap menunggu push nyata |
 | Kelengkapan penilaian | Kontrak 25 aksi dan empat entitas tersedia | S3/S4, lampiran/admin, dynamic fields dan audit Room/SQLCipher |
 
 Temuan auto-sync tidak membuka kembali empat defect classifier lama yang sudah ditutup
@@ -91,16 +91,25 @@ dengan commit ter-push; smoke provider, unit test dan Android E2E dicatat terpis
 
 ```mermaid
 flowchart LR
-    Gmail[Email Livin / Gmail] -->|IMAP read-only| Android[Android Kotlin / Compose]
+    Owner[Pemilik] -->|login PAM| Android[Android Kotlin / Compose]
     Android -->|REST + sesi JWT| Go[Backend Go]
+    Android -->|connect/start, buka browser| Google[Google OAuth 2.0]
+    Google -->|callback code+state| Go
+    Go -->|users.watch, history.list, get| Gmail[Gmail API readonly]
+    PubSub[Cloud Pub/Sub] -->|push + OIDC JWT| Go
+    Go -->|deep link pam://gmail/connected| Android
     Go --> DB[(Turso / libSQL)]
     Go -->|Merchant tersanitasi + consent kategorisasi| Azure[Microsoft Foundry]
     Go -->|Agregat + consent analisis| Azure
 ```
 
-Email mentah dan credential Gmail diproses di perangkat. Transaksi server-mode disimpan
-melalui Go; merchant bisnis minimal hanya dikirim ke classifier dengan purpose yang sesuai.
-Payload analisis agregat tidak diperlebar menjadi raw transaksi/email.
+Mode target memakai **Gmail API**: pemilik menautkan Gmail lewat browser dari sesi PAM, refresh
+token disimpan terenkripsi di server, email diproses di server saat backfill/delta dan tidak
+disimpan mentah (tidak ada isi email, PAN, atau ID pesan di DB/log/Git). Jalur IMAP lama tetap
+dikompilasi sebagai rollback sampai pemilik menyetujui cutover, tetapi entri UI-nya sudah
+dihapus dari Pengaturan. Transaksi server-mode disimpan melalui Go; merchant bisnis minimal
+hanya dikirim ke classifier dengan purpose yang sesuai. Payload analisis agregat tidak
+diperlebar menjadi raw transaksi/email.
 
 ```text
 pam-app/                 repo Android (klien)

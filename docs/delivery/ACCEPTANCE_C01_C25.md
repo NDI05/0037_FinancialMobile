@@ -170,3 +170,12 @@ Status gate di atas **tidak dinaikkan** oleh addendum ini; rekomendasi gate ada 
 |---|---|---|---|
 | Navigasi Transaksi satu sumber bulan + kembali ke Ringkasan | **PASS runtime (emulator gabungan)** | Sesi ulang 11:07–11:35 WIB: gejala (c) kembali dari daftar Transaksi ke Ringkasan **direproduksi sebelum** perbaikan lalu **PASS sesudah**; Home↔Transaksi dua putaran; "Lihat semua" konsisten; bulan aktif tampil. Lihat [UAT_PM_UI_2026-11-24.md](../evidence/UAT_PM_UI_2026-11-24.md) + `ui_split/01`–`17` | Varian final lewat **Run Android Studio** pemilik dan drill-down-after dengan data belum dijalankan; gejala (a) tab kosong tidak tereproduksi |
 | Merchant Livin = nama `Penerima`, repair tanpa duplikat | **PASS API/unit + PASS runtime perangkat pemilik** | 49 baris November 2026 tanpa duplikat setelah repair 13 baris; label nama usaha, bukan PAN/referensi; 40 baris uncategorized di-enqueue, job `NEEDS_REVIEW` revisi 0 lama tidak memblokir, 8 baris terklasifikasi model (6 food/1 shopping/1 transport) biaya $0.00101235. Detail transaksi perangkat pemilik menampilkan field **Merchant** berisi nama usaha penerima (bukan PAN/referensi) dan daftar menampilkan kategori hasil Azure ("Saran AI"). [UAT_PM_GO_2026-11-24.md](../evidence/UAT_PM_GO_2026-11-24.md) §E, [UAT_PM_OWNER_DEVICE_2026-11-24.md](../evidence/UAT_PM_OWNER_DEVICE_2026-11-24.md) §2–3 | Dedupe re-import antar-perangkat belum terbukti karena klien belum mengirim `sourceRef` di jalur impor; Run Android Studio pemilik belum dijalankan |
+
+## Catatan 24 November 2026
+
+Matriks C01–C25 di atas tetap menjadi acuan aksi S3/S4 dan **tidak diubah** oleh pekerjaan
+Gmail API/retensi. Mandat baru (Gmail API, impor setahun, job kategorisasi, retensi, UI ringkas)
+punya tabel gate sendiri di
+[Laporan gate akhir Gmail API + retensi](FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md).
+Aksi C16–C20 (lampiran) pada build baru kini juga tunduk pada jendela retensi setahun
+(`400 outside_retention` untuk metadata terlampir ke transaksi kedaluwarsa).

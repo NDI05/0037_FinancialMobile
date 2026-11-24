@@ -482,7 +482,6 @@ class ScreenScreenshotsTest {
 
         shot("06b-settings-demo-purge") {
             SettingsScreen(
-                onOpenGmail = {},
                 onOpenGmailLink = {},
                 onOpenConsentHistory = {},
                 onOpenBudget = {},
@@ -520,7 +519,6 @@ class ScreenScreenshotsTest {
 
         shot("06-settings") {
             SettingsScreen(
-                onOpenGmail = {},
                 onOpenGmailLink = {},
                 onOpenConsentHistory = {},
                 onOpenBudget = {},

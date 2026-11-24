@@ -330,7 +330,7 @@
     <string name="settings_last_ai">Last analysis</string>
     <string name="settings_never">never</string>
     <string name="settings_scope">Scope</string>
-    <string name="settings_scope_value">IMAP read-only (no write access)</string>
+    <string name="settings_scope_value">Livin email read-only (no write access)</string>
     <string name="settings_manage_mailbox">Manage mailbox</string>
     <string name="settings_privacy_eyebrow">Consent</string>
     <string name="settings_consent_gmail">Read Livin email</string>
