@@ -37,5 +37,9 @@ Tidak ada temuan pada: overstatement gate (G36 NOT RUN dan G29/G37 OPEN benar), 
   auth/gmail/httpapi/store **PASS**; runtime loopback dibangun ulang dari `e3b84b4`
   (`vcs.modified=false`) dan `/readyz=200`.
 - Android: tes SSO terpilih PASS; gate Android final tetap 678 tes/88 suite/0 gagal.
+- Harness kontrak QA (§9, provider fake, port terisolasi) diulang pada backend `7bb16f0`:
+  **PASS=82, FAIL=0, exit 0** — parser `gmail-livin-v2` tidak mengubah perilaku kontrak HTTP.
+- Preflight `scripts/verify/uat_readiness.sh` pada runtime `7bb16f0`: **exit 0** (nonce SSO 200,
+  rute status 401 tanpa token, HP + `adb reverse` OK); GCP Rp0 tetap manual/owner.
 - Gate tetap **29 PASS / 4 PARTIAL / 5 NOT RUN**; G25 tetap PASS-live-owner, G36 dan G29/G37 tetap
   NOT RUN/OPEN.
