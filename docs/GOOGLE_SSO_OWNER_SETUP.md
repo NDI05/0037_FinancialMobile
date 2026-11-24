@@ -25,8 +25,9 @@ meminta dan tidak mencetak password/OTP/secret/client ID):
 ```
 
 Script memeriksa: backend `/readyz`, status SSO (`/v1/auth/google/nonce` 200/503), rute
-`/v1/gmail/status` terpasang, HP fisik terhubung, paket debug terpasang, `adb reverse tcp:18090`,
-dan APK memuat Web client ID. Exit `0` = prasyarat otomatis siap; `2` = ada yang kurang (daftar
+`/v1/gmail/status` terpasang, `PAM_GOOGLE_SSO_CLIENT_ID` dan `PAM_BACKEND_BASE_URL` di
+`local.properties` (nilai tidak dicetak), HP fisik terhubung, Google Play Services terpasang,
+paket debug terpasang, `adb reverse tcp:18090`, dan APK memuat Web client ID. Exit `0` = prasyarat otomatis siap; `2` = ada yang kurang (daftar
 ditampilkan); `1` = kegagalan teknis. Gate **GCP Rp0** tetap manual karena butuh akses Billing
 pemilik. Script ini hanya prasyarat — gate live (G25/G29/G36) tetap dijalankan dan dilaporkan
 terpisah.

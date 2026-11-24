@@ -89,7 +89,33 @@ else
   warn "rute /v1/gmail/status (HTTP ${code}, harap 401 tanpa token)"
 fi
 
-# 4) HP fisik terhubung
+# 3b) Konfigurasi build Android: client ID Web OAuth + endpoint backend
+PROPS="local.properties"
+if [ -f "$PROPS" ]; then
+  client_id_set=0
+  if grep -qE '^[[:space:]]*PAM_GOOGLE_SSO_CLIENT_ID[[:space:]]*=[[:space:]]*[^[:space:]]' "$PROPS" 2>/dev/null; then
+    client_id_set=1
+  fi
+  if [ -z "${PAM_GOOGLE_SSO_CLIENT_ID:-}" ] && [ "$client_id_set" -eq 0 ]; then
+    warn "client ID SSO di local.properties/env (PAM_GOOGLE_SSO_CLIENT_ID)"
+  else
+    ok "client ID SSO dikonfigurasi (nilai tidak dicetak)"
+  fi
+
+  props_url="$(grep -E '^[[:space:]]*PAM_BACKEND_BASE_URL[[:space:]]*=' "$PROPS" 2>/dev/null     | head -1 | cut -d= -f2- | tr -d '[:space:]')"
+  expected="${BACKEND_URL%/}"
+  if [ -z "$props_url" ]; then
+    warn "PAM_BACKEND_BASE_URL di local.properties (kosong)"
+  elif [ "${props_url%/}" = "$expected" ]; then
+    ok "PAM_BACKEND_BASE_URL cocok dengan --backend-url"
+  else
+    warn "PAM_BACKEND_BASE_URL (${props_url}) beda dari --backend-url (${expected})"
+  fi
+else
+  warn "local.properties (tidak ada; client ID/endpoint belum dikonfigurasi)"
+fi
+
+# 4a) HP fisik terhubung
 PHONE_SERIAL="$SERIAL"
 if [ -n "$ADB_BIN" ] && [ -x "$ADB_BIN" ]; then
   if [ -z "$PHONE_SERIAL" ]; then
@@ -99,6 +125,15 @@ if [ -n "$ADB_BIN" ] && [ -x "$ADB_BIN" ]; then
     ok "HP fisik terhubung (${PHONE_SERIAL})"
   else
     warn "HP fisik terhubung (tidak ada perangkat non-emulator)"
+  fi
+fi
+
+# 4b) Google Play Services ada di HP (Credential Manager butuh ini)
+if [ -n "${PHONE_SERIAL:-}" ] && [ -n "$ADB_BIN" ] && [ -x "$ADB_BIN" ]; then
+  if "$ADB_BIN" -s "$PHONE_SERIAL" shell pm list packages 2>/dev/null | grep -qx 'package:com.google.android.gms'; then
+    ok "Google Play Services terpasang"
+  else
+    warn "Google Play Services terpasang (dibutuhkan Credential Manager)"
   fi
 fi
 
