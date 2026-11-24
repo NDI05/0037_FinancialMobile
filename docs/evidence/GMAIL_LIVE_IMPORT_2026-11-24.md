@@ -115,6 +115,14 @@ jadi alur antrian bisa diuji langsung dari perangkat (bukan hanya curl/harness).
 | Jumlah transaksi tersimpan | **914** sebelum dan sesudah kedua sinkron (idempoten, tanpa duplikat) |
 | Cooldown/queue | Ketukan berulang tidak membuat job paralel; job tetap satu dan selesai kembali ke idle |
 
+Catatan semantik cooldown (diverifikasi 24 Nov 21:15–21:19): penanda `sync_requested_at` dihapus
+saat job manual yang dipicu selesai (`ClearGmailSyncRequest`), sehingga ketukan **setelah** sync
+selesai kembali diterima (202) — ini perilaku desain, bukan pelanggaran throttle. Respons **429**
+`sync_cooldown` hanya muncul bila permintaan datang saat penanda masih aktif (job belum selesai);
+jalur itu tetap dicakup harness kontrak (G26), karena tombol UI dinonaktifkan ("Sedang sinkron")
+selama job berjalan sehingga tidak bisa dipicu dari layar. Total 7 permintaan manual 21:00–21:19:
+semua **202**, `failures=0`, tanpa WARN/ERROR, jumlah tetap **914**.
+
 Catatan: notice "Kategori: Koneksi terputus" pada sheet adalah respons 503 lama
 (`/v1/category-jobs`, 19:55–20:24 WIB, sebelum restart terakhir); setelah restart tidak ada 503
 kategori baru. Bukti ini memperkuat G25 (Gmail live + tombol manual dari HP) tetapi **bukan**
