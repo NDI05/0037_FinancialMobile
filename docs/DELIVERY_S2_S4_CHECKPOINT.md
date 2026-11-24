@@ -847,6 +847,10 @@ PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
   tanpa request, satu tap = satu percobaan sync; daftar menampilkan kategori Azure; detail
   menampilkan field **Merchant** berisi nama usaha (bukan PAN); analisis tersimpan
   `AVAILABLE/CURRENT`. [UAT_PM_OWNER_DEVICE_2026-11-24.md](evidence/UAT_PM_OWNER_DEVICE_2026-11-24.md).
+- Retry UI C13 (emulator, akun sintetis): update batas lewat editor menaikkan revisi 0→1,
+  simpan dengan revisi basi memunculkan banner konflik + "Muat data terbaru", lalu rencana
+  dihapus kembali. C13 kini **PASS API + UI**.
+  [UAT_PM_QA_2026-11-24.md](evidence/UAT_PM_QA_2026-11-24.md) §2.6.
 
 ### Keputusan gate PM (24 November 2026)
 

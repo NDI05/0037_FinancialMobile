@@ -49,7 +49,7 @@ bukan data pemilik.
 |---|---|---|---|
 | C11 Create plan/limits | PASS API/unit | PUT budget plan server + domain `ServerBudgetPlan`, test save | UI perangkat belum dijalankan |
 | C12 Read month/gap/actual | **PASS runtime** | Perangkat menampilkan REALISASI VS RENCANA: Makanan Rp476,27 dari Rp25.000, Transportasi Rp396,88 dari Rp12.000, Belanja Rp494,08 dari Rp9.000, sisa bulan Rp3.815,78 (dump c12_c15_budget.xml) | Plan anggaran dibuat worker pada akun sintetis; bukan plan pemilik |
-| C13 Update limits/attributes/revision | PASS API/unit | Editor atribut dinamis pada plan (worker S3) + PUT round-trip test | Sama |
+| C13 Update limits/attributes/revision | **PASS API/unit + PASS runtime UI** | Editor atribut dinamis pada plan (worker S3) + PUT round-trip test; 24 Nov di emulator: batas Makanan 500.000→600.000 lewat UI menaikkan revisi 0→1 dan menyisakan ulang saldo; revisi basi → banner "diubah di tempat lain" + "Muat data terbaru"; rencana sintetis dihapus lagi setelah uji. [UAT_PM_QA_2026-11-24.md](../evidence/UAT_PM_QA_2026-11-24.md) §2.6 | Sama |
 | C14 Delete plan | PASS API/unit | DELETE plan server + test | Sama |
 | C15 Search periode/metadata persistence | **PASS runtime** | Server `GET /v1/budget-plans?from=&to=&limit=&cursor=` (inklusif, newest-first, `nextCursor`); perangkat: "Muat riwayat rencana" → 200, kartu "1 rencana pada Desember 2025 sampai November 2026.", baris "November 2026 · revisi 0", "limit Rp46.000 · selisih Rp44.000" (totalLimitMinor/gapMinor) | Baru 1 plan tersimpan → indikator truncation belum terpicu; membuka plan dari riwayat belum ada |
 
@@ -133,7 +133,7 @@ Backend: terisolasi `:18092` (DB sementara, akun sintetis), kecuali walk UI yang
 | C08 update + 409 | **PASS API** (+ UI) | PATCH 200 readback + PATCH revisi basi 409 `revision_conflict` | Idem |
 | C09 guard builtin/used | **PASS API + UI** | 403 `builtin_category`; 409 "category is still referenced" (juga dipicu di UAT `:18090`); reassign 204 + GET lama 404; **reassign final lewat UI 24 Nov** `qa24`→`food`, kategori `qa24` count 0 | — |
 | C11 create plan/limits | **PASS API + UI** | PUT plan 200 limits/totalLimit/gap/attributes; **simpan rencana Nov 2026 dari UI 24 Nov** (`ui_split/19`–`21`), API revision 2 | — |
-| C13 update + 409 | **PASS API** | PUT 200 limits/attributes baru; PUT basi 409 | UI update limit + konflik belum dijalankan 24 Nov |
+| C13 update + 409 | **PASS API + UI** | PUT 200 limits/attributes baru; PUT basi 409; 24 Nov UI: revisi 0→1 dan banner konflik revisi basi (`c13_*`) | — |
 | C14 delete plan | **PASS API + UI** | DELETE 204 → GET 404, plan lain tetap; **hapus rencana lewat dialog UI 24 Nov** (`ui_split/22`–`23`), API `plans:[]` | — |
 | C02 cursor | **PASS API** | transaksi & kategori halaman 2 dengan id berbeda | UI halaman 2 belum diulang |
 | Persistensi | PASS API | kategori/plan/transaksi tetap setelah restart; kolom DB terenkripsi | DB sementara |

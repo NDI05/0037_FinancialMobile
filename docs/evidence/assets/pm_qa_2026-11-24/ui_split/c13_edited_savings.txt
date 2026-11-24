@@ -1,0 +1,22 @@
+Rencana anggaran
+Pengeluaran lain
+0
+IDR
+Kolom tambahan
+Nama kolom
+Isi
+Hapus
+Tambah kolom
+Maksimal 10 kolom, nama 40 karakter, isi 200 karakter. Tidak pernah dikirim ke model AI.
+Simpan rencana
+Menyimpan rencana tidak memindahkan uang apa pun.
+Hapus rencana
+RENCANA TERSIMPAN
+Muat riwayat rencana
+Muat riwayat rencana
+REALISASI VS RENCANA
+Makanan
+Rp2.345,67 dari Rp600.000
+Sisa bulan ini
+Rp6.790,11
+Transfer antar rekening tidak dihitung sebagai pengeluaran.

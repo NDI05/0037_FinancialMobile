@@ -1,0 +1,19 @@
+Rencana anggaran
+Pengeluaran lain
+0
+IDR
+Kolom tambahan
+Nama kolom
+Isi
+Hapus
+Tambah kolom
+Maksimal 10 kolom, nama 40 karakter, isi 200 karakter. Tidak pernah dikirim ke model AI.
+Rencana ini sudah diubah di tempat lain. Muat data terbaru sebelum menyimpan lagi.
+Muat data terbaru
+Simpan rencana
+Menyimpan rencana tidak memindahkan uang apa pun.
+Hapus rencana
+RENCANA TERSIMPAN
+Muat riwayat rencana
+Muat riwayat rencana
+REALISASI VS RENCANA
