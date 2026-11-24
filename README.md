@@ -31,12 +31,13 @@ Azure, dan mengakses analisis serta perencanaan anggaran sesuai consent masing-m
 
 1. [Ringkasan dan batas produk](#1-ringkasan-dan-batas-produk)
 2. [Status sprint dan fitur](#2-status-sprint-dan-fitur)
-3. [Progres harian](#3-progres-harian)
-4. [Arsitektur dan struktur repository](#4-arsitektur-dan-struktur-repository)
-5. [Menjalankan proyek lokal](#5-menjalankan-proyek-lokal)
-6. [Pengujian dan bukti](#6-pengujian-dan-bukti)
-7. [Konfigurasi, data, dan biaya](#7-konfigurasi-data-dan-biaya)
-8. [Dokumentasi dan cara berkontribusi](#8-dokumentasi-dan-cara-berkontribusi)
+3. [Progres mingguan (Weekly Progress)](#3-progres-mingguan-weekly-progress)
+4. [Progres harian](#4-progres-harian)
+5. [Arsitektur dan struktur repository](#5-arsitektur-dan-struktur-repository)
+6. [Menjalankan proyek lokal](#6-menjalankan-proyek-lokal)
+7. [Pengujian dan bukti](#7-pengujian-dan-bukti)
+8. [Konfigurasi, data, dan biaya](#8-konfigurasi-data-dan-biaya)
+9. [Dokumentasi dan cara berkontribusi](#9-dokumentasi-dan-cara-berkontribusi)
 
 ## 1. Ringkasan dan batas produk
 
@@ -83,7 +84,50 @@ pada `746b598`. Rincian implementasi/evidence: [living checkpoint](docs/DELIVERY
 Dokumen itu memuat snapshot historis; baca bagian bertanggal terbaru dan keputusan review,
 bukan hanya tabel atau hasil tes lama.
 
-## 3. Progres harian
+## 3. Progres mingguan (Weekly Progress)
+
+> **Direkonstruksi dari riwayat Git** — minggu dihitung Senin–Minggu, tanggal **WIB**. Status tiap
+> poin dibedakan: *diimplementasikan*, *lulus uji*, *parsial*, atau *direncanakan*. Commit backend
+> ditautkan ke [repo backend](https://github.com/NDI05/0037-Backend-Financial) dan disebut asalnya.
+> Detail per tanggal, bukti, dan gate yang masih terbuka tetap ada di
+> [Progres harian](#4-progres-harian) dan [log harian lengkap](docs/PROGRESS_DAILY.md).
+
+### 🗓️ Minggu 1 (16–22 November 2026)
+
+Repository Android dimulai Kamis 19 November 2026; minggu ini berisi fondasi klien dan integrasi
+awal ke backend.
+
+- **Fondasi proyek, primitif uang/bulan Jakarta, dan kontrak domain** ([52c5d8f](https://github.com/NDI05/0037_FinancialMobile/commit/52c5d8f), [f3685d2](https://github.com/NDI05/0037_FinancialMobile/commit/f3685d2), [0bf8a38](https://github.com/NDI05/0037_FinancialMobile/commit/0bf8a38)). Build Gradle tervalidasi, uang dalam minor unit, bulan memakai Asia/Jakarta, dan seluruh port Gmail/Analisis ditetapkan sebagai interface. *Status: diimplementasikan; unit test primitif lulus.*
+- **Room + SQLCipher skema v1 dan repositori lokal** ([5c728d6](https://github.com/NDI05/0037_FinancialMobile/commit/5c728d6), [5f66d8f](https://github.com/NDI05/0037_FinancialMobile/commit/5f66d8f)). Tabel transaksi, kategori, consent, impor, dan analisis disiapkan beserta DAO/konverter; enkripsi database aktif. *Status: diimplementasikan.*
+- **Parser Livin QRIS + pipeline impor fixture** ([c30f826](https://github.com/NDI05/0037_FinancialMobile/commit/c30f826), [1232307](https://github.com/NDI05/0037_FinancialMobile/commit/1232307), [3e56bf0](https://github.com/NDI05/0037_FinancialMobile/commit/3e56bf0)). Registry template, parser ketat, fingerprint, dan mesin impor diuji terhadap fixture mailbox; email ditolak tetap dihitung sebagai match, bukan bulan kosong. *Status: lulus uji fixture.*
+- **Desain Compose, navigasi type-safe, dan layar produk** ([d5c4b5e](https://github.com/NDI05/0037_FinancialMobile/commit/d5c4b5e), [2353a30](https://github.com/NDI05/0037_FinancialMobile/commit/2353a30), [ea9bea2](https://github.com/NDI05/0037_FinancialMobile/commit/ea9bea2), [cce0821](https://github.com/NDI05/0037_FinancialMobile/commit/cce0821), [e3fce16](https://github.com/NDI05/0037_FinancialMobile/commit/e3fce16)). Komponen desain, tujuan navigasi type-safe, gerbang sesi, serta layar Ringkasan/Transaksi/Detail/Entri manual/Analisis/Pengaturan; screenshot JVM dipakai untuk review desain. *Status: diimplementasikan; render JVM lulus.*
+- **Antarmuka Bahasa Indonesia dan pemolesan C2** ([aab721b](https://github.com/NDI05/0037_FinancialMobile/commit/aab721b), [ff9fc9a](https://github.com/NDI05/0037_FinancialMobile/commit/ff9fc9a)). Seluruh string utama diterjemahkan sesuai SRS §1.4; temuan review C2 ditutup. *Status: lulus uji render.*
+- **Klien backend Go + kontrak wire** ([19ed1c8](https://github.com/NDI05/0037_FinancialMobile/commit/19ed1c8), [e6f315f](https://github.com/NDI05/0037_FinancialMobile/commit/e6f315f), [756b186](https://github.com/NDI05/0037_FinancialMobile/commit/756b186)). Aplikasi terhubung ke API PAM; kontrak diverifikasi dengan MockWebServer dan body analisis replayable dipublikasikan. *Status: lulus uji kontrak.*
+- **Transaksi manual dan daftar/detail/Ringkasan dari server** ([2a2ecd7](https://github.com/NDI05/0037_FinancialMobile/commit/2a2ecd7), [a21dc14](https://github.com/NDI05/0037_FinancialMobile/commit/a21dc14)). C2A memindahkan sumber data layar utama ke API Go, termasuk create manual, paging, dan ringkasan; gate mapping/refresh/retry ditutup di [cd19ee5](https://github.com/NDI05/0037_FinancialMobile/commit/cd19ee5). *Status: lulus uji; bukti server-backed.*
+- **Consent v0.4 dengan acknowledgement server** ([0566824](https://github.com/NDI05/0037_FinancialMobile/commit/0566824)). Consent baru dianggap berlaku setelah server mengonfirmasi. *Status: lulus uji.*
+- **Parser Livin tanggal/waktu ketat, unggah impor ke job Go, dan retry tanpa duplikat** ([fe8c4f4](https://github.com/NDI05/0037_FinancialMobile/commit/fe8c4f4), [72a9cf4](https://github.com/NDI05/0037_FinancialMobile/commit/72a9cf4), [a217e02](https://github.com/NDI05/0037_FinancialMobile/commit/a217e02)). Tanggal/waktu gabungan dipisah dengan benar, tanggal mustahil ditolak, impor Livin diunggah ke API job/batch, dan identitas job server dipersistenkan agar retry tidak menggandakan baris. *Status: lulus uji parser + lost-response.*
+- **Batas klasifikasi Azure, consent AI_CATEGORIZATION terpisah, dan job kategori durable** ([8947881](https://github.com/NDI05/0037_FinancialMobile/commit/8947881), [5d9f93e](https://github.com/NDI05/0037_FinancialMobile/commit/5d9f93e), [0d80b50](https://github.com/NDI05/0037_FinancialMobile/commit/0d80b50)). Batas adapter bertipe, sakelar consent mandiri, aksi klasifikasi/reklasifikasi di Android, serta cache dan apply owner-scoped di backend. *Status: diimplementasikan; smoke Azure dan gate integrasi saat itu masih parsial.*
+- **Gmail tetap tertaut saat logout biasa dan guard pindah akun** ([a5b4656](https://github.com/NDI05/0037_FinancialMobile/commit/a5b4656), [99151a1](https://github.com/NDI05/0037_FinancialMobile/commit/99151a1)). Kredensial owner-scoped tidak ikut terhapus oleh logout biasa; reconnect dan race pindah akun ditangani. *Status: lulus uji.*
+- **SRS v0.5, provisioning Azure, dan bukti impor Gmail nyata pertama** ([c9d4a57](https://github.com/NDI05/0037_FinancialMobile/commit/c9d4a57), [74eab38](https://github.com/NDI05/0037_FinancialMobile/commit/74eab38)). Revisi SRS dan runtime Azure disiapkan; impor Gmail nyata, readback Go, dan siklus reconnect dicatat sebagai bukti awal. *Status: diimplementasikan; acceptance final belum.*
+
+### 🗓️ Minggu 2 (23–29 November 2026)
+
+Minggu berjalan; riwayat tersedia sampai **Selasa 24 November 2026**. Fokus: integrasi S2–S4,
+Gmail API/SSO, pensiun modul sesuai SRS v0.7, dan UAT perangkat final.
+
+- **Integrasi S2/S3/S4 dan acceptance merged-head** ([99cb3df](https://github.com/NDI05/0037_FinancialMobile/commit/99cb3df), [a512770](https://github.com/NDI05/0037_FinancialMobile/commit/a512770), [aa61a7b](https://github.com/NDI05/0037_FinancialMobile/commit/aa61a7b), [7337559](https://github.com/NDI05/0037_FinancialMobile/commit/7337559), [c999285](https://github.com/NDI05/0037_FinancialMobile/commit/c999285)). Paket recovery P1, bukti create manual di perangkat, wiring analisis server + guard consent, dan matriks acceptance merged; termasuk jalur admin/lampiran C18/C19/C23–C25 yang **kemudian dipensiunkan** oleh CR-008 ([897e751](https://github.com/NDI05/0037_FinancialMobile/commit/897e751), [cf7afc9](https://github.com/NDI05/0037_FinancialMobile/commit/cf7afc9)). *Status: lulus uji saat itu; modul terkait kini keluar dari cakupan aktif.*
+- **Revamp UI sinkronisasi dan Ringkasan** ([1362c11](https://github.com/NDI05/0037_FinancialMobile/commit/1362c11), [9aeea28](https://github.com/NDI05/0037_FinancialMobile/commit/9aeea28)). Satu sheet status tanpa memicu impor saat dibuka, Ringkasan lebih ringkas, judul terpusat, ikon status 48 dp; i18n pasca-merge dirapikan. *Status: lulus uji + walk perangkat saat itu.*
+- **Parser Livin memilih `Penerima` dan repair label merchant** ([02ee6df](https://github.com/NDI05/0037_FinancialMobile/commit/02ee6df), [b5ee7ae](https://github.com/NDI05/0037_FinancialMobile/commit/b5ee7ae), [276b7e1](https://github.com/NDI05/0037_FinancialMobile/commit/276b7e1)); backend pendukung [89b3203](https://github.com/NDI05/0037-Backend-Financial/commit/89b3203), [0688345](https://github.com/NDI05/0037-Backend-Financial/commit/0688345) (repo backend). Nama usaha dari `Penerima` diprioritaskan di atas `Merchant PAN`, baris tersimpan diperbaiki satu kali secara fail-closed, dan kategori pilihan pengguna tetap dipertahankan. *Status: lulus uji + bukti data owner.*
+- **Pemisahan repository backend Go** ([70d1535](https://github.com/NDI05/0037_FinancialMobile/commit/70d1535)). Source Go diekstrak dari `pam-app` path `backend-go/`; repo [0037-Backend-Financial](https://github.com/NDI05/0037-Backend-Financial) berdiri sendiri mulai commit [327d876](https://github.com/NDI05/0037-Backend-Financial/commit/327d876) (24 Nov), dengan 85 commit riwayat yang dapat diverifikasi. *Status: selesai; E2E lintas repo diverifikasi.*
+- **Gmail OAuth lewat browser + retensi UI setahun** ([f1e3e16](https://github.com/NDI05/0037_FinancialMobile/commit/f1e3e16), [5eb25e3](https://github.com/NDI05/0037_FinancialMobile/commit/5eb25e3)). Layar Tautkan Gmail memakai flow server + deep link callback, status masked, dan putuskan dengan konfirmasi; navigator bulan dibatasi jendela retensi bergulir dengan label "sebagian" di bulan tertua. *Status: lulus uji; walk perangkat lintas lane dicatat di log harian.*
+- **Google SSO di klien Android** ([5cb14d1](https://github.com/NDI05/0037_FinancialMobile/commit/5cb14d1)). Login "Masuk dengan Google" lewat Credential Manager, penautan akun lama, onboarding Gmail "Lewati", dan penanganan not-linked/inactive/invalid-token/conflict. *Status: lulus uji; login/logout/relogin nyata di HP terbukti 24 Nov (G36 PARTIAL — Run literal/onboarding Gmail belum).*
+- **SRS v0.7: pensiun anggaran, lampiran, administrasi + migrasi non-destruktif** ([1acc835](https://github.com/NDI05/0037_FinancialMobile/commit/1acc835), [d7c6bca](https://github.com/NDI05/0037_FinancialMobile/commit/d7c6bca)); backend ([1d020bc](https://github.com/NDI05/0037-Backend-Financial/commit/1d020bc), [76b2664](https://github.com/NDI05/0037-Backend-Financial/commit/76b2664)). Rute Java/UI modul pensiun dihapus dari jalur aktif, rute API-nya 404 untuk semua method, sedangkan tabel, baris, file, dan riwayat migrasi tetap dipertahankan (Room v1→v2 non-destruktif; baris anggaran legacy tetap terbaca). *Status: lulus uji + bukti 404 matrix; data lama utuh.*
+- **Entri manual: catatan opsional + batas tanggal NFR-15** ([b56e28f](https://github.com/NDI05/0037_FinancialMobile/commit/b56e28f)). Catatan 0–500 karakter ikut identitas retry; tanggal manual dibatasi lantai jendela retensi dan maksimum hari ini WIB; copy id/en dan validasi diperbarui. *Status: lulus uji + UAT perangkat.*
+- **Refresh daftar Transaksi setelah simpan manual** ([a629c41](https://github.com/NDI05/0037_FinancialMobile/commit/a629c41)). Form mempublikasikan bulan baris tersimpan lewat `SavedStateHandle`; daftar memuat ulang halaman 1 tanpa mengubah filter/pencarian, sehingga baris baru langsung tampil. *Status: lulus uji + terverifikasi dua kali di HP fisik.*
+- **Penutupan P2 audit final** ([b885555](https://github.com/NDI05/0037_FinancialMobile/commit/b885555)). Copy privasi catatan id/en tidak lagi mengklaim "hanya di perangkat" (catatan tersimpan di server akun, terenkripsi saat disimpan); identitas retry pending legacy 5-field dibuat kompatibel dengan format 6-field sehingga tidak memicu UUID/baris ganda saat upgrade. *Status: lulus uji (613 tes/88 suite) + UAT copy di perangkat.*
+- **UAT akhir SRS v0.7 di HP fisik dan dokumentasi gate** ([3aebaa1](https://github.com/NDI05/0037_FinancialMobile/commit/3aebaa1), [ddcc60c](https://github.com/NDI05/0037_FinancialMobile/commit/ddcc60c)). APK final (`b885555`, sha256 `ef34261b…`) dipasang via `adb install -r`; terbukti entri manual+catatan, tiga modul pensiun tidak terekspos, FR-32, sheet status, Analisis tersimpan, dan logout→login Google. Tombol **Run** literal Android Studio, onboarding Gmail, dan sync email baru saat app tertutup tetap **NOT RUN/OPEN**. Bukti: [UAT final](docs/evidence/FINAL_UAT_SRS_V07_2026-11-24.md), [gate akhir v0.7](docs/delivery/FINAL_GATES_SRS_V07_2026-11-24.md). *Status: lulus uji teknis; gate pemilik terbuka.*
+
+## 4. Progres harian
 
 Tanggal memakai **Asia/Jakarta (WIB)**. Tabel berikut direkonstruksi dari Git/checkpoint;
 bukan klaim setiap gate telah lulus pada tanggal tersebut.
@@ -102,7 +146,7 @@ bukan klaim setiap gate telah lulus pada tanggal tersebut.
 Tidak ada persentase selesai tanpa denominator acceptance. Pekerjaan WIP tidak disamakan
 dengan commit ter-push; smoke provider, unit test dan Android E2E dicatat terpisah.
 
-## 4. Arsitektur dan struktur repository
+## 5. Arsitektur dan struktur repository
 
 ```mermaid
 flowchart LR
@@ -150,7 +194,7 @@ Android ini; build Android dari clone repo ini sendiri. Backend Node lama diarsi
 tree (lihat [kebijakan retirement](docs/maintenance/RETIREMENT_POLICY.md)). Room/SQLCipher
 masih bagian transisi yang perlu dikeluarkan dari varian penilaian sesuai gate S4.
 
-## 5. Menjalankan proyek lokal
+## 6. Menjalankan proyek lokal
 
 ### Prasyarat
 
@@ -224,7 +268,7 @@ Launcher `scripts/run_real_uat_with_classifier.py` **mengaktifkan classifier**; 
 memakainya sebagai startup development biasa. Pengujian fault injection memakai fixture
 terisolasi. README ini tidak mengotorisasi perubahan cloud atau aktivasi pada data nyata.
 
-## 6. Pengujian dan bukti
+## 7. Pengujian dan bukti
 
 ### Android
 
@@ -269,7 +313,7 @@ Bukti kontrak polling 24 November 2026:
   di HP sudah terbukti (G36 **PARTIAL**; Run literal + onboarding Gmail belum) —
   [SSO_LIVE_PHONE](docs/evidence/SSO_LIVE_PHONE_2026-11-24.md).
 
-## 7. Konfigurasi, data, dan biaya
+## 8. Konfigurasi, data, dan biaya
 
 - Consent `GMAIL_READ`, `AI_CATEGORIZATION`, dan `AI_PROCESSING` independen. Tautan Gmail
   memakai OAuth browser; refresh token hanya disimpan terenkripsi di backend (tidak di APK).
@@ -300,7 +344,7 @@ berbeda dari jaminan jadwal batch; integrasi worker/jadwal masih dalam review.
 [Catatan cloud budget](docs/AZURE_MONTHLY_BUDGET_HANDOFF.md) ·
 [Verifikasi harga](docs/evidence/azure_price_verification_2026-11-22.md).
 
-## 8. Dokumentasi dan cara berkontribusi
+## 9. Dokumentasi dan cara berkontribusi
 
 | Dokumen | Kegunaan |
 |---|---|

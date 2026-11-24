@@ -517,3 +517,11 @@ sha256 `ef34261b…`, fingerprint build). UAT perangkat dengan APK ini mengulang
 memastikan copy catatan baru tampil. Bukti gate diperbarui di
 [gate akhir v0.7](delivery/FINAL_GATES_SRS_V07_2026-11-24.md).
 
+
+### Bagian Progres Mingguan di README — 25 November 2026 (WIB)
+
+README Android kini punya bagian **Progres mingguan (Weekly Progress)** yang merangkum riwayat
+Git per minggu (Minggu 1: 16–22 Nov, Minggu 2: 23–29 Nov; data sampai 24 Nov) dengan tautan commit
+yang dapat diverifikasi dan penanda status implementasi/uji/parsial. Tabel progres harian di
+bawah tetap menjadi detail per tanggal dan gate terbuka. README backend Go mendapat bagian yang
+sama untuk riwayat server, termasuk penjelasan repo Go berdiri sendiri sejak `327d876`.
