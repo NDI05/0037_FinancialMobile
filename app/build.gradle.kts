@@ -66,7 +66,9 @@ android {
         // is the **Web** OAuth client ID, i.e. the audience the backend verifies; no client secret
         // ever ships on Android. Blank is a supported configuration: the Google button and the
         // link card stay hidden and email/password sign-in works exactly as before.
+        // Precedence: -P property / gradle.properties, then local.properties, then the environment.
         val googleSsoClientId = buildProperty("PAM_GOOGLE_SSO_CLIENT_ID")
+            .ifBlank { System.getenv("PAM_GOOGLE_SSO_CLIENT_ID").orEmpty() }
         buildConfigField("String", "PAM_GOOGLE_SSO_CLIENT_ID", "\"$googleSsoClientId\"")
         buildConfigField(
             "boolean",

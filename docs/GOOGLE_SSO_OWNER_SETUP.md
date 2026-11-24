@@ -26,7 +26,8 @@ SHA-1 dihitung dari keystore yang benar-benar dipakai build debug repo ini
 (`app/keystore/debug.keystore`, alias `androiddebugkey`). Perintah verifikasi ulang:
 
 ```bash
-keytool -list -v \
+# keytool dari JDK bawaan Android Studio (jbr) atau JDK 21 mana pun.
+"$JAVA_HOME/bin/keytool" -list -v \
   -keystore app/keystore/debug.keystore \
   -alias androiddebugkey \
   -storepass android -keypass android \
@@ -62,8 +63,9 @@ menempelkannya di chat/laporan publik; simpan di password manager pemilik.
 
 ## 3. Aktifkan di build Android
 
-Client ID dibaca berurutan: `-P` Gradle → `gradle.properties` → `local.properties`. Gunakan
-`local.properties` (sudah gitignored) supaya build lokal pemilik tidak mengubah repo:
+Client ID dibaca berurutan: `-P` Gradle → `gradle.properties` → `local.properties` → variabel
+environment `PAM_GOOGLE_SSO_CLIENT_ID`. Gunakan `local.properties` (sudah gitignored) supaya build
+lokal pemilik tidak mengubah repo:
 
 ```properties
 # local.properties
@@ -76,6 +78,12 @@ Atau sekali jalan:
 PAM_JDK_HOME=$HOME/Library/Java/JavaVirtualMachines/temurin-21/Contents/Home \
   ./scripts/build.sh :app:assembleDebug \
   -PPAM_GOOGLE_SSO_CLIENT_ID=<WEB_CLIENT_ID>.apps.googleusercontent.com
+```
+
+Alternatif CI/env tanpa menyentuh file:
+
+```bash
+PAM_GOOGLE_SSO_CLIENT_ID=<WEB_CLIENT_ID>.apps.googleusercontent.com ./scripts/build.sh :app:assembleDebug
 ```
 
 Bentuk `BuildConfig` yang dihasilkan: `PAM_GOOGLE_SSO_CLIENT_ID` berisi string di atas dan
