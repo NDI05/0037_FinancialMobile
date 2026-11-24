@@ -113,8 +113,8 @@
     <string name="consent_ai_title">Analyse with AI</string>
     <string name="consent_ai_body">Only aggregate monthly and per-category numbers are sent to the analysis provider. No email content, merchant name, private note or message id. Declining AI keeps the recap fully usable.</string>
     <string name="consent_disclosure_title">What leaves the device</string>
-    <string name="consent_disclosure_leaves">Sent for analysis: inflow and outflow totals, per-category totals, transaction counts and coverage status.</string>
-    <string name="consent_disclosure_stays">Stays on device: email bodies, subjects, senders, message ids, merchant names, private notes, tokens and card numbers.</string>
+    <string name="consent_disclosure_leaves">Sent to your account server: manual transactions and their notes (encrypted at rest). For analysis: inflow and outflow totals, per-category totals, transaction counts and coverage status.</string>
+    <string name="consent_disclosure_stays">Stays on device: email bodies, subjects, senders, message ids, merchant names, tokens and card numbers.</string>
     <string name="consent_footer">You can withdraw AI consent at any time; older reports become historical.</string>
     <string name="consent_decline_gmail">Continue without connecting Gmail</string>
     <string name="consent_decline_gmail_body">You can enter transactions manually. Gmail access can be granted later from Settings.</string>
@@ -211,7 +211,7 @@
     <string name="detail_refund_sheet_title">Choose the refunded expense</string>
     <string name="detail_note_eyebrow">Private note</string>
     <string name="detail_note_label">Note</string>
-    <string name="detail_note_placeholder">Stored on this device only</string>
+    <string name="detail_note_placeholder">Stored with the transaction; encrypted on your account server</string>
     <string name="detail_edit_eyebrow">Edit details</string>
     <string name="detail_description_label">Description</string>
     <string name="detail_description_placeholder">Transaction description</string>
@@ -247,7 +247,7 @@
     <string name="manual_description_label">Description</string>
     <string name="manual_description_placeholder">e.g. monthly salary</string>
     <string name="manual_note_label">Note (optional)</string>
-    <string name="manual_note_placeholder">Stored on this device only</string>
+    <string name="manual_note_placeholder">Stored with the transaction; encrypted on your account server</string>
     <string name="manual_note_counter">%1$d/%2$d characters</string>
     <string name="manual_date_label">Date</string>
     <string name="manual_date_out_of_window">The date must fall between the start of the one-year window and today.</string>
@@ -370,8 +370,8 @@
     <string name="account_headline_sign_in">Sign in to your PAM account.</string>
     <string name="account_headline_register">Create a PAM account.</string>
     <string name="account_headline_offline">Create a local profile.</string>
-    <string name="account_body_sign_in">Use your PAM email and password. Transaction rows stay on this device.</string>
-    <string name="account_body_register">This account stores monthly aggregates and analyses on the PAM server. Transaction rows, merchants and notes are never sent.</string>
+    <string name="account_body_sign_in">Use your PAM email and password. Transactions and notes are stored on your PAM account server; the app keeps only a local cache.</string>
+    <string name="account_body_register">This account stores transactions, merchants, notes, monthly aggregates, and analyses on your PAM account server (encrypted at rest).</string>
     <string name="account_body_offline">No server is configured, so this profile stays on your device: an email and a name, no password.</string>
     <string name="account_email_label">Email</string>
     <string name="account_password_label">Password</string>

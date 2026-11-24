@@ -61,7 +61,30 @@ class ManualPendingActionStore @Inject constructor(
 
     private fun key(ownerId: String) = "manual_pending_$ownerId"
 
-    private companion object {
-        const val PREFS_NAME = "pam_backend_session"
+    companion object {
+        private const val PREFS_NAME = "pam_backend_session"
+
+        /**
+         * FR-26 retry identity: payloads written before the private note existed carry a five-field
+         * identity, so an identity-string comparison against today's six-field form never matches
+         * and would mint a fresh retry key for the same draft. That risks a duplicate manual row
+         * when the original POST reached the server but its response was lost. Compare the draft
+         * fields instead and treat a missing or blank note as equal to a blank draft note.
+         */
+        fun matchesDraft(
+            pending: Pending,
+            direction: String,
+            amountText: String,
+            description: String,
+            note: String,
+            dateIso: String,
+            categoryCode: String,
+        ): Boolean =
+            pending.direction == direction &&
+                pending.amountText == amountText &&
+                pending.description == description &&
+                pending.dateIso == dateIso &&
+                pending.categoryCode == categoryCode &&
+                pending.note.trim() == note.trim()
     }
 }

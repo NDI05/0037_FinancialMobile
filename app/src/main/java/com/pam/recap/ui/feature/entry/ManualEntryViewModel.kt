@@ -177,7 +177,14 @@ class ManualEntryViewModel @Inject constructor(
                 current.date.toString(), current.category.code,
             ).joinToString("|")
             val existing = pendingActions?.read(ownerId)
-            val key = if (existing?.identity == identity) {
+            // Compare draft fields, not the raw identity string: a payload restored from before the
+            // note feature still has its five-field identity and must keep its retry key.
+            val key = if (
+                existing != null && ManualPendingActionStore.matchesDraft(
+                    existing, current.direction.name, current.amountText, current.description,
+                    current.note, current.date.toString(), current.category.code,
+                )
+            ) {
                 existing.key
             } else {
                 val fresh = java.util.UUID.randomUUID().toString()

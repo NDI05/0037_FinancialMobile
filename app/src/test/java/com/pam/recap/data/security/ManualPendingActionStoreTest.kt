@@ -62,6 +62,58 @@ class ManualPendingActionStoreTest {
     }
 
     @Test
+    fun `five field legacy payload matches the same draft for a retry`() {
+        // Regression (SRS v0.7 P2-2): the pre-note payload identity has five fields, while the
+        // current draft identity has six. Field comparison must still recognise the same action so
+        // a retry reuses its key instead of minting a new UUID and duplicating the server row.
+        val encoded = listOf(
+            "legacy-key", "DEBIT|175000|Kopi|2026-11-22|food", "175000", "Kopi",
+            "2026-11-22", "DEBIT", "food",
+        ).joinToString("\u001f") { Base64.encodeToString(it.toByteArray(), Base64.NO_WRAP) }
+        context.getSharedPreferences("pam_backend_session", Context.MODE_PRIVATE)
+            .edit()
+            .putString("manual_pending_u_1", XorStore().wrap(encoded.toByteArray()))
+            .commit()
+
+        val restored = ManualPendingActionStore(context, XorStore()).read("u_1")!!
+
+        assertTrue(
+            ManualPendingActionStore.matchesDraft(
+                restored, direction = "DEBIT", amountText = "175000", description = "Kopi",
+                note = "", dateIso = "2026-11-22", categoryCode = "food",
+            ),
+        )
+        assertFalse(
+            ManualPendingActionStore.matchesDraft(
+                restored, direction = "DEBIT", amountText = "175000", description = "Kopi",
+                note = "catatan baru", dateIso = "2026-11-22", categoryCode = "food",
+            ),
+        )
+    }
+
+    @Test
+    fun `blank note on either side still matches the same stored draft`() {
+        val store = ManualPendingActionStore(context, XorStore())
+        assertTrue(store.save("u_1", ManualPendingActionStore.Pending(
+            key = "note-key", identity = "DEBIT|175000|Kopi|2026-11-22|food", amountText = "175000",
+            description = "Kopi", note = "   ", dateIso = "2026-11-22", direction = "DEBIT",
+            categoryCode = "food",
+        )))
+        val restored = store.read("u_1")!!
+
+        assertTrue(
+            ManualPendingActionStore.matchesDraft(
+                restored, "DEBIT", "175000", "Kopi", "", "2026-11-22", "food",
+            ),
+        )
+        assertFalse(
+            ManualPendingActionStore.matchesDraft(
+                restored, "DEBIT", "175000", "Kopi", "catatan lain", "2026-11-22", "food",
+            ),
+        )
+    }
+
+    @Test
     fun `wrapping failure is surfaced before the caller can POST`() {
         val store = ManualPendingActionStore(context, object : WrappedSecretStore {
             override fun wrap(plainSecret: ByteArray): String = error("keystore unavailable")

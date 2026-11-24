@@ -124,8 +124,8 @@
     <string name="consent_ai_title">Analisis dengan AI</string>
     <string name="consent_ai_body">Hanya angka agregat bulanan dan per kategori yang dikirim ke penyedia analisis. Tidak ada isi email, nama merchant, catatan pribadi, atau ID pesan. Menolak AI tidak menghilangkan ringkasan.</string>
     <string name="consent_disclosure_title">Yang keluar dari perangkat</string>
-    <string name="consent_disclosure_leaves">Dikirim saat analisis: total pemasukan dan pengeluaran, total per kategori, jumlah transaksi, dan status cakupan.</string>
-    <string name="consent_disclosure_stays">Tetap di perangkat: isi email, subjek, pengirim, ID pesan, nama merchant, catatan pribadi, token, dan nomor kartu.</string>
+    <string name="consent_disclosure_leaves">Dikirim ke server akun Anda: transaksi manual beserta catatannya (tetap terenkripsi saat disimpan). Saat analisis: total pemasukan dan pengeluaran, total per kategori, jumlah transaksi, dan status cakupan.</string>
+    <string name="consent_disclosure_stays">Tetap di perangkat: isi email, subjek, pengirim, ID pesan, nama merchant, token, dan nomor kartu.</string>
     <string name="consent_footer">Anda bisa mencabut izin AI kapan saja; laporan lama akan ditandai sebagai riwayat.</string>
     <string name="consent_decline_gmail">Lanjut tanpa menghubungkan Gmail</string>
     <string name="consent_decline_gmail_body">Transaksi bisa diisi manual. Izin Gmail bisa diberikan nanti dari Pengaturan.</string>
@@ -227,7 +227,7 @@
     <string name="detail_refund_sheet_title">Pilih pengeluaran yang dikembalikan</string>
     <string name="detail_note_eyebrow">Catatan pribadi</string>
     <string name="detail_note_label">Catatan</string>
-    <string name="detail_note_placeholder">Hanya tersimpan di perangkat</string>
+    <string name="detail_note_placeholder">Disimpan bersama transaksi; terenkripsi di server akun Anda</string>
     <string name="detail_edit_eyebrow">Ubah detail</string>
     <string name="detail_description_label">Deskripsi</string>
     <string name="detail_description_placeholder">Deskripsi transaksi</string>
@@ -263,7 +263,7 @@
     <string name="manual_description_label">Keterangan</string>
     <string name="manual_description_placeholder">Misal: gaji bulanan</string>
     <string name="manual_note_label">Catatan (opsional)</string>
-    <string name="manual_note_placeholder">Hanya tersimpan di perangkat</string>
+    <string name="manual_note_placeholder">Disimpan bersama transaksi; terenkripsi di server akun Anda</string>
     <string name="manual_note_counter">%1$d/%2$d karakter</string>
     <string name="manual_date_label">Tanggal</string>
     <string name="manual_date_out_of_window">Tanggal harus di antara awal jendela setahun dan hari ini.</string>
@@ -393,8 +393,8 @@
     <string name="account_headline_sign_in">Masuk ke akun PAM Anda.</string>
     <string name="account_headline_register">Buat akun PAM.</string>
     <string name="account_headline_offline">Buat profil lokal.</string>
-    <string name="account_body_sign_in">Gunakan email dan kata sandi akun PAM Anda. Baris transaksi tetap tinggal di perangkat ini.</string>
-    <string name="account_body_register">Akun ini menyimpan agregat bulanan dan analisis di server PAM. Baris transaksi, merchant, dan catatan tidak pernah dikirim.</string>
+    <string name="account_body_sign_in">Gunakan email dan kata sandi akun PAM Anda. Transaksi dan catatan tersimpan di server akun PAM; aplikasi hanya menyimpan cache lokal.</string>
+    <string name="account_body_register">Akun ini menyimpan transaksi, merchant, catatan, agregat bulanan, dan analisis di server akun PAM Anda (terenkripsi saat disimpan).</string>
     <string name="account_body_offline">Tidak ada server yang dikonfigurasi, jadi profil ini hanya tersimpan di perangkat Anda: cukup email dan nama, tanpa kata sandi.</string>
     <string name="account_email_label">Email</string>
     <string name="account_password_label">Kata sandi</string>
