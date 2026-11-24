@@ -28,8 +28,8 @@ baris sendiri, nilai di baris berikutnya) dan tanggal+waktu bertumpuk dengan nam
 diperbaiki lewat `5df6be6` (label/waktu stacked) dan `c98527b` (bulan Indonesia), diuji ulang
 (`go vet/build/test ./...` + `-race` **PASS**), lalu runtime resmi dibangun ulang dan dijalankan
 ulang. Hasil live: **transaksi Livin nyata masuk tanpa duplikat** (Nov 40/54, Okt 53/86, Agu
-55/124; total 327 baris unik pada snapshot 19:59 WIB, backfill melanjutkan ke bulan-bulan
-sebelumnya) — rincian agregat di
+55/124; final **12/12 bulan COMPLETE dengan 914 baris unik, 0 duplikat** pada 20:16 WIB) —
+rincian agregat di
 [GMAIL_LIVE_IMPORT](../evidence/GMAIL_LIVE_IMPORT_2026-11-24.md). **G25 (Gmail live) berubah
 menjadi PASS (live, akun pilot owner)**; G29/G37 (Rp0) tetap OPEN dan **G36 (SSO Google + tombol
 Run pemilik) tetap NOT RUN** karena login Google nyata belum dicoba. Gate Gmail live dan SSO

@@ -142,8 +142,9 @@ parser fixture: label **stacked** (`Penerima` baris sendiri) dan tanggal+waktu b
 bulan Indonesia (`12 Okt 2026` + `pkl 09:30:45 WIB`). Backend diperbaiki di `5df6be6` dan
 `c98527b` (plus regresi stacked/Indonesian), `vet`/`build`/`test ./...`/`-race` PASS, lalu runtime
 resmi dibangun ulang dengan launcher owner dan dijalankan ulang. Hasil live: **ratusan transaksi
-Livin nyata tersimpan tanpa duplikat** (Nov 40/54, Okt 53/86, Agu 55/124, dst.; total 327 baris
-unik saat snapshot 19:59 WIB dan backfill melanjutkan sampai 12/12). Gate **G25 berubah PASS
+Livin nyata tersimpan tanpa duplikat**: backfill **12/12 bulan COMPLETE**, **914 transaksi unik**,
+0 baris duplikat (Nov 40/54, Okt 53/86, Sep 0 baru/79 duplikat, Agu 55/124, dst.; snapshot final
+20:16 WIB). Gate **G25 berubah PASS
 (live, akun pilot owner)**; G29/G37 (Rp0) tetap OPEN dan G36 (SSO Google + Run pemilik) tetap NOT
 RUN. Bukti agregat: [GMAIL_LIVE_IMPORT](../evidence/GMAIL_LIVE_IMPORT_2026-11-24.md). Tidak ada
 alamat email, nominal, merchant, ID pesan, atau token yang ditulis ke repo/chat; data owner tetap

@@ -33,7 +33,7 @@ Gate backend setelah perbaikan: `go vet ./...` **PASS**, `go build ./...` **PASS
 `go test ./... -count=1` **PASS** (10 paket; `internal/gmail` termasuk regresi stacked/Indonesian),
 `-race` auth/gmail/httpapi/store **PASS**.
 
-## 3. Bukti live (agregat, per 24 Nov 19:59 WIB)
+## 3. Bukti live (agregat, final 24 Nov 20:16 WIB — backfill 12/12 COMPLETE)
 
 Binary runtime resmi dibangun ulang dari `c98527b` dengan overlay launcher owner, lalu backend
 dijalankan ulang memakai launcher yang sama (`~/.config/pam/uat-runtime/start.py`); DB dicadangkan
@@ -41,15 +41,15 @@ sebelum reset buku sinkronisasi (bukan data transaksi).
 
 | Butir | Hasil |
 |---|---|
-| Koneksi Gmail | 1 koneksi `ACTIVE`, `sync_state=backfill` → impor berjalan |
+| Koneksi Gmail | 1 koneksi `ACTIVE`, `sync_state=idle` setelah **12/12 bulan backfill COMPLETE** |
 | Backfill Nov 2026 | 54 dipindai, **40 transaksi diimpor**, 0 duplikat, 14 dilewati |
 | Backfill Okt 2026 | 86 dipindai, **53 transaksi diimpor**, 0 duplikat, 33 dilewati |
 | Backfill Sep 2026 | 136 dipindai, 0 baru, **79 duplikat**, 57 dilewati |
 | Backfill Agu 2026 | 124 dipindai, **55 transaksi diimpor**, 0 duplikat, 69 dilewati |
-| Backfill Jul 2026 | sedang berjalan saat snapshot (50 dipindai, **34 diimpor**) |
-| Total transaksi unik | **327** baris, 327 `source_ref_hash` unik, 327 fingerprint unik (tidak ada duplikat) |
-| Rate limit Google | 16 `gmail_provider_retry` (`rate_limited`) ditangani backoff provider; pass tetap berjalan tiap ±2 menit |
-| Aplikasi | layar utama memanggil `/v1/summary` dan `/v1/transactions` dan menampilkan data tersimpan (tanpa error) |
+| Backfill Jul–Des 2026 | 92/55, 124/73, 118/52, 156/97, 127/69, 106/48, 118/83, 170/144 (dipindai/diimpor), 0 duplikat per bulan |
+| Total transaksi unik | **914** baris; 914 `source_ref_hash` unik; **0 baris duplikat** |
+| Rate limit Google | 16 `gmail_provider_retry` (`rate_limited`) ditangani backoff provider; pass tetap berjalan tiap ±2 menit tanpa kegagalan permanen |
+| Aplikasi | layar utama memanggil `/v1/summary` dan `/v1/transactions` dan menampilkan data tersimpan (HTTP 200, tanpa error) |
 
 Sisa `skipped` adalah pesan yang bukan transaksi atau template lain (promosi/notifikasi tanpa
 merchant/nominal), bukan kegagalan impor diam-diam; alasannya tercatat per pesan di
