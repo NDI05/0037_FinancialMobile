@@ -182,3 +182,6 @@ Evidence audit: `docs/evidence/AUDIT_GMAIL_PARSER_R7_2026-11-24.md`. Gate tetap 
 Parser hasil hardening diberi tag `gmail-livin-v2` (`7bb16f0`) dan runtime loopback dibangun
 ulang dari commit itu; 914 baris live lama tetap bertanda `gmail-livin-v1` — regenerasinya bersifat
 destruktif pada data owner sehingga menunggu persetujuan pemilik. Gate tidak berubah.
+Gate Android final setelah semua perubahan ronde 8: `testDebugUnitTest` **678 tes/88 suite/0
+gagal/0 dilewati**, `lintDebug` **0 error/123 warning/1 hint**, `assembleDebug` PASS (APK
+47.992.939 B, sha256 `5368c92f…`). Tidak ada perubahan status gate.
