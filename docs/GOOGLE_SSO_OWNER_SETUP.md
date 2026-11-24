@@ -13,6 +13,24 @@ Kontrak backend yang dipakai Android (lihat task SSO): `GET /v1/auth/google/nonc
 `POST /v1/auth/google` (anonim), `POST /v1/auth/google/link` (Bearer), dan flag opsional
 `googleLinked` pada `GET /v1/me`. Saat SSO dimatikan server menjawab `503 google_sso_disabled`.
 
+## 0. Cek kesiapan otomatis (opsional, disarankan)
+
+Sebelum menekan **Run**, jalankan pemeriksaan baca-saja berikut dari root `pam-app` (tidak
+meminta dan tidak mencetak password/OTP/secret/client ID):
+
+```bash
+./scripts/verify/uat_readiness.sh \
+  --backend-url http://127.0.0.1:18090 \
+  --apk app/build/outputs/apk/debug/app-debug.apk
+```
+
+Script memeriksa: backend `/readyz`, status SSO (`/v1/auth/google/nonce` 200/503), rute
+`/v1/gmail/status` terpasang, HP fisik terhubung, paket debug terpasang, `adb reverse tcp:18090`,
+dan APK memuat Web client ID. Exit `0` = prasyarat otomatis siap; `2` = ada yang kurang (daftar
+ditampilkan); `1` = kegagalan teknis. Gate **GCP Rp0** tetap manual karena butuh akses Billing
+pemilik. Script ini hanya prasyarat — gate live (G25/G29/G36) tetap dijalankan dan dilaporkan
+terpisah.
+
 ## 1. Identitas aplikasi untuk Google Cloud Console
 
 Nilai yang **wajib** dipakai saat membuat OAuth client Android (jangan menebak):

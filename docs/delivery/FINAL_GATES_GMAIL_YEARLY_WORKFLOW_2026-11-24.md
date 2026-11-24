@@ -141,13 +141,14 @@ dan Rp0 masih milik pemilik.
 4. Jadwalkan drill rollback (G3) dan drill hapus/restore retensi (G14) pada salinan DB.
 5. Putuskan penonaktifan penuh jalur IMAP (G17) setelah rollback teruji.
 6. Merge ke `main`/deploy dan revisi SRS resmi hanya setelah 1–5 selesai.
-7. **Untuk gate SSO (G30–G37)**: daftarkan OAuth **Android** client untuk package
+7. **Cek kesiapan sebelum Run**: `./scripts/verify/uat_readiness.sh --backend-url http://127.0.0.1:18090 --apk app/build/outputs/apk/debug/app-debug.apk` (exit 0 = prasyarat otomatis siap; 2 = daftar kekurangan; tidak mencetak secret). Gate Rp0 tetap manual.
+8. **Untuk gate SSO (G30–G37)**: daftarkan OAuth **Android** client untuk package
    `com.pam.recap.debug` + SHA-1 debug `FE:38:71:AB:6A:DC:D2:E5:B3:68:96:DE:59:84:D3:08:5F:27:C6:30`
    (SHA-256 `B3:9A:3C:FC:78:CF:EB:2E:AA:E3:9A:F0:B7:E1:7A:A5:31:7C:5D:92:43:E1:CA:13:C0:7D:1D:12:C2:D6:25:BC`),
    isi **Web Client ID** (bukan secret) ke `PAM_GOOGLE_SSO_CLIENT_ID`/`GOOGLE_SSO_CLIENT_ID`, dan
    siapkan akun Google uji yang sudah login di HP. Rahasia (client secret Gmail, password, OTP)
    **tidak boleh** dikirim ke chat/repo.
-8. Jalankan tombol **Run** Android Studio pada HP fisik pemilik untuk G36: login Google, link akun
+9. Jalankan tombol **Run** Android Studio pada HP fisik pemilik untuk G36: login Google, link akun
    lama (tanpa duplikat), skip onboarding, tautkan Gmail + consent, dan verifikasi email Livin baru
    tersimpan saat aplikasi tertutup. Gate SSO (**G36**), Gmail live (**G25**), dan Rp0 (**G29/G37**)
    dilaporkan terpisah; fixture bukan bukti live.
