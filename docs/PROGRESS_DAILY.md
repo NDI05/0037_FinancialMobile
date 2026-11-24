@@ -433,3 +433,38 @@ branch `feat/c2-android` commit kode `b56e28f`:
 Gate fresh pada commit kode `b56e28f`: `:app:testDebugUnitTest` **602 tes / 85 suite / 0 gagal`,
 `:app:lintDebug` **0 error / 117 warning / 1 hint**, `:app:assembleDebug` lulus (APK debug **48.819.325** byte,
 sha256 `3c5f6b70fe3e0dc1979c62184a3a271f4360b52ad0f1c25b5287dd55613d656e`, fingerprint non-deterministik). UAT perangkat/emulator lane ini **NOT RUN**.
+
+### Refresh daftar Transaksi setelah simpan manual (24 November 2026, 23.30 WIB)
+
+Temuan PM pada build `b56e28f` (HP fisik, mode server): simpan manual (Rp1.000, "UjiRefresh",
+24 Nov 2026) → kembali ke daftar Transaksi, halaman 1 masih menampilkan data lama (header grup
+teratas "Senin, 23 Nov"; baris 24 Nov belum muncul) sampai bulan digeser Nov→Okt→Nov. Ringkasan
+sudah ter-update, jadi persistensi benar — hanya refresh daftar yang gagal.
+
+Perbaikan di branch `feat/c2-android`:
+
+- **Kontrak navigasi simpan→daftar**: setelah `AddManualEntryUseCase` sukses, form menaruh bulan
+  baris yang tersimpan pada `SavedStateHandle` layar daftar lewat
+  `publishManualSaveMonth` (kunci `manualSaveMonthId`) lalu pop. `TransactionsScreen`
+  mengonsumsi hasil satu kali itu dan memanggil `TransactionsViewModel.refreshAfterSave(monthId)`
+  yang menaikkan tick refresh halaman 1 (generasi query ikut naik, cursor direset), sehingga
+  baris baru muncul tanpa menggeser bulan. Filter bulan/hari/kategori/pencarian tidak disentuh.
+- **Bus refresh tetap dipertahankan**: jalur `FinanceRefreshBus` (dipakai juga oleh sunting/hapus
+  dan impor) tetap menjadi jalur utama; hasil navigasi menutup kasus event bus terlewat saat
+  layar daftar sedang tidak mengoleksi (mis. layar dibangun ulang saat kembali dari form).
+- Tidak ada perubahan kontrak API, backend, Room, maupun sumber data lain.
+
+Regresi baru: `TransactionsManualRefreshTest` (5 tes) — event bus manual save memuat ulang
+halaman 1 dengan baris baru tepat satu kali (tanpa duplikat, dua pembacaan tanpa cursor), hasil
+navigasi simpan melakukan hal yang sama, serta event/hasil untuk bulan atau owner lain tidak
+memicu refetch; `ManualSaveResultNavigationTest` (1 tes) — hasil simpan dipublikasikan pada entry
+daftar dan pop kembali ke daftar.
+
+Gate fresh: `:app:testDebugUnitTest` **608 tes / 87 suite / 0 gagal**, `:app:lintDebug`
+**0 error / 117 warning / 1 hint**, `:app:assembleDebug` lulus (APK debug **48.819.325** byte,
+sha256 `e7a1f4afcb40261c65ada103963d9c56fa5bb261a7a2018341f5142acf82dde4`, fingerprint build
+non-deterministik). Smoke emulator: APK baru terpasang dan app terbuka (Ringkasan termuat), tetapi
+verifikasi UI simpan→daftar **NOT RUN** karena sesi server akun emulator sudah berakhir ("Sesi
+server berakhir. Masuk ulang") dan tidak ada data November 2026 di akun itu; UAT perangkat tetap
+menunggu build ini dipasang ulang oleh Lead. Catatan: "tanggal tidak terlihat" pada form manual
+bukan bug (form bisa di-scroll) dan tidak diubah.

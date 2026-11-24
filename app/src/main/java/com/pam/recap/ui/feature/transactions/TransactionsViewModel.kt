@@ -459,6 +459,20 @@ class TransactionsViewModel @Inject constructor(
         refreshTick.update { it + 1 }
     }
 
+    /**
+     * FR-26 follow-up: after a manual row was saved, reload page one of that month so the new row
+     * shows up immediately. The month/day/category/search state is untouched — only the data is
+     * re-fetched — and it is a no-op when the list is already showing another month.
+     *
+     * The [FinanceRefreshBus] event normally does this; this path keeps the list correct when the
+     * event was emitted while this screen had no collector (e.g. it was recreated on the way back)
+     * and makes the save→list hand-off deterministic through the navigation result.
+     */
+    fun refreshAfterSave(monthId: String) {
+        if (month.value?.id() != monthId) return
+        refreshTick.update { it + 1 }
+    }
+
     /** Clears the footer error and retries the same page (the cursor is unchanged). */
     fun retryLoadMore() {
         if (_state.value.loadMoreError == null) return

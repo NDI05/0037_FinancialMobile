@@ -44,6 +44,11 @@ data class ManualEntryUiState(
     val isSaving: Boolean = false,
     val error: AppError? = null,
     val saved: Boolean = false,
+    /**
+     * Month of the row that was just saved. The navigation layer hands it back to the list so the
+     * list refreshes page one even when it missed the [FinanceRefreshBus] event.
+     */
+    val savedMonthId: String? = null,
 ) {
     val parsedAmount: Money? get() = MoneyInput.parse(amountText)
 
@@ -207,9 +212,10 @@ class ManualEntryViewModel @Inject constructor(
             ) {
                 is Outcome.Failure -> _state.update { it.copy(isSaving = false, error = result.error) }
                 is Outcome.Success -> {
+                    val monthId = JakartaMonth.of(eventAt).id()
                     pendingActions?.clear(ownerId)
-                    FinanceRefreshBus.notify(ownerId, JakartaMonth.of(eventAt).id())
-                    _state.update { it.copy(isSaving = false, saved = true) }
+                    FinanceRefreshBus.notify(ownerId, monthId)
+                    _state.update { it.copy(isSaving = false, saved = true, savedMonthId = monthId) }
                 }
             }
         }

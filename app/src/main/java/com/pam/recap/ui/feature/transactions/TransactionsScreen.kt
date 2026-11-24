@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,10 +63,23 @@ fun TransactionsScreen(
     modifier: Modifier = Modifier,
     /** Present only when the screen was opened as a drill-down (C2-2). */
     onBack: (() -> Unit)? = null,
+    /**
+     * One-shot navigation result: the month of the row the manual-entry form just saved. The list
+     * reloads page one so the new row is visible without a month switch (FR-26 follow-up).
+     */
+    savedMonthId: String? = null,
+    onSavedMonthHandled: () -> Unit = {},
     viewModel: TransactionsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val month = state.month
+
+    LaunchedEffect(savedMonthId) {
+        if (savedMonthId != null) {
+            viewModel.refreshAfterSave(savedMonthId)
+            onSavedMonthHandled()
+        }
+    }
 
     PamScaffold(
         modifier = modifier,

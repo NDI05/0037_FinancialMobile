@@ -55,14 +55,14 @@ import androidx.compose.material.icons.rounded.ChevronRight
 @Composable
 fun ManualEntryScreen(
     onBack: () -> Unit,
-    onSaved: () -> Unit,
+    onSaved: (savedMonthId: String?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ManualEntryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.saved) {
-        if (state.saved) onSaved()
+        if (state.saved) onSaved(state.savedMonthId)
     }
 
     PamScaffold(

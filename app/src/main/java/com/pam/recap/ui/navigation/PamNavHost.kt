@@ -186,6 +186,10 @@ fun PamNavHost(
                 // A tab tap lands on the bare route; a drill-down carries a filter, and only the
                 // drill-down gets a back well (C2-2).
                 val openedAsDrillDown = args.isDrillDown()
+                // FR-26 follow-up: the manual form publishes the saved row's month on the way back.
+                val savedMonthId by entry.savedStateHandle
+                    .getStateFlow<String?>(MANUAL_SAVE_MONTH_KEY, null)
+                    .collectAsStateWithLifecycle()
                 TransactionsScreen(
                     onOpenTransaction = { id ->
                         navController.navigate(PamDestination.TransactionDetail(id))
@@ -196,6 +200,8 @@ fun PamNavHost(
                     } else {
                         null
                     },
+                    savedMonthId = savedMonthId,
+                    onSavedMonthHandled = { entry.savedStateHandle.remove<String>(MANUAL_SAVE_MONTH_KEY) },
                 )
             }
 
@@ -206,7 +212,10 @@ fun PamNavHost(
             composable<PamDestination.ManualEntry> {
                 ManualEntryScreen(
                     onBack = { navController.popBackStack() },
-                    onSaved = { navController.popBackStack() },
+                    onSaved = { savedMonthId ->
+                        navController.publishManualSaveMonth(savedMonthId)
+                        navController.popBackStack()
+                    },
                 )
             }
 
@@ -419,3 +428,16 @@ internal fun tabTargetFor(key: String): PamDestination? = when (key) {
  */
 internal fun PamDestination.Transactions.isDrillDown(): Boolean =
     monthId != null || categoryCode != null || dayIso != null || direction != null || bank != null
+
+/** SavedStateHandle key for the one-shot "a manual row was saved in this month" navigation result. */
+internal const val MANUAL_SAVE_MONTH_KEY = "manualSaveMonthId"
+
+/**
+ * FR-26 follow-up: hands the month of a freshly saved manual row to the screen underneath so its
+ * list can reload page one. Without it the list only refreshed through [com.pam.recap.domain.repository.FinanceRefreshBus],
+ * which is a plain in-memory event and is missed whenever the list was not collecting at that
+ * instant (for example when it is rebuilt on the way back from the form).
+ */
+internal fun NavHostController.publishManualSaveMonth(monthId: String?) {
+    previousBackStackEntry?.savedStateHandle?.set(MANUAL_SAVE_MONTH_KEY, monthId)
+}
