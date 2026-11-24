@@ -273,6 +273,9 @@ private fun AdminBody(
     onLoadMoreAudit: () -> Unit,
     onDismissNotice: () -> Unit,
 ) {
+    // Keep the typed text local so fast keystrokes are not dropped or reordered while a page
+    // load recomposes; the ViewModel remains the source of truth for the applied query.
+    var queryText by remember { mutableStateOf(state.query) }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = PamSpacing.md, vertical = PamSpacing.sm),
@@ -298,8 +301,11 @@ private fun AdminBody(
                 horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
             ) {
                 OutlinedTextField(
-                    value = state.query,
-                    onValueChange = onQueryChange,
+                    value = queryText,
+                    onValueChange = {
+                        queryText = it
+                        onQueryChange(it)
+                    },
                     modifier = Modifier.weight(1f).testTag("admin_search_field"),
                     label = { Text(stringResource(R.string.admin_search)) },
                     singleLine = true,

@@ -124,6 +124,22 @@ class AdminScreenTest {
     }
 
     @Test
+    fun `the search field keeps earlier keystrokes while the list reloads`() {
+        var query = ""
+        compose.setContent {
+            AdminScreenContent(
+                // A reload between keystrokes must not drop what was already typed.
+                state = adminState().copy(query = query, loading = true),
+                onQueryChange = { query = it },
+            )
+        }
+
+        compose.onNodeWithTag("admin_search_field").performTextInput("wqa")
+        compose.onNodeWithTag("admin_search_field").performTextInput(".ui.b")
+        assertEquals("wqa.ui.b", query)
+    }
+
+    @Test
     fun `the one-time invitation token is shown with a copy action and warning`() {
         var copied: String? = null
         val invitation = AdminInvitation(
