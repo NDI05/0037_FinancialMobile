@@ -59,8 +59,8 @@ bukan data pemilik.
 |---|---|---|---|
 | C16 Create private copy + metadata | **PASS runtime** | `POST /v1/attachments 201`, panel menampilkan nama/tipe/ukuran, hint file tetap di perangkat | PDF uji 193 B buatan sendiri |
 | C17 Read setelah restart | **PASS runtime** | Force-stop + buka ulang memuat metadata dari `GET /v1/attachments` | Unavailable di perangkat lain belum diuji |
-| C18 Update display name/attributes + conflict | **PASS runtime** | Perangkat: rename via sheet → `PATCH /v1/attachments/{id}` 200, notice "Nama lampiran diperbarui.", baris menjadi bukti-rename-accept.pdf | Konflik revisi 409 di perangkat belum diulang (ditutup API/unit) |
-| C19 Delete metadata/file cleanup | **PASS runtime** | Hapus di panel + `DELETE /v1/attachments`; baris hilang setelah reload | Retry kegagalan hapus belum diuji perangkat |
+| C18 Update display name/attributes + conflict | **PASS runtime** | Perangkat: rename via sheet → `PATCH /v1/attachments/{id}` 200, notice "Nama lampiran diperbarui."; konflik revisi kini diulang di perangkat: PATCH stale **409** + banner "Lampiran sudah berubah. Muat ulang lalu coba lagi." (`ui_split/36`) | — |
+| C19 Delete metadata/file cleanup | **PASS runtime** | Hapus di panel + `DELETE /v1/attachments` 204; baris hilang setelah reload; retry kegagalan hapus kini diulang di perangkat: DELETE stale **409** lalu reload → DELETE **204** (`ui_split/37`, `38`) | — |
 | C20 Search nama/context/owner | **PASS runtime** | Perangkat: submit `zzz` → "Tidak ada lampiran yang cocok dengan pencarian."; submit nama hasil rename → baris cocok tampil | Pencarian konteks/owner lain di perangkat belum dijalankan |
 
 ## Admin pengguna (C21–C25)
@@ -137,8 +137,8 @@ Backend: terisolasi `:18092` (DB sementara, akun sintetis), kecuali walk UI yang
 | C14 delete plan | **PASS API + UI** | DELETE 204 → GET 404, plan lain tetap; **hapus rencana lewat dialog UI 24 Nov** (`ui_split/22`–`23`), API `plans:[]` | — |
 | C02 cursor | **PASS API** | transaksi & kategori halaman 2 dengan id berbeda | UI halaman 2 belum diulang |
 | Persistensi | PASS API | kategori/plan/transaksi tetap setelah restart; kolom DB terenkripsi | DB sementara |
-| C18 konflik revisi | **PASS API** | PATCH stale 409, PATCH benar 200 | UI konflik perangkat ditunda (emulator dialihkan) |
-| C19 hapus + retry | **PASS API** | DELETE rev salah 409, benar 204, retry 404 | Retry kegagalan di UI dicatat §2.5 dok. QA |
+| C18 konflik revisi | **PASS API + UI** | PATCH stale 409, PATCH benar 200; UI konflik perangkat PASS (`ui_split/36`) | — |
+| C19 hapus + retry | **PASS API + UI** | DELETE rev salah 409, benar 204, retry 404; UI dialog + retry perangkat PASS (`ui_split/37`, `38`) | — |
 | C20 konteks/owner | **PASS API** | search `transactionId`+`q` 1 hit; owner lain GET 404 | UI konteks dicatat §2.5 dok. QA |
 | C21 bootstrap/audit | PASS API | `pam-admin -promote` + audit `bootstrap_admin`, token lama stale | Email tetap tidak dikirim |
 | C23 role change/revoke/audit | **PASS API + UI** | PATCH role 200; token lama 401 `session_stale`; refresh 401 `refresh_invalid`; audit `admin.account.update`; **promosi/demote akun sintetis `wqa.ui.b` lewat dialog UI 24 Nov** (`ui_split/27`–`34`) | Status SUSPENDED via UI belum diulang |

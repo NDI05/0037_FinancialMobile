@@ -138,7 +138,7 @@ Matriks di atas adalah snapshot historis. Status sesudah lane paralel dan UAT em
 | S2.5 anggaran/freshness | **PARTIAL** | plan server read/save/delete + editor atribut; perbandingan aktual dari ringkasan; UI perangkat belum |
 | S3 kategori & anggaran remote | **PARTIAL/PASS API** | kategori CRUD + guard lulus test; C10 search kategori belum ada di port; lihat [matriks C01–C25](delivery/ACCEPTANCE_C01_C25.md) |
 | S3 atribut dinamis 4 entitas | **PASS wire + runtime transaksi** | PATCH transaksi `{"sumber":"kamera"}` 200, dibaca ulang dari server, UI prefill setelah buka ulang; editor anggaran ber-test |
-| S4.1 lampiran C16/C17/C19 | **PASS runtime** | [UAT lampiran](evidence/UAT_S4_ATTACHMENTS_2026-11-23.md): create, read setelah restart, delete; C18/C20 rename/search belum di perangkat |
+| S4.1 lampiran C16–C19 | **PASS runtime** | [UAT lampiran](evidence/UAT_S4_ATTACHMENTS_2026-11-23.md): create, read setelah restart, delete; 24 Nov upload dari picker, rename 200, konflik PATCH 409 + banner, DELETE stale 409 → reload → 204 di emulator (`ui_split/36`–`38`, QA doc §2.7); C20 search/konteks belum diulang di perangkat |
 | S4.2 admin C21–C24 | **PASS runtime** | [UAT admin](evidence/UAT_S4_ADMIN_2026-11-23.md): invite, list/cari, edit + konflik 409, deactivate, audit setelah restart; C24 last-admin guard via test API/store, C25 cursor/filter peran lewat API/VM |
 | S4.4 Room keluar | **NOT DONE** | Room masih dependency varian |
 
@@ -867,10 +867,11 @@ PM berdasarkan bukti yang ada, bukan status "source sudah ditulis".
   matriks; C09 (guard + reassign), C11, C13 (update + banner konflik), C14 diuji ulang lewat
   UI 24 Nov; C02/C06–C08/C10/C12/C15 mengandalkan runtime 23 Nov atau API 24 Nov dan tidak
   dijalankan ulang. Keputusan acceptance final tetap di pemilik.
-- **S4 = PARTIAL.** C16–C20, C21/C22/C24, C23 (API+UI), dan **Buat Analisis** (Azure 200,
+- **S4 = PARTIAL.** C16–C20 (termasuk konflik dan retry hapus lampiran di perangkat,
+  QA doc §2.7), C21/C22/C24, C23 (API+UI), dan **Buat Analisis** (Azure 200,
   `AVAILABLE/CURRENT`, UI "ANALISIS TERSIMPAN") sudah terbukti; C25 UI tetap PARTIAL
-  (status SUSPENDED via UI dan cursor lintas halaman belum dijalankan; filter pencarian
-  admin tidak menyaring live).
+  (status SUSPENDED via UI dan cursor lintas halaman belum dijalankan; pencarian admin live
+  belum diulang di perangkat; hardening field pencarian `897e751`).
 - **S5 tetap terbuka:** merge/deploy, hosting/backup, benchmark berlabel, mailbox produksi.
 
 ### Batas yang tidak diklaim
