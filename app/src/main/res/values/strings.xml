@@ -559,6 +559,27 @@
     <string name="update_status_cd_pending">Ada transaksi yang belum diakui server.</string>
     <string name="update_status_cd_attention">Ada hal yang perlu perhatian.</string>
     <string name="update_status_cd_review">Ada transaksi yang perlu ditinjau.</string>
+    <!-- Server-side Gmail sync (contract §9). Only shown while Gmail is linked. -->
+    <string name="update_status_server_section">Sinkron server Gmail</string>
+    <string name="update_status_server_state_label">Status</string>
+    <string name="update_status_server_state_fetching">Mengambil riwayat</string>
+    <string name="update_status_server_state_waiting">Menunggu</string>
+    <string name="update_status_server_state_connecting">Menghubungkan</string>
+    <string name="update_status_server_state_error">Sinkron gagal</string>
+    <string name="update_status_server_loading">Memuat status server…</string>
+    <string name="update_status_server_progress_months">Bulan selesai: %1$d dari %2$d.</string>
+    <string name="update_status_server_progress_month">Bulan berjalan: %1$s.</string>
+    <string name="update_status_server_progress_pages">Halaman diproses bulan ini: %1$d.</string>
+    <string name="update_status_server_last_success">Terakhir berhasil sinkron</string>
+    <string name="update_status_server_next_sync">Sinkron berikutnya sekitar %1$s.</string>
+    <string name="update_status_server_queued">Permintaan sinkron masuk antrean server.</string>
+    <string name="update_status_server_coalesced">Permintaan digabung dengan sinkron yang sedang berjalan.</string>
+    <string name="update_status_server_cooldown">Tunggu %1$d detik sebelum menyinkronkan lagi.</string>
+    <string name="update_status_server_cooldown_generic">Tunggu sebentar sebelum menyinkronkan lagi.</string>
+    <string name="update_status_server_not_connected">Gmail belum tersambung di server.</string>
+    <string name="update_status_server_disabled">Sinkron server belum diaktifkan.</string>
+    <string name="update_status_server_reauth">Izin Gmail perlu diperbarui sebelum sinkron bisa berjalan.</string>
+    <string name="update_status_server_reconnect">Tautkan ulang Gmail</string>
     <string name="category_manage_title">Kategori</string>
     <string name="category_manage_eyebrow">Kategori transaksi</string>
     <string name="category_manage_body">Kategori bawaan terlindungi. Kategori buatan sendiri bisa diubah atau dihapus tanpa memindahkan transaksi ke kategori lain.</string>

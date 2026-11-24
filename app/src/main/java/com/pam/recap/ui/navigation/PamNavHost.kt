@@ -70,6 +70,13 @@ fun PamNavHost(
     onGmailLinkHandled: () -> Unit = {},
 ) {
     val navController = rememberNavController()
+    // The status sheet lives above this graph, so "Tautkan ulang Gmail" arrives as an event.
+    val gmailLinkOpener = LocalGmailLinkOpener.current
+    LaunchedEffect(gmailLinkOpener) {
+        gmailLinkOpener?.requests?.collect {
+            navController.navigate(PamDestination.GmailLink())
+        }
+    }
     val gateViewModel: SessionGateViewModel = hiltViewModel()
     val gate by gateViewModel.state.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()

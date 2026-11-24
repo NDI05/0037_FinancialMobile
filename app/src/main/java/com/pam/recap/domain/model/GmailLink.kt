@@ -1,5 +1,6 @@
 package com.pam.recap.domain.model
 
+import com.pam.recap.core.time.JakartaMonth
 import kotlin.time.Instant
 
 /**
@@ -28,6 +29,21 @@ enum class GmailSyncState {
     }
 }
 
+/**
+ * Backfill/delta progress reported by the server (contract §9.2). All counters are optional
+ * projections: a `null` [phase] with zero totals just means the worker has not reported yet, and
+ * the screen must say "progress not reported" instead of inventing a percentage.
+ */
+data class GmailSyncProgress(
+    val phase: String? = null,
+    val month: JakartaMonth? = null,
+    val monthsDone: Int = 0,
+    val monthsTotal: Int = 0,
+    val pagesDone: Int = 0,
+) {
+    val hasMonths: Boolean get() = monthsTotal > 0
+}
+
 /** Owner-scoped Gmail link as reported by `GET /v1/gmail/status`. */
 data class GmailLinkStatus(
     val connected: Boolean,
@@ -38,6 +54,14 @@ data class GmailLinkStatus(
     val lastSyncAt: Instant? = null,
     val watchExpiresAt: Instant? = null,
     val lastErrorCode: String? = null,
+    /** Contract §9.2: the grant was revoked or the token cannot be refreshed. */
+    val needsReauth: Boolean = false,
+    val lastAttemptAt: Instant? = null,
+    val lastSuccessAt: Instant? = null,
+    val nextSyncAt: Instant? = null,
+    /** Set while a manually requested job is waiting for the worker; null when none is pending. */
+    val syncRequestedAt: Instant? = null,
+    val progress: GmailSyncProgress? = null,
 ) {
 
     companion object {
@@ -45,6 +69,17 @@ data class GmailLinkStatus(
         val NotConnected: GmailLinkStatus = GmailLinkStatus(connected = false)
     }
 }
+
+/**
+ * One `POST /v1/gmail/sync` acknowledgement (contract §9.3). The endpoint only enqueues; it never
+ * waits for the job, so the sheet keeps showing the *status* projection until the worker reports.
+ */
+data class GmailSyncRequest(
+    val queued: Boolean,
+    val coalesced: Boolean,
+    val requestedAt: Instant? = null,
+    val nextAllowedAt: Instant? = null,
+)
 
 /** One `POST /v1/gmail/connect/start` response: the URL the browser/Custom Tab must open. */
 data class GmailAuthorization(

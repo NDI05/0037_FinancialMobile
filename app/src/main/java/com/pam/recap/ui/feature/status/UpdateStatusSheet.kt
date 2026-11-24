@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.pam.recap.R
 import com.pam.recap.core.time.RetentionWindow
 import com.pam.recap.domain.model.CategoryQueuePhase
+import com.pam.recap.domain.model.GmailSyncState
 import com.pam.recap.ui.components.PillButton
 import com.pam.recap.ui.components.PillButtonStyle
 import com.pam.recap.ui.components.SheetScaffold
@@ -57,6 +59,14 @@ fun UpdateStatusSheet(
     onSyncNow: () -> Unit = {},
     /** The rolling window the served period belongs to; null keeps the sheet silent about it. */
     retention: RetentionWindow? = null,
+    /**
+     * Server-side Gmail projection (contract §9). While Gmail is linked this replaces the legacy
+     * device-sync trigger; when it is [GmailServerSyncUi.Hidden] the old behaviour is untouched.
+     */
+    serverSync: GmailServerSyncUi = GmailServerSyncUi(),
+    onServerSyncNow: () -> Unit = {},
+    /** "Tautkan ulang Gmail" goes to the existing Gmail link screen; the sheet owns no OAuth. */
+    onReconnectGmail: () -> Unit = {},
 ) {
     SheetScaffold(onDismissRequest = onDismiss) {
         Text(text = stringResource(R.string.update_status_title), style = TitleL, color = OnInk)
@@ -84,22 +94,28 @@ fun UpdateStatusSheet(
                         )
                     }
                 }
-                StatusLine(
-                    label = stringResource(R.string.update_status_last_attempt),
-                    value = relative(status.lastAttemptAt, now),
-                )
-                // Deliberately a different line: the last attempt is not the last successful sync.
-                StatusLine(
-                    label = stringResource(R.string.update_status_last_success),
-                    value = relative(status.lastSuccessAt, now),
-                )
+                // While Gmail is linked the server projection owns attempt/success and the manual
+                // trigger; the legacy device-sync lines would be a second, stale copy.
+                if (!serverSync.available) {
+                    StatusLine(
+                        label = stringResource(R.string.update_status_last_attempt),
+                        value = relative(status.lastAttemptAt, now),
+                    )
+                    // Deliberately different: the last attempt is not the last successful sync.
+                    StatusLine(
+                        label = stringResource(R.string.update_status_last_success),
+                        value = relative(status.lastSuccessAt, now),
+                    )
+                }
                 if (status.pendingUpload) {
                     BodyLine(stringResource(R.string.update_status_pending_upload))
                 }
-                SyncTrigger(
-                    status = status,
-                    onSyncNow = onSyncNow,
-                )
+                if (!serverSync.available) {
+                    SyncTrigger(
+                        status = status,
+                        onSyncNow = onSyncNow,
+                    )
+                }
                 if (status.newTransactionsLastRun > 0) {
                     BodyLine(
                         stringResource(
@@ -126,6 +142,17 @@ fun UpdateStatusSheet(
                 }
                 if (status.partial) {
                     BodyLine(stringResource(R.string.update_status_reason_partial))
+                }
+            }
+
+            if (serverSync.available) {
+                StatusSection(title = stringResource(R.string.update_status_server_section)) {
+                    ServerSyncSection(
+                        state = serverSync,
+                        fallbackNow = now,
+                        onSyncNow = onServerSyncNow,
+                        onReconnectGmail = onReconnectGmail,
+                    )
                 }
             }
 
@@ -160,6 +187,116 @@ fun UpdateStatusSheet(
 
             Spacer(modifier = Modifier.height(PamSpacing.sm))
         }
+    }
+}
+
+/**
+ * The server-sync control block. It never performs a local import: the single write it can cause is
+ * the enqueue tap, so closing the sheet leaves the server job running (contract §9.3).
+ */
+@Composable
+private fun ServerSyncSection(
+    state: GmailServerSyncUi,
+    fallbackNow: Instant,
+    onSyncNow: () -> Unit,
+    onReconnectGmail: () -> Unit,
+) {
+    if (state.needsReauth) {
+        BodyLine(stringResource(R.string.update_status_server_reauth))
+        PillButton(
+            text = stringResource(R.string.update_status_server_reconnect),
+            onClick = onReconnectGmail,
+            modifier = Modifier.fillMaxWidth().padding(top = PamSpacing.xs),
+            leadingIcon = Icons.Rounded.Link,
+            style = PillButtonStyle.Primary,
+        )
+        return
+    }
+
+    val now = state.observedAt ?: fallbackNow
+    StatusLine(
+        label = stringResource(R.string.update_status_server_state_label),
+        value = serverStateCopy(state),
+    )
+    serverProgressLines(state)
+    StatusLine(
+        label = stringResource(R.string.update_status_last_attempt),
+        value = relative(state.lastAttemptAt, now),
+    )
+    // Separate line on purpose: the last attempt is not the last successful sync.
+    StatusLine(
+        label = stringResource(R.string.update_status_server_last_success),
+        value = relative(state.lastSuccessAt, now),
+    )
+    state.nextSyncAt?.let {
+        BodyLine(stringResource(R.string.update_status_server_next_sync, PamDateFormat.time(it)))
+    }
+    when (state.notice) {
+        GmailSyncNotice.QUEUED -> BodyLine(stringResource(R.string.update_status_server_queued))
+        GmailSyncNotice.COALESCED -> BodyLine(stringResource(R.string.update_status_server_coalesced))
+        GmailSyncNotice.COOLDOWN -> BodyLine(cooldownCopy(state, now))
+        GmailSyncNotice.NOT_CONNECTED -> BodyLine(stringResource(R.string.update_status_server_not_connected))
+        GmailSyncNotice.DISABLED -> BodyLine(stringResource(R.string.update_status_server_disabled))
+        GmailSyncNotice.FAILED,
+        GmailSyncNotice.NONE,
+        -> state.error?.let { BodyLine(stringResource(appErrorRes(it))) }
+    }
+
+    val cooling = state.coolingDown(now)
+    PillButton(
+        text = if (state.running || state.busy) {
+            stringResource(R.string.update_status_sync_running)
+        } else {
+            stringResource(R.string.update_status_sync_now)
+        },
+        onClick = onSyncNow,
+        enabled = !cooling && !state.running && !state.busy,
+        loading = state.busy,
+        modifier = Modifier.fillMaxWidth().padding(top = PamSpacing.xs),
+        leadingIcon = if (state.running || state.busy) null else Icons.Rounded.Refresh,
+        style = PillButtonStyle.Secondary,
+    )
+}
+
+/** One-line state copy: the worker's phase first, then the pending request, then error/idle. */
+@Composable
+private fun serverStateCopy(state: GmailServerSyncUi): String = when {
+    state.running -> stringResource(R.string.update_status_server_state_fetching)
+    state.requested -> stringResource(R.string.update_status_server_state_connecting)
+    state.syncState == GmailSyncState.ERROR -> stringResource(R.string.update_status_server_state_error)
+    state.loading -> stringResource(R.string.update_status_server_loading)
+    else -> stringResource(R.string.update_status_server_state_waiting)
+}
+
+/** Month/page progress; an idle projection without counters says so instead of showing zeroes. */
+@Composable
+private fun serverProgressLines(state: GmailServerSyncUi) {
+    val progress = state.progress ?: return
+    if (!progress.hasMonths && progress.pagesDone == 0) return
+    if (progress.hasMonths) {
+        BodyLine(
+            stringResource(
+                R.string.update_status_server_progress_months,
+                progress.monthsDone.coerceIn(0, progress.monthsTotal),
+                progress.monthsTotal,
+            ),
+        )
+    }
+    progress.month?.let {
+        BodyLine(stringResource(R.string.update_status_server_progress_month, it.label()))
+    }
+    if (progress.pagesDone > 0) {
+        BodyLine(stringResource(R.string.update_status_server_progress_pages, progress.pagesDone))
+    }
+}
+
+@Composable
+private fun cooldownCopy(state: GmailServerSyncUi, now: Instant): String {
+    val seconds = state.cooldownSeconds(now)
+    return if (seconds != null && seconds > 0) {
+        stringResource(R.string.update_status_server_cooldown, seconds)
+    } else {
+        stringResource(R.string.update_status_server_cooldown_generic)
     }
 }
 

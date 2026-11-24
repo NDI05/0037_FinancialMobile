@@ -20,6 +20,39 @@ data class RemoteGmailStatus(
     @SerialName("watch_expires_at") val watchExpiresAt: String? = null,
     @SerialName("sync_state") val syncState: String? = null,
     @SerialName("last_error_code") val lastErrorCode: String? = null,
+    // Contract §9.2 additions. Defaults keep older servers readable.
+    @SerialName("needs_reauth") val needsReauth: Boolean = false,
+    @SerialName("last_attempt_at") val lastAttemptAt: String? = null,
+    @SerialName("last_success_at") val lastSuccessAt: String? = null,
+    @SerialName("next_sync_at") val nextSyncAt: String? = null,
+    @SerialName("sync_requested_at") val syncRequestedAt: String? = null,
+    val progress: RemoteGmailProgress? = null,
+)
+
+@Serializable
+data class RemoteGmailProgress(
+    val phase: String? = null,
+    val month: String? = null,
+    @SerialName("months_done") val monthsDone: Int = 0,
+    @SerialName("months_total") val monthsTotal: Int = 0,
+    @SerialName("pages_done") val pagesDone: Int = 0,
+)
+
+/** `POST /v1/gmail/sync` 202 body (contract §9.3); both queued and coalesced are 2xx. */
+@Serializable
+data class RemoteGmailSync(
+    val queued: Boolean = false,
+    val coalesced: Boolean = false,
+    @SerialName("requested_at") val requestedAt: String? = null,
+    @SerialName("next_allowed_at") val nextAllowedAt: String? = null,
+)
+
+/** Error envelope that carries the cooldown delay; never parsed for anything but machine fields. */
+@Serializable
+data class RemoteGmailSyncError(
+    val code: String? = null,
+    val retryable: Boolean = false,
+    val retryAfterSeconds: Int? = null,
 )
 
 @Serializable

@@ -523,6 +523,27 @@
     <string name="update_status_cd_pending">Some transactions are saved on the device but not yet acknowledged by the server.</string>
     <string name="update_status_cd_attention">There is something that needs attention.</string>
     <string name="update_status_cd_review">Some transactions need a review.</string>
+    <!-- Server-side Gmail sync (contract §9). Only shown while Gmail is linked. -->
+    <string name="update_status_server_section">Gmail server sync</string>
+    <string name="update_status_server_state_label">Status</string>
+    <string name="update_status_server_state_fetching">Fetching history</string>
+    <string name="update_status_server_state_waiting">Waiting</string>
+    <string name="update_status_server_state_connecting">Connecting</string>
+    <string name="update_status_server_state_error">Sync failed</string>
+    <string name="update_status_server_loading">Loading server status…</string>
+    <string name="update_status_server_progress_months">Months done: %1$d of %2$d.</string>
+    <string name="update_status_server_progress_month">Current month: %1$s.</string>
+    <string name="update_status_server_progress_pages">Pages processed this month: %1$d.</string>
+    <string name="update_status_server_last_success">Last successful sync</string>
+    <string name="update_status_server_next_sync">Next sync around %1$s.</string>
+    <string name="update_status_server_queued">The sync request is queued on the server.</string>
+    <string name="update_status_server_coalesced">The request was merged with a sync already in progress.</string>
+    <string name="update_status_server_cooldown">Wait %1$d seconds before syncing again.</string>
+    <string name="update_status_server_cooldown_generic">Wait a moment before syncing again.</string>
+    <string name="update_status_server_not_connected">Gmail is not linked on the server.</string>
+    <string name="update_status_server_disabled">Server sync is not enabled.</string>
+    <string name="update_status_server_reauth">Gmail permission must be renewed before sync can run.</string>
+    <string name="update_status_server_reconnect">Relink Gmail</string>
     <string name="update_status_reason_partial">This email range is not finished yet. Saved data stays safe; the next check continues the rest.</string>
     <string name="update_status_reason_storage">The check status could not be saved permanently, so progress is not recorded. Try again when device storage is available.</string>
     <string name="update_status_reason_pending_snapshot">Some saved transactions are not on the server yet. The upload is retried before progress is considered complete.</string>

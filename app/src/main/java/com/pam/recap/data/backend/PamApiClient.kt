@@ -2,6 +2,7 @@ package com.pam.recap.data.backend
 
 import com.pam.recap.core.di.IoDispatcher
 import com.pam.recap.core.result.AppError
+import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.result.SafeLogger
 import com.pam.recap.domain.repository.BackendSessionRepository
@@ -365,6 +366,22 @@ class PamApiClient @Inject constructor(
         send(ownerId, "POST", "/v1/gmail/disconnect", "{}", null,
             RemoteGmailDisconnect.serializer())
 
+    /**
+     * `POST /v1/gmail/sync` (contract §9.3). 202 answers both for a fresh enqueue and for a request
+     * that joined an active job; only 429/409/503 are failures, and the 429 body is read for
+     * `retryAfterSeconds` so the sheet can say how long the cooldown lasts.
+     */
+    suspend fun gmailSync(ownerId: String): Outcome<RemoteGmailSync> =
+        send(
+            ownerId = ownerId,
+            method = "POST",
+            path = "/v1/gmail/sync",
+            body = "{}",
+            idempotencyKey = null,
+            deserializer = RemoteGmailSync.serializer(),
+            mapErrorBody = ::gmailSyncError,
+        )
+
     suspend fun currentRole(ownerId: String): Outcome<RemoteAuthMe> =
         get(ownerId, "/v1/me", RemoteAuthMe.serializer(), ::adminBackendError)
 
@@ -502,6 +519,8 @@ class PamApiClient @Inject constructor(
         idempotencyKey: String?,
         deserializer: DeserializationStrategy<T>,
         mapError: (Int, String?) -> AppError = ::backendError,
+        /** Sees the raw error body; only used where a field beyond `code` matters (cooldown). */
+        mapErrorBody: ((Int, String) -> AppError)? = null,
     ): Outcome<T> {
         val endpoint = config.endpoint(path)
             ?: return Outcome.Failure(AppError.Configuration("backend_not_configured"))
@@ -511,7 +530,7 @@ class PamApiClient @Inject constructor(
             .header("content-type", JSON_MEDIA_TYPE.toString())
             .header("accept", JSON_MEDIA_TYPE.toString())
         idempotencyKey?.let { builder.header("Idempotency-Key", it) }
-        return request(ownerId, builder, deserializer, mapError)
+        return request(ownerId, builder, deserializer, mapError, mapErrorBody)
     }
 
     /** Same auth/refresh handling as [request], for endpoints that answer 204 without a body. */
@@ -559,6 +578,7 @@ class PamApiClient @Inject constructor(
         builder: Request.Builder,
         deserializer: DeserializationStrategy<T>,
         mapError: (Int, String?) -> AppError = ::backendError,
+        mapErrorBody: ((Int, String) -> AppError)? = null,
     ): Outcome<T> = withContext(ioDispatcher) {
         var refreshed = false
         var rejectedToken: String? = null
@@ -589,7 +609,10 @@ class PamApiClient @Inject constructor(
                 val machine = runCatching {
                     json.decodeFromString(BackendErrorBody.serializer(), response.body).code
                 }.getOrNull()
-                return@withContext Outcome.Failure(mapError(response.code, machine))
+                return@withContext Outcome.Failure(
+                    mapErrorBody?.invoke(response.code, response.body)
+                        ?: mapError(response.code, machine),
+                )
             }
             val parsed = runCatching {
                 json.decodeFromString(deserializer, response.body)
@@ -621,6 +644,30 @@ class PamApiClient @Inject constructor(
         val parsed = runCatching { json.decodeFromString(deserializer, response.body) }.getOrNull()
         return if (parsed == null) Outcome.Failure(AppError.Parsing("backend_invalid_response"))
         else Outcome.Success(parsed)
+    }
+
+    /**
+     * Gmail sync failures carry machine codes the sheet treats differently: a cooldown must show
+     * its remaining seconds, a missing link must hide the server section, and a disabled backend
+     * is configuration, not a transient outage.
+     */
+    private fun gmailSyncError(status: Int, body: String): AppError {
+        val parsed = runCatching {
+            json.decodeFromString(RemoteGmailSyncError.serializer(), body)
+        }.getOrNull()
+        return when {
+            status == 429 && parsed?.code == AppErrorRules.SYNC_COOLDOWN ->
+                AppError.RateLimited(
+                    debugDetail = AppErrorRules.SYNC_COOLDOWN,
+                    retryAfterSeconds = parsed.retryAfterSeconds?.takeIf { it > 0 },
+                )
+            status == 429 -> AppError.RateLimited(parsed?.code ?: "sync_cooldown")
+            status == 409 && parsed?.code == AppErrorRules.GMAIL_NOT_CONNECTED ->
+                AppError.Validation(AppErrorRules.GMAIL_NOT_CONNECTED)
+            status == 503 && parsed?.code == AppErrorRules.GMAIL_DISABLED ->
+                AppError.Validation(AppErrorRules.GMAIL_DISABLED)
+            else -> backendError(status, parsed?.code)
+        }
     }
 
     private data class ApiResponse(val code: Int, val body: String)

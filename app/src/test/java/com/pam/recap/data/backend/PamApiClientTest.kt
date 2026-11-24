@@ -179,6 +179,97 @@ class PamApiClientTest {
         assertTrue(client.gmailDisconnect("u_1") is Outcome.Success)
     }
 
+    @Test
+    fun `gmail status parses the v2 sync projection additively`() = runTest {
+        server.enqueue(
+            json(
+                200,
+                """{"connected":true,"account_email_masked":"p***@gmail.com","sync_state":"backfill",
+                   "connected_at":"2026-11-01T00:00:00Z","last_attempt_at":"2026-11-24T04:00:00Z",
+                   "last_success_at":"2026-11-24T03:00:00Z","next_sync_at":"2026-11-24T06:00:00Z",
+                   "sync_requested_at":"2026-11-24T04:30:00Z","needs_reauth":false,
+                   "progress":{"phase":"backfill","month":"2026-08","months_done":2,
+                               "months_total":12,"pages_done":7}}""",
+            ),
+        )
+        val result = client.gmailStatus("u_1") as Outcome.Success
+        val status = result.value
+        assertTrue(status.connected)
+        assertEquals("2026-08", status.progress?.month)
+        assertEquals(2, status.progress?.monthsDone)
+        assertEquals(7, status.progress?.pagesDone)
+        assertEquals("2026-11-24T04:30:00Z", status.syncRequestedAt)
+        assertEquals("/v1/gmail/status", server.takeRequest().path)
+    }
+
+    @Test
+    fun `gmail status without the new fields still parses the old contract`() = runTest {
+        server.enqueue(json(200, """{"connected":false}"""))
+        val result = client.gmailStatus("u_1") as Outcome.Success
+        // Additive contract: an older server that knows nothing about §9 must not fail the read.
+        assertTrue(!result.value.connected)
+        assertEquals(false, result.value.needsReauth)
+        assertEquals(null, result.value.progress)
+    }
+
+    @Test
+    fun `gmail sync posts one empty body and parses a queued 202`() = runTest {
+        server.enqueue(
+            json(
+                202,
+                """{"queued":true,"coalesced":false,
+                   "requested_at":"2026-11-24T05:00:00Z","next_allowed_at":"2026-11-24T05:01:00Z"}""",
+            ),
+        )
+        val result = client.gmailSync("u_1") as Outcome.Success
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/v1/gmail/sync", request.path)
+        assertTrue(result.value.queued)
+        assertEquals(false, result.value.coalesced)
+        assertEquals("2026-11-24T05:01:00Z", result.value.nextAllowedAt)
+    }
+
+    @Test
+    fun `gmail sync parses a coalesced ack`() = runTest {
+        server.enqueue(json(202, """{"queued":true,"coalesced":true}"""))
+        val result = client.gmailSync("u_1") as Outcome.Success
+        assertTrue(result.value.coalesced)
+    }
+
+    @Test
+    fun `gmail sync 429 carries the server cooldown`() = runTest {
+        server.enqueue(
+            json(
+                429,
+                """{"code":"sync_cooldown","message":"wait","retryable":true,"retryAfterSeconds":45}""",
+            ),
+        )
+        val result = client.gmailSync("u_1") as Outcome.Failure
+        val error = result.error as AppError.RateLimited
+        assertEquals(AppErrorRules.SYNC_COOLDOWN, error.debugDetail)
+        assertEquals(45, error.retryAfterSeconds)
+    }
+
+    @Test
+    fun `gmail sync 429 without retryAfterSeconds stays rate limited`() = runTest {
+        server.enqueue(json(429, """{"code":"sync_cooldown","message":"wait"}"""))
+        val result = client.gmailSync("u_1") as Outcome.Failure
+        val error = result.error as AppError.RateLimited
+        assertEquals(AppErrorRules.SYNC_COOLDOWN, error.debugDetail)
+        assertEquals(null, error.retryAfterSeconds)
+    }
+
+    @Test
+    fun `gmail sync maps 409 not connected and 503 disabled to their rules`() = runTest {
+        server.enqueue(json(409, """{"code":"gmail_not_connected","message":"link first"}"""))
+        server.enqueue(json(503, """{"code":"gmail_disabled","message":"off"}"""))
+        val notLinked = client.gmailSync("u_1") as Outcome.Failure
+        val disabled = client.gmailSync("u_1") as Outcome.Failure
+        assertEquals(AppError.Validation(AppErrorRules.GMAIL_NOT_CONNECTED), notLinked.error)
+        assertEquals(AppError.Validation(AppErrorRules.GMAIL_DISABLED), disabled.error)
+    }
+
     private fun json(code: Int, body: String) = MockResponse()
         .setResponseCode(code)
         .setHeader("content-type", "application/json")

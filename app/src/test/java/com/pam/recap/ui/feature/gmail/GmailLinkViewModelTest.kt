@@ -7,6 +7,7 @@ import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.GmailAuthorization
 import com.pam.recap.domain.model.GmailLinkResult
 import com.pam.recap.domain.model.GmailLinkStatus
+import com.pam.recap.domain.model.GmailSyncRequest
 import com.pam.recap.domain.model.GmailSyncState
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.GmailLinkRepository
@@ -256,11 +257,14 @@ private class FakeGmailLinkRepository(
         GmailAuthorization("https://accounts.google.com/o/oauth2/v2/auth?state=x"),
     ),
     var disconnectResult: Outcome<Unit> = Outcome.Success(Unit),
+    var syncResult: Outcome<GmailSyncRequest> =
+        Outcome.Success(GmailSyncRequest(queued = true, coalesced = false)),
 ) : GmailLinkRepository {
 
     var statusCalls: Int = 0
     var startCalls: Int = 0
     var disconnectCalls: Int = 0
+    var syncCalls: Int = 0
     val reconnectFlags = mutableListOf<Boolean>()
 
     override suspend fun status(ownerId: String): Outcome<GmailLinkStatus> {
@@ -280,5 +284,10 @@ private class FakeGmailLinkRepository(
     override suspend fun disconnect(ownerId: String): Outcome<Unit> {
         disconnectCalls++
         return disconnectResult
+    }
+
+    override suspend fun requestSync(ownerId: String): Outcome<GmailSyncRequest> {
+        syncCalls++
+        return syncResult
     }
 }

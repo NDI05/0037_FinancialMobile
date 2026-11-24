@@ -3,6 +3,7 @@ package com.pam.recap.domain.repository
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.GmailAuthorization
 import com.pam.recap.domain.model.GmailLinkStatus
+import com.pam.recap.domain.model.GmailSyncRequest
 
 /**
  * Server-side Gmail OAuth link (contract §1–§4, repo `0037-Backend-Financial`).
@@ -27,4 +28,10 @@ interface GmailLinkRepository {
 
     /** `POST /v1/gmail/disconnect` — revocation happens on the server, not on this device. */
     suspend fun disconnect(ownerId: String): Outcome<Unit>
+
+    /**
+     * `POST /v1/gmail/sync` (contract §9.3). Only enqueues a durable server job; it never waits
+     * for it and never starts a local import, so a dismissed sheet cannot cancel the work.
+     */
+    suspend fun requestSync(ownerId: String): Outcome<GmailSyncRequest>
 }

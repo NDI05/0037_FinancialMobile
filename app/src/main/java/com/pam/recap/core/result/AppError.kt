@@ -37,7 +37,14 @@ sealed interface AppError {
      * FR-50: the analysis quota is exhausted (per-user window or the daily ceiling). Recoverable by
      * waiting, so the UI offers that instead of a failure state.
      */
-    data class RateLimited(override val debugDetail: String? = null) : AppError {
+    data class RateLimited(
+        override val debugDetail: String? = null,
+        /**
+         * Server-provided wait before the same request may be retried (`sync_cooldown`). Null when
+         * the response did not carry it; the UI then falls back to generic copy.
+         */
+        val retryAfterSeconds: Int? = null,
+    ) : AppError {
         override val kind: ErrorKind get() = ErrorKind.RATE_LIMITED
     }
 
@@ -113,4 +120,6 @@ object AppErrorRules {
     const val IMAP_CREDENTIALS_REQUIRED = "imap_credentials_required"
     const val BROWSER_UNAVAILABLE = "browser_unavailable"
     const val GMAIL_DISABLED = "gmail_disabled"
+    const val GMAIL_NOT_CONNECTED = "gmail_not_connected"
+    const val SYNC_COOLDOWN = "sync_cooldown"
 }

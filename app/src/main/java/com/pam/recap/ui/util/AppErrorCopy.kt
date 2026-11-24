@@ -38,6 +38,10 @@ fun appErrorRes(error: AppError): Int = when (error) {
         com.pam.recap.core.result.AppErrorRules.IMAP_CREDENTIALS_REQUIRED -> R.string.gmail_credentials_required
         com.pam.recap.core.result.AppErrorRules.BROWSER_UNAVAILABLE -> R.string.gmail_link_browser_missing
         com.pam.recap.core.result.AppErrorRules.GMAIL_DISABLED -> R.string.gmail_link_backend_disabled
+        // §9.3: the server refuses an enqueue because the link is gone; the sheet's own notice says
+        // so, and this keeps any other caller's generic copy truthful.
+        com.pam.recap.core.result.AppErrorRules.GMAIL_NOT_CONNECTED ->
+            R.string.update_status_server_not_connected
         com.pam.recap.core.result.AppErrorRules.NOT_SIGNED_IN -> R.string.error_not_signed_in
         else -> R.string.error_validation
     }

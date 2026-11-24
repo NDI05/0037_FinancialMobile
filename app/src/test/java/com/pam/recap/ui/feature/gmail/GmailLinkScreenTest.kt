@@ -21,6 +21,7 @@ import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.GmailAuthorization
 import com.pam.recap.domain.model.GmailLinkResult
 import com.pam.recap.domain.model.GmailLinkStatus
+import com.pam.recap.domain.model.GmailSyncRequest
 import com.pam.recap.domain.model.GmailSyncState
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.GmailLinkRepository
@@ -360,4 +361,7 @@ private class ScreenGmailLinkRepository : GmailLinkRepository {
     }
 
     override suspend fun disconnect(ownerId: String): Outcome<Unit> = Outcome.Success(Unit)
+
+    override suspend fun requestSync(ownerId: String): Outcome<GmailSyncRequest> =
+        Outcome.Success(GmailSyncRequest(queued = true, coalesced = false))
 }

@@ -2,6 +2,8 @@ package com.pam.recap.ui.feature.status
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -9,8 +11,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pam.recap.ui.components.UpdateStatusPill
+import com.pam.recap.ui.navigation.GmailLinkOpener
+import com.pam.recap.ui.navigation.LocalGmailLinkOpener
 
 /**
  * Slot the shell installs once, so a screen can render the indicator without owning a view model.
@@ -34,16 +39,31 @@ val LocalOpenUpdateStatusSheet = staticCompositionLocalOf<(() -> Unit)?> { null 
 fun UpdateStatusActionProvider(content: @Composable () -> Unit) {
     val viewModel: UpdateStatusViewModel = hiltViewModel()
     val status by viewModel.state.collectAsStateWithLifecycle()
+    val serverSync by viewModel.serverSync.collectAsStateWithLifecycle()
     var sheetOpen by remember { mutableStateOf(false) }
     // Freeze "now" when the sheet opens instead of re-reading it on every recomposition.
     val openedAt = remember(sheetOpen) { viewModel.now() }
     val retention = remember(sheetOpen) { viewModel.window() }
+    val gmailLinkOpener = remember { GmailLinkOpener() }
+
+    // Polling lives exactly as long as the sheet: a GET while open, nothing after dismissal. It
+    // never starts or cancels the server job, which is the whole point of contract §9.3.
+    LaunchedEffect(sheetOpen) {
+        if (sheetOpen) viewModel.onSheetOpened() else viewModel.onSheetClosed()
+    }
+    DisposableEffect(Unit) { onDispose { viewModel.onSheetClosed() } }
+    // Re-read the projection when the app returns to the foreground with the sheet still open.
+    LifecycleResumeEffect(Unit) {
+        viewModel.refreshServerSync()
+        onPauseOrDispose { }
+    }
 
     CompositionLocalProvider(
         LocalUpdateStatusAction provides { modifier ->
             UpdateStatusPill(status = status, onClick = { sheetOpen = true }, modifier = modifier)
         },
         LocalOpenUpdateStatusSheet provides { sheetOpen = true },
+        LocalGmailLinkOpener provides gmailLinkOpener,
     ) {
         content()
         if (sheetOpen) {
@@ -53,6 +73,13 @@ fun UpdateStatusActionProvider(content: @Composable () -> Unit) {
                 onDismiss = { sheetOpen = false },
                 onSyncNow = viewModel::syncNow,
                 retention = retention,
+                serverSync = serverSync,
+                onServerSyncNow = viewModel::syncServerNow,
+                onReconnectGmail = {
+                    // Leave the sheet first so the Gmail screen is not covered on return.
+                    sheetOpen = false
+                    gmailLinkOpener.open()
+                },
             )
         }
     }
