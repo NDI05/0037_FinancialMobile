@@ -6,6 +6,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.pam.recap.BuildConfig
@@ -75,6 +76,13 @@ class CredentialManagerGoogleSignInGateway @Inject constructor(
         } catch (cancelled: GetCredentialCancellationException) {
             // Dismissing the Google sheet is a normal outcome, not a failure.
             GoogleSignInResult.Cancelled
+        } catch (noAccount: NoCredentialException) {
+            // No Google account on this device can satisfy the request (or Play Services is absent).
+            // The copy asks the user to add a Google account, so it must not become a crash.
+            SafeLogger.failure(TAG, "google_no_credential")
+            GoogleSignInResult.Failure(
+                AppError.Configuration(AppErrorRules.GOOGLE_PLAY_SERVICES_UNAVAILABLE),
+            )
         } catch (error: GetCredentialException) {
             SafeLogger.failure(TAG, "google_credential_failed")
             GoogleSignInResult.Failure(

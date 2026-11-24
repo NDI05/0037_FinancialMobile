@@ -1,5 +1,6 @@
 package com.pam.recap.ui.feature.account
 
+import androidx.annotation.Keep
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +21,7 @@ import javax.inject.Inject
 
 /** FR-51: the account screen has exactly two modes when a backend exists; offline has one form. */
 @Serializable
+@Keep
 enum class AccountMode {
     SIGN_IN,
     REGISTER,
