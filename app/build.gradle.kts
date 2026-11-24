@@ -62,6 +62,19 @@ android {
             "PAM_ALLOW_SCREEN_CAPTURE",
             buildProperty("PAM_ALLOW_SCREEN_CAPTURE").ifBlank { "true" },
         )
+        // Google SSO (contract: GET /v1/auth/google/nonce, POST /v1/auth/google, link). The value
+        // is the **Web** OAuth client ID, i.e. the audience the backend verifies; no client secret
+        // ever ships on Android. Blank is a supported configuration: the Google button and the
+        // link card stay hidden and email/password sign-in works exactly as before.
+        // Precedence: -P property / gradle.properties, then local.properties, then the environment.
+        val googleSsoClientId = buildProperty("PAM_GOOGLE_SSO_CLIENT_ID")
+            .ifBlank { System.getenv("PAM_GOOGLE_SSO_CLIENT_ID").orEmpty() }
+        buildConfigField("String", "PAM_GOOGLE_SSO_CLIENT_ID", "\"$googleSsoClientId\"")
+        buildConfigField(
+            "boolean",
+            "PAM_GOOGLE_SSO_ENABLED",
+            googleSsoClientId.isNotBlank().toString(),
+        )
     }
 
     buildTypes {
@@ -208,6 +221,11 @@ dependencies {
     "releaseImplementation"(libs.androidx.sqlite.ktx)
 
     implementation(libs.androidx.datastore.preferences)
+    // Google SSO uses Credential Manager + the Google ID helper. The Play Services auth artifact
+    // is a runtime/provider dependency of the former; both are stable releases.
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
     // Auto-sync scheduling: OS-owned periodic work, never a permanent foreground service.
     // S4.4: WorkManager is standard-only. Its WorkDatabase is Room-backed, so keeping it in the
     // assessment variant would re-introduce Room on the classpath no matter what our own code does.

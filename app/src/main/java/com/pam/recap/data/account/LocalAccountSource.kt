@@ -1,10 +1,13 @@
 package com.pam.recap.data.account
 
 import android.util.Patterns
+import com.pam.recap.BuildConfig
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.security.OwnerIdFactory
 import com.pam.recap.core.result.Outcome
+import com.pam.recap.domain.model.GoogleNonce
+import com.pam.recap.domain.model.GoogleSignInSession
 import com.pam.recap.domain.model.Session
 import com.pam.recap.domain.repository.AccountRepository
 import com.pam.recap.domain.repository.AppPasswordVault
@@ -92,7 +95,43 @@ class LocalAccountSource @Inject constructor(
         sessions.signOut()
     }
 
-    private suspend fun createProfile(email: String, displayName: String?): Outcome<Session> {
+    // --- Google SSO (contract: /v1/auth/google*) ---------------------------------------------
+
+    /** Hidden unless this build was compiled with a Google OAuth client ID. */
+    override val isGoogleSsoEnabled: Boolean get() = BuildConfig.PAM_GOOGLE_SSO_ENABLED
+
+    override suspend fun googleNonce(): Outcome<GoogleNonce> = backendSessions.googleNonce()
+
+    override suspend fun googleSignIn(idToken: String, nonce: String): Outcome<Session> {
+        val exchanged = backendSessions.googleSignIn(idToken, nonce)
+        if (exchanged is Outcome.Failure) return exchanged
+        val identity = (exchanged as Outcome.Success<GoogleSignInSession>).value
+        // The backend session is already stored; from here it is the same profile path as login.
+        return createProfile(
+            email = normalize(identity.email),
+            displayName = identity.displayName,
+            googleLinked = identity.googleLinked,
+        )
+    }
+
+    override suspend fun googleLink(idToken: String, nonce: String): Outcome<Unit> {
+        val current = sessions.current()
+            ?: return Outcome.Failure(AppError.Unauthorized(AppErrorRules.NOT_SIGNED_IN))
+        val linked = backendSessions.googleLink(current.ownerId, idToken, nonce)
+        if (linked is Outcome.Failure) return linked
+        // Linking only flips the flag on the *existing* session: owner, role, data and Gmail stay.
+        sessions.setGoogleLinked(current.ownerId, true)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun googleLinked(ownerId: String): Outcome<Boolean> =
+        backendSessions.googleLinked(ownerId)
+
+    private suspend fun createProfile(
+        email: String,
+        displayName: String?,
+        googleLinked: Boolean = false,
+    ): Outcome<Session> {
         val offline = !isBackendEnabled
         // A stored app password means real imports are possible: no sample rows, in any mode.
         val ownerId = OwnerIdFactory.ownerIdFor(email)
@@ -104,6 +143,7 @@ class LocalAccountSource @Inject constructor(
             // The label still describes the mode; seeding has its own condition.
             isDemo = offline,
             seedDemo = seedable,
+            googleLinked = googleLinked,
         )
         if (!seedable && result is Outcome.Success) {
             // F2 self-healing: an installation that seeded sample rows before this rule existed.

@@ -1,6 +1,10 @@
 package com.pam.recap.domain.repository
 
+import com.pam.recap.core.result.AppError
+import com.pam.recap.core.result.AppErrorRules
 import com.pam.recap.core.result.Outcome
+import com.pam.recap.domain.model.GoogleNonce
+import com.pam.recap.domain.model.GoogleSignInSession
 
 /**
  * The app's session against the optional analysis backend (contract §2, CR-001).
@@ -43,4 +47,29 @@ interface BackendSessionRepository {
 
     /** Drops the cached token without a network call (used after a 401). */
     fun clear()
+
+    // --- Google SSO (contract: /v1/auth/google*). Defaults keep existing test doubles compiling
+    // and make "SSO unavailable" the safe answer unless a real implementation opts in. ---
+
+    /** `GET /v1/auth/google/nonce`: a single-use challenge for the Google ID token. */
+    suspend fun googleNonce(): Outcome<GoogleNonce> =
+        Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
+
+    /**
+     * `POST /v1/auth/google`: verifies the Google ID token + [nonce] and stores the same opaque
+     * session email/password login stores. Returns the identity the local profile is built from.
+     */
+    suspend fun googleSignIn(idToken: String, nonce: String): Outcome<GoogleSignInSession> =
+        Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
+
+    /**
+     * `POST /v1/auth/google/link`: attaches a Google identity to the signed-in PAM account. The
+     * session, owner, transactions, role and Gmail link are untouched.
+     */
+    suspend fun googleLink(ownerId: String, idToken: String, nonce: String): Outcome<Unit> =
+        Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
+
+    /** `GET /v1/me` `googleLinked` for the signed-in account. */
+    suspend fun googleLinked(ownerId: String): Outcome<Boolean> =
+        Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
 }

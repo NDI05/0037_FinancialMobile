@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import com.pam.recap.core.platform.ActivityHost
 import com.pam.recap.core.util.AppLocale
 import com.pam.recap.ui.navigation.PamNavHost
 import com.pam.recap.ui.theme.Ink
@@ -62,6 +63,10 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var autoCategoryRun: AutoCategoryUseCase
 
+    /** Credential Manager needs the running Activity for the Google account sheet. */
+    @Inject
+    lateinit var activityHost: ActivityHost
+
     /**
      * The only activity. Its base context is created from the system configuration, so the
      * Indonesian pin has to be applied here as well as in the application (see [AppLocale]).
@@ -82,6 +87,7 @@ class MainActivity : ComponentActivity() {
                 WindowManager.LayoutParams.FLAG_SECURE,
             )
         }
+        activityHost.attach(this)
         gmailLinkIntentGate = GmailLinkIntentGate(
             savedInstanceState?.getString(GmailLinkIntentGate.KEY_HANDLED_INTENT),
         )
@@ -108,6 +114,11 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         readGmailLink(intent)
+    }
+
+    override fun onDestroy() {
+        activityHost.detach(this)
+        super.onDestroy()
     }
 
     private fun readGmailLink(intent: Intent?) {

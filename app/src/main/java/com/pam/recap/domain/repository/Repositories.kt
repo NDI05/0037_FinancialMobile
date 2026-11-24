@@ -239,6 +239,20 @@ interface SessionRepository {
     suspend fun clearDemoSeeded(ownerId: String)
 
     suspend fun markDemoSeeded(ownerId: String)
+
+    /**
+     * Mirrors `GET /v1/me` `googleLinked` onto the active session. Defaults keep every existing
+     * double source-compatible; only the DataStore implementation persists it.
+     */
+    suspend fun setGoogleLinked(ownerId: String, linked: Boolean) = Unit
+
+    /**
+     * Requirement: "Lewati" on the Gmail onboarding sheet is remembered **per owner**. Defaults
+     * (never skipped) are the safe fallback for doubles that do not model preferences.
+     */
+    suspend fun isGmailOnboardingSkipped(ownerId: String): Boolean = false
+
+    suspend fun skipGmailOnboarding(ownerId: String) = Unit
 }
 
 /** FR-47/FR-48 deletion lifecycle. */

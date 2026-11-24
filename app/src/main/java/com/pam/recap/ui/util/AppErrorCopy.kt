@@ -43,7 +43,26 @@ fun appErrorRes(error: AppError): Int = when (error) {
         com.pam.recap.core.result.AppErrorRules.GMAIL_NOT_CONNECTED ->
             R.string.update_status_server_not_connected
         com.pam.recap.core.result.AppErrorRules.NOT_SIGNED_IN -> R.string.error_not_signed_in
+        // Google SSO: each refusal has a distinct next step, so a kind-level message would hide it.
+        com.pam.recap.core.result.AppErrorRules.GOOGLE_INVALID_TOKEN ->
+            R.string.error_google_invalid_token
+        com.pam.recap.core.result.AppErrorRules.GOOGLE_IDENTITY_NOT_LINKED ->
+            R.string.error_google_identity_not_linked
+        com.pam.recap.core.result.AppErrorRules.GOOGLE_IDENTITY_CONFLICT ->
+            R.string.error_google_identity_conflict
+        com.pam.recap.core.result.AppErrorRules.GOOGLE_ALREADY_LINKED ->
+            R.string.error_google_already_linked
+        com.pam.recap.core.result.AppErrorRules.ACCOUNT_INACTIVE ->
+            R.string.error_account_inactive
         else -> R.string.error_validation
+    }
+
+    is AppError.Configuration -> when (error.debugDetail) {
+        com.pam.recap.core.result.AppErrorRules.GOOGLE_SSO_DISABLED ->
+            R.string.error_google_sso_disabled
+        com.pam.recap.core.result.AppErrorRules.GOOGLE_PLAY_SERVICES_UNAVAILABLE ->
+            R.string.error_google_play_services_unavailable
+        else -> R.string.error_configuration
     }
 
     else -> when (error.kind) {

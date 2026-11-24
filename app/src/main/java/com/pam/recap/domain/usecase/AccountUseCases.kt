@@ -63,6 +63,7 @@ class SignInUseCase @Inject constructor(
         mailboxLabel: String? = null,
         isDemo: Boolean = false,
         seedDemo: Boolean = false,
+        googleLinked: Boolean = false,
     ): Outcome<Session> {
         if (accountId.isBlank()) {
             return Outcome.Failure(AppError.Validation(AppErrorRules.NOT_SIGNED_IN))
@@ -73,6 +74,7 @@ class SignInUseCase @Inject constructor(
             mailboxLabel = mailboxLabel,
             signedInAt = clock.now(),
             isDemo = isDemo,
+            googleLinked = googleLinked,
         )
         sessions.signIn(session)
         if (seedDemo) {

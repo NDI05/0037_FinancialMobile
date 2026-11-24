@@ -65,6 +65,14 @@ sealed interface PamDestination {
     @Serializable
     data object Settings : PamDestination
 
+    /**
+     * Signed-in "Akun" editor (profile, Google link state, Gmail shortcut). It is a separate route
+     * from [Account] on purpose: [Account] is the pre-session entry screen and the gate redirects
+     * it to Overview once a session exists, so the gate would otherwise make this unreachable.
+     */
+    @Serializable
+    data object AccountSettings : PamDestination
+
     @Serializable
     data object ConsentHistory : PamDestination
 

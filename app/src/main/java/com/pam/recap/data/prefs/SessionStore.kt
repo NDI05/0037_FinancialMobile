@@ -26,6 +26,16 @@ internal object SessionKeys {
     val SIGNED_IN_AT = longPreferencesKey("session_signed_in_at")
     val IS_DEMO = booleanPreferencesKey("session_is_demo")
 
+    /** `GET /v1/me` `googleLinked` mirrored onto the session so screens need no round trip. */
+    val GOOGLE_LINKED = booleanPreferencesKey("session_google_linked")
+
     fun demoSeeded(ownerId: String): Preferences.Key<Boolean> =
         booleanPreferencesKey("demo_seeded_$ownerId")
+
+    /**
+     * Per-owner "Lewati" for the Gmail onboarding sheet. Owner-scoped on purpose: skipping for one
+     * PAM account must not silence the prompt for the next person who signs in on the device.
+     */
+    fun gmailOnboardingSkipped(ownerId: String): Preferences.Key<Boolean> =
+        booleanPreferencesKey("gmail_onboarding_skipped_$ownerId")
 }

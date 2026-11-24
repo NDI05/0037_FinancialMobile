@@ -11,12 +11,15 @@ import com.pam.recap.core.result.SafeLogger
 import com.pam.recap.core.security.OwnerIdFactory
 import com.pam.recap.core.security.WrappedSecretStore
 import com.pam.recap.core.time.ClockProvider
+import com.pam.recap.domain.model.GoogleNonce
+import com.pam.recap.domain.model.GoogleSignInSession
 import com.pam.recap.domain.repository.BackendSessionRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -273,6 +276,204 @@ class BackendSessionRepositoryImpl @Inject constructor(
         }
     }
 
+    // --- Google SSO (contract: /v1/auth/google*) ---
+
+    /**
+     * `GET /v1/auth/google/nonce` is anonymous: it carries no PAM token, so a stale session cannot
+     * block a first sign-in. The nonce is a single-use challenge bound to the ID token below.
+     */
+    override suspend fun googleNonce(): Outcome<GoogleNonce> {
+        val endpoint = config.endpoint("/v1/auth/google/nonce")
+            ?: return Outcome.Failure(AppError.Configuration(BACKEND_NOT_CONFIGURED))
+        return withContext(ioDispatcher) {
+            val call = call("GET", endpoint, null, null)
+                ?: return@withContext Outcome.Failure(AppError.Network("backend_unreachable"))
+            when (call.code) {
+                200, 201 -> {
+                    val body = runCatching {
+                        json.decodeFromString(GoogleNonceResponse.serializer(), call.payload)
+                    }.getOrNull()
+                    if (body == null || body.nonce.isBlank()) {
+                        Outcome.Failure(AppError.Network("backend_invalid_response"))
+                    } else {
+                        Outcome.Success(
+                            GoogleNonce(
+                                nonce = body.nonce,
+                                expiresAt = body.expiresAt,
+                                expiresInSeconds = body.expiresInSeconds,
+                            ),
+                        )
+                    }
+                }
+                503 -> Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
+                else -> Outcome.Failure(AppError.Network("backend_${'$'}{call.code}"))
+            }
+        }
+    }
+
+    /**
+     * `POST /v1/auth/google` returns the same body as `POST /v1/sessions` plus `googleLinked`; the
+     * tokens go through the exact same wrapping/caching path, so the rest of the app cannot tell
+     * an SSO session from an email/password one.
+     */
+    override suspend fun googleSignIn(idToken: String, nonce: String): Outcome<GoogleSignInSession> {
+        val endpoint = config.endpoint("/v1/auth/google")
+            ?: return Outcome.Failure(AppError.Configuration(BACKEND_NOT_CONFIGURED))
+        val body = json.encodeToString(
+            GoogleAuthBody.serializer(),
+            GoogleAuthBody(idToken = idToken, nonce = nonce),
+        )
+        val attemptGeneration = generation.get()
+        return withContext(ioDispatcher) {
+            val call = call("POST", endpoint, body, null)
+                ?: return@withContext Outcome.Failure(AppError.Network("backend_unreachable"))
+            when (call.code) {
+                200, 201 -> {
+                    val session = runCatching {
+                        json.decodeFromString(GoogleSessionResponse.serializer(), call.payload)
+                    }.getOrNull()
+                    val email = session?.user?.email?.trim()?.takeIf { it.isNotEmpty() }
+                    if (session == null || email == null) {
+                        Outcome.Failure(AppError.Network("backend_invalid_response"))
+                    } else if (!commitLogin(
+                            attemptGeneration,
+                            StoredSession(
+                                ownerId = OwnerIdFactory.ownerIdFor(email),
+                                serverOwnerId = session.user?.ownerId,
+                                role = session.user?.role,
+                                sessionId = null,
+                                accessToken = session.accessToken,
+                                refreshToken = session.refreshToken,
+                                expiresAtEpochMs = expiresAt(
+                                    session.accessExpiresAt ?: session.expiresAt,
+                                ),
+                            ),
+                        )
+                    ) {
+                        Outcome.Failure(AppError.Unauthorized("backend_session_superseded"))
+                    } else {
+                        Outcome.Success(
+                            GoogleSignInSession(
+                                email = email,
+                                displayName = session.displayName ?: session.user?.displayName,
+                                googleLinked = session.googleLinked ?: true,
+                                serverOwnerId = session.user?.ownerId,
+                            ),
+                        )
+                    }
+                }
+                401 -> Outcome.Failure(
+                    if (call.errorCode == AppErrorRules.GOOGLE_INVALID_TOKEN) {
+                        AppError.Validation(AppErrorRules.GOOGLE_INVALID_TOKEN)
+                    } else {
+                        AppError.Unauthorized("backend_401")
+                    },
+                )
+                409 -> Outcome.Failure(
+                    AppError.Validation(AppErrorRules.GOOGLE_IDENTITY_NOT_LINKED),
+                )
+                403 -> Outcome.Failure(AppError.Validation(AppErrorRules.ACCOUNT_INACTIVE))
+                429 -> Outcome.Failure(AppError.RateLimited(call.errorCode))
+                503 -> Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
+                else -> Outcome.Failure(AppError.Network("backend_${'$'}{call.code}"))
+            }
+        }
+    }
+
+    /**
+     * `POST /v1/auth/google/link` is authenticated with the *current* PAM session; linking never
+     * re-issues or rotates that session. A conflict is a 409 the UI explains without touching the
+     * existing session.
+     */
+    override suspend fun googleLink(
+        ownerId: String,
+        idToken: String,
+        nonce: String,
+    ): Outcome<Unit> {
+        val endpoint = config.endpoint("/v1/auth/google/link")
+            ?: return Outcome.Failure(AppError.Configuration(BACKEND_NOT_CONFIGURED))
+        val bearer = when (val tokenResult = token(ownerId)) {
+            is Outcome.Failure -> return tokenResult
+            is Outcome.Success -> tokenResult.value
+        }
+        val body = json.encodeToString(
+            GoogleAuthBody.serializer(),
+            GoogleAuthBody(idToken = idToken, nonce = nonce),
+        )
+        return withContext(ioDispatcher) {
+            val call = call("POST", endpoint, body, bearer)
+                ?: return@withContext Outcome.Failure(AppError.Network("backend_unreachable"))
+            when (call.code) {
+                200, 201 -> Outcome.Success(Unit)
+                409 -> Outcome.Failure(
+                    AppError.Validation(
+                        if (call.errorCode == AppErrorRules.GOOGLE_ALREADY_LINKED) {
+                            AppErrorRules.GOOGLE_ALREADY_LINKED
+                        } else {
+                            AppErrorRules.GOOGLE_IDENTITY_CONFLICT
+                        },
+                    ),
+                )
+                401 -> Outcome.Failure(AppError.Unauthorized("backend_401"))
+                403 -> Outcome.Failure(AppError.Validation(AppErrorRules.ACCOUNT_INACTIVE))
+                429 -> Outcome.Failure(AppError.RateLimited(call.errorCode))
+                503 -> Outcome.Failure(AppError.Configuration(AppErrorRules.GOOGLE_SSO_DISABLED))
+                else -> Outcome.Failure(AppError.Network("backend_${'$'}{call.code}"))
+            }
+        }
+    }
+
+    override suspend fun googleLinked(ownerId: String): Outcome<Boolean> {
+        val endpoint = config.endpoint("/v1/me")
+            ?: return Outcome.Failure(AppError.Configuration(BACKEND_NOT_CONFIGURED))
+        val bearer = when (val tokenResult = token(ownerId)) {
+            is Outcome.Failure -> return tokenResult
+            is Outcome.Success -> tokenResult.value
+        }
+        return withContext(ioDispatcher) {
+            val call = call("GET", endpoint, null, bearer)
+                ?: return@withContext Outcome.Failure(AppError.Network("backend_unreachable"))
+            if (call.code !in 200..299) {
+                return@withContext Outcome.Failure(AppError.Network("backend_${'$'}{call.code}"))
+            }
+            val body = runCatching {
+                json.decodeFromString(MeGoogleFlag.serializer(), call.payload)
+            }.getOrNull()
+            if (body == null) {
+                Outcome.Failure(AppError.Network("backend_invalid_response"))
+            } else {
+                Outcome.Success(body.googleLinked ?: false)
+            }
+        }
+    }
+
+    /**
+     * One request with an optional bearer token. The response is reduced to a status plus an
+     * optional machine code; bodies are never logged.
+     */
+    private fun call(method: String, endpoint: String, body: String?, bearer: String?): CallResult? =
+        try {
+            val builder = Request.Builder().url(endpoint)
+            if (body == null) {
+                builder.method(method, null)
+            } else {
+                builder.method(method, body.toRequestBody(JSON_MEDIA_TYPE))
+                builder.header("content-type", JSON_MEDIA_TYPE.toString())
+            }
+            builder.header("accept", JSON_MEDIA_TYPE.toString())
+            bearer?.let { builder.header("authorization", "Bearer $it") }
+            client.newCall(builder.build()).execute().use { response ->
+                val payload = response.body?.string().orEmpty()
+                CallResult(response.code, payload, errorCode(payload))
+            }
+        } catch (error: IOException) {
+            SafeLogger.failure(TAG, "google_sso_call_failed")
+            null
+        } catch (error: Exception) {
+            SafeLogger.failure(TAG, "google_sso_call_invalid")
+            null
+        }
+
     /**
      * One POST. The response is reduced to a status plus an optional machine code; the body is
      * never logged, and the password lives only in the request it built.
@@ -364,6 +565,42 @@ class BackendSessionRepositoryImpl @Inject constructor(
 
     @Serializable
     private data class RefreshBody(val refreshToken: String)
+
+    @Serializable
+    private data class GoogleNonceResponse(
+        val nonce: String,
+        val expiresAt: String? = null,
+        val expiresInSeconds: Long? = null,
+    )
+
+    @Serializable
+    private data class GoogleAuthBody(val idToken: String, val nonce: String)
+
+    /** Superset of [SessionResponse] with `googleLinked`; the wire shape is otherwise identical. */
+    @Serializable
+    private data class GoogleSessionResponse(
+        val accessToken: String,
+        val expiresAt: String,
+        val accessExpiresAt: String? = null,
+        val refreshToken: String? = null,
+        val refreshExpiresAt: String? = null,
+        val displayName: String? = null,
+        val googleLinked: Boolean? = null,
+        val user: GoogleSessionUser? = null,
+    )
+
+    @Serializable
+    private data class GoogleSessionUser(
+        val ownerId: String? = null,
+        val email: String? = null,
+        val displayName: String? = null,
+        val role: String? = null,
+    )
+
+    @Serializable
+    private data class MeGoogleFlag(
+        @SerialName("googleLinked") val googleLinked: Boolean? = null,
+    )
 
     @Serializable
     private data class StoredSession(

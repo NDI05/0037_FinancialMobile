@@ -66,6 +66,8 @@ import com.pam.recap.testing.FakeAccountRepository
 import com.pam.recap.testing.FakeAnalysisRepository
 import com.pam.recap.testing.FakeBudgetRepository
 import com.pam.recap.testing.FakeConsentRepository
+import com.pam.recap.testing.FakeGoogleSignInGateway
+import com.pam.recap.testing.FakeSessionRepository
 import com.pam.recap.testing.FakeDeletionRepository
 import com.pam.recap.testing.FakeAppPasswordVault
 import com.pam.recap.testing.FakeCredentialValidator
@@ -605,7 +607,12 @@ class ScreenScreenshotsTest {
     @Test
     fun accountSignIn() {
         val accounts = FakeAccountRepository(isBackendEnabled = true)
-        val viewModel = AccountViewModel(accounts, SavedStateHandle(mapOf("mode" to "SIGN_IN")))
+        val viewModel = AccountViewModel(
+            accounts,
+            FakeSessionRepository(),
+            FakeGoogleSignInGateway(),
+            SavedStateHandle(mapOf("mode" to "SIGN_IN")),
+        )
 
         shot("09b-account-signin") {
             AccountScreen(onBack = {}, viewModel = viewModel)
@@ -613,9 +620,29 @@ class ScreenScreenshotsTest {
     }
 
     @Test
+    fun accountSignInGoogleEnabled() {
+        val accounts = FakeAccountRepository(isBackendEnabled = true, googleSsoEnabled = true)
+        val viewModel = AccountViewModel(
+            accounts,
+            FakeSessionRepository(),
+            FakeGoogleSignInGateway(),
+            SavedStateHandle(mapOf("mode" to "SIGN_IN")),
+        )
+
+        shot("09b2-account-signin-google") {
+            AccountScreen(onBack = {}, viewModel = viewModel)
+        }
+    }
+
+    @Test
     fun accountRegister() {
         val accounts = FakeAccountRepository(isBackendEnabled = true)
-        val viewModel = AccountViewModel(accounts, SavedStateHandle(mapOf("mode" to "REGISTER")))
+        val viewModel = AccountViewModel(
+            accounts,
+            FakeSessionRepository(),
+            FakeGoogleSignInGateway(),
+            SavedStateHandle(mapOf("mode" to "REGISTER")),
+        )
 
         shot("09c-account-register") {
             AccountScreen(onBack = {}, viewModel = viewModel)
@@ -625,9 +652,39 @@ class ScreenScreenshotsTest {
     @Test
     fun accountOffline() {
         val accounts = FakeAccountRepository(isBackendEnabled = false)
-        val viewModel = AccountViewModel(accounts, SavedStateHandle(mapOf("mode" to "SIGN_IN")))
+        val viewModel = AccountViewModel(
+            accounts,
+            FakeSessionRepository(),
+            FakeGoogleSignInGateway(),
+            SavedStateHandle(mapOf("mode" to "SIGN_IN")),
+        )
 
         shot("09d-account-offline") {
+            AccountScreen(onBack = {}, viewModel = viewModel)
+        }
+    }
+
+    @Test
+    fun accountSignedInGoogleLink() {
+        val owner = ownerId
+        val accounts = FakeAccountRepository(isBackendEnabled = true, googleSsoEnabled = true)
+        val viewModel = AccountViewModel(
+            accounts,
+            FakeSessionRepository(
+                Session(
+                    ownerId = owner,
+                    displayName = "Andhika Pratama",
+                    mailboxLabel = "andhika.pratama@gmail.com",
+                    signedInAt = now,
+                    isDemo = false,
+                    googleLinked = false,
+                ),
+            ),
+            FakeGoogleSignInGateway(),
+            SavedStateHandle(),
+        )
+
+        shot("09e-account-google-link") {
             AccountScreen(onBack = {}, viewModel = viewModel)
         }
     }

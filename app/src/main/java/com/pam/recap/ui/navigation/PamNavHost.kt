@@ -127,6 +127,16 @@ fun PamNavHost(
             composable<PamDestination.Account> {
                 AccountScreen(
                     onBack = { if (!navController.popBackStack()) navController.replaceWith(PamDestination.Welcome) },
+                    onOpenGmailLink = { navController.navigate(PamDestination.GmailLink()) },
+                )
+            }
+
+            // Signed-in account editor from Settings: same screen, no gate redirect because this
+            // route is not the pre-session entry point.
+            composable<PamDestination.AccountSettings> {
+                AccountScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenGmailLink = { navController.navigate(PamDestination.GmailLink()) },
                 )
             }
 
@@ -221,6 +231,7 @@ fun PamNavHost(
                     onOpenCategories = { navController.navigate(PamDestination.CategoryManagement) },
                     onOpenDeletion = { navController.navigate(PamDestination.DataDeletion) },
                     onOpenAdmin = { navController.navigate(PamDestination.Admin) },
+                    onOpenAccount = { navController.navigate(PamDestination.AccountSettings) },
                     onSignedOut = { navController.replaceWith(PamDestination.Welcome) },
                 )
             }
@@ -243,6 +254,16 @@ fun PamNavHost(
                     onDeleted = { navController.replaceWith(PamDestination.Welcome) },
                 )
             }
+        }
+
+        // One-time Gmail offer: only once a session is Ready, and never on top of the Gmail flow
+        // itself. Dismissal is handled by the sheet's own ViewModel.
+        if (gate is GateState.Ready && !destination.isGmailLink()) {
+            com.pam.recap.ui.feature.onboarding.GmailOnboardingSheet(
+                onLinkGmail = { navController.navigate(PamDestination.GmailLink()) },
+                onSkip = {},
+                onDismiss = {},
+            )
         }
 
         val showBottomBar = gate is GateState.Ready && destination.isTopLevel()
@@ -349,6 +370,9 @@ private fun NavDestination?.isTransactions(): Boolean = this?.hasRoute<PamDestin
 private fun NavDestination?.isAnalysis(): Boolean = this?.hasRoute<PamDestination.Analysis>() == true
 
 private fun NavDestination?.isSettings(): Boolean = this?.hasRoute<PamDestination.Settings>() == true
+
+private fun NavDestination?.isGmailLink(): Boolean =
+    this?.hasRoute<PamDestination.GmailLink>() == true || this?.hasRoute<PamDestination.GmailConnect>() == true
 
 internal fun NavHostController.replaceWith(destination: PamDestination) {
     navigate(destination) {
