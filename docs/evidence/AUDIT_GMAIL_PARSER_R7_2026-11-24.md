@@ -66,3 +66,20 @@ dipersempit ke guard yang benar-benar teruji (`e19477b`).
 Gate backend setelah perbaikan: `e19477b` vet/build/test/race **PASS**; runtime loopback
 dibangun ulang dari `e19477b` (`vcs.modified=false`, `/readyz=200`). Harness kontrak QA §9
 diulang: **PASS=82, FAIL=0, exit 0**; preflight UAT **exit 0**.
+
+## 5. Audit verifikasi ronde 3 (24 Nov 2026, read-only, snapshot `e19477b`)
+
+Verdict: **tidak ada P0/P1 blocking**; fix `e19477b` bertahan. Snapshot bersih: vet/build PASS,
+`test ./internal/gmail ./internal/httpapi -count=1` **200 PASS / 0 FAIL**, `-race` PASS.
+Probe sintetis 175 parse + 16 ref: **0/48** baris field/PAN bocor menjadi merchant pada jalur
+stacked, inline, maupun separator; WITA +08:00 / WIT +09:00 tepat; waktu tidak terikat ke prosa
+jauh. Residual yang ditemukan: baris referensi **tanpa titik dua** (`Ref ABC123`, `ID 12345`,
+`Kartu 1234`) masih bisa menjadi label (P2, kelas sama dengan ronde 2), prosa ber-kolon bisa
+menjembatani waktu (P3), dan dua nit dokumen (provenance 145 baris, "20 migrasi" kedaluwarsa).
+
+Tindak lanjut: **P2/P3 ditutup** di backend `c69cf57` dengan `looseFieldPattern` (field word + token berdigit) dan
+`isBridgeFieldLine` (hanya baris field kuat yang boleh menjembatani tanggal–waktu), plus regresi
+`Ref`/`ID`/`Kartu` dan `TestParseLivinProseColonDoesNotBridgeTime`. Nit dokumen diperbaiki:
+provenance 145 baris dijelaskan (backfill parsial pasca-perbaikan parser, bukan pass pertama), dan
+G20 memakai angka 21 migrasi. Sisa catatan non-blocking: nama merchant yang mengandung titik dua
+ganda (`Penerima: TOKO: BERKAH`) tetap terpotong — template produksi tidak memakainya.

@@ -203,3 +203,14 @@ counter duplikat Nov/Okt 0 dijelaskan (baris lama tidak dipindai ulang), angka p
 final dipisahkan, bukti 914 dinyatakan dari build `c98527b` (hardening hanya rebuild runtime), dan
 klaim PAN dipersempit ke guard yang teruji. Gate tetap **29 PASS / 4 PARTIAL / 5 NOT RUN**;
 G36/G29/G37 tetap menunggu pemilik.
+
+### Audit verifikasi ronde 3 — residual referensi/prosa ditutup (24 Nov 2026, ronde 10)
+
+Audit independen ketiga (snapshot `e19477b`) menyatakan **tidak ada P0/P1**: guard PAN berlaku di
+kedua jalur (0/48 kebocoran), 200 tes + race PASS, offset WITA/WIT tepat. Dua residual ditutup:
+baris referensi tanpa titik dua (`Ref ABC123`, `No Referensi ABC123`, `ID 12345`, `Kartu 1234`) kini
+ditolak lewat `looseFieldPattern`, dan prosa ber-kolon (`Catatan: …`) tidak lagi menjembatani waktu
+lewat `isBridgeFieldLine`; keduanya punya regresi. Nit dokumen diperbaiki: provenance 145 baris
+dijelaskan sebagai backfill parsial pasca-perbaikan parser (bukan pass pertama `imported=0`), dan
+G20 kembali menyebut **21 migrasi**. Gate backend `c69cf57` vet/build/test/race PASS;
+runtime loopback dibangun ulang. Gate tetap **29 PASS / 4 PARTIAL / 5 NOT RUN**.
