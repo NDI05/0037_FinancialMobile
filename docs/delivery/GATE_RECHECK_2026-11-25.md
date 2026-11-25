@@ -17,6 +17,15 @@ build/lingkungan yang disebut; sisanya PARTIAL atau NOT RUN.
 | CI backend | `6c941d9` **success**; `1325d3d` **success** (docs); commit sebelumnya (`d42d7c4`, `aa33fb8`, `68f1ba4`, `b6ce917`) juga success |
 | CI Android | tidak ada workflow CI di repo Android (tetap seperti sebelumnya) |
 
+## Snapshot pra-uji G36 (agregat data pemilik, tanpa PII)
+
+- 25 Nov 2026 ±14:43 WIB, sebelum uji email Livin: total transaksi **1665** (di antaranya **1655**
+  sumber EMAIL), koneksi Gmail **2**, sesi auth **12** (sesi terbaru 14:37:16 WIB). Angka ini hanya
+  hitungan agregat; tidak ada isi transaksi/email yang dibaca.
+- Pada 14:42:39 WIB APK baru (`39f2cd6e…`) memicu `POST /v1/category-jobs/enqueue` → **503**
+  `category_unavailable` (klasifier mati sesuai config UAT); pesan UX baru berlaku untuk pemicuan
+  berikutnya.
+
 ## Kebersihan repo
 
 | Item | Hasil |
