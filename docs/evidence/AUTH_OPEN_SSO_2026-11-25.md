@@ -60,5 +60,11 @@ Backend biner baru dijalankan pada port 18093 dengan database sementara (bukan D
   tanpa entri Anggaran/Lampiran/Administrasi, `AndroidRuntime:E` kosong. Bukti `/tmp/w-ui-smoke2-*`.
 - APK hasil fix juga dipasang di perangkat fisik Redmi 10 (model `21061119AG`, seri diredaksi) yang
   terhubung; app membuka Ringkasan tanpa crash, data tidak ditelusuri.
-- **Tetap NOT RUN:** Google SSO live (butuh Test user OAuth consent screen) dan Run literal G36
+- **Login Google live di HP pemilik terverifikasi backend 25 Nov ±14:37 WIB:** POST ke rute SSO
+  (rute POST yang tidak terdaftar di logger request) membalas **200 dalam 1257 ms** dan tepat pada
+  detik yang sama dibuat `auth_session` baru untuk akun pemilik; layar HP menampilkan Ringkasan.
+  Ini bukti token Google asli diterima, bukan fixture. Logout/relogin berurutan dan login dengan
+  akun Google kedua belum dicatat.
+- **Tetap NOT RUN:** logout/relogin berurutan, onboarding Gmail akun uji, email Livin alami, dan
+  Run literal Android Studio dan Run literal G36
   lewat Android Studio pada HP pemilik (**Redmi 10 `21061119AG`**, terhubung).

@@ -21,6 +21,8 @@ tidak menghasilkan apa pun.
 
 ## Kesimpulan
 
+UX yang menyesatkan sudah diperbaiki di `13b7a2a`: respons `503 category_unavailable` kini tampil sebagai "Kategorisasi AI belum diaktifkan di server ini" (bukan error jaringan).
+
 Ini **bukan bug aplikasi**: build/endpoint kategori benar, tetapi runtime UAT lokal dikonfigurasi
 hemat biaya (Rp0) sehingga tidak ada panggilan AI. Analisis AI juga memakai `LLM_PROVIDER=fake`
 pada runtime ini.
