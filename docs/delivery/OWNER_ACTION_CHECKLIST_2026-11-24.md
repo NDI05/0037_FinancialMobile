@@ -14,6 +14,27 @@ diverifikasi siap (`scripts/verify/uat_readiness.sh` → exit 0; backend `00bb51
 > [runbook G36](OWNER_G36_RUNBOOK_2026-11-25.md) (prasyarat, Run literal, onboarding Gmail, email
 > Livin alami, dan bukti yang perlu dikirim).
 
+> **Update 25 November 2026 (malam, pasca-merge).** Checklist ini dokumen historis 24 Nov;
+> langkah merge di bagian 3 **sudah selesai**: branch kerja Android dan backend sudah
+> diintegrasikan ke `main` (kedua `HEAD == origin`, worktree bersih). Perubahan keputusan pemilik
+> 25 Nov juga sudah berlaku: **kode undangan registrasi dihapus**, login/daftar memakai **Google
+> SSO langsung** (tanpa Settings), dan **Azure penuh** dipakai untuk Analisis + Kategorisasi di UAT
+> lokal dengan pagar token/biaya. Karena itu abaikan instruksi merge/undangan di bawah dan gunakan
+> status terkini di [GATE_RECHECK_2026-11-25](GATE_RECHECK_2026-11-25.md).
+>
+> **Sisa aksi pemilik saat ini (bukti terverifikasi):**
+> 1. **G36** — Run literal, login/logout/relogin Google, Lewati/Tautkan Gmail + consent, lalu satu
+>    email Livin alami saat app tertutup ([runbook G36](OWNER_G36_RUNBOOK_2026-11-25.md)); prasyarat
+>    otomatis sudah `exit 0` pada 25 Nov 15:20 WIB.
+> 2. **G29/G37** — konfirmasi Billing GCP tidak tertaut + biaya Rp0 di konsol.
+> 3. **Pilihan host gratis** (Vercel tidak cocok untuk polling) — Oracle Always Free (rekomendasi)
+>    atau Render Free; langkah ada di [FREE_HOST_DEPLOYMENT_2026-11-25](FREE_HOST_DEPLOYMENT_2026-11-25.md).
+> 4. **OI-27** — keputusan pemetaan akademik ([memo](DECISION_MEMO_OI27_OI28_2026-11-25.md));
+>    OI-28 sudah diputuskan.
+> 5. **Produksi** — merge/deploy/revisi SRS resmi tetap keputusan pemilik; deployment demo Vercel
+>    bukan produksi.
+
+
 ## 1. G36 — UAT SSO Google + tombol Run Android Studio
 
 Prasyarat (sudah siap): Web Client ID terpasang di `local.properties`/`PAM_GOOGLE_SSO_CLIENT_ID`,
