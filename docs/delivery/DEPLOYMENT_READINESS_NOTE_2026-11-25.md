@@ -74,7 +74,24 @@ Backup DB sebelum deploy pertama dan setiap kali ada migrasi baru.
 - **Rollback polling:** Pub/Sub bersifat opt-in rollback; default tetap polling 15 menit tanpa biaya
   GCP tambahan.
 
+## Vercel (dijalankan 25 Nov 2026 atas permintaan pemilik)
+
+Vercel Hobby **bisa** menjalankan backend Go ini berkat **Go Framework Preset (Beta)** yang
+mendukung server `net/http` panjang (`cmd/api/main.go`, dengarkan `PORT`). Hasil uji:
+project `pam-api-vercel`, alias <https://pam-api-vercel.vercel.app>, DB Turso baru
+`pam-vercel` (migrasi 22/22), health/ready/register/login/transaksi/summary/SSO-nonce lulus.
+Detail, perintah, insiden migrasi, dan batasan ada di
+[evidence/VERCEL_DEPLOYMENT_2026-11-25.md](../evidence/VERCEL_DEPLOYMENT_2026-11-25.md).
+
+Batasan penting bila memilih Vercel: worker Gmail berjalan sebagai goroutine di proses server
+sehingga **tidak dijamin** hidup saat Functions scale-to-zero; Cron Hobby hanya 1×/hari dan
+Daemon Hobby hanya 5 CPU-jam + 420 GB-jam memori/bulan. Gmail otomatis andal butuh host proses
+panjang (opsi Fly.io/Render/Koyeb di atas). Gmail di Vercel juga belum diaktifkan karena redirect
+OAuth HTTPS harus didaftarkan dulu di Google Cloud Console. **G24 tetap NOT RUN** sampai pemilik
+memutuskan platform final, domain, backup, dan merge/deploy produksi.
+
 ## Yang belum dilakukan
 
-Deployment, pembuatan secret produksi, pendaftaran host OAuth, dan uji live di host nyata **belum
-dijalankan**. Gate G24 tetap NOT RUN sampai pemilik memberi instruksi deploy terpisah.
+Deployment **produksi final** tetap belum dilakukan: project Vercel di atas adalah demo/UAT
+terpisah (DB Turso baru), belum ada domain kustom, backup otomatis, atau pendaftaran redirect
+Gmail produksi. Gate G24 tetap NOT RUN sampai pemilik memberi instruksi deploy produksi terpisah.
