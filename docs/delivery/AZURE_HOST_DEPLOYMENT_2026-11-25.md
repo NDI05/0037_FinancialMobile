@@ -74,6 +74,12 @@ Insiden dan perbaikan (commit backend `3e95727`, sudah di `main`+CI):
   `FinalizeImportJob`, plus error finalize ikut dilog agar bisa dibedakan dari mismatch hitungan.
 - Sesudah fix: finalize sukses, `sync_state=idle`, classifier berjalan dan transaksi mulai
   berkategori tanpa mengubah plafon biaya Azure (USD 0.10/hari, USD 2.00/bulan kategorisasi).
+- Tindak lanjut antrean awal (commit backend `fed2547`): job dari backfill mewarisi jendela 2 jam,
+  jadi classifier hanya bisa jalan 3 hari sekali. Kini saat bulan backfill terakhir selesai queue
+  dibuka ulang (semua job PENDING dibuat due) dan jeda jendela dapat diatur lewat
+  `CATEGORY_LLM_DRAIN_INTERVAL_SECONDS` (default tetap 2 jam; host UAT memakai **60 detik**).
+  Sesudah deploy `fed2547`: **109 transaksi berkategori** dan **521 job tersisa** (per 11:26 UTC),
+  biaya tercatat **USD 0.0097** dari 80 attempt, jauh di bawah plafon harian USD 0.10.
 
 ### Operasional: polling, backup, rollback
 
