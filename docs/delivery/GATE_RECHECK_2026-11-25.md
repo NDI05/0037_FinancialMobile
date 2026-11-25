@@ -36,6 +36,9 @@ build/lingkungan yang disebut; sisanya PARTIAL atau NOT RUN.
 | Worktree | Satu worktree per repo, bersih; tidak ada worktree sementara |
 | Temporary artifact | Fixture/log DB uji nominal di `/tmp` dibersihkan; binary/DB UAT yang masih dirujuk bukti dipertahankan |
 | Tautan dokumen | Pemeriksaan tautan relatif Markdown di `README.md` + `docs/**`: 8 tautan rusak ditemukan dan diperbaiki, hasil akhir **0 rusak** |
+| Baseline SRS v0.7 | Berkas `docs/specifications/PAM_SRS_v0.7_Personal_Finance_Draft.docx`/`.pdf` **tidak diubah isinya** pada verifikasi ini. Commit `1061a23` (24 Nov) pernah menyimpan ulang DOCX (1.254.216 → 662.647 byte) karena sesi Word; perbandingan teks via `python-docx` terhadap versi `1e46df3` = **identik** (434 vs 435 paragraf, 66.928 karakter sama). Perubahan SRS resmi tetap milik pemilik. sha256 DOCX saat ini `87617571…`, PDF `5d18570b…` |
+| Scan rahasia (git grep) | Pola kunci privat/API key/JWT/token pada kedua repo: **0 temuan nyata**; satu-satunya kecocokan adalah placeholder `JWT_SECRET=isi-secret-lokal...` di `.env.example` (bukan rahasia). Nilai dummy lama di evidence sudah diredaksi |
+
 
 ## Perubahan auth pada verifikasi ulang ini (owner decision 25 November 2026)
 
