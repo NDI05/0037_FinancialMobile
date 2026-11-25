@@ -23,6 +23,7 @@ import com.pam.recap.ui.theme.PamTheme
 import androidx.lifecycle.lifecycleScope
 import com.pam.recap.domain.repository.AutoCategoryScheduler
 import com.pam.recap.domain.repository.AutoSyncScheduler
+import com.pam.recap.domain.repository.GmailLinkRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.AutoCategoryUseCase
 import com.pam.recap.domain.model.GmailLinkResult
@@ -62,6 +63,10 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var autoCategoryRun: AutoCategoryUseCase
+
+    /** True for builds that delegate Gmail import to the Go backend (contract §9). */
+    @Inject
+    lateinit var gmailLink: GmailLinkRepository
 
     /** Credential Manager needs the running Activity for the Google account sheet. */
     @Inject
@@ -152,10 +157,18 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         lifecycleScope.launch {
             val ownerId = sessions.current()?.ownerId ?: return@launch
-            // Idempotent; also covers an install that was already signed in before this feature.
-            runCatching { autoSync.ensureScheduled(ownerId) }
-            runCatching { incrementalSync.hydrate(ownerId) }
-            runCatching { incrementalSync.runIfStale() }
+            // Hosted builds delegate Gmail import to the Go backend (contract §9). The legacy
+            // device pipeline must stay off there: it has no mailbox token, so it would only
+            // record a partial run and surface a false "Perlu perhatian" banner. Local mode (no
+            // backend configured) keeps the original foreground freshness check.
+            if (gmailLink.isEnabled) {
+                runCatching { autoSync.cancelAll() }
+            } else {
+                // Idempotent; also covers an install that was already signed in before this feature.
+                runCatching { autoSync.ensureScheduled(ownerId) }
+                runCatching { incrementalSync.hydrate(ownerId) }
+                runCatching { incrementalSync.runIfStale() }
+            }
             // The drain itself is throttled by the server; a foreground visit just makes sure the
             // schedule exists and the panel has a fresh backlog number.
             runCatching { autoCategory.ensureScheduled(ownerId) }

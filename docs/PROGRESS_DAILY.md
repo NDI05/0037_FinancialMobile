@@ -583,6 +583,16 @@ Uji run `45609200337` **success** (1m24s); host terverifikasi `uptimeSeconds:0` 
 Aplikasi Android juga terbukti tetap jalan setelah `adb reverse` dihapus dan kabel USB dicabut,
 karena APK memakai URL HTTPS host.
 
+**Status pembaruan di build hosted sempat menampilkan peringatan palsu.** Di build hosted
+(backend mengelola Gmail), pipeline impor lokal lama masih dijalankan saat aplikasi dibuka; karena
+tidak punya token kotak surat, pipeline itu mencatat `partial_import` sehingga sheet Status
+menampilkan "Perlu perhatian — Transaksi: Rentang email belum selesai" padahal server melaporkan
+13/13 bulan selesai dan tanpa error. `MainActivity.onStart` sekarang mematikan pipeline lokal
+(`autoSync.cancelAll()`, tanpa `hydrate`/`runIfStale`) ketika `GmailLinkRepository.isEnabled`
+(backend dikonfigurasi); mode lokal tanpa backend tetap memakai alur lama. Diverifikasi di HP:
+sheet Status hanya berisi "Tidak ada masalah yang perlu tindakan". `:app:testDebugUnitTest`
+**BUILD SUCCESSFUL**; APK `5409533043035898…` 47,746,357 B.
+
 **Keyboard menutupi field input.** Keluhan pemilik saat entri manual: field tertutup keyboard.
 `PamScaffold` sekarang memakai `.imePadding()` sehingga seluruh layar (termasuk bottom bar tombol
 Simpan) menyusut di atas keyboard dan konten yang fokus otomatis ter-scroll ke area terlihat.
