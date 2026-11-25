@@ -78,8 +78,9 @@ Urutan wajib: 2 → 3 (keduanya menyentuh auth aplikasi), lalu 4 → 5.
 ## 4. Detail teknis per fase
 
 ### Fase 2 — Auth
-- `POST /v1/accounts` (registrasi, butuh `REGISTRATION_INVITE_CODE`), `POST /v1/sessions`
-  (email + password), `DELETE /v1/sessions`.
+- `POST /v1/accounts` (registrasi terbuka, tanpa kode undangan sejak 25 November 2026),
+  `POST /v1/sessions` (email + password), `DELETE /v1/sessions`; Google SSO juga menjadi jalur
+  daftar langsung (auto-provision akun `USER` dari email terverifikasi).
 - Hash: **`node:crypto.scrypt`** (N=2^15, r=8, p=1, salt 16 B) — tanpa dependensi native.
 - Rate limit login: 5 percobaan / 15 menit / IP+email, lalu backoff.
 - Aplikasi: `LocalAccountSource` menggantikan `GoogleIdentitySource`.

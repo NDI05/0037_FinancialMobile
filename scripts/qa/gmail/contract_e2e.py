@@ -211,7 +211,6 @@ class Backend:
         self.log_path = os.path.join(run_dir, "server.log")
         self.process: subprocess.Popen | None = None
         self.internal_token = uuid.uuid4().hex
-        self.registration_code = "pam-qa-invite"
         self.email = "qa.gmail." + uuid.uuid4().hex[:10] + "@example.invalid"
         self.password = "qa-" + uuid.uuid4().hex
         self.redirect_uri = f"http://127.0.0.1:{port}/v1/gmail/connect/callback"
@@ -268,7 +267,6 @@ class Backend:
             "JWT_ISSUER": "pam-api",
             "JWT_AUDIENCE": "pam-android",
             "ACCESS_TOKEN_TTL_SECONDS": "900",
-            "REGISTRATION_INVITE_CODE": self.registration_code,
             "DATA_ENCRYPTION_KEY": base64.b64encode(os.urandom(32)).decode(),
             "DATA_KEY_VERSION": "1",
             "LLM_PROVIDER": "fake",
@@ -361,11 +359,10 @@ class Backend:
 class Session:
     """One synthetic PAM account and its access token (kept in memory only)."""
 
-    def __init__(self, client: HttpClient, email: str, password: str, invite: str) -> None:
+    def __init__(self, client: HttpClient, email: str, password: str) -> None:
         self.client = client
         self.email = email
         self.password = password
-        self.invite = invite
         self.access_token = ""
 
     def register(self) -> tuple[int, dict, str]:
@@ -373,7 +370,6 @@ class Session:
             "email": self.email,
             "password": self.password,
             "displayName": "QA Gmail Harness",
-            "inviteCode": self.invite,
         })
 
     def login(self) -> tuple[int, dict, str]:
@@ -442,8 +438,7 @@ class GmailScenarios:
         self.args = args
         self.expected = expected
         self.client = HttpClient(f"http://127.0.0.1:{backend.port}")
-        self.session = Session(self.client, backend.email, backend.password,
-                               backend.registration_code)
+        self.session = Session(self.client, backend.email, backend.password)
         self.scenario = backend.scenario
 
     # -- capability ----------------------------------------------------------------------------

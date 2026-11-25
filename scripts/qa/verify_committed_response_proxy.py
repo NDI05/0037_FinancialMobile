@@ -37,7 +37,7 @@ def main():
         db = Path(directory) / "synthetic.db"
         env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "APP_ENV": "development",
                "PORT": str(api_port), "DATABASE_URL": "file:" + str(db),
-               "REGISTRATION_INVITE_CODE": "qa-proxy"}
+}
         with open(Path(directory) / "api.log", "w") as log:
             process = subprocess.Popen([str(args.binary.resolve())], env=env, stdout=log, stderr=log)
             evidence = Evidence(events_path, armed=True)
@@ -78,8 +78,7 @@ def main():
                 else:
                     raise RuntimeError("Synthetic Go API startup failed")
                 email, password = "qa-proxy@example.test", "synthetic-password"
-                assert request("POST", "/v1/accounts", {"email": email, "password": password,
-                    "inviteCode": "qa-proxy"})[0] == 201
+                assert request("POST", "/v1/accounts", {"email": email, "password": password})[0] == 201
                 code, session = request("POST", "/v1/sessions", {"email": email, "password": password})
                 assert code == 201
                 token, key = session["accessToken"], uuid.uuid4().hex

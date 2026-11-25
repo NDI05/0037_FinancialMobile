@@ -17,8 +17,10 @@ No secret, URL, token, Gmail address, merchant, email body or raw credential is 
 
 ## Owner handoff
 
-1. In the open emulator app choose **Buat akun**, register with your own PAM email/password.
-   The invite code is the value of `REGISTRATION_INVITE_CODE` in the private env file.
+1. In the open app choose **Buat akun** and register with your own PAM email/password, or use
+   **Daftar dengan Google** directly. Registration is open: there is no invite code any more
+   (owner decision 25 November 2026; Google SSO creates or opens the account from a verified
+   Google email).
 2. Grant Gmail consent, then **Hubungkan Gmail** and enter the App Password directly in the UI.
 3. Tell the SE when the account and Gmail link are ready; SE will run read-only import and
    verify Turso rows, list/detail/summary, category, logout/login/restart persistence.

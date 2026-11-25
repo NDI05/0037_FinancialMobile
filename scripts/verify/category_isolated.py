@@ -165,7 +165,6 @@ def main():
         "PORT": str(port),
         "DATABASE_URL": f"file:{dbpath}",
         "LOG_LEVEL": "info",
-        "REGISTRATION_INVITE_CODE": "isolated-synthetic",
         "CATEGORY_LLM_ENABLED": "true",
         "CATEGORY_LLM_PROVIDER": "azure",
         "AZURE_CLASSIFIER_BASE_URL": f"http://127.0.0.1:{stub.port}",
@@ -205,8 +204,7 @@ def main():
         password = os.environ.get("PAM_SMOKE_PASSWORD") or secrets.token_urlsafe(18)
         email = f"category.verify.{secrets.token_hex(6)}@pam-uat.test"
         api.request(port, "/v1/accounts", "POST",
-                    {"email": email, "password": password, "displayName": "Synthetic verify",
-                     "inviteCode": "isolated-synthetic"}, expect=201)
+                    {"email": email, "password": password, "displayName": "Synthetic verify"}, expect=201)
         api.token = api.request(port, "/v1/sessions", "POST",
                                 {"email": email, "password": password}, expect=201)["accessToken"]
         food = next(item["id"] for item in api.request(port, "/v1/categories")["categories"]
@@ -273,8 +271,7 @@ def main():
         second = Api()
         email_b = f"category.verify.b.{secrets.token_hex(6)}@pam-uat.test"
         second.request(port, "/v1/accounts", "POST",
-                       {"email": email_b, "password": password, "displayName": "Synthetic B",
-                        "inviteCode": "isolated-synthetic"}, expect=201)
+                       {"email": email_b, "password": password, "displayName": "Synthetic B"}, expect=201)
         second.token = second.request(port, "/v1/sessions", "POST",
                                       {"email": email_b, "password": password},
                                       expect=201)["accessToken"]

@@ -48,12 +48,16 @@ Bulan `YYYY-MM` dalam **Asia/Jakarta**. Nominal selalu **integer minor IDR** (1/
 
 ```http
 POST /v1/accounts
-{ "email": "a@example.test", "password": "8..200 chars", "displayName": "A", "inviteCode": "..." }
+{ "email": "a@example.test", "password": "8..200 chars", "displayName": "A" }
 ```
-`201 { userId, email, displayName, role: "USER" }`. Register publik selalu `USER`. Undangan admin
-memakai `invitationToken` menggantikan `inviteCode` dan boleh menghasilkan `ADMIN` sesuai undangan.
-Duplicate email → `409 conflict`; kode salah → `403 forbidden` (`invalid_invite`).
+`201 { userId, email, displayName, role: "USER" }`. Register publik **terbuka tanpa kode undangan**
+(keputusan pemilik 25 November 2026); `USER` selalu, role tidak pernah dari body. Field
+`inviteCode`/`invitationToken` sudah pensiun dan ditolak `400 invalid_request`.
+Duplicate email → `409 conflict`; email/password tidak valid → `400 invalid_request`.
 Server membuat `account_keys` (kunci fingerprint) dalam transaksi yang sama.
+Google SSO juga menjadi jalur daftar langsung: `POST /v1/auth/google` membuat akun `USER` baru dari
+email terverifikasi Google, atau menautkan/membuka akun yang emailnya sama; lihat
+[GOOGLE_SSO_CONTRACT.md](../../0037-Backend-Financial/docs/GOOGLE_SSO_CONTRACT.md).
 
 ### 2.2 Login
 

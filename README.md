@@ -217,14 +217,13 @@ cd ../0037-Backend-Financial
 PAM_GOROOT=../pam-app/.toolchain/go \
 APP_ENV=development PORT=8080 \
   DATABASE_URL=file:./data/pam-readme-dev.db \
-  REGISTRATION_INVITE_CODE=dev-local-only \
   LLM_PROVIDER=fake CATEGORY_LLM_ENABLED=false \
   ./scripts/go.sh run ./cmd/api
 ```
 
 Perintah ini memakai database development lokal dan classifier nonaktif. Tidak menggunakan
-database UAT pemilik atau membuat panggilan Azure. Kode invite di atas hanya contoh lokal,
-bukan konfigurasi production. Konfigurasi rinci: README repo backend dan
+database UAT pemilik atau membuat panggilan Azure. Registrasi publik tidak memerlukan kode
+undangan sejak 25 November 2026. Konfigurasi rinci: README repo backend dan
 [kontrak API](docs/06_BACKEND_CONTRACT.md).
 
 ### B. Android Studio dan UAT pemilik

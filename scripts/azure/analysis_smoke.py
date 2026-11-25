@@ -118,7 +118,6 @@ def start_backend(binary, port, dbpath, logpath, env_overrides):
         "PORT": str(port),
         "DATABASE_URL": f"file:{dbpath}",
         "LOG_LEVEL": "info",
-        "REGISTRATION_INVITE_CODE": "isolated-synthetic",
     }
     env.update(env_overrides)
     log = Path(logpath).open("w")
@@ -236,8 +235,7 @@ def run_primary(binary, profile, args):
         email = f"analysis.smoke.{secrets.token_hex(6)}@pam-uat.test"
         password = os.environ.get("PAM_SMOKE_PASSWORD") or secrets.token_urlsafe(18)
         api.request(port, "/v1/accounts", "POST",
-                    {"email": email, "password": password, "displayName": "Synthetic smoke",
-                     "inviteCode": "isolated-synthetic"}, expect=201)
+                    {"email": email, "password": password, "displayName": "Synthetic smoke"}, expect=201)
         api.token = api.request(port, "/v1/sessions", "POST",
                                 {"email": email, "password": password}, expect=201)["accessToken"]
         categories = api.request(port, "/v1/categories")["categories"]
@@ -408,8 +406,7 @@ def run_ceiling(binary, profile, args):
         email = f"analysis.ceiling.{secrets.token_hex(6)}@pam-uat.test"
         password = os.environ.get("PAM_SMOKE_PASSWORD") or secrets.token_urlsafe(18)
         api.request(port, "/v1/accounts", "POST",
-                    {"email": email, "password": password, "displayName": "Synthetic smoke",
-                     "inviteCode": "isolated-synthetic"}, expect=201)
+                    {"email": email, "password": password, "displayName": "Synthetic smoke"}, expect=201)
         api.token = api.request(port, "/v1/sessions", "POST",
                                 {"email": email, "password": password}, expect=201)["accessToken"]
         api.request(port, "/v1/consents", "POST",

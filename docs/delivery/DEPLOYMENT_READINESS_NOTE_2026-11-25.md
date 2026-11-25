@@ -18,7 +18,8 @@ Kebutuhan minimum: HTTPS publik, volume persisten bila memakai file SQLite, dan 
 - `APP_ENV` **bukan** `development`; `PORT` mengikuti host.
 - `DATABASE_URL` (file di volume persisten atau `libsql://…` + `DATABASE_AUTH_TOKEN`).
 - `DATA_ENCRYPTION_KEY` (base64 32 byte, **baru untuk produksi**), `DATA_KEY_VERSION`,
-  `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `REFRESH_PEPPER`, `REGISTRATION_INVITE_CODE`.
+  `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `REFRESH_PEPPER`. Registrasi publik terbuka tanpa
+  kode undangan (keputusan pemilik 25 November 2026); tidak ada env undangan yang wajib.
 - Gmail: `GMAIL_ENABLED=true`, `GMAIL_MODE=polling`, `GMAIL_PROVIDER=google`,
   `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REDIRECT_URI=https://<host>/v1/gmail/connect/callback`,
   `GMAIL_APP_DEEP_LINK=pam://gmail/connected`.

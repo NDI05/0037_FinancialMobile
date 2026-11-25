@@ -1,7 +1,15 @@
 # Memo keputusan OI-27 dan OI-28 — 25 November 2026 (WIB)
 
-Status: **OPEN — keputusan milik pemilik.** Memo ini menyiapkan opsi dan rekomendasi; tidak ada
-default yang diambil dan tidak ada perubahan kode/dokumen resmi dalam memo ini.
+Status: **OI-28 DIPUTUSKAN PEMILIK 25 November 2026 (WIB); OI-27 tetap milik pemilik.**
+
+## Addendum — keputusan pemilik untuk OI-28 (25 November 2026)
+
+Pemilik memutuskan: (a) **hapus registrasi dengan kode undangan** — pendaftaran email+password
+terbuka; (b) **Google SSO menjadi jalur login dan daftar langsung** tanpa perlu menautkan lebih
+dulu di Pengaturan. Implementasi dan bukti: [CR-009](../changes/CR_009_OPEN_GOOGLE_AUTH.md) dan
+[evidence](../evidence/AUTH_OPEN_SSO_2026-11-25.md). Keputusan ini menggantikan fakta dan opsi di
+bawah; teks asli dipertahankan sebagai jejak keputusan. Dampak: OI-28 tinggal bagian ADMIN
+(`pam-admin -promote <email>`) yang tidak berubah.
 
 ## OI-28 — pendaftaran akun dan provisioning ADMIN
 
