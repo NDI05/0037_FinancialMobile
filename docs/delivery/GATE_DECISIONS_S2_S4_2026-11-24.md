@@ -47,7 +47,7 @@ PASS / PARTIAL / FAIL / NOT RUN per skenario.
 
 - Emulator `emulator-5556` (AVD project-local `pamui_api36`), backend UAT `127.0.0.1:18090`
   mode `production`, transport `adb reverse`; akun sintetis `wqa.*` dan `wqa.admin.1124`.
-- Perangkat pemilik `105397ba0507` (APK build `897e751`, terpasang 11:51) dipakai untuk UAT
+- Perangkat pemilik `(serial diredaksi)` (APK build `897e751`, terpasang 11:51) dipakai untuk UAT
   pemilik; data pemilik tidak pernah masuk repo (disamarkan/merah).
 - Artefak QA: [assets/pm_qa_2026-11-24](../evidence/assets/pm_qa_2026-11-24/), manifest
   `SHA256SUMS`. Artefak audit: [UAT_AUDIT_2026-11-24.md](../evidence/UAT_AUDIT_2026-11-24.md).

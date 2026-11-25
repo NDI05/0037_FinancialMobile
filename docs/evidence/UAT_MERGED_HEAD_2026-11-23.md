@@ -17,7 +17,7 @@ memberi dasar penutupan S2/S3/S4 tanpa mengklaim melebihi yang benar-benar dijal
 | Build | `./gradlew :app:assembleDebug -PPAM_BACKEND_BASE_URL=http://127.0.0.1:18090` dan `:app:assembleAssessment` (lihat `/tmp/merged-gates.log`); string `http://127.0.0.1:18090` terverifikasi ada di `classes*.dex` APK debug |
 | Backend UAT | `/tmp/pam-be-merged` pada `127.0.0.1:18090`, PID 9190, DB Turso sintetis `pam-real-uat-ndi05`, log `/tmp/pam-uat-18090-fixed.log` |
 | Backend terisolasi (jalur analisis) | binary yang sama pada `127.0.0.1:18091`, DB file `/tmp/pam-gap-analysis/pam.db`, `LLM_PROVIDER=fake` (tidak ada panggilan LLM nyata), log `/tmp/pam-gap-analysis/backend.log` |
-| Perangkat | emulator **5556** `Pixel_10_Pro_XL`; `adb reverse tcp:18090 tcp:18090` (UAT) lalu `tcp:18090 → tcp:18091` (isolated). Tidak memakai perangkat fisik `105397ba0507`. |
+| Perangkat | emulator **5556** `Pixel_10_Pro_XL`; `adb reverse tcp:18090 tcp:18090` (UAT) lalu `tcp:18090 → tcp:18091` (isolated). Tidak memakai perangkat fisik `(serial diredaksi)`. |
 
 Alasan dua backend: backend UAT `18090` tidak punya provider analisis yang berfungsi (POST
 `/v1/analyses` → 502 setelah ±31 s), sehingga jalur generasi/kesegaran analisis diuji pada

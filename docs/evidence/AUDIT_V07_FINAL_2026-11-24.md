@@ -5,7 +5,7 @@
 - **Android:** `pam-app`, branch `feat/c2-android`, HEAD **`a629c41fe62494d9a176714bf3667917058cc618`**
   (`origin/feat/c2-android` = HEAD; `main` = `origin/main` = `c10ca67e57b6e5fbe8e9c419adc870318e2958da`, tidak tersentuh)
 - **Backend:** `0037-Backend-Financial`, branch `integration/2026-11-24`, HEAD **`dd5bc88c6d9c85970e700f7444b89449f19e01e2`** (= origin, clean)
-- **Metode:** baca kode + tes + dokumen di working tree, jalankan gate build/test independen (tanpa fix/commit/checkout). Tidak me-restart backend/port 18090, tidak memakai HP fisik `105397ba0507`, tidak menyentuh data owner/live.
+- **Metode:** baca kode + tes + dokumen di working tree, jalankan gate build/test independen (tanpa fix/commit/checkout). Tidak me-restart backend/port 18090, tidak memakai HP fisik `(serial diredaksi)`, tidak menyentuh data owner/live.
 
 ## Ringkasan Verdict
 

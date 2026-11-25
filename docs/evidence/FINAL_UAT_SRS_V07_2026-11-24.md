@@ -13,8 +13,8 @@ tertutup, Rp0/billing, drill hapus-restore data pemilik, merge/deploy/SRS).
 | Backend | repo `0037-Backend-Financial`, branch `integration/2026-11-24`, HEAD **`dd5bc88`** |
 | Varian Android | `debug`, package `com.pam.recap.debug` |
 | APK diuji | `app/build/outputs/apk/debug/app-debug.apk`, **48.819.325 byte**, sha256 `e7a1f4afcb40261c65ada103963d9c56fa5bb261a7a2018341f5142acf82dde4` (fingerprint build; byte tidak deterministik antar-build) |
-| Instalasi | `adb -s 105397ba0507 install -r app/build/outputs/apk/debug/app-debug.apk` → `Success` (**bukan** tombol Run Android Studio) |
-| Perangkat | HP fisik `105397ba0507`, portrait 1080×2400 @440 dpi, font scale 1.0 |
+| Instalasi | `adb -s (serial diredaksi) install -r app/build/outputs/apk/debug/app-debug.apk` → `Success` (**bukan** tombol Run Android Studio) |
+| Perangkat | HP fisik `(serial diredaksi)`, portrait 1080×2400 @440 dpi, font scale 1.0 |
 | Backend runtime | `~/.config/pam/uat-runtime/pam-api-loopback` (rebuild dari `dd5bc88`, sha256 `3bdcca47…`), `127.0.0.1:18090`, `adb reverse tcp:18090 tcp:18090`, `/readyz` = ready |
 | Basis data | `~/.config/pam/pam-gmail-uat.db` (akun UAT sintetis `owner-uat@pam.test`; data pilot owner tidak diubah) |
 | Profil provider | Gmail nyata (`GMAIL_PROVIDER=google`), kategori LLM **nonaktif** (`CATEGORY_LLM_ENABLED=false`), `LLM_PROVIDER=fake` untuk Analisis (env UAT; bukan Azure berbayar) |

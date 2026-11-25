@@ -209,7 +209,7 @@ gagal `IllegalArgumentException: Path is not a file: .../.robolectric-deps/andro
 ## Batasan bukti
 
 - Hanya satu emulator dipakai (`emulator-5556`); emulator-5554 milik Worker A dan perangkat fisik
-  `105397ba0507` tidak disentuh.
+  `(serial diredaksi)` tidak disentuh.
 - Pencarian lewat keyboard emulator memakai `adb shell input text` yang tidak konsisten pada IME
   Compose; bukti pencarian di perangkat karena itu diganti dengan filter peran/status (angka cocok
   dengan API) dan unit test screen. Pencarian `q` sendiri dibuktikan lewat respons API nyata.

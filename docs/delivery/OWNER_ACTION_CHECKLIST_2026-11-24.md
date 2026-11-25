@@ -4,11 +4,19 @@ Dokumen ini merangkum satu-satunya pekerjaan yang tersisa. Semua prasyarat otoma
 diverifikasi siap (`scripts/verify/uat_readiness.sh` → exit 0; backend `00bb515`, Android
 `8824fff`, APK sha256 `5368c92f…`, DB live 914 transaksi / 21 job COMPLETE). Untuk putaran SRS v0.7, pasangan build yang berlaku adalah Android `a629c41` + backend `dd5bc88` ([gate v0.7](FINAL_GATES_SRS_V07_2026-11-24.md), [UAT final](../evidence/FINAL_UAT_SRS_V07_2026-11-24.md)); status gate pemilik di bawah tidak berubah.
 
+> **Update 25 November 2026:** pasangan build terbaru adalah Android `0cf7faf` (APK sha256
+> `5a2f71a1…`) + backend `d42d7c4` (dokumentasi `aa33fb8`, migrasi **22**). Backend UAT lokal sudah
+> memakai binary perbaikan nominal; DB UAT lokal sudah dimigrasi sekali jalan (915 baris EMAIL
+> diskalakan, 10 baris MANUAL utuh). Karena itu, setelah membuka aplikasi, **refresh daftar
+> Transaksi/Ringkasan** dan pastikan nominal email Livin sudah sesuai (tidak lagi 100x kecil).
+> Analisis lama yang tersimpan perlu dibuat ulang. Sisa gate pemilik tidak berubah; lihat
+> [verifikasi ulang gate 25 Nov](GATE_RECHECK_2026-11-25.md).
+
 ## 1. G36 — UAT SSO Google + tombol Run Android Studio
 
 Prasyarat (sudah siap): Web Client ID terpasang di `local.properties`/`PAM_GOOGLE_SSO_CLIENT_ID`,
 SHA-1 debug `com.pam.recap.debug` terdaftar pada OAuth Android client, backend berjalan di
-`127.0.0.1:18090`, `adb reverse tcp:18090 tcp:18090` aktif, HP `105397ba0507` terhubung.
+`127.0.0.1:18090`, `adb reverse tcp:18090 tcp:18090` aktif, HP `(serial diredaksi)` terhubung.
 
 **Sudah terbukti 24 Nov 21:49–21:50 WIB:** login Google nyata dari HP + sesi PAM terbit + binding
 identitas + 914 transaksi tetap unik (0 duplikat), dengan bukti perangkat `MainActivity` resumed

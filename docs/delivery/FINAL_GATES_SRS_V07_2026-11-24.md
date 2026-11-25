@@ -1,5 +1,7 @@
 # Gate akhir SRS v0.7 — cakupan produk, pensiun modul, dan regresi (24 November 2026)
 
+> **Update 25 November 2026:** temuan audit, perbaikan nominal impor email (`d42d7c4`), migrasi 022, dan status gate terbaru (FR-67, NFR-15, G14 fixture, G36 PARTIAL) ada di [verifikasi ulang gate 25 Nov](GATE_RECHECK_2026-11-25.md). Dokumen ini adalah snapshot gate 24 Nov.
+
 Status keseluruhan: **PASS untuk perilaku yang diuji pada pasangan build di bawah**; gate
 pemilik (Run literal, onboarding/consent Gmail, email baru saat app tertutup, Rp0/billing, drill
 hapus-restore data nyata, merge `main`/deploy/revisi SRS) tetap **NOT RUN / OPEN** dan tidak
@@ -12,7 +14,7 @@ diklaim PASS. Bukti rinci di [FINAL_UAT_SRS_V07_2026-11-24.md](../evidence/FINAL
 | Android | branch `feat/c2-android`, HEAD **`b885555`** (= origin; `a629c41` refresh daftar setelah simpan manual + `b885555` penutupan P2 audit final: copy privasi catatan dan identitas retry legacy) |
 | Backend | branch `integration/2026-11-24`, HEAD **`dd5bc88`** (== `origin`), 21 migrasi tidak berubah |
 | `main` | Android `main` **tidak disentuh**; backend `main` **tidak disentuh**; tanpa force-push |
-| Varian Android | `debug` (`com.pam.recap.debug`), konfigurasi `app`, perangkat fisik `105397ba0507` (portrait 1080×2400, font 100%) |
+| Varian Android | `debug` (`com.pam.recap.debug`), konfigurasi `app`, perangkat fisik `(serial diredaksi)` (portrait 1080×2400, font 100%) |
 | APK UAT | 48.819.325 byte sha256 `e7a1f4af…` (build `a629c41`, dipakai UAT awal) dan **47.628.443 byte sha256 `ef34261b…`** (build `b885555`, dipasang ulang via `adb install -r`); byte tidak deterministik — fingerprint build |
 | Backend runtime | `~/.config/pam/uat-runtime/pam-api-loopback` rebuild dari `dd5bc88`, `127.0.0.1:18090` + `adb reverse`, `/readyz` ready; DB `~/.config/pam/pam-gmail-uat.db` (akun UAT sintetis) |
 | Profil provider UAT | Gmail nyata (`google`); kategori LLM nonaktif (`CATEGORY_LLM_ENABLED=false` → enqueue 503 by config); Analisis `LLM_PROVIDER=fake` (bukan Azure berbayar) |

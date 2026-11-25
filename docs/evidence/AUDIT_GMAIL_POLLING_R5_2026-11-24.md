@@ -72,7 +72,7 @@ Kedua MAJOR ronde 4 terbukti tertutup di kode + test kedua repo, dan sweep regre
 - `FINAL_GATES…` G22 sudah menyatakan "re-audit temuan ronde 4 tanpa P0 tersisa" padahal laporan ini baru diterbitkan dan (sesuai mandat) berada di `/tmp`, bukan `docs/evidence/`. Isi klaim konsisten dengan hasil audit ini (tidak ada P0/MAJOR), tetapi dokumen gate sebaiknya merujuk laporan ronde 5 (path/isi) agar jejak audit lengkap — terutama karena gate G22 berstatus PASS.
 
 ### F8 (NIT) — identifier perangkat di dokumen bukti
-- `GMAIL_POLLING_UAT_PHONE_2026-11-24.md` memuat model + serial perangkat (`21061119AG`, `105397ba0507`) dan path profil privat `~/.config/pam/…` (tanpa nilai secret). Bukan data pribadi pemilik dan wajar untuk traceability UAT, tetapi bila dokumen dibagikan keluar, serial perangkat sebaiknya disamarkan.
+- `GMAIL_POLLING_UAT_PHONE_2026-11-24.md` memuat model + serial perangkat (`21061119AG`, `(serial diredaksi)`) dan path profil privat `~/.config/pam/…` (tanpa nilai secret). Bukan data pribadi pemilik dan wajar untuk traceability UAT, tetapi bila dokumen dibagikan keluar, serial perangkat sebaiknya disamarkan.
 
 ## 4. SWEEP REGRESI (tidak ada regresi fungsional)
 

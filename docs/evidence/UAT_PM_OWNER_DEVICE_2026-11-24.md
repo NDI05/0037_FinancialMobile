@@ -1,6 +1,6 @@
 # UAT perangkat pemilik — 24 November 2026 (S2)
 
-Bukti diambil langsung pada perangkat pemilik `105397ba0507` dengan APK debug yang terpasang
+Bukti diambil langsung pada perangkat pemilik `(serial diredaksi)` dengan APK debug yang terpasang
 pukul 11:08 WIB dari build `0030a43`. Rentang `0030a43..092276e` **tidak mengubah kode
 Android** (`git diff --name-only 0030a43..HEAD | grep -v '^docs/'` hanya berisi backend Go),
 jadi APK saat itu memuat kode Android final. Backend UAT `:18090` adalah binary baru yang

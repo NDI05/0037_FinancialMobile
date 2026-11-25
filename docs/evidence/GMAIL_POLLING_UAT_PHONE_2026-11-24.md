@@ -13,7 +13,7 @@ nominal nyata, atau token di dokumen maupun aset.
 | APK | `app/build/outputs/apk/debug/app-debug.apk`, varian debug, package `com.pam.recap.debug`, 46.433.080 byte; build UAT `a7abb14` 17:08 WIB sha256 `93b69cc0…`, build final `7f218ed` 17:28 WIB sha256 `7efc1803…` |
 | Repo backend | `0037-Backend-Financial`, branch `integration/2026-11-24`, HEAD `1290910` |
 | Binary backend | `/tmp/pam-gmail-uat/bin/pam-api`, dibangun dari `1290910` pukul 17:12 WIB |
-| Perangkat | HP fisik `21061119AG`, serial `105397ba0507`, Android debug via `adb` |
+| Perangkat | HP fisik `21061119AG`, serial `(serial diredaksi)`, Android debug via `adb` |
 | Transport | `adb reverse tcp:18090 tcp:18090`; backend hanya mendengarkan loopback `127.0.0.1:18090` |
 | Profil backend | `~/.config/pam/gmail-uat-fixture*.env` (permission 600, di luar repo): `APP_ENV=development`, `GMAIL_PROVIDER=fake`, `GMAIL_DEV_SCENARIO=normal`, DB SQLite terpisah, `GMAIL_WORKER_INTERVAL_SECONDS=10`, `GMAIL_DELTA_INTERVAL_SECONDS=60`, `GMAIL_SYNC_COOLDOWN_SECONDS=60` |
 | Akun uji | akun sintetis fixture (`uat.pm@pam.test`), Gmail tertaut lewat consent palsu; consent AI/Azure tetap nonaktif |

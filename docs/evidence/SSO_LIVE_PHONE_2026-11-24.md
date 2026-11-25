@@ -64,8 +64,8 @@ saat app tertutup) belum diuji. Gate dihitung **PARTIAL** — bukan PASS — sam
 ## 6. Adendum build final SRS v0.7 — 24 November 2026 (WIB)
 
 Putaran verifikasi akhir memakai **build final** `feat/c2-android@a629c41` + backend
-`integration/2026-11-24@dd5bc88`, dipasang di HP fisik `105397ba0507` dengan
-`adb -s 105397ba0507 install -r app/build/outputs/apk/debug/app-debug.apk` (**bukan** tombol Run).
+`integration/2026-11-24@dd5bc88`, dipasang di HP fisik `(serial diredaksi)` dengan
+`adb -s (serial diredaksi) install -r app/build/outputs/apk/debug/app-debug.apk` (**bukan** tombol Run).
 APK 48.819.325 byte sha256 `e7a1f4af…`; backend runtime `dd5bc88` di `127.0.0.1:18090` via
 `adb reverse`, `/readyz` ready, DB UAT sintetis.
 

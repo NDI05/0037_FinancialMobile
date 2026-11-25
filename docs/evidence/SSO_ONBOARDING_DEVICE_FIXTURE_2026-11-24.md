@@ -3,7 +3,7 @@
 - **Tanggal**: 24 November 2026, 18:30–18:35 WIB
 - **Sifat**: bukti **fixture di HP fisik**; **bukan** UAT akun Google nyata dan bukan Gmail live.
   Tidak ada akun Google, consent `gmail.readonly` nyata, email asli, atau data pemilik dalam uji ini.
-- **Perangkat**: HP fisik `105397ba0507` (model `21061119AG`), aplikasi `com.pam.recap.debug`.
+- **Perangkat**: HP fisik `(serial diredaksi)` (model `21061119AG`), aplikasi `com.pam.recap.debug`.
 - **Build**: Android `e67380a` (APK debug 48.362.013 B, sha256 `41584bae…`; dokumen di `062e674`);
   backend `integration/2026-11-24` @ `138b5c3` (kode `71013f5`), mode fixture Gmail, port 18090
   lewat `adb reverse`.
@@ -57,7 +57,7 @@ dinyalakan (profil fixture, port isolasi 18091, SSO sengaja mati):
 - `/readyz` → `200` (OK)
 - `/v1/auth/google/nonce` → `503 google_sso_disabled` (dilaporkan BELUM, benar untuk profil tanpa client ID)
 - `/v1/gmail/status` → `401` tanpa token (dilaporkan OK: rute terpasang)
-- HP `105397ba0507` terdeteksi, Play Services OK, paket debug terpasang, `adb reverse` belum ada
+- HP `(serial diredaksi)` terdeteksi, Play Services OK, paket debug terpasang, `adb reverse` belum ada
 
 Exit `2` dengan daftar prasyarat kurang — sesuai harapan. Ini memvalidasi skrip terhadap rute
 backend nyata, bukan hanya server HTTP tiruan. Temuan higiene: proses backend lama
