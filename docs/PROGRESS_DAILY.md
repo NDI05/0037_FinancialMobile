@@ -656,3 +656,10 @@ alami), G29/G37 Rp0, deploy/SRS (merge sudah selesai), OI-27, dan G14 owner-gate
 Bukti polling: 5 job sinkron terakhir `11:20:33Z / 11:36:33Z / 11:52:33Z / 12:07:53Z / 12:09:12Z`
 (±15–16 menit), semuanya `COMPLETE`. Commit `685d191`, di-push ke `main`.
 
+**Siklus polling otonom terbukti (25 Nov 19:25:53 WIB).** Tanpa membuka/mengubah aplikasi,
+server membuat job sinkron Gmail baru pada `12:25:53Z` dengan state **COMPLETE** (job ke-20;
+sebelumnya `12:09:12Z`), koneksi Gmail ikut diperbarui. Ini membuktikan prasyarat G36 "email Livin
+saat app tertutup" berjalan di host: polling ±15–16 menit tidak bergantung pada aplikasi. Jumlah
+transaksi tetap **876** (belum ada email Livin baru); setelah pemilik mengirim email alami,
+ekspektasi gate tetap **tepat +1 transaksi**. Gate doc dan runbook G36 diperbarui.
+

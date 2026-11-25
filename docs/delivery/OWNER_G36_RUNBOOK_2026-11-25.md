@@ -73,7 +73,7 @@ Sebelum uji pemilik, agent mencatat baseline **agregat tanpa PII** langsung dari
 
 - transaksi non-deleted: **876**, semuanya `EMAIL`; transaksi terbaru `2026-11-25T10:49:51Z` (17:49 WIB)
 - `gmail_connections`: **1**, terakhir diperbarui `2026-11-25T12:09:53Z` (19:09 WIB)
-- `gmail_sync_jobs`: **19 COMPLETE**, terakhir `2026-11-25T12:09:12Z` (19:09 WIB) → polling hidup
+- `gmail_sync_jobs`: **20 COMPLETE**, terakhir `2026-11-25T12:25:53Z` (19:25:53 WIB; siklus otonom ±15–16 menit) → polling hidup tanpa app aktif
 - `category_jobs`: **358 CLASSIFIED / 515 NEEDS_REVIEW**, 0 pending
 
 Setelah uji pemilik, agent akan mengulang kueri yang sama dan mengharapkan **tepat +1 transaksi
