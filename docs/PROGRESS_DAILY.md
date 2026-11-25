@@ -685,3 +685,10 @@ Gmail (`12:56:53Z`), consent, atau transaksi setelah relogin; jumlah transaksi t
 Artinya porsi Run/login/logout/relogin tampak sudah dijalankan pemilik; sisa G36 adalah
 onboarding Gmail + satu email Livin alami. Bila ini bukan aksi pemilik, mohon konfirmasi.
 
+**Pemantauan G36 pasca-relogin (25 Nov 20:00–20:18 WIB).** Setelah sesi logout/relogin 19:58 WIB,
+tidak ada perubahan koneksi Gmail (`12:56:53Z`), consent (tetap 3), maupun transaksi (**876**).
+Polling Gmail tetap sehat: job ke-23 `13:12:53Z` (**20:12:53 WIB**) `COMPLETE`. Jadi porsi
+login/logout/relogin tampak sudah dijalankan, tetapi **Tautkan Gmail + consent dan email Livin
+alami belum terjadi**; G36 tetap PARTIAL. Bila pemilik belum menautkan Gmail pada akun uji, lanjutkan
+langkah 3–5 runbook.
+
