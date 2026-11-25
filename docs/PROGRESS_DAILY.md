@@ -731,3 +731,21 @@ tetap NOT RUN dan dicatat di manifest bukti.
 bukti widget/notifikasi, APK debug final (`d62ab519…`) dipasang ulang di HP fisik. Screenshot
 Ringkasan, Transaksi, sheet status, Pengaturan, 360/412 dp, dan font 200% diambil ulang dari build
 ini; back dari drill-down Transaksi ke Ringkasan terverifikasi. Tidak ada perubahan data pemilik.
+
+**Redesign Stitch iterasi struktur penuh (26 Nov 2026, 00:15 WIB).** Lead menyelesaikan integrasi
+visual seluruh layar utama di branch `feature/stitch-redesign`: Ringkasan dan Transaksi ditulis ulang
+mengikuti blok/proporsi render Stitch 393 dp (kartu bank opsi B, kartu kategori 6 track, search 48 dp,
+chip 36 dp, grup tanggal, FAB lime 56 dp radius 24 di atas nav), lalu Detail, Tambah, Analisis,
+Pengaturan, Kelola Kategori, Gmail, dan sheet status dirapikan oleh lane UI/QA/Android dan
+diintegrasikan Lead. Perbaikan lintas lane: label nominal "Rp" + pemisah ribuan pada Tambah, footer
+cakupan server pada Transaksi, label aksesibilitas field catatan Detail, dan hit target teks
+Pengeluaran/Pemasukan di Ringkasan. Sheet status dipadatkan (header "Terakhir", kartu radius 16,
+aksi tunggal) dan dibuktikan tetap menyimpan progres saat ditutup lalu dibuka kembali ketika sync
+berjalan. Gate: `:app:testDebugUnitTest` 640 tes/0 gagal, `assembleDebug` lulus, `lintDebug`
+0 error; satu kegagalan flaky `AutoCategoryUseCaseTest` sempat muncul pada gate pertama dan lulus
+3/3 saat dijalankan ulang terisolasi. Bukti visual per layar (sebelum/Stitch/sesudah, dump bounds,
+360/412 dp, font 200%) ada di
+[evidence/stitch_redesign_2026-11-25](evidence/stitch_redesign_2026-11-25/README.md). Batas jujur:
+sesi Gmail server berakhir saat sesi verifikasi sehingga layar Transaksi/Kategori hanya terekam
+sebagai state error pada capture terakhir; relink butuh OAuth pemilik. Android Studio Run literal
+tetap **NOT RUN**.

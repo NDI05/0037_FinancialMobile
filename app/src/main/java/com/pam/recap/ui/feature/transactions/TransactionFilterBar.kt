@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
@@ -274,20 +275,26 @@ private fun FilterChip(
     val shape = RoundedCornerShape(PamRadius.pill)
     Box(
         modifier = Modifier
-            .clip(shape)
-            .background(if (selected) OnInk else Surface)
-            .border(1.dp, if (selected) Color.Transparent else GlassBorder, shape)
-            .clickable(role = Role.Button, onClick = onClick)
             .minimumInteractiveComponentSize()
-            .padding(horizontal = PamSpacing.sm, vertical = PamSpacing.xs),
+            .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = label,
-            style = LabelL,
-            color = if (selected) Ink else OnInkMuted,
-            maxLines = 1,
-        )
+        Box(
+            modifier = Modifier
+                .height(36.dp)
+                .clip(shape)
+                .background(if (selected) OnInk else Surface)
+                .border(1.dp, if (selected) Color.Transparent else GlassBorder, shape)
+                .padding(horizontal = PamSpacing.md),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = label,
+                style = LabelL,
+                color = if (selected) Ink else OnInkMuted,
+                maxLines = 1,
+            )
+        }
     }
 }
 

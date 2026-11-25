@@ -77,10 +77,12 @@ fun MonthSelector(
     ) {
         Row(
             modifier = Modifier
+                .widthIn(min = 249.dp)
+                .height(58.dp)
                 .clip(RoundedCornerShape(PamRadius.pill))
                 .background(com.pam.recap.ui.theme.SurfaceLow)
                 .border(1.dp, com.pam.recap.ui.theme.OutlineVariant, RoundedCornerShape(PamRadius.pill))
-                .padding(horizontal = PamSpacing.xxs, vertical = 2.dp),
+                .padding(horizontal = PamSpacing.xxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MonthArrow(
@@ -91,8 +93,8 @@ fun MonthSelector(
             )
             Column(
                 modifier = Modifier
-                    .widthIn(min = 128.dp)
-                    .padding(horizontal = PamSpacing.sm),
+                    .weight(1f)
+                    .padding(horizontal = PamSpacing.xxs),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
@@ -267,7 +269,7 @@ fun BottomNavBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 68.dp)
+                .heightIn(min = 48.dp)
                 .padding(horizontal = PamSpacing.xs, vertical = PamSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),

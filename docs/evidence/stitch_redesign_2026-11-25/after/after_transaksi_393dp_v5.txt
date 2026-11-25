@@ -1,0 +1,10 @@
+  53.1  72.0  Transaksi
+ 171.8  76.4  November 2026
+ 171.8 246.0  Semua
+ 171.8 332.6  Pengeluaran
+ 233.6  36.0  Sesi Google berakhir. Hubungkan ulang kotak masuk.
+ 316.2  40.0  Coba lagi
+   0.0   0.0  Ringkasan
+   0.0   0.0  Transaksi
+   0.0   0.0  Analisis
+   0.0   0.0  Pengaturan

@@ -666,4 +666,5 @@
     <string name="widget_preview_month">November 2026</string>
     <string name="widget_preview_count">42 transaksi</string>
     <string name="widget_preview_subtitle">Ringkasan bulan ini</string>
+    <string name="update_status_last_success_short">Terakhir: %1$s</string>
 </resources>

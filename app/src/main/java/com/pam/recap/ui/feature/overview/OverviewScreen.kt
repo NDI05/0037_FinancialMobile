@@ -9,17 +9,20 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Undo
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -44,24 +47,29 @@ import com.pam.recap.domain.model.CoverageStatus
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.model.MonthlySummary
 import com.pam.recap.domain.model.Transaction
+import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.ui.components.CategoryGlyph
 import com.pam.recap.ui.components.GlassCard
 import com.pam.recap.ui.components.GlassTopBar
+import com.pam.recap.ui.components.GroupedListCard
 import com.pam.recap.ui.components.LoadingShimmer
 import com.pam.recap.ui.components.MoneyText
 import com.pam.recap.ui.components.MoneyTone
 import com.pam.recap.ui.components.MonthSelector
 import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
-import com.pam.recap.ui.components.SectionHeader
-import com.pam.recap.ui.components.categoryColor
 import com.pam.recap.ui.components.TransactionRow
+import com.pam.recap.ui.components.categoryColor
+import com.pam.recap.ui.components.categoryIcon
 import com.pam.recap.ui.feature.status.UpdateStatusTopBarAction
+import com.pam.recap.ui.theme.Accent
 import com.pam.recap.ui.theme.BodyM
 import com.pam.recap.ui.theme.BodyS
 import com.pam.recap.ui.theme.DisplayL
 import com.pam.recap.ui.theme.HeadlineM
 import com.pam.recap.ui.theme.IncomeMint
+import com.pam.recap.ui.theme.LabelEyebrow
+import com.pam.recap.ui.theme.LabelL
 import com.pam.recap.ui.theme.LabelM
 import com.pam.recap.ui.theme.OnInk
 import com.pam.recap.ui.theme.OnInkFaint
@@ -71,22 +79,23 @@ import com.pam.recap.ui.theme.PamRadius
 import com.pam.recap.ui.theme.PamSize
 import com.pam.recap.ui.theme.PamSpacing
 import com.pam.recap.ui.theme.Surface
+import com.pam.recap.ui.theme.SurfaceLow
 import com.pam.recap.ui.theme.TitleL
 import com.pam.recap.ui.theme.TitleM
 import com.pam.recap.ui.util.PamDateFormat
+import com.pam.recap.ui.util.appErrorRes
 import com.pam.recap.ui.util.categoryLabelRes
 import com.pam.recap.ui.util.coverageBannerRes
-import com.pam.recap.ui.util.appErrorRes
 import com.pam.recap.ui.util.directionLabelRes
 
 /**
- * Stitch Ringkasan: centred title with the update-status icon, a compact month pill, two summary
- * cards (expense first), the Option B bank carousel, the category breakdown and recent rows.
+ * Stitch Ringkasan: centred title with the update-status icon, a compact month pill, the Option B
+ * bank card (expense hero + income drill-down), a six-column category chart and the three latest
+ * rows inside one grouped list.
  *
  * [monthTransactions] is additive and optional: when the host already holds the month's rows it
- * yields exact per-direction counts on the summary cards. Without it the cards still show the
- * authoritative amounts from [MonthlySummary], while Mandiri's EMAIL count comes from the summary
- * arithmetic (transactionCount minus manualEntryCount), never from account totals.
+ * yields exact per-direction counts. Without it the authoritative amounts still come from
+ * [MonthlySummary], while Mandiri's EMAIL count uses the summary arithmetic (recorded minus manual).
  */
 @Composable
 fun OverviewScreen(
@@ -121,49 +130,29 @@ fun OverviewScreen(
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = PamSpacing.xxs,
-                    bottom = PamSize.bottomBarContentPadding,
-                ),
-                verticalArrangement = Arrangement.spacedBy(PamSpacing.sm),
+                contentPadding = PaddingValues(bottom = PamSize.bottomBarContentPadding),
             ) {
                 item {
                     // Arrows stop at the rolling-year boundaries; no month outside the window is reachable.
                     val window = viewModel.window()
-                    MonthSelector(
-                        label = month.label(),
-                        onPrevious = viewModel::previousMonth,
-                        onNext = viewModel::nextMonth,
-                        canGoPrevious = window.canGoEarlier(month),
-                        canGoNext = window.canGoLater(month),
-                        partial = window.isPartial(month),
-                    )
+                    Box(modifier = Modifier.padding(top = PamSpacing.xs)) {
+                        MonthSelector(
+                            label = month.label(),
+                            onPrevious = viewModel::previousMonth,
+                            onNext = viewModel::nextMonth,
+                            canGoPrevious = window.canGoEarlier(month),
+                            canGoNext = window.canGoLater(month),
+                            partial = window.isPartial(month),
+                        )
+                    }
                 }
 
                 if (summary != null) {
                     item {
+                        Spacer(modifier = Modifier.height(38.dp))
                         val counts = rowsForBanks
                             .takeIf { it.isNotEmpty() }
                             ?.let { monthlyDirectionCounts(it, month) }
-                        Column(verticalArrangement = Arrangement.spacedBy(PamSpacing.xs)) {
-                            SummaryCard(
-                                label = stringResource(R.string.overview_expense_recorded),
-                                amount = summary.grossOutflow,
-                                tone = MoneyTone.Neutral,
-                                count = counts?.expense,
-                                onClick = { onOpenTransactions(null, month.id(), Direction.DEBIT) },
-                            )
-                            SummaryCard(
-                                label = stringResource(R.string.overview_income_recorded),
-                                amount = summary.grossInflow,
-                                tone = MoneyTone.Income,
-                                count = counts?.income,
-                                onClick = { onOpenTransactions(null, month.id(), Direction.CREDIT) },
-                            )
-                        }
-                    }
-
-                    item {
                         val mandiriCount = if (rowsForBanks.isNotEmpty()) {
                             emailTransactionCount(rowsForBanks, month)
                         } else {
@@ -171,13 +160,23 @@ fun OverviewScreen(
                         }
                         BankCards(
                             cards = buildBankCards(month = month, mandiriEmailCount = mandiriCount),
+                            expense = summary.grossOutflow,
+                            income = summary.grossInflow,
+                            expenseCount = counts?.expense,
+                            incomeCount = counts?.income,
+                            onOpenExpense = {
+                                onOpenTransactions(null, month.id(), Direction.DEBIT)
+                            },
+                            onOpenIncome = {
+                                onOpenTransactions(null, month.id(), Direction.CREDIT)
+                            },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
 
                     if (summary.hasData) {
-                        item { NetCashFlowNote(summary = summary) }
                         item {
+                            Spacer(modifier = Modifier.height(2.dp))
                             CategoryBreakdown(
                                 summary = summary,
                                 onOpenCategory = { code -> onOpenTransactions(code, month.id(), null) },
@@ -185,43 +184,65 @@ fun OverviewScreen(
                             )
                         }
                     } else {
-                        item { EmptyMonthCard(coverage = summary.coverage) }
+                        item {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            EmptyMonthCard(coverage = summary.coverage)
+                        }
                     }
                 }
 
                 if (state.recent.isNotEmpty()) {
                     item {
-                        SectionHeader(
-                            eyebrow = stringResource(R.string.overview_recent_eyebrow),
-                            trailing = {
-                                Text(
-                                    text = stringResource(R.string.action_see_all),
-                                    style = LabelM,
-                                    color = OnInkMuted,
-                                    modifier = Modifier
-                                        .minimumInteractiveComponentSize()
-                                        .clip(RoundedCornerShape(PamRadius.sm))
-                                        .clickable(role = Role.Button) {
-                                            onOpenTransactions(null, month.id(), null)
-                                        }
-                                        .padding(horizontal = PamSpacing.xs, vertical = PamSpacing.xs),
-                                )
-                            },
-                        )
+                        Spacer(modifier = Modifier.height(28.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.overview_recent_title),
+                                style = TitleM,
+                                color = OnInk,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                text = stringResource(R.string.action_see_all),
+                                style = LabelL,
+                                color = OnInkMuted,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(PamRadius.sm))
+                                    .clickable(role = Role.Button) {
+                                        onOpenTransactions(null, month.id(), null)
+                                    }
+                                    .padding(horizontal = PamSpacing.xs, vertical = PamSpacing.xs),
+                            )
+                        }
                     }
-                    items(state.recent) { transaction ->
-                        TransactionRow(
-                            category = transaction.category,
-                            title = transaction.description,
-                            meta = rowMeta(transaction),
-                            amount = transaction.amount,
-                            direction = transaction.direction,
-                            isLowConfidence = transaction.isLowConfidence,
-                            hasUnconfirmedSuggestion = transaction.hasUnconfirmedSuggestion,
-                            currency = transaction.currency,
-                            onClick = { onOpenTransaction(transaction.id) },
-                            modifier = Modifier.padding(horizontal = 0.dp),
-                        )
+                    item {
+                        GroupedListCard(radius = PamRadius.xl) {
+                            state.recent.take(RECENT_ROWS).forEachIndexed { index, transaction ->
+                                if (index > 0) {
+                                    HorizontalDivider(
+                                        color = OutlineVariant,
+                                        modifier = Modifier.padding(start = PamSpacing.md),
+                                    )
+                                }
+                                TransactionRow(
+                                    category = transaction.category,
+                                    title = transaction.description,
+                                    meta = stringResource(categoryLabelRes(transaction.category)),
+                                    amount = transaction.amount,
+                                    direction = transaction.direction,
+                                    isLowConfidence = transaction.isLowConfidence,
+                                    hasUnconfirmedSuggestion = transaction.hasUnconfirmedSuggestion,
+                                    isManual = transaction.source == TransactionSource.MANUAL,
+                                    currency = transaction.currency,
+                                    showCardWrapper = false,
+                                    onClick = { onOpenTransaction(transaction.id) },
+                                )
+                            }
+                        }
                     }
                 } else if (state.error != null) {
                     item {
@@ -235,189 +256,176 @@ fun OverviewScreen(
     }
 }
 
-/** White bordered summary card; the whole card drills into the month list with a direction filter. */
-@Composable
-private fun SummaryCard(
-    label: String,
-    amount: Money,
-    tone: MoneyTone,
-    count: Int?,
-    onClick: () -> Unit,
-) {
-    val shape = RoundedCornerShape(PamRadius.lg)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .minimumInteractiveComponentSize()
-            .clip(shape)
-            .background(Surface)
-            .border(1.dp, OutlineVariant, shape)
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(PamSpacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = BodyM, color = OnInkMuted)
-            Spacer(modifier = Modifier.height(PamSpacing.xxs))
-            MoneyText(amount = amount, tone = tone, style = DisplayL)
-            if (count != null) {
-                Spacer(modifier = Modifier.height(PamSpacing.xxs))
-                Text(
-                    text = pluralStringResource(R.plurals.overview_recorded_count, count, count),
-                    style = LabelM,
-                    color = OnInkFaint,
-                )
-            }
-        }
-        Icon(
-            imageVector = Icons.Rounded.ChevronRight,
-            contentDescription = null,
-            tint = OnInkFaint,
-            modifier = Modifier.size(20.dp),
-        )
-    }
-}
-
 /**
- * One-line honesty note replacing the old dominant net-cash-flow hero. Net flow is still reported
- * to TalkBack and shown compactly; there is no duplicate data-source banner.
+ * Stitch category chart: six 32 dp columns, each a percentage label, a 96 dp pill track filled from
+ * the bottom, and a category glyph. The strongest category is repeated as the legend row.
  */
-@Composable
-private fun NetCashFlowNote(summary: MonthlySummary) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(PamSpacing.xs),
-    ) {
-        Text(
-            text = stringResource(R.string.overview_net_eyebrow),
-            style = LabelM,
-            color = OnInkFaint,
-        )
-        MoneyText(
-            amount = summary.netCashFlow,
-            tone = if (summary.netCashFlow.isNegative) MoneyTone.Expense else MoneyTone.Income,
-            style = TitleM,
-        )
-    }
-}
-
-@Composable
-private fun rowMeta(transaction: Transaction): String {
-    val category = stringResource(categoryLabelRes(transaction.category))
-    val time = PamDateFormat.time(transaction.eventAt)
-    val direction = stringResource(directionLabelRes(transaction.direction))
-    // Direction before category: an ellipsis may only ever drop the category name.
-    return "$time · $direction · $category"
-}
-
-/** Category breakdown: glyph, label, transaction count, amount and a share bar (FR-30/FR-32). */
 @Composable
 private fun CategoryBreakdown(
     summary: MonthlySummary,
     onOpenCategory: (String) -> Unit,
     onSeeAll: () -> Unit,
 ) {
-    // BR-02: this section is the *expense* breakdown, so income and transfers must not appear.
     val expenseTotals = summary.categoryTotals
         .filter { it.category.kind == ClassifiedKind.EXPENSE && !it.amount.isZero }
         .sortedByDescending { it.amount.minor }
         .take(MAX_CATEGORIES)
+    val totalExpense = summary.classifiedExpense.minor.toFloat().takeIf { it > 0f }
 
-    Column(verticalArrangement = Arrangement.spacedBy(PamSpacing.xs)) {
-        SectionHeader(
-            eyebrow = stringResource(R.string.overview_categories_eyebrow),
-            trailing = {
-                Text(
-                    text = stringResource(R.string.action_see_all),
-                    style = LabelM,
-                    color = OnInkMuted,
-                    modifier = Modifier
-                        .minimumInteractiveComponentSize()
-                        .clip(RoundedCornerShape(PamRadius.sm))
-                        .clickable(role = Role.Button, onClick = onSeeAll)
-                        .padding(horizontal = PamSpacing.xs, vertical = PamSpacing.xs),
-                )
-            },
-        )
-        expenseTotals.forEach { total ->
-            CategoryRow(
-                total = total,
-                share = if (summary.classifiedExpense.isPositive) {
-                    total.amount.minor.toFloat() / summary.classifiedExpense.minor.toFloat()
-                } else {
-                    0f
-                },
-                onClick = { onOpenCategory(total.category.code) },
+    val shape = RoundedCornerShape(PamRadius.xl)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 274.dp)
+            .clip(shape)
+            .background(Surface)
+            .border(1.dp, OutlineVariant, shape)
+            .padding(PamSpacing.md),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.overview_top_categories),
+                style = TitleM,
+                color = OnInk,
+                modifier = Modifier.weight(1f),
             )
+            Text(
+                text = stringResource(R.string.overview_analysis_link),
+                style = LabelM,
+                color = OnInkMuted,
+                modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .clip(RoundedCornerShape(PamRadius.sm))
+                    .clickable(role = Role.Button, onClick = onSeeAll)
+                    .padding(horizontal = PamSpacing.xxs, vertical = PamSpacing.xxs),
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
+        ) {
+            expenseTotals.forEachIndexed { index, total ->
+                val share = totalExpense
+                    ?.let { (total.amount.minor.toFloat() / it).coerceIn(0f, 1f) }
+                    ?: 0f
+                CategoryColumn(
+                    total = total,
+                    share = share,
+                    fill = columnFill(index),
+                    highlighted = index == 0,
+                    onClick = { onOpenCategory(total.category.code) },
+                )
+            }
+            // Keep six slots so the chart never stretches to two wide columns on sparse months.
+            repeat((MAX_CATEGORIES - expenseTotals.size).coerceAtLeast(0)) {
+                Spacer(modifier = Modifier.width(COLUMN_WIDTH))
+            }
+        }
+        if (expenseTotals.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(color = OutlineVariant)
+            Spacer(modifier = Modifier.height(8.dp))
+            val top = expenseTotals.first()
+            val percent = ((top.amount.minor.toFloat() / (totalExpense ?: 1f)) * 100).toInt()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .minimumInteractiveComponentSize()
+                    .clip(RoundedCornerShape(PamRadius.sm))
+                    .clickable(
+                        role = Role.Button,
+                        onClick = { onOpenCategory(top.category.code) },
+                    )
+                    .padding(vertical = PamSpacing.xxs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = top.serverLabel ?: stringResource(categoryLabelRes(top.category)),
+                    style = BodyS,
+                    color = OnInk,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "${moneyLabel(top.amount)} · $percent%",
+                    style = LabelL,
+                    color = OnInk,
+                    maxLines = 1,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun CategoryRow(total: CategoryTotal, share: Float, onClick: () -> Unit) {
-    val color = categoryColor(total.category.colorRole)
-    val isNetRefund = total.amount.isNegative
-    Row(
+private fun CategoryColumn(
+    total: CategoryTotal,
+    share: Float,
+    fill: androidx.compose.ui.graphics.Color,
+    highlighted: Boolean,
+    onClick: () -> Unit,
+) {
+    val percent = (share * 100).toInt()
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(PamRadius.md))
-            .clickable(onClick = onClick)
-            .padding(vertical = PamSpacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
+            .width(COLUMN_WIDTH)
+            .clip(RoundedCornerShape(PamRadius.sm))
+            .clickable(role = Role.Button, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        CategoryGlyph(category = total.category, size = 36.dp)
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = total.serverLabel ?: stringResource(categoryLabelRes(total.category)),
-                style = TitleL,
-                color = OnInk,
-                maxLines = 1,
+        Text(
+            text = "$percent%",
+            style = LabelEyebrow,
+            color = OnInkMuted,
+            maxLines = 1,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .width(COLUMN_WIDTH)
+                .height(BAR_HEIGHT)
+                .clip(RoundedCornerShape(PamRadius.lg))
+                .background(SurfaceLow),
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(COLUMN_WIDTH - 4.dp)
+                    .fillMaxHeight(share.coerceIn(0.02f, 1f))
+                    .clip(RoundedCornerShape(PamRadius.lg))
+                    .background(fill),
             )
-            Text(
-                text = pluralStringResource(
-                    R.plurals.overview_transaction_count,
-                    total.transactionCount,
-                    total.transactionCount,
-                ),
-                style = LabelM,
-                color = OnInkFaint,
-            )
-            Spacer(modifier = Modifier.height(PamSpacing.xxs))
-            if (isNetRefund) {
-                RefundBadge()
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(PamRadius.pill))
-                        .background(color.copy(alpha = 0.16f)),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(share.coerceIn(0f, 1f))
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(PamRadius.pill))
-                            .background(color),
-                    )
-                }
-            }
         }
-        Column(horizontalAlignment = Alignment.End) {
-            MoneyText(amount = total.amount, tone = MoneyTone.Neutral, style = TitleM)
-            if (isNetRefund) {
-                Text(
-                    text = stringResource(R.string.overview_after_refund),
-                    style = LabelM,
-                    color = OnInkMuted,
-                )
-            }
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(if (highlighted) OnInk else SurfaceLow),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = categoryIcon(total.category),
+                contentDescription = null,
+                tint = if (highlighted) Accent else OnInk,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }
+
+private fun columnFill(index: Int) = when (index) {
+    0 -> Accent
+    1 -> OnInk
+    2 -> OnInkMuted
+    3 -> OnInkFaint
+    else -> OutlineVariant
+}
+
+private fun moneyLabel(amount: Money): String = com.pam.recap.core.money.IdrFormatter.format(amount)
 
 /** Explicit marker for a category whose refunds exceeded its spending in this month (C2-4). */
 @Composable
@@ -446,8 +454,7 @@ private fun RefundBadge() {
 
 @Composable
 private fun EmptyMonthCard(coverage: CoverageStatus) {
-    // The month-empty state stays honest (absence of matching email is not "no spending"); the
-    // import CTA that used to live here moved into "Status pembaruan".
+    // Absence of matching email is not "no spending"; the import CTA lives in "Status pembaruan".
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.overview_empty_eyebrow),
@@ -463,4 +470,7 @@ private fun EmptyMonthCard(coverage: CoverageStatus) {
     }
 }
 
+private val COLUMN_WIDTH = 32.dp
+private val BAR_HEIGHT = 88.dp
 private const val MAX_CATEGORIES = 6
+private const val RECENT_ROWS = 3

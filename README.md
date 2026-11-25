@@ -74,8 +74,10 @@ Rincian bukti per gate dan sisa pekerjaan pemilik ada di [laporan gate akhir](do
 Implementasi native Kotlin/Compose dari 16 prototipe Stitch: Ringkasan opsi B dengan kartu per bank,
 satu layar Transaksi yang membawa filter dan kembali ke Ringkasan, sheet "Status pembaruan" tunggal,
 serta CR-010 widget Glance 2×2/4×2 + notifikasi transaksi baru. Pemetaan mockup→rute→kontrak ada di
-[STITCH_IMPLEMENTATION_MAP](docs/design/STITCH_IMPLEMENTATION_MAP.md), bukti runtime per layar di
-[evidence/stitch_2026-11-25](docs/evidence/stitch_2026-11-25/README.md). Mandiri ditampilkan dari data
+[STITCH_IMPLEMENTATION_MAP](docs/design/STITCH_IMPLEMENTATION_MAP.md). Bukti runtime per layar dari
+APK debug yang berjalan (screenshot sebelum/Stitch/sesudah + pengukuran dp) ada di
+[evidence/stitch_redesign_2026-11-25](docs/evidence/stitch_redesign_2026-11-25/README.md);
+bukti widget/notifikasi terpisah di [evidence/stitch_2026-11-25](docs/evidence/stitch_2026-11-25/README.md). Mandiri ditampilkan dari data
 nyata; Jago/BRI adalah pratinjau berlabel karena backend belum punya dimensi bank. Batas yang masih
 terbuka: Android Studio Run literal, instance widget di launcher, notifikasi single/group nyata, dan
 FCM live (belum diimplementasikan). Merge/deploy tetap menunggu izin pemilik.

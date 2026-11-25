@@ -91,4 +91,9 @@
     <string name="update_status_close_desc">Close status sheet</string>
     <string name="update_status_can_close_hint">You can close this sheet; progress keeps running.</string>
     <string name="update_status_sync_again">Sync again</string>
+    <string name="settings_section_widget">Widget</string>
+    <string name="settings_widget_title">Home screen widget</string>
+    <string name="settings_widget_sub">Preview the 2×2 &amp; 4×2 widget</string>
+    <string name="settings_widget_unsupported">This launcher does not support adding widgets directly.</string>
+    <string name="action_clear">Clear search</string>
 </resources>

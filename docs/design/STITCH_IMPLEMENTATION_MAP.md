@@ -1,6 +1,6 @@
 # Peta implementasi redesign Stitch → Compose
 
-Status: 25 November 2026 WIB, branch `feature/stitch-redesign`. Dokumen ini memetakan 9 layar
+Status: 26 November 2026 WIB, branch `feature/stitch-redesign`. Dokumen ini memetakan 9 layar
 prototipe ke route, komponen, dan sumber data aktual sebelum perubahan UI. Sumber visual:
 `docs/design/stitch_pam_finance_app_prototype/`; perilaku: SRS v0.7 + CR-009/CR-010.
 
@@ -15,6 +15,15 @@ prototipe ke route, komponen, dan sumber data aktual sebelum perubahan UI. Sumbe
 | 7. Analisis | `Analysis` | state consent, proses, hasil, kedaluwarsa, gagal; grafik tanpa warna saja | `AnalysisViewModel`, `GET/POST /v1/analysis` |
 | 8. Pengaturan | `Settings`, `AccountSettings`, `ConsentHistory`, `DataDeletion` | grup Akun/Gmail/AI/Kategori, **toggle notifikasi transaksi baru (default off)**, Keluar | `SettingsScreen`, `AccountViewModel`; outlet CR-010 |
 | 9. Kelola Kategori | `CategoryManagement` | daftar, tambah/ubah/arsip kategori | `CategoryManagementViewModel` |
+
+## Status implementasi (26 November 2026)
+
+Iterasi visual kedua menyamakan struktur/blok dan proporsi layar utama dengan render Stitch 393 dp:
+Ringkasan (kartu bank opsi B, hero pengeluaran, kartu kategori 6 track, daftar terbaru grouped card),
+Transaksi (search 48 dp, chip 36 dp, grup tanggal, FAB lime 56 dp di atas nav), Detail, Tambah,
+Analisis, Pengaturan, Kelola Kategori, Gmail, dan sheet status ringkas. Screenshot sebelum/referensi/
+sesudah, tabel ukuran dp, deviasi platform (status bar 37,5 dp + nav ±49 dp), dan regresi fungsional
+ada di [evidence/stitch_redesign_2026-11-25](../evidence/stitch_redesign_2026-11-25/README.md).
 
 ## Status implementasi (25 November 2026)
 

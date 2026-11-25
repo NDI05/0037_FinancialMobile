@@ -83,6 +83,10 @@
     <string name="settings_notif_denied_badge">Izin sistem ditolak</string>
     <string name="settings_categories_sub">Daftar &amp; ikon kategori</string>
     <string name="settings_logout_cta">Keluar</string>
+    <string name="settings_section_widget">Widget</string>
+    <string name="settings_widget_title">Widget layar utama</string>
+    <string name="settings_widget_sub">Pratinjau widget 2×2 &amp; 4×2</string>
+    <string name="settings_widget_unsupported">Launcher ini tidak mendukung penambahan widget langsung.</string>
 
     <string name="category_search_placeholder">Cari kategori...</string>
     <string name="category_tx_count">%1$d transaksi</string>
@@ -90,4 +94,5 @@
     <string name="update_status_close_desc">Tutup lembar status</string>
     <string name="update_status_can_close_hint">Anda dapat menutup lembar ini; progres tetap tersimpan.</string>
     <string name="update_status_sync_again">Sinkronkan lagi</string>
+    <string name="action_clear">Hapus pencarian</string>
 </resources>

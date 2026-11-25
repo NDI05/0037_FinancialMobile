@@ -1,0 +1,42 @@
+  53.1  72.0  Transaksi
+ 171.8  76.4  November 2026
+ 171.8 246.0  Semua
+ 171.8 332.6  Pengeluaran
+ 217.6  24.0  Rabu, 25 Nov
+ 258.0  36.0  Pembayaran Berhasil!
+ 284.2  36.0  00:00 · Belum berkategori
+ 284.2 192.9  ·
+ 308.6  44.0  Email Livin
+ 280.9 276.6  -Rp10.000
+ 353.7  24.0  Senin, 23 Nov
+ 394.1  36.0  Pembayaran Berhasil!
+ 422.5  44.0  Saran AI
+ 421.0 102.6  ·
+ 422.5 119.7  Email Livin
+ 405.7 276.6  -Rp18.500
+ 467.6  24.0  Minggu, 22 Nov
+ 508.0  36.0  Pembayaran Berhasil!
+ 536.4  44.0  Saran AI
+ 534.9 102.6  ·
+ 536.4 119.7  Email Livin
+ 519.6 276.6  -Rp18.000
+ 586.6  36.0  Pembayaran Berhasil!
+ 615.0  44.0  Saran AI
+ 613.5 102.6  ·
+ 615.0 119.7  Email Livin
+ 598.2 276.6  -Rp18.000
+ 665.2  36.0  Pembayaran Berhasil!
+ 693.6  44.0  Saran AI
+ 692.1 102.6  ·
+ 693.6 119.7  Email Livin
+ 676.8 276.6  -Rp16.000
+ 738.7  24.0  Sabtu, 21 Nov
+ 779.1  99.0  Pembayaran Berhasil!
+   0.0   0.0  Saran AI
+   0.0   0.0  ·
+   0.0   0.0  Email Livin
+   0.0   0.0  -Rp15.000
+   0.0   0.0  Ringkasan
+   0.0   0.0  Transaksi
+   0.0   0.0  Analisis
+   0.0   0.0  Pengaturan

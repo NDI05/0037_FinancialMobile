@@ -1,0 +1,29 @@
+  53.1  72.0  Ringkasan
+ 121.2  40.0  Pemasukan tercatat
+ 117.2 301.3  Rp0
+ 226.7  36.0  Kategori utama
+ 214.0 302.0  Analisis
+ 269.6  39.7  66%
+ 269.6  97.5  31%
+ 269.6 159.0  2%
+ 467.2  36.0  Transportasi
+ 466.1 228.9  Rp1.150.500 · 66%
+ 557.1  20.0  Transaksi terbaru
+ 544.4 275.1  Lihat semua
+ 608.1  36.0  Pembayaran Berhasil!
+ 635.0  36.0  Belum berkategori
+ 635.0 149.2  ·
+ 636.4 166.3  Email Livin
+ 619.7 276.6  -Rp10.000
+ 686.7  36.0  Pembayaran Berhasil!
+ 715.0  44.0  Saran AI
+ 713.6 102.6  ·
+ 715.0 119.7  Email Livin
+ 698.3 276.6  -Rp18.500
+ 765.3  36.0  Pembayaran Berhasil!
+   0.0   0.0  ·
+ 776.9 289.7  -Rp18.000
+   0.0   0.0  Ringkasan
+   0.0   0.0  Transaksi
+   0.0   0.0  Analisis
+   0.0   0.0  Pengaturan

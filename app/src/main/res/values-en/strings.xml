@@ -643,4 +643,5 @@
     <string name="widget_preview_month">November 2026</string>
     <string name="widget_preview_count">42 transactions</string>
     <string name="widget_preview_subtitle">This month\'s summary</string>
+    <string name="update_status_last_success_short">Last: %1$s</string>
 </resources>

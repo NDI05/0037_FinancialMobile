@@ -141,7 +141,7 @@ fun GlassTopBar(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .padding(horizontal = PamSpacing.md, vertical = PamSpacing.xs),
+            .padding(horizontal = PamSpacing.md),
         contentAlignment = Alignment.Center,
     ) {
         Column(

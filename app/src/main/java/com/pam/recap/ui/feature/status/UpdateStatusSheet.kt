@@ -43,6 +43,7 @@ import com.pam.recap.ui.theme.DangerRed
 import com.pam.recap.ui.theme.GlassBorder
 import com.pam.recap.ui.theme.LabelEyebrow
 import com.pam.recap.ui.theme.OnInk
+import com.pam.recap.ui.theme.OnInkFaint
 import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.PamRadius
 import com.pam.recap.ui.theme.PamSpacing
@@ -84,12 +85,23 @@ fun UpdateStatusSheet(
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(PamSpacing.xs),
         ) {
-            Text(
-                text = stringResource(R.string.update_status_title),
-                style = TitleL,
-                color = OnInk,
-                modifier = Modifier.weight(1f),
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.update_status_title),
+                    style = TitleL,
+                    color = OnInk,
+                )
+                val lastSuccess = if (serverSync.available) serverSync.lastSuccessAt else status.lastSuccessAt
+                Text(
+                    text = stringResource(
+                        R.string.update_status_last_success_short,
+                        relative(lastSuccess, now),
+                    ),
+                    style = BodyS,
+                    color = OnInkFaint,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
             // Closing the sheet only hides it: the run belongs to the coordinator and keeps going.
             CircularIconWell(
                 icon = Icons.Rounded.Close,
@@ -161,15 +173,14 @@ private fun SyncStatusCard(
     onServerSyncNow: () -> Unit,
     onReconnectGmail: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(PamRadius.lg)
+    val shape = RoundedCornerShape(PamRadius.md)
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
             .background(SurfaceLow)
-            .border(1.dp, GlassBorder, shape)
             .padding(PamSpacing.md),
-        verticalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(
             text = stringResource(
@@ -450,16 +461,16 @@ private fun stageLine(status: UpdateStatusUi): String = when {
 
 @Composable
 private fun StatusSection(title: String, content: @Composable () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().padding(top = PamSpacing.sm)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = PamSpacing.xs)) {
         Text(
             text = title,
             style = LabelEyebrow,
             color = OnInkMuted,
             modifier = Modifier.semantics { heading() },
         )
-        Spacer(modifier = Modifier.height(PamSpacing.xs))
+        Spacer(modifier = Modifier.height(PamSpacing.xxs))
         content()
-        Spacer(modifier = Modifier.height(PamSpacing.xs))
+        Spacer(modifier = Modifier.height(PamSpacing.xxs))
     }
 }
 
