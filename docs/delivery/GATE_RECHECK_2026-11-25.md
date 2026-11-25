@@ -9,12 +9,12 @@ yang disebut; sisanya PARTIAL atau NOT RUN.
 
 | Item | Nilai |
 |---|---|
-| Android `main` | `0cf7faf` == `origin/main`, worktree bersih, satu worktree |
+| Android `main` | `cbb3db5` == `origin/main`, worktree bersih (kode app tetap `0cf7faf`; sesudahnya hanya dokumen + screenshot bukti) |
 | Backend `main` (sebelum perbaikan hari ini) | `4473f38` == `origin/main` saat verifikasi gate |
-| Backend `main` (setelah perbaikan nominal) | `d42d7c4` kode + `aa33fb8` dokumentasi, dipush ke `origin/main` |
+| Backend `main` (setelah perbaikan nominal) | `d42d7c4` kode + `aa33fb8` dokumentasi + `68f1ba4` tes tambahan + `b6ce917` dokumentasi audit, semua dipush ke `origin/main` (runtime UAT aktif memakai binary `d42d7c4`) |
 | APK debug yang dipakai smoke | `app-debug.apk` 47.890.601 B sha256 `5a2f71a1aaf823949a0bc2b62851e43e4f5addfb5167557a90e6f67f13c824e6`; terpasang di emulator-5556 (versionName `1.0.0-debug`, `lastUpdateTime` 2026-11-25 13:04:42) |
 | Binary backend diverifikasi | `/tmp/pam-api-main-4473f38` 20.033.298 B sha256 `90411475967de2b8578a1acf22fd9bb65f6d93659cbd0d52a05207af1d8a9561`; binary perbaikan `/tmp/pam-api-d42d7c4` sha256 `4c88bc46d323825784f768a5fc99a2b3a5c0f4e5f2c4a09141bafae5758bc48f`; binary UAT loopback aktif sha256 `77b0963a33b3b846fd65d85125460710e7c3f206e6fd90b74f42c59759d654aa` |
-| CI backend | `4473f38`: run `45534425758` **success**; `d42d7c4` + docs `aa33fb8`: run `45559414209` **success** |
+| CI backend | `4473f38`: run `45534425758` **success**; `d42d7c4` + docs `aa33fb8`: run `45559414209` **success**; `68f1ba4`: run `45560831326` **success**; `b6ce917`: run `45560979882` **success** |
 | CI Android | tidak ada workflow CI di repo Android (tetap seperti sebelumnya) |
 
 ## Tabel gate
