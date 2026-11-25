@@ -22,6 +22,7 @@ build/lingkungan yang disebut; sisanya PARTIAL atau NOT RUN.
 - 25 Nov 2026 ±14:43 WIB, sebelum uji email Livin: total transaksi **1665** (di antaranya **1655**
   sumber EMAIL), koneksi Gmail **2**, sesi auth **12** (sesi terbaru 14:37:16 WIB). Angka ini hanya
   hitungan agregat; tidak ada isi transaksi/email yang dibaca.
+- Dicek ulang 25 Nov 15:24 WIB (baca-saja agregat, DB UAT lokal): **1657** transaksi non-deleted (**1655 EMAIL**, 2 MANUAL), **2** koneksi Gmail, transaksi terbaru `2026-11-25T07:07:06Z` (14:07 WIB). Tidak ada transaksi baru setelah baseline, jadi **bukti email Livin alami untuk G36 belum ada**; angka ini juga memastikan tidak ada duplikasi impor.
 - Pada 14:42:39 WIB APK baru (`39f2cd6e…`) memicu `POST /v1/category-jobs/enqueue` → **503**
   `category_unavailable` (klasifier mati sesuai config UAT). Jalur ini adalah auto-kategori pasca
   sync yang sengaja menelan kegagalan, jadi tidak menampilkan pesan; copy baru tampil jika pengguna
