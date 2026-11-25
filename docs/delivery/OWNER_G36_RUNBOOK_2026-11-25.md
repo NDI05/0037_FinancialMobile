@@ -15,6 +15,33 @@ memverifikasi hasil yang dilaporkan. Jangan memakai akun pribadi pemilik: gunaka
   kabel USB: `adb reverse tcp:18090 tcp:18090`, lalu `PAM_BACKEND_BASE_URL=http://127.0.0.1:18090`.
   (Emulator memakai `http://10.0.2.2:18090`.) Pastikan `BuildConfig` efektif menunjuk endpoint itu.
 
+## Menyiapkan Test user Google (untuk SSO live)
+
+Konsol: **Google Cloud Console** milik pemilik proyek OAuth yang dipakai build UAT.
+
+1. Cari proyek yang memiliki **OAuth client** dengan Client ID yang sama seperti di
+   `~/.config/pam/gmail-uat.env` (`GOOGLE_SSO_CLIENT_ID`, `GMAIL_CLIENT_ID`). Cocokkan di
+   **APIs & Services → Credentials → OAuth 2.0 Client IDs**.
+2. Buka **APIs & Services → OAuth consent screen**. Selama *Publishing status* masih **Testing**,
+   hanya akun yang terdaftar yang boleh login.
+3. Di bagian **Test users** klik **Add users**, masukkan **email Google pemilik/akun uji**
+   (akun yang akan dipakai login di HP), lalu **Save**. Tunggu ±1 menit agar berlaku.
+4. Pastikan **Google Sign-In** dan **Gmail API** aktif di proyek yang sama.
+5. Di HP, buka aplikasi → **Masuk dengan Google** (atau Daftar dengan Google) → pilih akun uji →
+   setujui consent. Bila muncul "Access blocked / app not verified", berarti email tersebut belum
+   masuk daftar Test users atau memakai proyek OAuth yang berbeda.
+
+Catatan: menambahkan Test user tidak memerlukan publikasi aplikasi; jangan mengubah status ke
+Production saat uji. Jangan pernah menempelkan Client Secret/token ke chat atau dokumen.
+
+## Waktu tunggu email Livin
+
+Runtime UAT resmi memakai `GMAIL_MODE=polling` dengan `GMAIL_DELTA_INTERVAL_SECONDS=900` (15 menit).
+Setelah email Livin masuk ke kotak surat tertaut, sinkronisasi berikutnya terjadi paling lambat
+±15 menit; buka aplikasi/Transaksi lalu tarik sinkronisasi bila tersedia. Untuk uji "app tertutup",
+tutup aplikasi (force stop) sebelum email masuk, tunggu minimal satu siklus polling, lalu buka lagi.
+Email Livin harus benar-benar dikirim ke alamat Gmail yang ditautkan (bukan email lain).
+
 ## Langkah
 
 1. **Catat baseline**: commit Android (`git rev-parse HEAD`), hash APK, commit backend, dan waktu

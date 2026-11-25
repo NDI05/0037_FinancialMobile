@@ -37,7 +37,7 @@ Backend biner baru dijalankan pada port 18093 dengan database sementara (bukan D
   `pam-api-loopback.bak-20261125-auth`); proses lama dihentikan lalu `start.py` dijalankan ulang.
 - `/healthz` 200, `/readyz` 200; probe `POST /v1/accounts` email tidak valid → 400 dan body dengan
   `inviteCode` → 400, membuktikan biner baru aktif (biner lama menjawab 403 `invalid_invite`).
-- APK debug baru saat itu dipasang di perangkat uji fisik yang terhubung (seri `927a…`, model 24069PC21G), `adb reverse tcp:18090` aktif. Pada verifikasi gate akhir perangkat tersebut tidak terhubung; APK hasil fix `a0498c29…` dipasang di perangkat fisik Redmi 10 (`21061119AG`) dan emulator-5556.
+- APK debug baru saat itu dipasang di perangkat fisik yang terhubung (seri `927a…`, `adb reverse tcp:18090` aktif). Pemilik mengonfirmasi 25 Nov bahwa HP-nya adalah **Redmi 10 `21061119AG` (seri `105397ba0507`)**; APK hasil fix `a0498c29…` dipasang di HP tersebut dan emulator-5556. Catatan model `24069PC21G` pada ronde sebelumnya keliru.
 
 ## Belum diverifikasi (jujur)
 
@@ -61,4 +61,4 @@ Backend biner baru dijalankan pada port 18093 dengan database sementara (bukan D
 - APK hasil fix juga dipasang di perangkat fisik Redmi 10 (model `21061119AG`, seri diredaksi) yang
   terhubung; app membuka Ringkasan tanpa crash, data tidak ditelusuri.
 - **Tetap NOT RUN:** Google SSO live (butuh Test user OAuth consent screen) dan Run literal G36
-  lewat Android Studio pada HP pemilik (`24069PC21G`, tidak terhubung pada putaran ini).
+  lewat Android Studio pada HP pemilik (**Redmi 10 `21061119AG`**, terhubung).
