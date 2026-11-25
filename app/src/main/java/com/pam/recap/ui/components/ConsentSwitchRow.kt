@@ -1,6 +1,7 @@
 package com.pam.recap.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,13 +19,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.pam.recap.ui.theme.BodyM
+import com.pam.recap.ui.theme.BodyS
 import com.pam.recap.ui.theme.GlassFill
 import com.pam.recap.ui.theme.Ink
 import com.pam.recap.ui.theme.LabelL
 import com.pam.recap.ui.theme.OnInk
+import com.pam.recap.ui.theme.OnInkFaint
 import com.pam.recap.ui.theme.OnInkMuted
+import com.pam.recap.ui.theme.OutlineVariant
 import com.pam.recap.ui.theme.PamRadius
 import com.pam.recap.ui.theme.PamSpacing
+import com.pam.recap.ui.theme.Primary
+import com.pam.recap.ui.theme.Surface
+import com.pam.recap.ui.theme.SurfaceLow
 import com.pam.recap.ui.theme.TitleM
 import com.pam.recap.ui.theme.TrackInset
 import com.pam.recap.ui.theme.Violet
@@ -109,7 +117,8 @@ fun LabelledField(
                 .fillMaxWidth()
                 .padding(top = PamSpacing.xxs)
                 .clip(RoundedCornerShape(PamRadius.sm))
-                .background(GlassFill)
+                .background(SurfaceLow)
+                .border(1.dp, OutlineVariant, RoundedCornerShape(PamRadius.sm))
                 .padding(horizontal = PamSpacing.md, vertical = PamSpacing.sm)
                 .minimumInteractiveComponentSize(),
             verticalAlignment = Alignment.CenterVertically,
@@ -121,12 +130,12 @@ fun LabelledField(
                 minLines = if (singleLine) 1 else 2,
                 keyboardOptions = keyboardOptions,
                 visualTransformation = visualTransformation,
-                textStyle = com.pam.recap.ui.theme.TitleL.copy(color = OnInk),
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(Violet),
+                textStyle = BodyM.copy(color = OnInk),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(Primary),
                 modifier = Modifier.weight(1f),
                 decorationBox = { inner ->
                     if (value.isEmpty() && placeholder != null) {
-                        Text(text = placeholder, style = TitleM, color = OnInkMuted)
+                        Text(text = placeholder, style = BodyM, color = OnInkFaint)
                     }
                     inner()
                 },

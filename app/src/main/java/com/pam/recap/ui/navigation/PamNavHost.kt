@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Settings
@@ -299,12 +299,9 @@ fun PamNavHost(
 
         val showBottomBar = gate is GateState.Ready && destination.isTopLevel()
         if (showBottomBar) {
-            val openStatus = com.pam.recap.ui.feature.status.LocalOpenUpdateStatusSheet.current
             BottomNavBar(
                 items = bottomItems(destination),
                 onSelect = { key -> navController.navigateTabFor(key) },
-                onOpenStatus = { openStatus?.invoke() },
-                statusLabel = stringResource(R.string.update_status_open),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars),
@@ -330,7 +327,7 @@ private fun bottomItems(destination: NavDestination?): List<BottomNavItem> = lis
     BottomNavItem(
         key = PamDestination.TAB_ANALYSIS,
         label = stringResource(R.string.nav_analysis),
-        icon = Icons.Rounded.AutoAwesome,
+        icon = Icons.Rounded.BarChart,
         selected = destination.isAnalysis(),
     ),
     BottomNavItem(

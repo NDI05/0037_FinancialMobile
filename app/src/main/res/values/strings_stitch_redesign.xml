@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="welcome_brand_subtitle">Pencatat keuangan</string>
+    <string name="welcome_stitch_headline">Catat keuangan dengan tenang.</string>
+    <string name="welcome_stitch_subtitle">Rekap transaksi manual dan notifikasi Livin\' dalam satu tempat.</string>
+    <string name="welcome_feature_manual_title">Manual &amp; Gmail</string>
+    <string name="welcome_feature_manual_body">Impor notifikasi Livin\' secara opsional.</string>
+    <string name="welcome_feature_record_title">Hanya pencatatan</string>
+    <string name="welcome_feature_record_body">Tanpa simpan nomor rekening atau akses transfer.</string>
+    <string name="welcome_retention_footnote">Riwayat transaksi hingga 1 tahun.</string>
+    <string name="welcome_email_option">Masuk / Daftar dengan email</string>
+
+    <string name="gmail_stitch_headline">Baca notifikasi Livin\' otomatis</string>
+    <string name="gmail_stitch_subtitle">Opsional. Hanya membaca email notifikasi Livin\' by Mandiri.</string>
+    <string name="gmail_stitch_bullet_readonly">Akses baca-saja untuk email notifikasi.</string>
+    <string name="gmail_stitch_bullet_ai">Izin AI diatur terpisah di Pengaturan.</string>
+    <string name="gmail_link_feature_readonly">Akses baca-saja untuk email notifikasi.</string>
+    <string name="gmail_link_feature_ai_separate">Izin AI diatur terpisah di Pengaturan.</string>
+    <string name="gmail_stitch_cta">Tautkan Gmail</string>
+    <string name="gmail_stitch_skip">Lewati</string>
+
+    <string name="overview_top_categories">Kategori utama</string>
+    <string name="overview_analysis_link">Analisis</string>
+    <string name="overview_recent_title">Transaksi terbaru</string>
+    <string name="overview_bank_summary_section">Ringkasan keuangan per bank</string>
+    <string name="overview_preview_unavailable">Belum tersambung</string>
+
+    <string name="transactions_search_stitch">Cari transaksi...</string>
+    <string name="transactions_filter_expense_short">Pengeluaran</string>
+    <string name="transactions_filter_income_short">Pemasukan</string>
+    <string name="transactions_source_chip">Sumber: %1$s</string>
+    <string name="transactions_today_group">Hari ini · %1$s</string>
+    <string name="transactions_yesterday_group">Kemarin · %1$s</string>
+    <string name="transactions_carried_filter">Filter dari Ringkasan</string>
+    <string name="transactions_reset_filter">Reset</string>
+    <string name="transactions_empty_search_title">Tidak ada transaksi untuk \"%1$s\"</string>
+    <string name="transactions_empty_search_body">Ubah kata kunci atau reset filter periode.</string>
+    <string name="transactions_retry_banner_title">Gagal memperbarui daftar</string>
+    <string name="transactions_retry_banner_body">Periksa koneksi Anda.</string>
+
+    <string name="detail_readonly_livin_note">Nominal &amp; tanggal dari notifikasi Livin\'.</string>
+    <string name="detail_date_row">Tanggal</string>
+    <string name="detail_category_row">Kategori</string>
+    <string name="detail_choose_category">Pilih kategori</string>
+    <string name="detail_provenance_toggle">Info asal data</string>
+    <string name="detail_edit_tx">Ubah transaksi</string>
+    <string name="detail_delete_tx">Hapus transaksi</string>
+
+    <string name="manual_expense_tab">Pengeluaran</string>
+    <string name="manual_income_tab">Pemasukan</string>
+    <string name="manual_nominal_label">Nominal</string>
+    <string name="manual_desc_label">Deskripsi</string>
+    <string name="manual_desc_placeholder">Nama transaksi...</string>
+    <string name="manual_date_stitch">Tanggal</string>
+    <string name="manual_category_stitch">Kategori</string>
+    <string name="manual_note_stitch">Catatan</string>
+    <string name="manual_note_stitch_placeholder">Catatan opsional...</string>
+
+    <string name="analysis_primary_insight">Insight utama</string>
+    <string name="analysis_spending_by_category">Pengeluaran per kategori</string>
+    <string name="analysis_concise_findings">Temuan ringkas</string>
+    <string name="analysis_consent_missing_title">Izin analisis AI belum aktif</string>
+    <string name="analysis_consent_missing_body">Aktifkan di Pengaturan untuk melihat ringkasan pola pengeluaran.</string>
+    <string name="analysis_open_settings">Buka Pengaturan</string>
+    <string name="analysis_update_short">Perbarui</string>
+    <string name="analysis_stale_title">Data berubah</string>
+
+    <string name="settings_section_google">Akun Google</string>
+    <string name="settings_section_gmail">Koneksi Gmail</string>
+    <string name="settings_section_ai">Izin AI</string>
+    <string name="settings_section_notifications">Notifikasi</string>
+    <string name="settings_section_categories">Kategori</string>
+    <string name="settings_section_privacy">Data &amp; privasi</string>
+    <string name="settings_gmail_card_title">Notifikasi Livin\' by Mandiri</string>
+    <string name="settings_gmail_readonly">Baca-saja</string>
+    <string name="settings_gmail_disconnected">Belum terhubung</string>
+    <string name="settings_ai_categorization">Kategorisasi AI</string>
+    <string name="settings_ai_categorization_sub">Saran kategori otomatis</string>
+    <string name="settings_ai_analysis">Analisis AI</string>
+    <string name="settings_ai_analysis_sub">Ringkasan pola di tab Analisis</string>
+    <string name="settings_notif_off">Nonaktif</string>
+    <string name="settings_notif_on">Aktif</string>
+    <string name="settings_notif_denied_badge">Izin sistem ditolak</string>
+    <string name="settings_categories_sub">Daftar &amp; ikon kategori</string>
+    <string name="settings_logout_cta">Keluar</string>
+
+    <string name="category_search_placeholder">Cari kategori...</string>
+    <string name="category_tx_count">%1$d transaksi</string>
+
+    <string name="update_status_close_desc">Tutup lembar status</string>
+    <string name="update_status_can_close_hint">Anda dapat menutup lembar ini; progres tetap tersimpan.</string>
+    <string name="update_status_sync_again">Sinkronkan lagi</string>
+</resources>

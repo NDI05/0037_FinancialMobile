@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.Icon
@@ -244,17 +243,17 @@ data class BottomNavItem(
 )
 
 /**
- * Flat Stitch bottom navigation: four labelled destinations with a lime pill behind the active
- * icon, plus the update-status trigger that used to sit in the raised centre circle. Keeping the
- * status trigger here preserves access to the sync sheet from every top-level tab.
+ * Flat Stitch bottom navigation: four equal-width labelled destinations with a lime pill behind
+ * the active icon. Sync status lives in the top bar on every top-level tab, never as a 5th icon
+ * squeezed into the bottom navigation bar.
  */
 @Composable
 fun BottomNavBar(
     items: List<BottomNavItem>,
     onSelect: (String) -> Unit,
-    onOpenStatus: () -> Unit,
-    statusLabel: String,
     modifier: Modifier = Modifier,
+    @Suppress("UNUSED_PARAMETER") onOpenStatus: (() -> Unit)? = null,
+    @Suppress("UNUSED_PARAMETER") statusLabel: String = "",
 ) {
     Column(
         modifier = modifier
@@ -268,30 +267,16 @@ fun BottomNavBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = PamSize.bottomBar)
-                .padding(horizontal = PamSpacing.xxs, vertical = PamSpacing.xxs),
+                .heightIn(min = 68.dp)
+                .padding(horizontal = PamSpacing.xs, vertical = PamSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
         ) {
             items.forEach { item ->
                 BottomNavCell(
                     item = item,
                     onSelect = onSelect,
                     modifier = Modifier.weight(1f),
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .size(PamSize.minTouch)
-                    .clip(CircleShape)
-                    .clickable(role = Role.Button, onClick = onOpenStatus)
-                    .semantics { contentDescription = statusLabel },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Sync,
-                    contentDescription = null,
-                    tint = OnInkMuted,
-                    modifier = Modifier.size(22.dp),
                 )
             }
         }
@@ -314,36 +299,36 @@ private fun BottomNavCell(
                 contentDescription = item.label
                 selected = item.selected
             }
-            .padding(vertical = PamSpacing.xxs),
+            .padding(vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Box(
             modifier = Modifier
                 .height(28.dp)
-                .widthIn(min = 40.dp)
+                .widthIn(min = 52.dp)
                 .clip(RoundedCornerShape(PamRadius.pill))
                 .background(
                     if (active) {
-                        com.pam.recap.ui.theme.SecondaryContainer
+                        com.pam.recap.ui.theme.Accent
                     } else {
                         androidx.compose.ui.graphics.Color.Transparent
                     },
                 )
-                .padding(horizontal = PamSpacing.xs),
+                .padding(horizontal = PamSpacing.md),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = null,
-                tint = if (active) OnInk else OnInkFaint,
+                tint = if (active) com.pam.recap.ui.theme.OnAccent else OnInkMuted,
                 modifier = Modifier.size(20.dp),
             )
         }
         Text(
             text = item.label,
-            style = com.pam.recap.ui.theme.LabelM,
-            color = if (active) OnInk else OnInkFaint,
+            style = com.pam.recap.ui.theme.LabelEyebrow,
+            color = if (active) OnInk else OnInkMuted,
             maxLines = 1,
         )
     }

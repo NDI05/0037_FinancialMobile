@@ -21,8 +21,10 @@ val OnPrimary = Color(0xFFFFFFFF)
 val OnPrimaryContainer = Color(0xFF171915)
 val Secondary = Color(0xFF576500)
 val SecondaryContainer = Color(0xFFD9F449)
+val Accent = Color(0xFFD9F449)
+val OnAccent = Color(0xFF171915)
 /** Legacy lime accent kept for widgets and older surfaces; still always paired with dark text. */
-val Lime = Color(0xFFD9F449)
+val Lime = Accent
 val LimeSoft = Color(0xFFF4FAC8)
 val OnSecondaryContainer = Color(0xFF171915)
 val Tertiary = Color(0xFF576500)
@@ -39,11 +41,20 @@ val PinkSoft = Color(0xFFFFEDE3)
 val Amber = Color(0xFF9B4500)
 val AmberDeep = Color(0xFF6E3000)
 
-val IncomeMint = Color(0xFF006D30)
-val IncomeMintSoft = Color(0xFFE6F6EC)
+val Success = Color(0xFF006D30)
+val SuccessContainer = Color(0xFFE6F6EC)
+val OnSuccessContainer = Color(0xFF00210A)
+val Warning = Color(0xFF9B4500)
+val WarningContainer = Color(0xFFFFEDE5)
+val OnWarningContainer = Color(0xFF331200)
+val ErrorContainer = Color(0xFFFFEDEA)
+val OnErrorContainer = Color(0xFF93000B)
+
+val IncomeMint = Success
+val IncomeMintSoft = SuccessContainer
 val ExpenseRose = Color(0xFFB91C1C)
-val ExpenseRoseSoft = Color(0xFFFDEBEB)
-val WarningAmber = Color(0xFF9B4500)
+val ExpenseRoseSoft = ErrorContainer
+val WarningAmber = Warning
 val DangerRed = Color(0xFFB91C1C)
 
 val OnInk = Color(0xFF171915)

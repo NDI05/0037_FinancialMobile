@@ -19,27 +19,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.pam.recap.ui.theme.GlassBorder
 import com.pam.recap.ui.theme.InkElevated
-import com.pam.recap.ui.theme.InkSurface
 import com.pam.recap.ui.theme.OnInk
-import com.pam.recap.ui.theme.OnInkFaint
-import com.pam.recap.ui.theme.PamGradients
+import com.pam.recap.ui.theme.OutlineVariant
 import com.pam.recap.ui.theme.PamRadius
 import com.pam.recap.ui.theme.PamSpacing
+import com.pam.recap.ui.theme.Surface
 import com.pam.recap.ui.theme.TrackInset
 
 /**
- * Frosted glass card: ink-surface base, a diagonal white sheen, then a 1 dp top-lit border.
- * Never a flat grey box (design system §1.2).
+ * Stitch flat tonal card: crisp white `#FFFFFF` surface with a 1 dp `#E2E3DB` border and generous
+ * 20 dp corners (no heavy shadows or decorative gradients).
  */
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
     radius: Dp = PamRadius.lg,
-    fill: Brush = PamGradients.glassSheen,
+    fill: Brush = SolidColor(Surface),
+    containerColor: Color = Surface,
+    borderColor: Color = OutlineVariant,
     contentPadding: PaddingValues = PaddingValues(PamSpacing.md),
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -47,12 +50,34 @@ fun GlassCard(
     Box(
         modifier = modifier
             .clip(shape)
-            .background(InkSurface)
+            .background(containerColor)
             .background(fill)
-            .border(width = 1.dp, color = GlassBorder, shape = shape),
+            .border(width = 1.dp, color = borderColor, shape = shape),
     ) {
         Column(modifier = Modifier.padding(contentPadding), content = content)
     }
+}
+
+/**
+ * Grouped Stitch container (`rounded-xl`/`rounded-2xl` white card with `1dp` border). Callers
+ * separate rows inside with `HorizontalDivider(color = OutlineVariant)`.
+ */
+@Composable
+fun GroupedListCard(
+    modifier: Modifier = Modifier,
+    radius: Dp = PamRadius.md,
+    borderColor: Color = OutlineVariant,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(radius)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Surface)
+            .border(width = 1.dp, color = borderColor, shape = shape),
+        content = content,
+    )
 }
 
 /** Inset dark track used behind toggles, skeletons and progress bars. */
@@ -72,8 +97,8 @@ fun InsetTrack(
 }
 
 /**
- * Bottom sheet wrapper with the 34 dp top radius from the design system. The sheet state is
- * internal: the caller closes by calling `onDismissRequest`, which keeps navigation in charge.
+ * Stitch bottom sheet wrapper: crisp white `#FFFFFF` surface, 24 dp top radius, thin top border,
+ * and centered drag handle.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +111,7 @@ fun SheetScaffold(
         onDismissRequest = onDismissRequest,
         modifier = modifier,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = InkElevated,
+        containerColor = Surface,
         contentColor = OnInk,
         shape = RoundedCornerShape(topStart = PamRadius.sheet, topEnd = PamRadius.sheet),
         dragHandle = { SheetDragHandle() },
@@ -112,10 +137,10 @@ fun SheetDragHandle(modifier: Modifier = Modifier) {
     ) {
         Box(
             modifier = Modifier
-                .width(36.dp)
+                .width(40.dp)
                 .height(4.dp)
                 .clip(RoundedCornerShape(PamRadius.pill))
-                .background(OnInkFaint.copy(alpha = 0.4f)),
+                .background(OutlineVariant),
         )
     }
 }

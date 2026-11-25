@@ -4,19 +4,20 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Cloud
-import androidx.compose.material.icons.rounded.CloudDone
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -44,26 +45,26 @@ import com.pam.recap.ui.feature.status.UpdateHeadline
 import com.pam.recap.ui.feature.status.UpdateStatusUi
 import com.pam.recap.ui.theme.DangerRed
 import com.pam.recap.ui.theme.IncomeMint
-import com.pam.recap.ui.theme.LabelM
+import com.pam.recap.ui.theme.LabelEyebrow
 import com.pam.recap.ui.theme.LocalReducedMotion
-import com.pam.recap.ui.theme.OnInkMuted
+import com.pam.recap.ui.theme.OnInk
 import com.pam.recap.ui.theme.PamRadius
 import com.pam.recap.ui.theme.PamSize
 import com.pam.recap.ui.theme.PamSpacing
-import com.pam.recap.ui.theme.Violet
+import com.pam.recap.ui.theme.SurfaceContainer
 import com.pam.recap.ui.theme.WarningAmber
 import kotlinx.coroutines.delay
 
-/** How long the transient status word stays on screen after a change (2.5 s, inside the 2–3 s spec). */
-private const val LABEL_HOLD_MILLIS = 2_500L
+/** How long the transient status word stays on screen after a change (2.2 s, per Stitch). */
+private const val LABEL_HOLD_MILLIS = 2_200L
 
 /**
- * Compact automatic-update indicator for a glass top bar.
- *
- * The icon is always present and is the whole >= 48 dp touch target; a short word fades in next to
- * it only when the status actually changes, holds ~2.5 s, then fades out while the icon stays. The
- * animation is keyed to the status token, so recomposition (scroll, font change, sheet open) never
- * replays it. The accessible name always carries the current status, independent of the visual fade.
+ * Stitch automatic-update indicator for the top bar:
+ * - On normal/idle states (`IDLE`, `WAITING`), the `sync` icon stands alone with no word pushing
+ *   or overlapping the centred screen title.
+ * - When an important status occurs or transitions (`CHECKING`/`FETCHING`/`SAVING`/`CATEGORIZING`,
+ *   `SUCCEEDED`, `NEEDS_ATTENTION`, `OFFLINE`), a compact pill fades in briefly next to the icon
+ *   and fades back out without ever shifting the centred title.
  */
 @Composable
 fun UpdateStatusPill(
@@ -72,17 +73,19 @@ fun UpdateStatusPill(
     modifier: Modifier = Modifier,
 ) {
     val reducedMotion = LocalReducedMotion.current
-    // At very large text the transient word no longer fits next to the screen title; the icon keeps
-    // the state visible and the content description keeps it audible.
     val showLabel = LocalDensity.current.fontScale < 1.5f && !reducedMotion
     val label = stringResource(status.labelRes())
     val spoken = spokenStatus(status, label)
     val tint = status.headline.tint()
+    val important = status.headline != UpdateHeadline.IDLE && status.headline != UpdateHeadline.WAITING
     val token = "${status.headline}:${status.syncAttempt}:${status.attemptToken()}"
 
     var labelVisible by remember { mutableStateOf(false) }
     LaunchedEffect(token) {
-        if (!showLabel) return@LaunchedEffect
+        if (!showLabel || !important) {
+            labelVisible = false
+            return@LaunchedEffect
+        }
         labelVisible = true
         delay(LABEL_HOLD_MILLIS)
         labelVisible = false
@@ -99,24 +102,29 @@ fun UpdateStatusPill(
             }
             .padding(horizontal = PamSpacing.xs, vertical = PamSpacing.xxs),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         AnimatedVisibility(
             visible = labelVisible,
-            enter = fadeIn(tween(220)),
-            exit = fadeOut(tween(420)),
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(200)),
         ) {
             Text(
                 text = label,
-                style = LabelM,
-                color = tint,
+                style = LabelEyebrow,
+                color = OnInk,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .widthIn(max = 104.dp)
+                    .clip(RoundedCornerShape(PamRadius.pill))
+                    .background(SurfaceContainer)
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
             )
         }
         if (status.isActive && !reducedMotion) {
             CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(18.dp),
                 strokeWidth = 2.dp,
                 color = tint,
             )
@@ -125,7 +133,7 @@ fun UpdateStatusPill(
                 imageVector = status.headline.staticIcon(),
                 contentDescription = null,
                 tint = tint,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(22.dp),
             )
         }
     }
@@ -180,13 +188,11 @@ private fun UpdateHeadline.labelRes(): Int = when (this) {
 
 private fun UpdateHeadline.staticIcon(): ImageVector = when (this) {
     UpdateHeadline.NEEDS_ATTENTION -> Icons.Rounded.ErrorOutline
-    UpdateHeadline.CHECKING, UpdateHeadline.FETCHING -> Icons.Rounded.Cloud
-    UpdateHeadline.SAVING -> Icons.Rounded.Cloud
-    UpdateHeadline.CATEGORIZING -> Icons.Rounded.Schedule
-    UpdateHeadline.WAITING -> Icons.Rounded.Schedule
+    UpdateHeadline.CHECKING, UpdateHeadline.FETCHING, UpdateHeadline.SAVING,
+    UpdateHeadline.CATEGORIZING, UpdateHeadline.WAITING, UpdateHeadline.IDLE,
+    -> Icons.Rounded.Sync
     UpdateHeadline.OFFLINE -> Icons.Rounded.CloudOff
-    UpdateHeadline.SUCCEEDED -> Icons.Rounded.CloudDone
-    UpdateHeadline.IDLE -> Icons.Rounded.Cloud
+    UpdateHeadline.SUCCEEDED -> Icons.Rounded.CheckCircle
 }
 
 private fun UpdateHeadline.tint(): Color = when (this) {
@@ -194,7 +200,6 @@ private fun UpdateHeadline.tint(): Color = when (this) {
     UpdateHeadline.OFFLINE -> WarningAmber
     UpdateHeadline.SUCCEEDED -> IncomeMint
     UpdateHeadline.CHECKING, UpdateHeadline.FETCHING, UpdateHeadline.SAVING,
-    UpdateHeadline.CATEGORIZING, UpdateHeadline.WAITING,
-    -> Violet
-    UpdateHeadline.IDLE -> OnInkMuted
+    UpdateHeadline.CATEGORIZING, UpdateHeadline.WAITING, UpdateHeadline.IDLE,
+    -> OnInk
 }

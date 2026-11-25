@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="welcome_brand_subtitle">Personal finance recap</string>
+    <string name="welcome_stitch_headline">Track your finances calmly.</string>
+    <string name="welcome_stitch_subtitle">Recap manual transactions and Livin\' notifications in one place.</string>
+    <string name="welcome_feature_manual_title">Manual &amp; Gmail</string>
+    <string name="welcome_feature_manual_body">Import Livin\' notifications optionally.</string>
+    <string name="welcome_feature_record_title">Record-keeping only</string>
+    <string name="welcome_feature_record_body">No account numbers stored and no transfer access.</string>
+    <string name="welcome_retention_footnote">Transaction history up to 1 year.</string>
+    <string name="welcome_email_option">Sign in / Register with email</string>
+
+    <string name="gmail_stitch_headline">Read Livin\' notifications automatically</string>
+    <string name="gmail_stitch_subtitle">Optional. Only reads Livin\' by Mandiri notification emails.</string>
+    <string name="gmail_stitch_bullet_readonly">Read-only access for notification emails.</string>
+    <string name="gmail_stitch_bullet_ai">AI permissions are configured separately in Settings.</string>
+    <string name="gmail_link_feature_readonly">Read-only access for notification emails.</string>
+    <string name="gmail_link_feature_ai_separate">AI permissions are configured separately in Settings.</string>
+    <string name="gmail_stitch_cta">Link Gmail</string>
+    <string name="gmail_stitch_skip">Skip</string>
+
+    <string name="overview_top_categories">Top categories</string>
+    <string name="overview_analysis_link">Analysis</string>
+    <string name="overview_recent_title">Recent transactions</string>
+    <string name="overview_bank_summary_section">Financial summary per bank</string>
+    <string name="overview_preview_unavailable">Not connected yet</string>
+
+    <string name="transactions_search_stitch">Search transactions...</string>
+    <string name="transactions_filter_expense_short">Expense</string>
+    <string name="transactions_filter_income_short">Income</string>
+    <string name="transactions_source_chip">Source: %1$s</string>
+    <string name="transactions_today_group">Today · %1$s</string>
+    <string name="transactions_yesterday_group">Yesterday · %1$s</string>
+    <string name="transactions_carried_filter">Filter from Overview</string>
+    <string name="transactions_reset_filter">Reset</string>
+
+    <string name="transactions_empty_search_title">No transactions for \"%1$s\"</string>
+    <string name="transactions_empty_search_body">Change keywords or reset the period filter.</string>
+    <string name="transactions_retry_banner_title">Failed to refresh list</string>
+    <string name="transactions_retry_banner_body">Check your connection.</string>
+
+    <string name="detail_readonly_livin_note">Amount &amp; date from Livin\' notification.</string>
+    <string name="detail_date_row">Date</string>
+    <string name="detail_category_row">Category</string>
+    <string name="detail_choose_category">Choose category</string>
+    <string name="detail_provenance_toggle">Data origin info</string>
+    <string name="detail_edit_tx">Edit transaction</string>
+    <string name="detail_delete_tx">Delete transaction</string>
+
+    <string name="manual_expense_tab">Expense</string>
+    <string name="manual_income_tab">Income</string>
+    <string name="manual_nominal_label">Amount</string>
+    <string name="manual_desc_label">Description</string>
+    <string name="manual_desc_placeholder">Transaction name...</string>
+    <string name="manual_date_stitch">Date</string>
+    <string name="manual_category_stitch">Category</string>
+    <string name="manual_note_stitch">Note</string>
+    <string name="manual_note_stitch_placeholder">Optional note...</string>
+
+    <string name="analysis_primary_insight">Primary insight</string>
+    <string name="analysis_spending_by_category">Spending by category</string>
+    <string name="analysis_concise_findings">Concise findings</string>
+    <string name="analysis_consent_missing_title">AI analysis permission is off</string>
+    <string name="analysis_consent_missing_body">Enable it in Settings to view spending pattern summaries.</string>
+    <string name="analysis_open_settings">Open Settings</string>
+    <string name="analysis_update_short">Update</string>
+    <string name="analysis_stale_title">Data changed</string>
+
+    <string name="settings_section_google">Google Account</string>
+    <string name="settings_section_gmail">Gmail Connection</string>
+    <string name="settings_section_ai">AI Permissions</string>
+    <string name="settings_section_notifications">Notifications</string>
+    <string name="settings_section_categories">Categories</string>
+    <string name="settings_section_privacy">Data &amp; privacy</string>
+    <string name="settings_gmail_card_title">Livin\' by Mandiri Notifications</string>
+    <string name="settings_gmail_readonly">Read-only</string>
+    <string name="settings_gmail_disconnected">Not connected</string>
+    <string name="settings_ai_categorization">AI Categorization</string>
+    <string name="settings_ai_categorization_sub">Automatic category suggestions</string>
+    <string name="settings_ai_analysis">AI Analysis</string>
+    <string name="settings_ai_analysis_sub">Pattern summaries in Analysis tab</string>
+    <string name="settings_notif_off">Off</string>
+    <string name="settings_notif_on">On</string>
+    <string name="settings_notif_denied_badge">System permission denied</string>
+    <string name="settings_categories_sub">Category list &amp; icons</string>
+    <string name="settings_logout_cta">Sign out</string>
+
+    <string name="category_search_placeholder">Search categories...</string>
+    <string name="category_tx_count">%1$d transactions</string>
+
+    <string name="update_status_close_desc">Close status sheet</string>
+    <string name="update_status_can_close_hint">You can close this sheet; progress keeps running.</string>
+    <string name="update_status_sync_again">Sync again</string>
+</resources>
