@@ -639,3 +639,12 @@ polling hidup), **358 CLASSIFIED / 515 NEEDS_REVIEW**, 0 pending. Baseline dan e
 **tepat +1 transaksi EMAIL** dicatat di runbook G36 dan gate doc; setelah uji pemilik, kueri yang
 sama dipakai untuk menutup gate. Tidak ada data mentah email/pemilik yang dibaca atau disimpan.
 
+**Smoke ulang HP + API publik (25 Nov 19:20–19:35 WIB).** APK terpasang `54095330…` dijalankan
+ulang di HP fisik (seri diredaksi): Ringkasan November 2026 net **Rp3.222.373**; Transaksi tampil
+kalender + entri; Pengaturan hanya Akun, Riwayat persetujuan, Kategori, Hapus semua data, Keluar,
+footer (0 kemunculan Anggaran/Lampiran/Administrasi/Kotak Masuk/Persetujuan, dicek sebelum dan
+sesudah scroll); sheet Status pembaruan 13/13 bulan, sinkron berikutnya 19:24, tanpa banner
+error/perhatian; tidak ada crash. API publik host: `/healthz` 200, `/readyz` 200, rute transaksi/
+kategori tanpa token 401, tiga rute pensiun 404. Ini re-verifikasi read-only; G36 (email Livin
+alami) tetap menunggu aksi pemilik.
+
