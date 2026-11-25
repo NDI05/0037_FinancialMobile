@@ -46,3 +46,19 @@ Backend biner baru dijalankan pada port 18093 dengan database sementara (bukan D
 - Registrasi tidak dilakukan ke database UAT pemilik (sengaja; tidak membuat akun sintetis di data
   pemilik). Uji end-to-end memakai database sementara.
 - SRS resmi DOCX/PDF tidak diubah.
+
+## Addendum: temuan mode daftar dan perbaikannya
+
+- Smoke emulator putaran pertama menemukan **Welcome → "Buat akun" membuka mode MASUK**: navigasi
+  type-safe menaruh enum `AccountMode` di `SavedStateHandle`, sedangkan `AccountViewModel` hanya
+  membaca `String`, lalu jatuh ke `SIGN_IN` tanpa error.
+- Perbaikan `8de8f75` menerima enum maupun nama enum + tes regresi di `AccountSsoViewModelTest`.
+- Diverifikasi ulang di emulator-5556 (APK sha256 `a0498c29…`, `pm clear`): "Buat akun" langsung
+  mode daftar **dua kali deterministik** (headline "Buat akun PAM.", field Nama tampilan, tombol
+  "Daftar dengan Google"), "Masuk" tetap mode masuk ("Masuk dengan Google"), login sintetis 201,
+  Ringkasan net **Rp88.466,78** / masuk **Rp123.456,78** / keluar **Rp34.990**, Transaksi 3 baris,
+  tanpa entri Anggaran/Lampiran/Administrasi, `AndroidRuntime:E` kosong. Bukti `/tmp/w-ui-smoke2-*`.
+- APK hasil fix juga dipasang di perangkat fisik Redmi 10 (model `21061119AG`, seri diredaksi) yang
+  terhubung; app membuka Ringkasan tanpa crash, data tidak ditelusuri.
+- **Tetap NOT RUN:** Google SSO live (butuh Test user OAuth consent screen) dan Run literal G36
+  lewat Android Studio pada HP pemilik (`24069PC21G`, tidak terhubung pada putaran ini).
