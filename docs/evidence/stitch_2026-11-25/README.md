@@ -1,6 +1,6 @@
 # Bukti redesign Stitch PAM — 25 November 2026 (WIB)
 
-Build: APK debug `com.pam.recap.debug`, sha256 `af334072…` (20:10 WIB, pasca-fix audit).
+Build final: APK debug `com.pam.recap.debug`, sha256 `d62ab519…` (21:25 WIB, pasca-fix audit + bukti widget/notifikasi). Screenshot 01–04, 09–11 diambil ulang dari build ini di HP fisik 393 dp; 360/412 dp dan font 200% juga dari build final. Bukti 12–18 dari emulator (debug-only helpers).
 Perangkat: HP fisik Xiaomi (serial diredaksi), Android 13; lebar 393 dp (1080 px @ 440 dpi).
 Screenshot diambil dengan `adb exec-out screencap` setelah memasang APK hasil
 `scripts/build.sh :app:assembleDebug :app:lintDebug`.
@@ -52,3 +52,13 @@ membuktikan render Glance tanpa launcher; tidak ikut build release.
   atau nomor akun pada judul/isi. Ini bukti fixture, bukan pengiriman email Livin nyata.
 - Activity debug (`WidgetPreviewHostActivity`, `PinWidgetActivity`, `NotificationDemoActivity`)
   hanya ada di source set `debug`, tidak masuk APK release/assessment.
+
+### Rekaman ulang build final (25 Nov 21:25 WIB)
+
+Screenshot `01_ringkasan_393dp.png`, `02_transaksi_393dp.png`, `03_sync_sheet_393dp.png`,
+`04_pengaturan_393dp.png`, `09_ringkasan_360dp.png`, `10_ringkasan_412dp.png`, dan
+`11_ringkasan_font200_360dp.png` diambil ulang setelah semua perbaikan audit pada APK final
+`d62ab519…`. Verifikasi teks runtime: Ringkasan menampilkan **77 transaksi** Mandiri (sama dengan
+sebelum pagination, data uji <100 baris), Transaksi satu layar, sheet menampilkan "Bulan selesai:
+13 dari 13 / Menunggu" tanpa persentase palsu, Pengaturan menampilkan toggle notifikasi dan
+footer privasi. Navigasi back dari drill-down Transaksi kembali ke Ringkasan terverifikasi.

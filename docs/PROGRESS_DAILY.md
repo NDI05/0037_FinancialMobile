@@ -726,3 +726,8 @@ screenshot `15_widget_2x2_launcher.png`; render 4×2 nyata dari host debug
 group menampilkan copy generik tanpa nominal/merchant (`16`, `17`). Semua helper ini debug-only,
 tidak ikut release. Pengiriman notifikasi dari email Livin nyata serta Run Android Studio literal
 tetap NOT RUN dan dicatat di manifest bukti.
+
+**Rekaman ulang bukti pada build final (25 Nov 21:25 WIB).** Setelah perbaikan audit dan penambahan
+bukti widget/notifikasi, APK debug final (`d62ab519…`) dipasang ulang di HP fisik. Screenshot
+Ringkasan, Transaksi, sheet status, Pengaturan, 360/412 dp, dan font 200% diambil ulang dari build
+ini; back dari drill-down Transaksi ke Ringkasan terverifikasi. Tidak ada perubahan data pemilik.
