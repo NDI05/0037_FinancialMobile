@@ -557,3 +557,21 @@ Sisa aksi pemilik: uji G36 dari tombol Run Android Studio (local.properties suda
 Azure) — login Google, lewati onboarding, tautkan Gmail + consent, force stop, email Livin alami,
 tunggu ±15 menit, laporkan jumlah/nominal transaksi. Deploy produksi/merge tetap milik pemilik. Bukti:
 [AZURE_HOST_DEPLOYMENT](delivery/AZURE_HOST_DEPLOYMENT_2026-11-25.md).
+
+### Perbaikan klasifikasi AI hosted + pembersihan UI Settings — 25 November 2026 (WIB)
+
+Kategori AI di host Azure sempat tidak jalan sama sekali: `sync_state` tertahan `backfill` dan log
+`gmail_import_finalize_failed` memuat `SQLite error: database is locked`. Penyebabnya Turso menolak
+penulis kedua (`SQLITE_BUSY`) saat `ImportBatch`/`FinalizeImportJob` berjalan bersamaan dengan
+penulis latar, sehingga job bulan gagal finalize dan gate `categoryAwaitingInitialBackfill` menahan
+classifier terus-menerus. Perbaikan ada di backend `3e95727` (retry backoff khusus konflik tulis
+untuk `ImportBatch` dan `FinalizeImportJob`, error finalize ikut dilog, throughput Gmail
+`GMAIL_PAGE_SIZE=50`/`GMAIL_MAX_PAGES_PER_RUN=10`). Sesudah deploy: `sync_state=idle`, backfill tiga
+bulan menghasilkan **876** transaksi `EMAIL`, classifier drain 22 job pertama (**12 `CLASSIFIED`**,
+**19 `NEEDS_REVIEW`**) dan attempt Azure tercatat di `category_usage` tanpa mengubah plafon biaya.
+
+Permintaan UI pemilik dieksekusi di `a2876df`: kartu **Kotak Masuk** dan kartu **Persetujuan** pada
+Settings dihapus karena pengaturan koneksi sudah terpusat di section Akun dan riwayat persetujuan
+sudah punya layar sendiri; parameter `onOpenGmailLink` di `SettingsScreen` dan string mati ikut
+dibersihkan, screenshot test disesuaikan. `:app:testDebugUnitTest` **BUILD SUCCESSFUL**, APK debug
+baru `e2953a268fb4f377e56ced3f3434492e448d78aaf468bbc8193ad684a44e3ec9` (45 MB).

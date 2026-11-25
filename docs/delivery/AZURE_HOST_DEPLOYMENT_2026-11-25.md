@@ -39,7 +39,8 @@ Status: **DEPLOYED (sementara, memakai credit Azure for Students) · Gmail AKTIF
 - Analisis: `LLM_MAX_OUTPUT_TOKENS=1200`, timeout 12 dtk, `DAILY_AI_CEILING_USD=0.25`.
 - Kategorisasi: `CATEGORY_LLM_ENABLED=true`, plafon harian **USD 0.10**, bulanan **USD 2.00**,
   harga per 1K token diisi sehingga biaya terhitung dan pagar `daily_ceiling_reached` aktif.
-- `GMAIL_ENABLED=true` setelah pemilik mendaftarkan redirect URI; polling 900 dtk, cooldown sync 60 dtk.
+- `GMAIL_ENABLED=true` setelah pemilik mendaftarkan redirect URI; polling 900 dtk, cooldown sync 60 dtk;
+  `GMAIL_PAGE_SIZE=50`, `GMAIL_MAX_PAGES_PER_RUN=10` agar backfill tiga bulan selesai dalam beberapa menit.
 
 ## Bukti verifikasi (25 Nov 2026, WIB)
 
@@ -52,6 +53,39 @@ Status: **DEPLOYED (sementara, memakai credit Azure for Students) · Gmail AKTIF
 | Turso `pam-azure-uat` | tabel `transactions`, `analyses`, `gmail_connections`, `auth_sessions`, dll. terbentuk |
 | APK debug diarahkan ke host | `PAM_BACKEND_BASE_URL=https://pam-70-153-86-163.sslip.io`, build `:app:assembleDebug` sukses, terpasang di HP fisik |
 | Gmail aktif | `GMAIL_ENABLED=true`; `POST /v1/gmail/connect/start` tanpa auth **401** (rute siap), callback state invalid redirect ke `pam://gmail/connected?reason=state_invalid` |
+
+### Uji Gmail dan kategorisasi AI di host (25 Nov 2026, 10:00–10:52 UTC)
+
+| Cek | Hasil |
+|---|---|
+| Koneksi Gmail pemilik | 1 baris `gmail_connections` state `ACTIVE`; `sync_state` `idle` setelah backfill |
+| Backfill tiga bulan (Sep–Nov 2026) | **876** transaksi `EMAIL` tersimpan (per 10:51 UTC), 0 MANUAL di DB host |
+| Klasifikasi AI | Drain 22 job: **12 `CLASSIFIED`**, **19 `NEEDS_REVIEW`**, sisa antre; attempt Azure tercatat di `category_usage` |
+| Polling server | `gmail_sync_pass` periodik `"backfills":1`/`"deltas":0` dengan `failures:0`; `last_sync_at` bergerak (10:51:34 UTC) |
+
+Insiden dan perbaikan (commit backend `3e95727`, sudah di `main`+CI):
+
+- Gejala: kategori AI tidak pernah berjalan; `sync_state` tertahan `backfill`; log
+  `gmail_import_finalize_failed` dan `SQLite error: database is locked`.
+- Sebab: Turso menolak penulis kedua (`SQLITE_BUSY`) saat `ImportBatch`/`FinalizeImportJob`
+  berjalan bersamaan dengan penulis latar; job bulan gagal finalize, sehingga gate
+  `categoryAwaitingInitialBackfill` menahan classifier terus-menerus.
+- Perbaikan: retry backoff (4 percobaan) hanya untuk konflik tulis pada `ImportBatch` dan
+  `FinalizeImportJob`, plus error finalize ikut dilog agar bisa dibedakan dari mismatch hitungan.
+- Sesudah fix: finalize sukses, `sync_state=idle`, classifier berjalan dan transaksi mulai
+  berkategori tanpa mengubah plafon biaya Azure (USD 0.10/hari, USD 2.00/bulan kategorisasi).
+
+### Operasional: polling, backup, rollback
+
+- **Polling**: `GMAIL_MODE=polling`; delta tiap **900 dtk** dan cooldown sync manual **60 dtk**.
+  Karena Gmail dibaca server, kondisi "aplikasi ditutup" tetap terpenuhi di sisi host.
+- **TLS**: `caddy` memegang sertifikat Let's Encrypt dan memperbarui otomatis lewat systemd.
+- **Restart/log**: `sudo systemctl restart pam-api`, `sudo journalctl -u pam-api -f`.
+- **Backup DB**: Turso menyimpan backup otomatis; dump manual
+  `turso db dump pam-azure-uat > pam-azure-uat-YYYYMMDD.sql` (simpan terenkripsi, jangan commit).
+- **Restore**: buat DB baru dari dump (`turso db create … --from-dump …`) lalu arahkan
+  `DATABASE_URL`/`DATABASE_AUTH_TOKEN` ke DB itu; service membaca env saat restart.
+- **Rollback deploy**: lihat bagian [Rollback](#rollback) di bawah.
 
 ## Biaya dan pagar
 
