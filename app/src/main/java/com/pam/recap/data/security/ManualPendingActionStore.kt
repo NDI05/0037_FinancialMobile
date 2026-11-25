@@ -22,6 +22,7 @@ class ManualPendingActionStore @Inject constructor(
         val dateIso: String,
         val direction: String,
         val categoryCode: String,
+        val eventAtEpochMillis: Long? = null,
     )
 
     private val prefs get() = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -31,6 +32,7 @@ class ManualPendingActionStore @Inject constructor(
         val encoded = listOf(
             pending.key, pending.identity, pending.amountText, pending.description,
             pending.note, pending.dateIso, pending.direction, pending.categoryCode,
+            pending.eventAtEpochMillis?.toString().orEmpty(),
         ).joinToString("\u001f") { java.util.Base64.getUrlEncoder().encodeToString(it.encodeToByteArray()) }
         val wrapped = runCatching { wrappedSecrets.wrap(encoded.encodeToByteArray()) }.getOrNull()
             ?: return false
@@ -42,7 +44,7 @@ class ManualPendingActionStore @Inject constructor(
         val wrapped = prefs.getString(key(ownerId), null) ?: return null
         val decoded = runCatching { wrappedSecrets.unwrap(wrapped).decodeToString() }.getOrNull() ?: return null
         val parts = decoded.split("\u001f")
-        if (parts.size != 7 && parts.size != 8) return null
+        if (parts.size !in 7..9) return null
         return runCatching {
             val values = parts.map { String(java.util.Base64.getUrlDecoder().decode(it)) }
             // A payload written before notes existed has no note field; the draft then restores
@@ -50,7 +52,10 @@ class ManualPendingActionStore @Inject constructor(
             if (values.size == 7) {
                 Pending(values[0], values[1], values[2], values[3], "", values[4], values[5], values[6])
             } else {
-                Pending(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7])
+                Pending(
+                    values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7],
+                    values.getOrNull(8)?.takeIf { it.isNotEmpty() }?.toLong(),
+                )
             }
         }.getOrNull()
     }

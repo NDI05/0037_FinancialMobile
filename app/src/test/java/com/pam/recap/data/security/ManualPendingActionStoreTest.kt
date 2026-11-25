@@ -31,6 +31,7 @@ class ManualPendingActionStoreTest {
             key = "key", identity = "a|b", amountText = "175000",
             description = "Kopi \u001f khusus — 100%", note = "catatan", dateIso = "2026-11-22",
             direction = "DEBIT", categoryCode = "custom_coffee",
+            eventAtEpochMillis = 1795280400000L,
         )
         assertTrue(ManualPendingActionStore(context, XorStore()).save("u_1", pending))
         val restarted = ManualPendingActionStore(context, XorStore())

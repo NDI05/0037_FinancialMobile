@@ -169,22 +169,28 @@ class ManualEntryViewModel @Inject constructor(
                 _state.update { it.copy(isSaving = false, error = AppError.Validation(AppErrorRules.NOT_SIGNED_IN)) }
                 return@launch
             }
-            val eventAt = kotlin.time.Instant.fromEpochMilliseconds(
-                current.date.atTime(LocalTime.NOON).atZone(zone).toInstant().toEpochMilli(),
-            )
             val identity = listOf(
                 current.direction.name, current.amountText, current.description, current.note,
                 current.date.toString(), current.category.code,
             ).joinToString("|")
-            val existing = pendingActions?.read(ownerId)
+            val pending = pendingActions?.read(ownerId)
             // Compare draft fields, not the raw identity string: a payload restored from before the
             // note feature still has its five-field identity and must keep its retry key.
-            val key = if (
-                existing != null && ManualPendingActionStore.matchesDraft(
-                    existing, current.direction.name, current.amountText, current.description,
+            val existing = pending?.takeIf {
+                ManualPendingActionStore.matchesDraft(
+                    it, current.direction.name, current.amountText, current.description,
                     current.note, current.date.toString(), current.category.code,
                 )
-            ) {
+            }
+            // New date-only entries represent the start of the selected WIB day. Legacy
+            // pending actions used noon, so reuse their exact timestamp for an idempotent retry.
+            val eventAt = kotlin.time.Instant.fromEpochMilliseconds(
+                existing?.eventAtEpochMillis ?: (
+                    if (existing == null) current.date.atStartOfDay(zone)
+                    else current.date.atTime(LocalTime.NOON).atZone(zone)
+                ).toInstant().toEpochMilli(),
+            )
+            val key = if (existing != null) {
                 existing.key
             } else {
                 val fresh = java.util.UUID.randomUUID().toString()
@@ -195,6 +201,7 @@ class ManualEntryViewModel @Inject constructor(
                             description = current.description, note = current.note,
                             dateIso = current.date.toString(),
                             direction = current.direction.name, categoryCode = current.category.code,
+                            eventAtEpochMillis = eventAt.toEpochMilliseconds(),
                         ),
                     )
                 ) {

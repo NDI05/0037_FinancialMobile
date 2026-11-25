@@ -46,9 +46,12 @@ class ManualEntryViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel(monthId: String? = null): Pair<ManualEntryViewModel, FakeTransactionRepository> {
+    private fun viewModel(
+        monthId: String? = null,
+        currentInstant: Instant = now,
+    ): Pair<ManualEntryViewModel, FakeTransactionRepository> {
         val transactions = FakeTransactionRepository()
-        val clock = fixedClock(now)
+        val clock = fixedClock(currentInstant)
         val viewModel = ManualEntryViewModel(
             savedStateHandle = SavedStateHandle(buildMap { if (monthId != null) put("monthId", monthId) }),
             sessions = FakeSessionRepository(
@@ -77,6 +80,16 @@ class ManualEntryViewModelTest {
         setAmount("16000")
         setDescription("Makan siang")
         setCategory(Category.FOOD)
+    }
+
+    @Test
+    fun `manual entry today before noon represents the start of the WIB day`() {
+        val (viewModel, transactions) = viewModel(currentInstant = Instant.parse("2026-11-24T01:30:00Z"))
+        viewModel.fillDraft()
+
+        viewModel.save()
+
+        assertEquals(Instant.parse("2026-11-23T17:00:00Z"), transactions.all().single().eventAt)
     }
 
     @Test
