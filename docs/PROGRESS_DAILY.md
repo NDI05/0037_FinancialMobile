@@ -648,3 +648,11 @@ error/perhatian; tidak ada crash. API publik host: `/healthz` 200, `/readyz` 200
 kategori tanpa token 401, tiga rute pensiun 404. Ini re-verifikasi read-only; G36 (email Livin
 alami) tetap menunggu aksi pemilik.
 
+**Checklist pemilik disegarkan (25 Nov 19:25 WIB).** `OWNER_ACTION_CHECKLIST_2026-11-24.md`
+ditulis ulang agar hanya memuat sisa pekerjaan yang benar: pasangan build Android `1432557`
+(kode `112c556`) + backend `54618f9`, host Azure live, sisa G36 (onboarding Gmail + email Livin
+alami), G29/G37 Rp0, deploy/SRS (merge sudah selesai), OI-27, dan G14 owner-gated. Instruksi lama
+(merge branch, pilih Oracle/Render, backend lokal 18090) dihapus agar tidak menyesatkan.
+Bukti polling: 5 job sinkron terakhir `11:20:33Z / 11:36:33Z / 11:52:33Z / 12:07:53Z / 12:09:12Z`
+(±15–16 menit), semuanya `COMPLETE`. Commit `685d191`, di-push ke `main`.
+
