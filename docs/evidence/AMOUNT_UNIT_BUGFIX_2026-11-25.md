@@ -47,3 +47,28 @@ tertutup (G36) tetap tugas pemilik.
 
 Detail teknis dan angka agregat: backend
 [`docs/evidence/GMAIL_AMOUNT_UNIT_FIX_2026-11-25.md`](https://github.com/NDI05/0037-Backend-Financial/blob/main/docs/evidence/GMAIL_AMOUNT_UNIT_FIX_2026-11-25.md).
+
+## Bukti UI pada APK (emulator, data sintetis)
+
+Untuk membuktikan perbaikan sampai ke layar Android, APK final (`0cf7faf`, sha256 `5a2f71a1…`)
+diuji pada emulator-5556 dengan **backend terisolasi** `d42d7c4` (port 18091, DB `/tmp`, fake Gmail,
+akun sintetis `emu-amount@example.test`) dan `adb reverse tcp:18090 tcp:18091`. Fixture mengirim
+tiga nominal minor: `2_500_000` (Rp25.000), `999_000` (Rp9.990), `12_345_678` (Rp123.456,78).
+
+Hasil yang terlihat di layar:
+
+| Layar | yang tampil |
+|---|---|
+| Transaksi | `Rp25.000`, `Rp9.990`, `Rp123.456,78` — tiga baris, 3 transaksi |
+| Ringkasan | KELUAR `Rp158.446,78` (= 25.000 + 9.990 + 123.456,78), arus kas bersih `Rp158.446,78`, "3 belum berkategori" |
+
+Screenshot (hanya data sintetis): [Transaksi](../evidence/assets/amount_fix_emulator_2026-11-25/transaksi_dengan_nominal_benar.png)
+dan [Ringkasan](../evidence/assets/amount_fix_emulator_2026-11-25/ringkasan_dengan_nominal_benar.png).
+
+Smoke pada sesi yang sama: layar **Analisis** terbuka tanpa crash, sheet **Status pembaruan** hanya
+memanggil `GET /v1/gmail/status` (tanpa memicu impor) dan menampilkan status bulan 13/13, layar
+**Pengaturan** tidak memuat entri Anggaran/Lampiran/Administrasi. Setelah uji, `adb reverse`
+dikembalikan ke backend UAT pemilik dan data aplikasi emulator dibersihkan.
+
+Batas: emulator bukan HP pemilik; provider Gmail adalah fake dan datanya sintetis; bukti email Livin
+alami saat aplikasi tertutup (G36) tetap tugas pemilik.
