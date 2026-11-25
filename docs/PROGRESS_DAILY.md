@@ -708,3 +708,13 @@ sheet status, Pengaturan, Analisis, Kelola Kategori, Detail, Tambah, serta 360/3
 Batas: Android Studio Run literal, instance widget di launcher, notifikasi single/group nyata, dan
 FCM live **NOT RUN/PARTIAL**; backend tetap tanpa dimensi bank sehingga Jago/BRI hanya pratinjau;
 tidak ada merge/deploy produksi.
+
+**Audit independen redesign + perbaikan P1 (25 Nov 21:10 WIB).** Audit read-only diff
+`ccbba22..5dad109` memberi verdict PASS WITH FOLLOW-UPS. Dua P1 ditutup: (1) deep link
+widget/notifikasi tidak lagi memakai `SharedFlow` yang bisa drop/replay — sekarang polling satu
+slot `PamPendingNavigation` dan dibersihkan saat gate tidak Ready, sehingga aman dari recreate
+maupun ganti akun; (2) hitungan kartu bank/arah di Ringkasan tidak lagi terpotong halaman 100
+baris karena `OverviewViewModel` memuat seluruh halaman bulan. P2 timestamp sama juga diperbaiki.
+Widget Glance dirender nyata lewat host debug-only 2×2 dan 4×2 (state signed-out); instance di
+launcher tetap belum ditambahkan. Gate ulang: **640 tes/0 gagal**, assembleDebug PASS,
+lintDebug **0 error/153 warning**, APK sha256 `af334072…`.

@@ -44,6 +44,20 @@ class TransactionNotificationPlannerTest {
     }
 
     @Test
+    fun newTransactionWithSameEventTimestampAsWatermarkStillNotifies() {
+        val plan = TransactionNotificationPlanner.plan(
+            previous = baseline,
+            candidates = listOf(
+                candidate("old-1", now - 60_000),
+                candidate("new-same-ms", now - 60_000),
+            ),
+            nowEpochMs = now,
+        )
+
+        assertEquals(listOf("new-same-ms"), plan.newTransactions.map { it.id })
+    }
+
+    @Test
     fun groupCycleReportsEveryNewIdOnce() {
         val plan = TransactionNotificationPlanner.plan(
             previous = baseline,

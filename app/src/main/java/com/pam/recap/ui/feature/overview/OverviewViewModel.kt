@@ -129,9 +129,11 @@ class OverviewViewModel @Inject constructor(
                         }
                         val summary = (current as Outcome.Success).value
                         val previous = server.summary(ownerId, selectedMonth.previous())
-                        val rows = server.listMonth(ownerId, selectedMonth)
-                        val recent = (rows as? Outcome.Success)?.value?.items
-                            ?.sortedByDescending { it.eventAt }?.take(RECENT_COUNT).orEmpty()
+                        // Bank cards and direction counts must cover the whole month, not only the
+                        // first 100-row page (audit P1: counts were silently capped at 100).
+                        val rows = loadMonthTransactions(ownerId, selectedMonth)
+                        val monthRows = (rows as? Outcome.Success)?.value.orEmpty()
+                        val recent = monthRows.sortedByDescending { it.eventAt }.take(RECENT_COUNT)
                         val prior = (previous as? Outcome.Success)?.value
                         emit(
                             OverviewUiState(
@@ -150,7 +152,7 @@ class OverviewViewModel @Inject constructor(
                                     )
                                 },
                                 recent = recent,
-                                monthTransactions = (rows as? Outcome.Success)?.value?.items.orEmpty(),
+                                monthTransactions = monthRows,
                                 error = if (rows is Outcome.Failure) rows.error else null,
                             ),
                         )
@@ -179,6 +181,30 @@ class OverviewViewModel @Inject constructor(
     /** The rolling one-year window the arrows are bounded by (DRAFT-RET-01/02). */
     fun window(): RetentionWindow = RetentionWindow.of(clock)
 
+    /**
+     * Loads every page of the selected month for accurate per-bank and per-direction counts.
+     * Bounded so a misbehaving cursor cannot loop forever; the UI still renders the rows fetched.
+     */
+    private suspend fun loadMonthTransactions(
+        ownerId: String,
+        month: JakartaMonth,
+    ): Outcome<List<Transaction>> {
+        val repo = server ?: return Outcome.Success(emptyList())
+        val items = mutableListOf<Transaction>()
+        var cursor: String? = null
+        repeat(MONTH_PAGE_LIMIT) {
+            when (val page = repo.listMonth(ownerId, month, limit = MONTH_PAGE_SIZE, cursor = cursor)) {
+                is Outcome.Failure -> return page
+                is Outcome.Success -> {
+                    items += page.value.items
+                    cursor = page.value.nextCursor
+                    if (cursor == null || page.value.items.isEmpty()) return Outcome.Success(items)
+                }
+            }
+        }
+        return Outcome.Success(items)
+    }
+
     fun previousMonth() {
         val current = month.value ?: return
         if (!window().canGoEarlier(current)) return
@@ -198,6 +224,8 @@ class OverviewViewModel @Inject constructor(
     }
 
     private companion object {
+        const val MONTH_PAGE_SIZE = 200
+        const val MONTH_PAGE_LIMIT = 10
         const val RECENT_COUNT = 3
         const val STOP_TIMEOUT_MILLIS = 5_000L
     }

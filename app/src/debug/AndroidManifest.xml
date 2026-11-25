@@ -4,5 +4,11 @@
   Release builds do not include this source set, so NFR-03 (HTTPS only) still holds for release.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:usesCleartextTraffic="true" />
+    <application android:usesCleartextTraffic="true">
+        <!-- Debug host for capturing real Glance widget renders; never packaged in release. -->
+        <activity
+            android:name=".debug.WidgetPreviewHostActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+    </application>
 </manifest>

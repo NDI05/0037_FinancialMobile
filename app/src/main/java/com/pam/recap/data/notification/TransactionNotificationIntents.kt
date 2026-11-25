@@ -4,8 +4,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import com.pam.recap.MainActivity
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * Intent contract between a local transaction notification and [MainActivity]. Kept small and
@@ -62,17 +60,9 @@ object PamPendingNavigation {
     @Volatile
     private var pending: PamPendingTarget? = null
 
-    private val _targets = MutableSharedFlow<PamPendingTarget>(extraBufferCapacity = 1)
-
-    /** Live stream consumed by `PamNavHost`; [pending] still covers an emission before Ready. */
-    val targets = _targets.asSharedFlow()
-
     fun emit(target: PamPendingTarget) {
         pending = target
-        _targets.tryEmit(target)
     }
-
-    fun peek(): PamPendingTarget? = pending
 
     fun consume(): PamPendingTarget? {
         val value = pending

@@ -65,7 +65,7 @@ object TransactionNotificationPlanner {
 
         val seen = previous.seenIds.toHashSet()
         val fresh = eligible.filter { candidate ->
-            candidate.id !in seen && candidate.eventAtEpochMs > previous.lastEventAtEpochMs
+            candidate.id !in seen && candidate.eventAtEpochMs >= previous.lastEventAtEpochMs
         }
         val latestEventAt = maxOf(
             previous.lastEventAtEpochMs,

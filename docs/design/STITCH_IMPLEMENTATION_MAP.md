@@ -20,7 +20,7 @@ prototipe ke route, komponen, dan sumber data aktual sebelum perubahan UI. Sumbe
 
 Kesembilan layar sudah dipetakan dan diimplementasikan pada branch `feature/stitch-redesign`.
 Bukti runtime per layar, batas bukti, dan screenshot ada di
-[evidence/stitch_2026-11-25](../evidence/stitch_2026-11-25/README.md). Gate saat ini: 639 unit test
+[evidence/stitch_2026-11-25](../evidence/stitch_2026-11-25/README.md). Gate saat ini: 640 unit test
 lulus, `assembleDebug` dan `lintDebug` (0 error) lulus. Widget/notifikasi CR-010 sudah terpasang
 secara kode; instance widget di launcher dan notifikasi Livin nyata masih PARTIAL/NOT RUN.
 

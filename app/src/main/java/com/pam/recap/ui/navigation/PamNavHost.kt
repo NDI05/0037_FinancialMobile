@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -89,7 +90,11 @@ fun PamNavHost(
     // CR-010: widget/notification taps are validated by MainActivity and parked here. The graph
     // itself stays unchanged; targets are applied only once the session gate is Ready.
     LaunchedEffect(gate) {
-        if (gate !is GateState.Ready) return@LaunchedEffect
+        if (gate !is GateState.Ready) {
+            // Never carry an owner-scoped deep link across logout/account switch.
+            PamPendingNavigation.clear()
+            return@LaunchedEffect
+        }
         fun openPending(target: PamPendingTarget) {
             when (target) {
                 is PamPendingTarget.Overview -> navController.navigate(
@@ -105,8 +110,14 @@ fun PamNavHost(
                 PamPendingTarget.SignIn -> Unit
             }
         }
-        PamPendingNavigation.consume()?.let(::openPending)
-        PamPendingNavigation.targets.collect { openPending(it) }
+        // Delivery is polled from the single retained slot. A SharedFlow-only collector can drop a
+        // target emitted between consume() and collection start, and a replaying flow can redeliver
+        // a stale deep link when the activity is recreated. Polling + consume() is exactly-once and
+        // the non-Ready branch clears targets so a logged-out intent cannot replay for another owner.
+        while (true) {
+            PamPendingNavigation.consume()?.let(::openPending)
+            delay(250)
+        }
     }
 
     // The browser returns through the pam://gmail/connected deep link. Only navigate once the gate
