@@ -613,3 +613,13 @@ Settings dihapus karena pengaturan koneksi sudah terpusat di section Akun dan ri
 sudah punya layar sendiri; parameter `onOpenGmailLink` di `SettingsScreen` dan string mati ikut
 dibersihkan, screenshot test disesuaikan. `:app:testDebugUnitTest` **BUILD SUCCESSFUL**, APK debug
 baru `e2953a268fb4f377e56ced3f3434492e448d78aaf468bbc8193ad684a44e3ec9` (45 MB).
+**Verifikasi ulang FR-67/NFR-15 pada backend `main` terbaru.** Binary backend `main` `54618f9`
+dibangun ulang (sha256 `1db19f23…`) lalu diuji pada runtime terisolasi (fake Gmail + classifier
+stub, DB `/tmp`), bukan data pemilik. FR-67: antrean kategori tetap tertahan saat backfill belum
+lengkap (`GATE_DRAIN state:"not_due"`, **stub 0 panggilan**), lalu setelah backfill selesai drain
+memicu tepat **4** batch `[2,2,1,2]` dan poll berikutnya `not_due`; `FINAL_TX_COUNT 4`. NFR-15:
+tanggal masa depan → **400** `outside_retention`; entri hari ini WIB → **201** dengan `eventAt`
+`2026-11-24T17:00:00Z`; retry identik → **200** id sama dan list tepat **1** baris. Log:
+`/tmp/pm25_fr67_e2e_main54618f9.log`, `/tmp/pm25_nfr15_main54618f9.out2`. Gate doc diperbarui;
+sisa gate tetap aksi pemilik (G36, G29/G37, G14 data pemilik, OI-27, merge/SRS resmi).
+
