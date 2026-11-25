@@ -677,3 +677,11 @@ menampilkan "Terakhir berhasil sinkron **1 menit lalu**" dan "Sinkron berikutnya
 — konsisten dengan siklus polling otonom 19:25:53 WIB; status "Menunggu" di antara siklus adalah
 normal. Aplikasi dikembalikan ke Ringkasan; tidak ada perubahan data.
 
+**Aktivitas uji G36 terdeteksi (25 Nov 19:58 WIB).** DB mencatat sesi lama `u_d66e…` dicabut
+dengan alasan **logout** pada `12:58:21Z` (19:58:21 WIB) dan sesi baru dibuat `12:58:31Z`
+(19:58:31 WIB) — tepat pola login → logout → relogin Google yang diminta G36, di luar aktivitas
+agent (agent hanya melakukan smoke UI read-only pada 19:26–19:27). Belum ada perubahan koneksi
+Gmail (`12:56:53Z`), consent, atau transaksi setelah relogin; jumlah transaksi tetap **876**.
+Artinya porsi Run/login/logout/relogin tampak sudah dijalankan pemilik; sisa G36 adalah
+onboarding Gmail + satu email Livin alami. Bila ini bukan aksi pemilik, mohon konfirmasi.
+
