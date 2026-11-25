@@ -141,7 +141,13 @@ fun AccountScreen(
             if (state.showGoogleSignIn) {
                 Spacer(modifier = Modifier.height(PamSpacing.md))
                 PillButton(
-                    text = stringResource(R.string.account_google_sign_in),
+                    text = stringResource(
+                        if (state.mode == AccountMode.REGISTER) {
+                            R.string.account_google_register
+                        } else {
+                            R.string.account_google_sign_in
+                        },
+                    ),
                     onClick = viewModel::signInWithGoogle,
                     loading = state.googleBusy,
                     enabled = !state.isBusy && !state.googleBusy,
@@ -238,20 +244,6 @@ fun AccountScreen(
                             value = state.displayName,
                             onValueChange = viewModel::setDisplayName,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                        )
-                    }
-
-                    if (state.isBackendEnabled && state.mode == AccountMode.REGISTER) {
-                        LabelledField(
-                            label = stringResource(R.string.account_invite_label),
-                            value = state.inviteCode,
-                            onValueChange = viewModel::setInviteCode,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        )
-                        Text(
-                            text = stringResource(R.string.account_invite_hint),
-                            style = LabelM,
-                            color = OnInkMuted,
                         )
                     }
                 }

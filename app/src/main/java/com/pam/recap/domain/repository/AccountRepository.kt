@@ -18,12 +18,11 @@ interface AccountRepository {
     /** True when a backend URL is configured; drives the copy and the fields on the account screen. */
     val isBackendEnabled: Boolean
 
-    /** Invite-only registration (FR-51). Fails with [com.pam.recap.core.result.AppErrorRules.INVALID_INVITE]. */
+    /** Open registration (FR-51): email + password only, no invite code. */
     suspend fun register(
         email: String,
         password: String,
         displayName: String?,
-        inviteCode: String,
     ): Outcome<Session>
 
     /** Email + password sign-in; a failure never says whether the account exists (FR-53). */

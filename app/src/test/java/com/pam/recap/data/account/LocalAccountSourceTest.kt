@@ -94,7 +94,7 @@ class LocalAccountSourceTest {
     @Test
     fun `offline registration also works and rejects an invalid email`() = runTest {
         val source = offlineSource()
-        assertTrue(source.register("budi@example.test", "ignored", "Budi", "ignored") is Outcome.Success)
+        assertTrue(source.register("budi@example.test", "ignored", "Budi") is Outcome.Success)
 
         val invalid = source.loginOffline("not-an-email", null)
         assertTrue(invalid is Outcome.Failure)
@@ -112,7 +112,7 @@ class LocalAccountSourceTest {
         server.enqueue(sessionCreated("token-1"))
         val source = backendSource()
 
-        val result = source.register("andi@example.test", "correct-horse-battery", "Andi", "invite-123")
+        val result = source.register("andi@example.test", "correct-horse-battery", "Andi")
 
         assertTrue(result is Outcome.Success)
         assertEquals("Andi", sessions.current()?.displayName)
@@ -125,18 +125,18 @@ class LocalAccountSourceTest {
     }
 
     @Test
-    fun `a bad invite fails before any session is created`() = runTest {
+    fun `a rejected registration keeps the user signed out`() = runTest {
         server.enqueue(
-            MockResponse().setResponseCode(403).setHeader("content-type", "application/json")
-                .setBody("""{"code":"invalid_invite","message":"teknisi","retryable":false,"correlationId":"c"}"""),
+            MockResponse().setResponseCode(409).setHeader("content-type", "application/json")
+                .setBody("""{"code":"email_taken","message":"teknisi","retryable":false,"correlationId":"c"}"""),
         )
         val source = backendSource()
 
-        val result = source.register("andi@example.test", "correct-horse-battery", "Andi", "wrong")
+        val result = source.register("andi@example.test", "correct-horse-battery", "Andi")
 
         assertTrue(result is Outcome.Failure)
         assertEquals(
-            AppErrorRules.INVALID_INVITE,
+            AppErrorRules.EMAIL_TAKEN,
             ((result as Outcome.Failure).error as AppError.Validation).rule,
         )
         assertNull(sessions.current())
@@ -145,7 +145,7 @@ class LocalAccountSourceTest {
     @Test
     fun `a short password never reaches the network`() = runTest {
         val source = backendSource()
-        val result = source.register("andi@example.test", "short", "Andi", "invite-123")
+        val result = source.register("andi@example.test", "short", "Andi")
 
         assertTrue(result is Outcome.Failure)
         assertEquals(
@@ -181,7 +181,7 @@ class LocalAccountSourceTest {
         server.enqueue(sessionCreated("token-1"))
         val source = backendSource()
 
-        val result = source.register("andi@example.test", "correct-horse-battery", "Andi", "invite-123")
+        val result = source.register("andi@example.test", "correct-horse-battery", "Andi")
 
         assertTrue(result is Outcome.Success)
         assertEquals(emptyList<String>(), demoDataPort.seededOwners)

@@ -55,6 +55,26 @@ class AccountSsoComposeTest {
     }
 
     @Test
+    fun `google button is offered in register mode above the email form`() {
+        val accounts = FakeAccountRepository(isBackendEnabled = true, googleSsoEnabled = true)
+        val viewModel = AccountViewModel(
+            accounts,
+            FakeSessionRepository(),
+            FakeGoogleSignInGateway(),
+            SavedStateHandle(mapOf("mode" to AccountMode.REGISTER.name)),
+        )
+
+        compose.setContent {
+            PamTheme { AccountScreen(onBack = {}, viewModel = viewModel) }
+        }
+
+        compose.onNodeWithTag(AccountTestTags.GOOGLE_SIGN_IN).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.account_google_register)).assertIsDisplayed()
+        // The email form is still there: Google is a second door, not a replacement.
+        compose.onNodeWithText(text(R.string.account_email_label)).assertIsDisplayed()
+    }
+
+    @Test
     fun `google button is absent without a configured client id`() {
         val accounts = FakeAccountRepository(isBackendEnabled = true, googleSsoEnabled = true)
         val viewModel = viewModel(accounts, FakeGoogleSignInGateway(isAvailable = false))

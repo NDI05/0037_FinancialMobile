@@ -65,22 +65,18 @@ class BackendSessionRepositoryImpl @Inject constructor(
         email: String,
         password: String,
         displayName: String?,
-        inviteCode: String,
     ): Outcome<Unit> {
         val endpoint = config.endpoint("/v1/accounts")
             ?: return Outcome.Failure(AppError.Configuration(BACKEND_NOT_CONFIGURED))
         val body = json.encodeToString(
             RegisterBody.serializer(),
-            RegisterBody(email = email.trim(), password = password, displayName = displayName, inviteCode = inviteCode),
+            RegisterBody(email = email.trim(), password = password, displayName = displayName),
         )
         return withContext(ioDispatcher) {
             when (val call = execute(endpoint, body)) {
                 null -> Outcome.Failure(AppError.Network("backend_unreachable"))
                 else -> when {
                     call.code == 201 -> Outcome.Success(Unit)
-                    call.errorCode == INVALID_INVITE || call.code == 403 -> Outcome.Failure(
-                        AppError.Validation(AppErrorRules.INVALID_INVITE),
-                    )
                     call.code == 409 -> Outcome.Failure(AppError.Validation(AppErrorRules.EMAIL_TAKEN))
                     call.code == 400 -> Outcome.Failure(AppError.Validation(AppErrorRules.INVALID_CREDENTIALS))
                     call.code == 429 -> Outcome.Failure(AppError.RateLimited())
@@ -539,7 +535,6 @@ class BackendSessionRepositoryImpl @Inject constructor(
         val email: String,
         val password: String,
         val displayName: String? = null,
-        val inviteCode: String,
     )
 
     @Serializable
@@ -618,7 +613,6 @@ class BackendSessionRepositoryImpl @Inject constructor(
         const val PREFS_NAME = "pam_backend_session"
         const val KEY_SESSION = "wrapped_backend_session_v1"
         const val BACKEND_NOT_CONFIGURED = "backend_not_configured"
-        const val INVALID_INVITE = "invalid_invite"
         const val FALLBACK_TTL_MILLIS = 30L * 24 * 60 * 60 * 1000
         const val REFRESH_SKEW_MILLIS = 60_000L
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()

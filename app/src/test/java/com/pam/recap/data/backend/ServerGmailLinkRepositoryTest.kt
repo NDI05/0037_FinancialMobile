@@ -49,7 +49,6 @@ class ServerGmailLinkRepositoryTest {
                     email: String,
                     password: String,
                     displayName: String?,
-                    inviteCode: String,
                 ) = Outcome.Success(Unit)
                 override suspend fun login(email: String, password: String) = Outcome.Success(Unit)
                 override suspend fun token(ownerId: String): Outcome<String> =

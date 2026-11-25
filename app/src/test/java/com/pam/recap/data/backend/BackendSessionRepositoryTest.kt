@@ -235,12 +235,27 @@ class BackendSessionRepositoryTest {
     }
 
     @Test
-    fun `registration maps invite and duplicate-email failures`() = runTest {
-        server.enqueue(jsonResponse(403, "invalid_invite"))
-        assertValidation(repository().register(EMAIL, "correct-horse-battery", "A", "bad"), AppErrorRules.INVALID_INVITE)
-
+    fun `registration maps a duplicate email to EMAIL_TAKEN`() = runTest {
         server.enqueue(jsonResponse(409, "conflict"))
-        assertValidation(repository().register(EMAIL, "correct-horse-battery", "A", "invite"), AppErrorRules.EMAIL_TAKEN)
+        assertValidation(repository().register(EMAIL, "correct-horse-battery", "A"), AppErrorRules.EMAIL_TAKEN)
+    }
+
+    @Test
+    fun `registration body carries no invite code`() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(201)
+                .setHeader("content-type", "application/json")
+                .setBody("""{"ownerId":"u_x","email":"$EMAIL","displayName":"A"}"""),
+        )
+        repository().register(EMAIL, "correct-horse-battery", "A")
+
+        val request = server.takeRequest()
+        assertEquals("/v1/accounts", request.path)
+        val body = Json.parseToJsonElement(request.body.readUtf8()).jsonObject
+        assertEquals(EMAIL, body["email"]?.jsonPrimitive?.content)
+        assertTrue(body.containsKey("password"))
+        assertFalse(body.containsKey("inviteCode"))
     }
 
     @Test
@@ -252,7 +267,7 @@ class BackendSessionRepositoryTest {
                 .setBody("""{"ownerId":"u_x","email":"$EMAIL","displayName":"A"}"""),
         )
         val repository = repository()
-        val registered = repository.register(EMAIL, "correct-horse-battery", "A", "invite")
+        val registered = repository.register(EMAIL, "correct-horse-battery", "A")
         assertTrue(registered is Outcome.Success)
         assertTrue(repository.token(OWNER) is Outcome.Failure)
     }

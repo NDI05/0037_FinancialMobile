@@ -49,7 +49,6 @@ class LocalAccountSource @Inject constructor(
         email: String,
         password: String,
         displayName: String?,
-        inviteCode: String,
     ): Outcome<Session> {
         val normalized = normalize(email)
         if (!isValidEmail(normalized)) {
@@ -63,7 +62,7 @@ class LocalAccountSource @Inject constructor(
         if (password.length < MIN_PASSWORD_LENGTH) {
             return Outcome.Failure(AppError.Validation(AppErrorRules.PASSWORD_TOO_SHORT))
         }
-        val registered = backendSessions.register(normalized, password, cleanName, inviteCode.trim())
+        val registered = backendSessions.register(normalized, password, cleanName)
         if (registered is Outcome.Failure) return registered
         val loggedIn = backendSessions.login(normalized, password)
         if (loggedIn is Outcome.Failure) return loggedIn

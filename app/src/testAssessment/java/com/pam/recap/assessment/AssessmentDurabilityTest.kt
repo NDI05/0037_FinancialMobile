@@ -425,7 +425,6 @@ class AssessmentDurabilityTest {
             email: String,
             password: String,
             displayName: String?,
-            inviteCode: String,
         ): Outcome<Unit> = Outcome.Success(Unit)
 
         override suspend fun login(email: String, password: String): Outcome<Unit> = Outcome.Success(Unit)

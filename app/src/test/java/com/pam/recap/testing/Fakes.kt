@@ -402,7 +402,6 @@ class NoopBackendSessionRepository : BackendSessionRepository {
         email: String,
         password: String,
         displayName: String?,
-        inviteCode: String,
     ): Outcome<Unit> = Outcome.Failure(AppError.Configuration("backend_not_configured"))
 
     override suspend fun login(email: String, password: String): Outcome<Unit> =
@@ -475,10 +474,9 @@ class FakeAccountRepository(
         email: String,
         password: String,
         displayName: String?,
-        inviteCode: String,
     ): Outcome<Session> {
         calls += "register:$email"
-        return result ?: Outcome.Failure(AppError.Validation(AppErrorRules.INVALID_INVITE))
+        return result ?: Outcome.Failure(AppError.Validation(AppErrorRules.INVALID_CREDENTIALS))
     }
 
     override suspend fun login(email: String, password: String): Outcome<Session> {

@@ -271,7 +271,7 @@ class PamApiClientTest {
         override val isEnabled = true
         var renewals = 0
         var renewFailure: AppError? = null
-        override suspend fun register(email: String, password: String, displayName: String?, inviteCode: String) = Outcome.Success(Unit)
+        override suspend fun register(email: String, password: String, displayName: String?) = Outcome.Success(Unit)
         override suspend fun login(email: String, password: String) = Outcome.Success(Unit)
         override suspend fun token(ownerId: String): Outcome<String> = Outcome.Success("access-1")
         override suspend fun renew(ownerId: String, rejectedToken: String?): Outcome<String> {

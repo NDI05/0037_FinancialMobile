@@ -32,7 +32,6 @@ data class AccountUiState(
     val email: String = "",
     val password: String = "",
     val displayName: String = "",
-    val inviteCode: String = "",
     val passwordVisible: Boolean = false,
     val isBackendEnabled: Boolean = true,
     val isBusy: Boolean = false,
@@ -56,7 +55,6 @@ data class AccountUiState(
             email.isBlank() -> false
             !isBackendEnabled -> true
             password.length < MIN_PASSWORD_LENGTH -> false
-            mode == AccountMode.REGISTER && inviteCode.isBlank() -> false
             else -> true
         }
 
@@ -145,8 +143,6 @@ class AccountViewModel @Inject constructor(
 
     fun setDisplayName(value: String) = _state.update { it.copy(displayName = value, error = null) }
 
-    fun setInviteCode(value: String) = _state.update { it.copy(inviteCode = value, error = null) }
-
     fun togglePasswordVisibility() =
         _state.update { it.copy(passwordVisible = !it.passwordVisible) }
 
@@ -168,7 +164,6 @@ class AccountViewModel @Inject constructor(
                     email = snapshot.email,
                     password = snapshot.password,
                     displayName = snapshot.displayName,
-                    inviteCode = snapshot.inviteCode,
                 )
                 else -> accounts.login(snapshot.email, snapshot.password)
             }

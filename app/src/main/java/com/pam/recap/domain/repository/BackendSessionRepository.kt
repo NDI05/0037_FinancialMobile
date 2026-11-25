@@ -18,12 +18,11 @@ interface BackendSessionRepository {
     /** True when a backend URL is configured. */
     val isEnabled: Boolean
 
-    /** FR-51: invite-only registration; the token is not issued until [login] succeeds. */
+    /** FR-51: open registration; the token is not issued until [login] succeeds. */
     suspend fun register(
         email: String,
         password: String,
         displayName: String?,
-        inviteCode: String,
     ): Outcome<Unit>
 
     /** Exchanges email + password for an access token and caches it. */

@@ -126,7 +126,25 @@ class AccountSsoViewModelTest {
     }
 
     @Test
-    fun `unlinked identity returns guidance to use the pam email first`() = runTest(dispatcher) {
+    fun `google sign in also serves registration mode`() = runTest(dispatcher) {
+        // /v1/auth/google auto-creates (or auto-links) the account, so the register mode must never
+        // ask the user to link Google from Settings first.
+        accounts.googleSignInResult = Outcome.Success(session(googleLinked = true))
+        val vm = viewModel(mode = AccountMode.REGISTER)
+
+        assertTrue(vm.state.value.showGoogleSignIn)
+        vm.signInWithGoogle()
+        advanceUntilIdle()
+
+        assertTrue(vm.state.value.isSignedIn)
+        assertTrue(vm.state.value.googleLinked)
+        assertNull(vm.state.value.error)
+        assertEquals("u_owner", sessions.current()?.ownerId)
+        assertTrue(accounts.calls.contains("googleSignIn:nonce-fake"))
+    }
+
+    @Test
+    fun `unlinked identity fallback still explains the blocked sign in`() = runTest(dispatcher) {
         accounts.googleSignInResult = Outcome.Failure(
             AppError.Validation(AppErrorRules.GOOGLE_IDENTITY_NOT_LINKED),
         )

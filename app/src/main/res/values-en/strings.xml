@@ -376,7 +376,6 @@
     <string name="account_email_label">Email</string>
     <string name="account_password_label">Password</string>
     <string name="account_display_name_label">Display name (optional)</string>
-    <string name="account_invite_label">Invite code</string>
     <string name="account_submit_sign_in">Sign in</string>
     <string name="account_submit_register">Create account</string>
     <string name="account_submit_offline">Continue without an account</string>
@@ -384,11 +383,11 @@
     <string name="account_hide_password">Hide password</string>
     <string name="account_switch_to_register">No account yet? Create one</string>
     <string name="account_switch_to_sign_in">Already have an account? Sign in</string>
-    <string name="account_invite_hint">Registration needs an invite code from the server owner.</string>
     <string name="account_offline_badge">Local profile</string>
     <string name="account_backend_badge">Server account</string>
     <string name="account_google_sign_in">Sign in with Google</string>
-    <string name="account_google_sign_in_body">No PAM password: Google verifies who you are and the PAM server exchanges it for a session.</string>
+    <string name="account_google_register">Sign up with Google</string>
+    <string name="account_google_sign_in_body">No PAM password: Google verifies who you are, then the PAM server creates a new account or opens the existing one.</string>
     <string name="account_google_or_email">or use your PAM email</string>
     <string name="account_signed_in_headline">Your account.</string>
     <string name="account_signed_in_body">Manage how you sign in and the inbox connection. Linking Google never changes your transactions, owner or role.</string>
@@ -421,7 +420,6 @@
     <string name="error_invalid_email">Enter a valid email address.</string>
     <string name="error_password_too_short">Password must be at least 8 characters.</string>
     <string name="error_invalid_credentials">Email or password is incorrect.</string>
-    <string name="error_invalid_invite">The invite code is invalid.</string>
     <string name="error_email_taken">This email is already registered. Try signing in.</string>
     <string name="account_email_placeholder">name@example.com</string>
     <string name="gmail_credentials_title">Inbox credentials</string>

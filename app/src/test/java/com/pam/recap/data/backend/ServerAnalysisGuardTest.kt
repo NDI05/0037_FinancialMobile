@@ -78,7 +78,7 @@ class ServerAnalysisGuardTest {
         }
         val sessions = object : BackendSessionRepository {
             override val isEnabled = true
-            override suspend fun register(email: String, password: String, displayName: String?, inviteCode: String) = Outcome.Success(Unit)
+            override suspend fun register(email: String, password: String, displayName: String?) = Outcome.Success(Unit)
             override suspend fun login(email: String, password: String) = Outcome.Success(Unit)
             override suspend fun token(ownerId: String) = Outcome.Success("token")
             override suspend fun revoke() = Unit

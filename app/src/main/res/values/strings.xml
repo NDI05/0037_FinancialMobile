@@ -399,7 +399,6 @@
     <string name="account_email_label">Email</string>
     <string name="account_password_label">Kata sandi</string>
     <string name="account_display_name_label">Nama tampilan (opsional)</string>
-    <string name="account_invite_label">Kode undangan</string>
     <string name="account_submit_sign_in">Masuk</string>
     <string name="account_submit_register">Buat akun</string>
     <string name="account_submit_offline">Lanjut tanpa akun</string>
@@ -407,11 +406,11 @@
     <string name="account_hide_password">Sembunyikan kata sandi</string>
     <string name="account_switch_to_register">Belum punya akun? Buat akun</string>
     <string name="account_switch_to_sign_in">Sudah punya akun? Masuk</string>
-    <string name="account_invite_hint">Pendaftaran butuh kode undangan dari pemilik server.</string>
     <string name="account_offline_badge">Profil lokal</string>
     <string name="account_backend_badge">Akun server</string>
     <string name="account_google_sign_in">Masuk dengan Google</string>
-    <string name="account_google_sign_in_body">Tanpa kata sandi PAM: Google memverifikasi identitas Anda, server PAM menukarnya dengan sesi.</string>
+    <string name="account_google_register">Daftar dengan Google</string>
+    <string name="account_google_sign_in_body">Tanpa kata sandi PAM: Google memverifikasi identitas Anda, lalu server PAM membuat akun baru atau membuka sesi akun yang sudah ada.</string>
     <string name="account_google_or_email">atau gunakan email PAM</string>
     <string name="account_signed_in_headline">Akun Anda.</string>
     <string name="account_signed_in_body">Kelola cara masuk dan koneksi kotak masuk. Transaksi, pemilik, dan peran tidak berubah saat Anda menautkan Google.</string>
@@ -444,7 +443,6 @@
     <string name="error_invalid_email">Format email tidak valid.</string>
     <string name="error_password_too_short">Kata sandi minimal 8 karakter.</string>
     <string name="error_invalid_credentials">Email atau kata sandi salah.</string>
-    <string name="error_invalid_invite">Kode undangan tidak valid.</string>
     <string name="error_email_taken">Email ini sudah terdaftar. Coba masuk.</string>
     <string name="account_email_placeholder">nama@contoh.id</string>
     <string name="gmail_credentials_title">Kredensial kotak masuk</string>
