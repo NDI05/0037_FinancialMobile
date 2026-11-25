@@ -85,6 +85,36 @@ Insiden dan perbaikan (commit backend `3e95727`, sudah di `main`+CI):
   (keputusan manual lewat aksi “Kategorikan dengan AI”/review), sesuai aturan produk agar tidak
   menebak kategori.
 
+### CI/CD: deploy otomatis ke host (25 Nov 2026)
+
+Pipeline ada di repo backend `.github/workflows/deploy-host.yml` dan berjalan setiap push ke
+`main` (atau manual `workflow_dispatch`):
+
+1. `go vet`, `go test ./...`, build `CGO_ENABLED=0 GOOS=linux GOARCH=amd64` (binary ±14 MB);
+2. upload binary ke `/tmp/pam-api.new` lewat SSH;
+3. cadangkan binary lama ke `/opt/pam-api/pam-api.prev`, pasang binary baru secara atomik,
+   `systemctl restart pam-api`;
+4. health check lokal `/readyz` (20×1 dtk); bila gagal, binary lama dipulihkan dan service
+   di-restart otomatis (rollback), job gagal;
+5. verifikasi publik `https://pam-70-153-86-163.sslip.io/healthz` + `/readyz` dari runner.
+
+Rahasia repo yang dipakai: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PORT`, `DEPLOY_SSH_KEY`
+(private key ed25519 khusus CI; public key-nya ditambahkan ke `~/.ssh/authorized_keys` user
+`pam`). Uji nyata: run [45609200337](https://github.com/NDI05/0037-API-FinancialMobile/actions/runs/45609200337)
+**success** 1m24s; sesudah deploy `/healthz` `uptimeSeconds:0`, `/readyz` 200, service `active`,
+binary baru bertanggal 11:58 UTC. Deploy manual tetap bisa dilakukan bila perlu, tetapi jalur
+utama sekarang push ke `main`.
+
+### Aplikasi Android tanpa kabel USB
+
+USB hanya dipakai untuk memasang APK debug dan melihat log. Build yang terpasang memakai
+`PAM_BACKEND_BASE_URL=https://pam-70-153-86-163.sslip.io` (bukan `adb reverse` ke localhost),
+jadi setelah kabel dicabut aplikasi tetap memuat Ringkasan/Transaksi dari host selama ada
+internet. Bukti 25 Nov: seluruh `adb reverse` dihapus (`adb reverse --remove-all`), aplikasi
+di-force-stop lalu dibuka ulang dan tetap memuat Ringkasan ("Dari email", arus kas, masuk/keluar)
+dari host Azure. Sinkronisasi Gmail berjalan di server (polling 15 menit), jadi email baru tetap
+diproses walau aplikasi tertutup dan HP tidak terhubung kabel.
+
 ### Operasional: polling, backup, rollback
 
 - **Polling**: `GMAIL_MODE=polling`; delta tiap **900 dtk** dan cooldown sync manual **60 dtk**.

@@ -575,6 +575,14 @@ habis ±20 menit; per 11:55 UTC **358 `CLASSIFIED`**, **515 `NEEDS_REVIEW`**, **
 **USD 0.0246** dari 205 attempt. `NEEDS_REVIEW` = merchant ambigu/transfer personal, sengaja tidak
 ditebak.
 
+**CI/CD host.** `.github/workflows/deploy-host.yml` di repo backend men-deploy otomatis setiap
+push `main`: vet/test → build linux/amd64 → scp → cadangkan binary lama → pasang atomik →
+restart → cek `/readyz` lokal + `/healthz`/`/readyz` publik → rollback otomatis bila gagal.
+Secret: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PORT`, `DEPLOY_SSH_KEY` (key ed25519 khusus CI).
+Uji run `45609200337` **success** (1m24s); host terverifikasi `uptimeSeconds:0` setelah restart.
+Aplikasi Android juga terbukti tetap jalan setelah `adb reverse` dihapus dan kabel USB dicabut,
+karena APK memakai URL HTTPS host.
+
 Permintaan UI pemilik dieksekusi di `a2876df`: kartu **Kotak Masuk** dan kartu **Persetujuan** pada
 Settings dihapus karena pengaturan koneksi sudah terpusat di section Akun dan riwayat persetujuan
 sudah punya layar sendiri; parameter `onOpenGmailLink` di `SettingsScreen` dan string mati ikut
