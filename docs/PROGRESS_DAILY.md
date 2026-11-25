@@ -623,3 +623,12 @@ tanggal masa depan → **400** `outside_retention`; entri hari ini WIB → **201
 `/tmp/pm25_fr67_e2e_main54618f9.log`, `/tmp/pm25_nfr15_main54618f9.out2`. Gate doc diperbarui;
 sisa gate tetap aksi pemilik (G36, G29/G37, G14 data pemilik, OI-27, merge/SRS resmi).
 
+**G14 fixture + cek hidup host pada backend `main` `54618f9`.** Drill retensi/hapus/restore
+dijalankan ulang dengan binary dari backend `main` terbaru (sha256 `1db19f23…`) pada DB/port
+terisolasi: **59/59** check PASS (token gate, report-only vs delete, jendela 12 bulan WIB, audit
+`retention_sweeps`, backup/restore utuh, baris terhapus kembali). Laporan
+`/tmp/G14_DRILL_MAIN54618F9_2026-11-25.md`. Cek hidup host Azure (baca-saja, 19:20 WIB): service
+`pam-api` **active** sejak 18:58 WIB, `/healthz`+`/readyz` lokal & publik **200**, binary rollback
+`.prev` tersedia, env **600**, **60** event polling Gmail dalam 1 jam, sertifikat LE valid s.d.
+23 Feb 2027, disk 12%. Gate G14 data pemilik tetap **NOT RUN**; deploy produksi tetap milik pemilik.
+
