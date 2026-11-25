@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -73,7 +74,10 @@ fun PamScaffold(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBars.only(WindowInsetsSides.Top)),
+                .windowInsetsPadding(WindowInsets.statusBars.only(WindowInsetsSides.Top))
+                // Keyboard (IME) is a bottom inset: shrink the shell instead of letting the
+                // keyboard cover the fields and the save button on manual-entry forms.
+                .imePadding(),
         ) {
             if (topBar != null) {
                 topBar()

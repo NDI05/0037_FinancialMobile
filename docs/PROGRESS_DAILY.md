@@ -583,6 +583,13 @@ Uji run `45609200337` **success** (1m24s); host terverifikasi `uptimeSeconds:0` 
 Aplikasi Android juga terbukti tetap jalan setelah `adb reverse` dihapus dan kabel USB dicabut,
 karena APK memakai URL HTTPS host.
 
+**Keyboard menutupi field input.** Keluhan pemilik saat entri manual: field tertutup keyboard.
+`PamScaffold` sekarang memakai `.imePadding()` sehingga seluruh layar (termasuk bottom bar tombol
+Simpan) menyusut di atas keyboard dan konten yang fokus otomatis ter-scroll ke area terlihat.
+Diverifikasi di HP: keyboard tampil setinggi 701 dp, field `Catatan` yang difokuskan bergeser ke
+y≈1050–1249 (di atas keyboard y=1569), tombol **Simpan transaksi** tetap terlihat di y≈1443–1498.
+`:app:testDebugUnitTest` **BUILD SUCCESSFUL**; APK `bc81925c…`.
+
 **Cakupan data Livin.** Audit 100 email Livin terakhir: semua transaksi yang dikirim via email
 adalah **keluar** (QRIS, transfer BI Fast, tagihan dibayar); tidak ada email dana masuk, sehingga
 uang masuk di Livin tidak bisa masuk lewat connector Gmail (Livin hanya notifikasi push in-app).
