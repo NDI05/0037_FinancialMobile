@@ -663,3 +663,9 @@ saat app tertutup" berjalan di host: polling ±15–16 menit tidak bergantung pa
 transaksi tetap **876** (belum ada email Livin baru); setelah pemilik mengirim email alami,
 ekspektasi gate tetap **tepat +1 transaksi**. Gate doc dan runbook G36 diperbarui.
 
+**Smoke layar Analisis pada build hosted (25 Nov 19:26 WIB).** Tab Analisis menampilkan
+consent-aware copy ("Yang dikirim hanya angka agregat…") dan analisis tersimpan berstatus
+**Kedaluwarsa** karena data berubah (revisi 39) — perilaku jujur, bukan error, dan tidak ada
+panggilan provider baru (tanpa biaya). Tab Ringkasan/Transaksi/Pengaturan tetap normal; aplikasi
+dikembalikan ke Ringkasan. Tidak ada perubahan data pemilik.
+
