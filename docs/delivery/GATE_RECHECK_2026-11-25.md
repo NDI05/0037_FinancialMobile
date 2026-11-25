@@ -10,12 +10,12 @@ build/lingkungan yang disebut; sisanya PARTIAL atau NOT RUN.
 
 | Item | Nilai |
 |---|---|
-| Android `main` | == `origin/main`, worktree bersih; kode terakhir `13b7a2a` (fix pesan kategori), auth `a53f45e`, mode daftar `8de8f75`; commit dokumentasi terakhir yang menyentuh dokumen ini `5f0383a` (docs-only) |
-| Backend `main` | == `origin/main`, worktree bersih; kode terakhir `6c941d9` (auth), dokumentasi `1325d3d`, gitignore Vercel `5789f54`; artefak deploy host gratis `0b09664` (CI 45574878205 success); perbaikan nominal sebelumnya `d42d7c4`/`aa33fb8`/`68f1ba4`/`b6ce917` tetap ada |
-| APK debug terpasang di perangkat fisik & emulator | **APK terbaru (fix pesan kategori):** 47.628.023 B sha256 `39f2cd6efc8d27e22007a08b9d349797019c8c0188ca6087f0b18347b75a4fbe` (commit `13b7a2a`), terpasang di Redmi 10 14:42 WIB; **APK dasar gate:** `app-debug.apk` 47.668.107 B sha256 `a0498c2904b7d129dc471c5e09a65e6f59f3ae7d96c180bd63a1901440da114d` (build dari `main` `8de8f75`), `adb install -r` di emulator-5556 dan perangkat fisik Xiaomi **Redmi 10** (model `21061119AG`, seri diredaksi) yang terhubung saat verifikasi; pemilik mengonfirmasi 25 Nov bahwa HP-nya adalah **Redmi 10 `21061119AG` (seri diredaksi)** yang terhubung tersebut; catatan model `24069PC21G` dari ronde sebelumnya keliru; APK sebelumnya `fefd7041…` dipakai smoke emulator putaran pertama |
+| Android `main` | == `origin/main` **`1c9e7de`**, worktree bersih; kode terakhir `1c9e7de` (IME `imePadding`), `2f64fdc` (docs uang masuk), `b8e63cc` (audit cakupan email), `6a9c449` (docs CI/CD), `a2876df` (hapus kartu Settings) |
+| Backend `main` | == `origin/main` **`54618f9`**, worktree bersih; `3e95727` finalize retry Turso, `fed2547` buka queue setelah backfill, `54618f9` workflow deploy host (CI **success**), perbaikan nominal `d42d7c4` dan seterusnya tetap ada |
+| APK debug terpasang di perangkat fisik | **APK terbaru:** 47.628.155 B sha256 `bc81925c2987587156b4568942249950688e9407bf75ba8160d64ef1d41fe0bb` (commit `1c9e7de`, IME fix), dipasang ulang di HP uji (model `21061119AG`, seri diredaksi) dan diverifikasi keyboard tidak menutupi field. APK dasar gate dan APK sebelumnya tetap tercatat di riwayat dokumen. |
 | Binary backend diverifikasi | `/tmp/pam-api-head` (dibangun dari `1325d3d`/kode `6c941d9`) sha256 `3878814bbb3c3c5ba21fbe2802ca375299f4b1346a813662590e118558cf7ffe`; binary UAT loopback aktif sha256 `cbd882ea86cc684e3beb6fc38981205b226d2e70c4114e9d61db512f7824abc7` (backup biner lama: `pam-api-loopback.bak-20261125-auth`) |
-| CI backend | `5789f54` **success** (run 45573339049, 57 dtk); `6c941d9`/`1325d3d` dan commit sebelumnya juga **success** |
-| CI Android | tidak ada workflow CI di repo Android (tetap seperti sebelumnya) |
+| CI backend | `54618f9` **success**: run `backend` 45609200445 dan **deploy-host** 45609200337 (1m24s, host terverifikasi `/healthz` `uptimeSeconds:0` + `/readyz` 200) |
+| CI Android | tidak ada workflow CI di repo Android; build APK masih lewat Android Studio/`scripts/build.sh` |
 
 ## Snapshot pra-uji G36 (agregat data pemilik, tanpa PII)
 

@@ -9,11 +9,13 @@ memverifikasi hasil yang dilaporkan. Jangan memakai akun pribadi pemilik: gunaka
 - HP fisik terbuka (bukan layar kunci `NotificationShade`) dan USB debugging aktif;
   `adb devices` menampilkan perangkat sebagai `device`.
 - Android Studio terpasang (`/Applications/Android Studio.app`) dan proyek `pam-app` terbuka.
-- Backend UAT resmi berjalan dari launcher resmi; `GET /healthz` dan `GET /readyz` = 200.
+- Backend UAT resmi berjalan di host Azure: `https://pam-70-153-86-163.sslip.io` dengan
+  `GET /healthz` dan `GET /readyz` = 200. Tidak perlu backend lokal maupun `adb reverse`.
 - Akun Google uji dan kotak surat uji yang bisa menerima email Livin.
-- `local.properties` memakai endpoint UAT yang sama dengan build verifikasi. Untuk HP fisik lewat
-  kabel USB: `adb reverse tcp:18090 tcp:18090`, lalu `PAM_BACKEND_BASE_URL=http://127.0.0.1:18090`.
-  (Emulator memakai `http://10.0.2.2:18090`.) Pastikan `BuildConfig` efektif menunjuk endpoint itu.
+- `local.properties` sudah memakai `PAM_BACKEND_BASE_URL=https://pam-70-153-86-163.sslip.io`;
+  build varian `debug` di Android Studio akan memakai endpoint host itu. Kabel USB hanya untuk
+  memasang/menjalankan build, bukan syarat aplikasi berjalan (APK tetap jalan setelah kabel
+  dicabut selama ada internet).
 
 ## Menyiapkan Test user Google (untuk SSO live)
 
