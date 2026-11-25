@@ -273,12 +273,13 @@ private fun BankCardPager(
     }
 }
 
-/** Visibility-sensitive 6 dp dot inside a 32 dp touch target. */
+/** 6 dp dot inside a 48 x 24 dp touch target (full accessibility width, design-limited height). */
 @Composable
 private fun BankCardDot(selected: Boolean, label: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(24.dp)
+            .width(48.dp)
+            .height(24.dp)
             .clip(CircleShape)
             .clickable(role = Role.Tab, onClick = onClick)
             .semantics {
@@ -289,7 +290,7 @@ private fun BankCardDot(selected: Boolean, label: String, onClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .width(if (selected) 20.dp else 6.dp)
+                .width(if (selected) 24.dp else 6.dp)
                 .height(6.dp)
                 .clip(RoundedCornerShape(PamRadius.pill))
                 .background(if (selected) OnInk else OutlineVariant),

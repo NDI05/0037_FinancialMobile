@@ -44,8 +44,8 @@ pada viewport **393×852, DPR 2**, font Manrope dan ikon Material Symbols termua
 | Ringkasan: kartu bank | y162, 353×245, radius 24 | y≈198 (termasuk 37,5 status), 353×245, radius 24 |
 | Ringkasan: nominal pengeluaran | 32/700 | 32/700, tabular |
 | Ringkasan: kartu kategori | y445, 353×295 | proporsi sama; tinggi minimum 274 dp agar nav tetap di bawah |
-| Transaksi: search | 353×48, radius 16 | 353×48, radius 12 visual (token Stitch `rounded-xl`), touch 48 |
-| Transaksi: chip filter | h36 | h36 visual di dalam target sentuh 48 |
+| Transaksi: search | 353×48, radius 16 | 353×48, radius 12 (`PamRadius.sm`), touch 48; deviasi radius visual 4 dp |
+| Transaksi: baris | tinggi minimum 64 (padding 16) | ±74 (padding 48 total + konten), tetap > 48 |
 | Transaksi: FAB | 56, radius 24, x317 y716 | 56, radius 24, x317 y689–745 |
 | Nav bawah | konten 65 dp + 1 dp divider | konten 65 dp + divider; sistem nav ±49 dp |
 | Kartu | putih, outline `#E2E3DB` 1 dp, tanpa shadow | sama |
@@ -68,7 +68,11 @@ pada viewport **393×852, DPR 2**, font Manrope dan ikon Material Symbols termua
    kartu provenance/edit/delete/audit di bawah fold dipertahankan karena fungsional.
 7. **Kelola kategori**: baris menampilkan jenis kategori nyata, bukan jumlah transaksi yang tidak
    tersedia di kontrak.
-8. **State kritis**: `after_transaksi_393dp_v5.png` dan `after_kategori_393dp_v1.png` merekam state
+8. **Kartu bank**: pager memakai halaman penuh selebar 353 dp dengan snapping dan tombol panah,
+   tanpa "peek edge" kartu tetangga seperti render (garis lime bertumpuk di belakang kartu). Ini
+   disengaja agar kartu tidak menyusut di 360 dp; label preview Jago/BRI tetap terlihat. Titik pager
+   memakai target sentuh 48×24 dp (visual 6 dp, terpilih 24×6 dp sesuai referensi).
+9. **State kritis**: `after_transaksi_393dp_v5.png` dan `after_kategori_393dp_v1.png` merekam state
    "Sesi Google berakhir" yang muncul saat verifikasi (token Gmail server kedaluwarsa). Daftar
    Transaksi versi data ada di `after_transaksi_393dp_v3.png`. Relink Gmail butuh interaksi OAuth
    pemilik, jadi tidak diuji ulang di sesi ini.
