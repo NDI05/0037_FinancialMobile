@@ -95,6 +95,23 @@ migrasi dulu (satu instance), jangan biarkan banyak instance balapan migrasi.
 4. Bila Vercel dipakai serius: buat project terpisah untuk produksi, domain kustom, backup
    Turso, dan audit ulang env/secret sebelum dinyatakan PASS.
 
+## Backup, restore, dan pemantauan (diuji 25 Nov 2026)
+
+- **Backup Turso (diuji nyata):**
+  `turso db export pam-vercel --output-file /tmp/pam-vercel-backup.db` berhasil; file SQLite
+  640 KB (+WAL) berisi `schema_migrations` 22 dan data demo; dapat dibuka `sqlite3` untuk
+  `PRAGMA integrity_check` atau dipulihkan ke DB baru dengan `turso db import`.
+- **Restore/rollback data:** buat DB Turso baru lalu `turso db import <file>`; atau gunakan
+  fitur restore dashboard Turso. Rollback **kode** memakai `vercel rollback <deployment-url>`
+  (deploy demo ini tidak mengubah migrasi; DB demo terpisah).
+- **Kesehatan dan latensi:** `GET /healthz` dari jaringan publik ±15:20 WIB: **200** dalam
+  **0,37–0,40 dtk** (3 kali berturut-turut). Belum ada alert/monitoring otomatis.
+- **CI backend:** commit `5789f54` → run GitHub Actions **45573339049 success** (57 dtk).
+  Satu annotation non-blocking: `actions/checkout@v4`/`setup-go@v5` masih Node 20.
+- **Kuota Hobby:** Functions/transfer mengikuti kuota Hobby; Daemon Hobby 5 CPU-jam +
+  420 GB-jam memori/bulan. Demo ini tidak memakai Daemon, jadi biaya tetap Rp0 selama di
+  dalam kuota Hobby/Turso free.
+
 ## Perintah operasional
 
 ```bash
