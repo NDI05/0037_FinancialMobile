@@ -34,6 +34,10 @@ Status verifikasi: commit backend **`0b09664`** (CI `45574878205` **success**); 
 dibangun (`pam-api:freehost-test`) dan smoke container membuktikan `/healthz` + `/readyz` **200**
 (DB SQLite sementara, provider fake). Deploy nyata tetap **NOT RUN** sampai akun/VM pemilik tersedia.
 
+Validasi tambahan 25 Nov 15:30 WIB: `bash -n bootstrap.sh` lolos; `Caddyfile` diuji dengan image
+resmi `caddy:2` (`caddy validate`) → **Valid configuration**; unit systemd baru akan divalidasi saat
+`bootstrap.sh` dijalankan di VM (langkah `daemon-reload` + `restart` akan gagal keras bila unit salah).
+
 ## 4. Langkah pemilik — Oracle Cloud (rekomendasi)
 
 1. Daftar **oracle.com/cloud/free** (butuh verifikasi kartu; jangan pakai kartu kredit limit besar).
