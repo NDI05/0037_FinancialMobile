@@ -1,0 +1,397 @@
+<!DOCTYPE html><html lang="id"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transaksi — FinancialRecap</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'canvas': '#FAFAF7',
+        'accent': '#D9F449',
+        'on-accent': '#171915',
+        'light-primary': '#171915',
+        'light-on-primary': '#FFFFFF',
+        'light-primary-container': '#EEEEEB',
+        'light-on-primary-container': '#171915',
+        'light-secondary': '#576500',
+        'light-on-secondary': '#FFFFFF',
+        'light-secondary-container': '#D9F449',
+        'light-on-secondary-container': '#171915',
+        'light-surface': '#FFFFFF',
+        'light-on-surface': '#171915',
+        'light-surface-container-lowest': '#FFFFFF',
+        'light-surface-container-low': '#F4F4F1',
+        'light-surface-container': '#EEEEEB',
+        'light-surface-container-high': '#E8E8E5',
+        'light-on-surface-variant': '#454742',
+        'light-outline': '#767871',
+        'light-outline-variant': '#E2E3DB',
+        'light-success': '#006D30',
+        'light-on-success': '#FFFFFF',
+        'light-success-container': '#E6F6EC',
+        'light-on-success-container': '#00210A',
+        'light-warning': '#9B4500',
+        'light-on-warning': '#FFFFFF',
+        'light-warning-container': '#FFEDE5',
+        'light-on-warning-container': '#331200',
+        'light-error': '#B91C1C',
+        'light-on-error': '#FFFFFF',
+        'light-error-container': '#FFEDEA',
+        'light-on-error-container': '#93000B',
+      },
+      borderRadius: {
+        'sm': '8px',
+        'DEFAULT': '12px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        '2xl': '24px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-lg': '16px',
+        'page-margin': '20px',
+        'section': '24px',
+        'block': '32px',
+      },
+      fontFamily: {
+        'display': ['"Manrope"', 'sans-serif'],
+        'headline': ['"Manrope"', 'sans-serif'],
+        'title': ['"Manrope"', 'sans-serif'],
+        'body': ['"Manrope"', 'sans-serif'],
+        'label': ['"Manrope"', 'sans-serif'],
+      },
+      fontSize: {
+        'display-lg': ['36px', { lineHeight: '44px', letterSpacing: '-0.75px', fontWeight: '700' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'headline-md': ['24px', { lineHeight: '30px', letterSpacing: '-0.3px', fontWeight: '700' }],
+        'title-lg': ['18px', { lineHeight: '24px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'title-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '500' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.15px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.2px', fontWeight: '600' }],
+      },
+      transitionDuration: {
+        'state-change': '120ms',
+        'status-label-fade': '200ms',
+        'sheet-enter': '250ms',
+        'sheet-exit': '180ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'status-label-fade': '0ms',
+        'sheet-enter': '0ms',
+        'sheet-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'status-label-fade': 'ease-in-out',
+        'sheet-enter': 'cubic-bezier(0.2, 0, 0, 1)',
+        'sheet-exit': 'cubic-bezier(0.3, 0, 1, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; font-variation-settings: 'FILL' 0, 'wght' 400; }
+  </style>
+</head>
+<body class="bg-canvas text-light-on-surface font-body antialiased">
+  <div class="min-h-[884px] max-w-[393px] mx-auto flex flex-col justify-between pb-36 relative" data-stitch-vh="min-h-[884px]===min-h-screen">
+    <div>
+      <!-- Top Bar -->
+      <header class="relative h-14 px-page-margin flex items-center justify-between">
+        <div class="w-12 h-12 -ml-3"></div>
+        <h1 class="font-headline text-title-lg text-light-on-surface absolute left-1/2 -translate-x-1/2">Transaksi</h1>
+        <button id="sync-trigger" type="button" onclick="openSyncSheet()" aria-label="Status pembaruan: siap disinkronkan" class="w-12 h-12 -mr-3 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low">
+          <span id="sync-header-icon" class="material-symbols-outlined text-[22px]" aria-hidden="true">sync</span>
+        </button>
+      </header>
+
+      <main class="px-page-margin pt-2 flex flex-col gap-4">
+
+        <!-- Search input -->
+        <div class="relative">
+          <span class="material-symbols-outlined text-[20px] text-light-outline absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true">search</span>
+          <input id="search-input" type="search" oninput="applyFilters()" placeholder="Cari transaksi..." aria-label="Cari transaksi" class="w-full min-h-[48px] pl-11 pr-4 py-2.5 rounded-lg bg-light-surface border border-light-outline-variant font-body text-body-md text-light-on-surface placeholder:text-light-outline focus:border-light-primary focus:ring-0">
+        </div>
+
+        <!-- Filter chips: Periode, Arah, Sumber (1-row horizontal slide) -->
+        <div class="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 -mx-page-margin px-page-margin [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden" role="group" aria-label="Filter transaksi">
+          <button type="button" onclick="cyclePeriod()" class="shrink-0 min-h-[36px] px-3 py-1.5 rounded-full bg-light-surface-container text-light-on-surface font-label text-label-md inline-flex items-center gap-1 whitespace-nowrap hover:bg-light-surface-container-high">
+            <span class="material-symbols-outlined text-[16px]" aria-hidden="true">calendar_today</span>
+            <span id="filter-period-label">Nov 2026</span>
+          </button>
+          <button type="button" onclick="setArah(&#39;semua&#39;)" id="chip-arah-semua" aria-pressed="true" class="shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-primary text-light-on-primary font-label text-label-md whitespace-nowrap">Semua</button>
+          <button type="button" onclick="setArah(&#39;pengeluaran&#39;)" id="chip-arah-pengeluaran" aria-pressed="false" class="shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-surface border border-light-outline-variant text-light-on-surface-variant font-label text-label-md whitespace-nowrap">Pengeluaran</button>
+          <button type="button" onclick="setArah(&#39;pemasukan&#39;)" id="chip-arah-pemasukan" aria-pressed="false" class="shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-surface border border-light-outline-variant text-light-on-surface-variant font-label text-label-md whitespace-nowrap">Pemasukan</button>
+          <button type="button" onclick="toggleSumber()" id="chip-sumber" aria-pressed="false" class="shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-surface border border-light-outline-variant text-light-on-surface-variant font-label text-label-md whitespace-nowrap">Sumber: Semua</button>
+        </div>
+
+        <!-- Active filter summary when coming from Ringkasan -->
+        <div id="carried-filter-note" class="hidden rounded-lg bg-light-surface-container-low px-3 py-2 flex items-center justify-between gap-2">
+          <span id="carried-filter-text" class="font-body text-body-sm text-light-on-surface-variant">Filter dari Ringkasan</span>
+          <button type="button" onclick="resetFilters()" class="font-label text-label-md text-light-on-surface underline">Reset</button>
+        </div>
+
+        <!-- Date-grouped Transaction List -->
+        <div id="tx-groups" class="flex flex-col gap-4"></div>
+
+        <!-- Empty search result -->
+        <div id="tx-empty" class="hidden bg-light-surface border border-light-outline-variant rounded-xl p-6 text-center flex flex-col items-center gap-2">
+          <span class="material-symbols-outlined text-[24px] text-light-outline" aria-hidden="true">search_off</span>
+          <p class="font-title text-title-md text-light-on-surface">Tidak ada transaksi</p>
+          <p class="font-body text-body-sm text-light-on-surface-variant">Ubah kata kunci atau filter.</p>
+        </div>
+      </main>
+    </div>
+
+    <!-- Floating Action Button (FAB): Icon-only Tambah transaksi -->
+    <div class="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-[393px] px-page-margin flex justify-end pointer-events-none z-30">
+      <a href="../add-transaction/TambahTransaksi.html" data-component-id="button-icon" data-component-type="button" data-component-variant="fab" aria-label="Tambah transaksi" class="pointer-events-auto w-14 h-14 rounded-2xl bg-accent text-on-accent border border-light-outline-variant inline-flex items-center justify-center transition-opacity duration-state-change hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-light-primary">
+        <span class="material-symbols-outlined text-[26px]" aria-hidden="true">add</span>
+      </a>
+    </div>
+
+    <!-- Bottom Navigation (4 tabs) -->
+    <nav aria-label="Navigasi utama" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[393px] bg-light-surface border-t border-light-outline-variant px-2 py-2 grid grid-cols-4 gap-1 z-20">
+      <a href="../summary/Ringkasan.html" class="min-h-[48px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-light-on-surface-variant hover:text-light-on-surface">
+        <span class="px-4 py-1 rounded-full flex items-center justify-center">
+          <span class="material-symbols-outlined text-[20px]" aria-hidden="true">home</span>
+        </span>
+        <span class="font-label text-label-sm">Ringkasan</span>
+      </a>
+      <a href="../transactions/Transaksi.html" aria-current="page" class="min-h-[48px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-light-on-surface">
+        <span class="px-4 py-1 rounded-full bg-accent text-on-accent flex items-center justify-center">
+          <span class="material-symbols-outlined text-[20px]" aria-hidden="true">receipt_long</span>
+        </span>
+        <span class="font-label text-label-sm">Transaksi</span>
+      </a>
+      <a href="../analysis/Analisis.html" class="min-h-[48px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-light-on-surface-variant hover:text-light-on-surface">
+        <span class="px-4 py-1 rounded-full flex items-center justify-center">
+          <span class="material-symbols-outlined text-[20px]" aria-hidden="true">bar_chart</span>
+        </span>
+        <span class="font-label text-label-sm">Analisis</span>
+      </a>
+      <a href="../settings/Pengaturan.html" class="min-h-[48px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-light-on-surface-variant hover:text-light-on-surface">
+        <span class="px-4 py-1 rounded-full flex items-center justify-center">
+          <span class="material-symbols-outlined text-[20px]" aria-hidden="true">settings</span>
+        </span>
+        <span class="font-label text-label-sm">Pengaturan</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Bottom Sheet: Status pembaruan -->
+  <div id="sync-backdrop" onclick="closeSyncSheet()" class="hidden fixed inset-0 bg-light-primary/30 z-40"></div>
+  <section id="sync-sheet" role="dialog" aria-modal="true" aria-labelledby="sync-sheet-title" class="hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[393px] bg-light-surface border-t border-light-outline-variant rounded-t-2xl p-5 z-50 flex flex-col gap-4">
+    <div class="w-10 h-1 rounded-full bg-light-outline-variant mx-auto"></div>
+    <header class="flex items-start justify-between gap-2">
+      <div>
+        <h2 id="sync-sheet-title" class="font-headline text-title-lg text-light-on-surface">Status pembaruan</h2>
+        <p id="sync-last-success" class="font-body text-body-sm text-light-on-surface-variant mt-0.5">Terakhir: Hari ini, 09:40</p>
+      </div>
+      <button type="button" onclick="closeSyncSheet()" aria-label="Tutup" class="w-12 h-12 -mr-2 -mt-2 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low">
+        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
+      </button>
+    </header>
+    <div id="sync-body" class="bg-light-surface-container-low rounded-xl p-4 flex flex-col gap-1.5">
+      <p class="font-label text-label-lg text-light-on-surface">Siap sinkronkan Gmail</p>
+      <p class="font-body text-body-sm text-light-on-surface-variant">12 tersimpan · 2 dilewati</p>
+    </div>
+    <button id="sync-action-btn" type="button" onclick="startSync()" class="w-full min-h-[48px] px-6 py-3 rounded-lg bg-light-primary text-light-on-primary inline-flex items-center justify-center gap-2">
+      <span class="font-label text-label-lg" id="sync-action-label">Sinkronkan sekarang</span>
+    </button>
+  </section>
+
+  <script>
+    var transactions = [
+      { id: 1, dateGroup: 'Hari ini · 25 Nov 2026', title: 'Kopi Kenangan', category: 'Makan & Minum', source: 'Livin', kind: 'QRIS', arah: 'pengeluaran', amount: '-Rp38.000' },
+      { id: 2, dateGroup: 'Kemarin · 24 Nov 2026', title: 'PLN Pascabayar', category: 'Tagihan & Utilitas', source: 'Livin', kind: 'VA', arah: 'pengeluaran', amount: '-Rp485.000' },
+      { id: 3, dateGroup: 'Kemarin · 24 Nov 2026', title: 'Warung Bu Sari', category: 'Saran AI', isAiSuggestion: true, source: 'Manual', kind: '', arah: 'pengeluaran', amount: '-Rp27.000' },
+      { id: 4, dateGroup: '22 Nov 2026', title: 'Gaji Bulanan', category: 'Penghasilan', source: 'Manual', kind: '', arah: 'pemasukan', amount: '+Rp8.500.000' },
+      { id: 5, dateGroup: '21 Nov 2026', title: 'Pembayaran QRIS', category: 'Belanja Harian', source: 'Livin', kind: 'QRIS', arah: 'pengeluaran', amount: '-Rp112.000' },
+      { id: 6, dateGroup: '20 Nov 2026', title: 'Transfer Masuk — Raka', category: 'Lainnya', source: 'Livin', kind: 'Transfer', arah: 'pemasukan', amount: '+Rp250.000' }
+    ];
+
+    var periodLabels = ['Nov 2026', 'Okt 2026', 'Sep 2026'];
+    var periodIdx = 0;
+    var activeArah = 'semua';
+    var sumberList = ['semua', 'Manual', 'Livin'];
+    var sumberIdx = 0;
+
+    function cyclePeriod() {
+      periodIdx = (periodIdx + 1) % periodLabels.length;
+      document.getElementById('filter-period-label').textContent = periodLabels[periodIdx];
+    }
+
+    function openSyncSheet() {
+      document.getElementById('sync-backdrop').classList.remove('hidden');
+      document.getElementById('sync-sheet').classList.remove('hidden');
+    }
+
+    function closeSyncSheet() {
+      document.getElementById('sync-backdrop').classList.add('hidden');
+      document.getElementById('sync-sheet').classList.add('hidden');
+    }
+
+    function startSync() {
+      var btn = document.getElementById('sync-action-btn');
+      var lbl = document.getElementById('sync-action-label');
+      var icon = document.getElementById('sync-header-icon');
+      btn.disabled = true;
+      lbl.textContent = 'Menyinkronkan...';
+      icon.classList.add('animate-spin');
+      setTimeout(function() {
+        icon.classList.remove('animate-spin');
+        icon.textContent = 'check_circle';
+        btn.disabled = false;
+        lbl.textContent = 'Sinkronkan lagi';
+        document.getElementById('sync-last-success').textContent = 'Terakhir: Baru saja';
+      }, 900);
+    }
+
+    function initFromQuery() {
+      var params = new URLSearchParams(window.location.search);
+      var arah = params.get('arah');
+      var periode = params.get('periode');
+      var cycle = params.get('cycle');
+      var notice = params.get('notice');
+      if (periode === '2026-10') { periodIdx = 1; document.getElementById('filter-period-label').textContent = 'Okt 2026'; }
+      if (arah === 'pengeluaran' || arah === 'pemasukan') {
+        activeArah = arah;
+        document.getElementById('carried-filter-note').classList.remove('hidden');
+        document.getElementById('carried-filter-text').textContent = 'Filter: ' + (arah === 'pengeluaran' ? 'Pengeluaran' : 'Pemasukan');
+      } else if (cycle === 'latest') {
+        document.getElementById('carried-filter-note').classList.remove('hidden');
+        document.getElementById('carried-filter-text').textContent = '3 transaksi baru tercatat';
+      } else if (notice === 'unavailable') {
+        document.getElementById('carried-filter-note').classList.remove('hidden');
+        document.getElementById('carried-filter-text').textContent = 'Transaksi tidak lagi tersedia. Menampilkan daftar terbaru.';
+      }
+      updateChipStyles();
+      applyFilters();
+    }
+
+    function setArah(arah) {
+      activeArah = arah;
+      updateChipStyles();
+      applyFilters();
+    }
+
+    function toggleSumber() {
+      sumberIdx = (sumberIdx + 1) % sumberList.length;
+      var s = sumberList[sumberIdx];
+      var btn = document.getElementById('chip-sumber');
+      btn.textContent = s === 'semua' ? 'Sumber: Semua' : 'Sumber: ' + s;
+      btn.setAttribute('aria-pressed', s !== 'semua' ? 'true' : 'false');
+      btn.className = s !== 'semua'
+        ? 'shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-primary text-light-on-primary font-label text-label-md whitespace-nowrap'
+        : 'shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-surface border border-light-outline-variant text-light-on-surface-variant font-label text-label-md whitespace-nowrap';
+      applyFilters();
+    }
+
+    function resetFilters() {
+      activeArah = 'semua';
+      sumberIdx = 0;
+      document.getElementById('chip-sumber').textContent = 'Sumber: Semua';
+      document.getElementById('carried-filter-note').classList.add('hidden');
+      document.getElementById('search-input').value = '';
+      updateChipStyles();
+      applyFilters();
+    }
+
+    function updateChipStyles() {
+      ['semua', 'pengeluaran', 'pemasukan'].forEach(function(a) {
+        var el = document.getElementById('chip-arah-' + a);
+        var active = a === activeArah;
+        el.setAttribute('aria-pressed', active ? 'true' : 'false');
+        el.className = active
+          ? 'shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-primary text-light-on-primary font-label text-label-md whitespace-nowrap'
+          : 'shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-surface border border-light-outline-variant text-light-on-surface-variant font-label text-label-md whitespace-nowrap';
+      });
+    }
+
+    function applyFilters() {
+      var q = (document.getElementById('search-input').value || '').toLowerCase();
+      var sFilter = sumberList[sumberIdx];
+      var filtered = transactions.filter(function(tx) {
+        if (activeArah !== 'semua' && tx.arah !== activeArah) return false;
+        if (sFilter !== 'semua' && tx.source !== sFilter) return false;
+        if (q && tx.title.toLowerCase().indexOf(q) === -1 && tx.category.toLowerCase().indexOf(q) === -1) return false;
+        return true;
+      });
+
+      var container = document.getElementById('tx-groups');
+      var emptyBox = document.getElementById('tx-empty');
+      container.innerHTML = '';
+
+      if (filtered.length === 0) {
+        emptyBox.classList.remove('hidden');
+        return;
+      }
+      emptyBox.classList.add('hidden');
+
+      var groups = {};
+      filtered.forEach(function(tx) {
+        if (!groups[tx.dateGroup]) groups[tx.dateGroup] = [];
+        groups[tx.dateGroup].push(tx);
+      });
+
+      Object.keys(groups).forEach(function(dateLabel) {
+        var sec = document.createElement('section');
+        sec.className = 'flex flex-col gap-2';
+        var h2 = document.createElement('h2');
+        h2.className = 'font-label text-label-md text-light-on-surface-variant px-1';
+        h2.textContent = dateLabel;
+        sec.appendChild(h2);
+
+        var ul = document.createElement('ul');
+        ul.className = 'bg-light-surface border border-light-outline-variant rounded-xl divide-y divide-light-outline-variant';
+
+        groups[dateLabel].forEach(function(tx) {
+          var badgeText = tx.kind ? (tx.source + ' · ' + tx.kind) : tx.source;
+          var catHtml = tx.isAiSuggestion
+            ? '<span class="font-label text-label-sm px-2 py-0.5 rounded-full bg-light-warning-container text-light-on-warning-container">Saran AI</span>'
+            : '<span class="font-body text-body-sm text-light-on-surface-variant">' + tx.category + '</span>';
+          var amountColor = tx.arah === 'pemasukan' ? 'text-light-success' : 'text-light-on-surface';
+
+          var li = document.createElement('li');
+          li.innerHTML =
+            '<a href="../transaction-detail/DetailTransaksi.html?id=' + tx.id + '" class="p-4 flex items-center justify-between gap-3 min-h-[64px] hover:bg-light-surface-container-low">' +
+              '<div class="min-w-0 flex-1">' +
+                '<p class="font-title text-title-md text-light-on-surface">' + tx.title + '</p>' +
+                '<div class="flex flex-wrap items-center gap-1.5 mt-1">' +
+                  catHtml +
+                  '<span class="text-light-on-surface-variant">·</span>' +
+                  '<span class="font-label text-label-sm px-2 py-0.5 rounded-md bg-light-surface-container text-light-on-surface-variant">' + badgeText + '</span>' +
+                '</div>' +
+              '</div>' +
+              '<span class="font-title text-title-md ' + amountColor + ' tabular-nums shrink-0">' + tx.amount + '</span>' +
+            '</a>';
+          ul.appendChild(li);
+        });
+
+        sec.appendChild(ul);
+        container.appendChild(sec);
+      });
+    }
+
+    initFromQuery();
+  </script>
+
+
+</body></html>

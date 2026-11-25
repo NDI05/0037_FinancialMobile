@@ -1,0 +1,187 @@
+<!DOCTYPE html><html lang="id"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Keadaan Sinkronisasi — PAM</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'canvas': '#FAFAF7',
+        'accent': '#D9F449',
+        'on-accent': '#171915',
+        'light-primary': '#171915',
+        'light-on-primary': '#FFFFFF',
+        'light-primary-container': '#EEEEEB',
+        'light-on-primary-container': '#171915',
+        'light-secondary': '#576500',
+        'light-on-secondary': '#FFFFFF',
+        'light-secondary-container': '#D9F449',
+        'light-on-secondary-container': '#171915',
+        'light-surface': '#FFFFFF',
+        'light-on-surface': '#171915',
+        'light-surface-container-lowest': '#FFFFFF',
+        'light-surface-container-low': '#F4F4F1',
+        'light-surface-container': '#EEEEEB',
+        'light-surface-container-high': '#E8E8E5',
+        'light-on-surface-variant': '#454742',
+        'light-outline': '#767871',
+        'light-outline-variant': '#E2E3DB',
+        'light-success': '#006D30',
+        'light-on-success': '#FFFFFF',
+        'light-success-container': '#E6F6EC',
+        'light-on-success-container': '#00210A',
+        'light-warning': '#9B4500',
+        'light-on-warning': '#FFFFFF',
+        'light-warning-container': '#FFEDE5',
+        'light-on-warning-container': '#331200',
+        'light-error': '#B91C1C',
+        'light-on-error': '#FFFFFF',
+        'light-error-container': '#FFEDEA',
+        'light-on-error-container': '#93000B',
+      },
+      borderRadius: {
+        'sm': '8px',
+        'DEFAULT': '12px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        '2xl': '24px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-lg': '16px',
+        'page-margin': '20px',
+        'section': '24px',
+        'block': '32px',
+      },
+      fontFamily: {
+        'display': ['"Manrope"', 'sans-serif'],
+        'headline': ['"Manrope"', 'sans-serif'],
+        'title': ['"Manrope"', 'sans-serif'],
+        'body': ['"Manrope"', 'sans-serif'],
+        'label': ['"Manrope"', 'sans-serif'],
+      },
+      fontSize: {
+        'display-lg': ['36px', { lineHeight: '44px', letterSpacing: '-0.75px', fontWeight: '700' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'headline-md': ['24px', { lineHeight: '30px', letterSpacing: '-0.3px', fontWeight: '700' }],
+        'title-lg': ['18px', { lineHeight: '24px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'title-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '500' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.15px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.2px', fontWeight: '600' }],
+      },
+      transitionDuration: {
+        'state-change': '120ms',
+        'status-label-fade': '200ms',
+        'sheet-enter': '250ms',
+        'sheet-exit': '180ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'status-label-fade': '0ms',
+        'sheet-enter': '0ms',
+        'sheet-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'status-label-fade': 'ease-in-out',
+        'sheet-enter': 'cubic-bezier(0.2, 0, 0, 1)',
+        'sheet-exit': 'cubic-bezier(0.3, 0, 1, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>.material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; font-variation-settings: 'FILL' 0, 'wght' 400; }</style>
+</head>
+<body class="bg-canvas text-light-on-surface font-body antialiased">
+  <div class="min-h-[884px] max-w-[393px] mx-auto px-page-margin py-5 flex flex-col gap-4" data-stitch-vh="min-h-[884px]===min-h-screen">
+    <header class="flex items-start gap-2">
+      <a href="../summary/Ringkasan.html" aria-label="Kembali ke Ringkasan" class="w-12 h-12 -ml-3 -mt-2 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low shrink-0">
+        <span class="material-symbols-outlined text-[22px]" aria-hidden="true">arrow_back</span>
+      </a>
+      <div>
+        <h1 class="font-headline text-title-lg text-light-on-surface">Keadaan &#34;Status pembaruan&#34;</h1>
+        <p class="font-body text-body-sm text-light-on-surface-variant">Seluruh state bottom sheet sinkronisasi Gmail dalam satu tampilan.</p>
+      </div>
+    </header>
+
+    <!-- 1. Belum tertaut -->
+    <article class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex flex-col gap-3">
+      <div class="flex justify-between items-center">
+        <span class="font-label text-label-lg">1. Belum tertaut</span>
+        <span class="px-2.5 py-0.5 rounded-full bg-light-surface-container font-label text-label-sm">Gmail nonaktif</span>
+      </div>
+      <p class="font-body text-body-sm text-light-on-surface-variant">Tautkan Gmail untuk membaca notifikasi Livin&#39; secara otomatis.</p>
+      <a href="../gmail-link/TautkanGmail.html" class="w-full min-h-[44px] rounded-lg bg-accent text-on-accent font-label text-label-lg inline-flex items-center justify-center">Tautkan Gmail</a>
+    </article>
+
+    <!-- 2. Indeterminate (total belum diketahui) -->
+    <article class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex flex-col gap-3">
+      <div class="flex justify-between items-center">
+        <span class="font-label text-label-lg">2. Menyinkronkan (total belum diketahui)</span>
+      </div>
+      <div class="w-full h-2 rounded-full bg-light-surface-container overflow-hidden">
+        <div class="h-full bg-light-primary rounded-full w-1/3 animate-pulse"></div>
+      </div>
+      <p class="font-body text-body-sm text-light-on-surface-variant">Memeriksa kotak masuk Gmail... (tanpa persentase).</p>
+    </article>
+
+    <!-- 3. Determinate (total diketahui) -->
+    <article class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex flex-col gap-2">
+      <div class="flex justify-between items-center">
+        <span class="font-label text-label-lg">3. Menyinkronkan (total diketahui)</span>
+        <span class="font-label text-label-md tabular-nums">8 / 14</span>
+      </div>
+      <div class="w-full h-2 rounded-full bg-light-surface-container overflow-hidden">
+        <div class="h-full bg-light-primary rounded-full w-3/5"></div>
+      </div>
+      <p class="font-body text-body-sm text-light-on-surface-variant">Lembar bisa ditutup; progres tetap berjalan.</p>
+    </article>
+
+    <!-- 4. Berhasil + AI terpisah -->
+    <article class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex flex-col gap-2">
+      <div class="flex items-center gap-2 text-light-success">
+        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">check_circle</span>
+        <span class="font-label text-label-lg">4. Berhasil</span>
+      </div>
+      <p class="font-body text-body-md tabular-nums">12 tersimpan · 2 dilewati</p>
+      <p class="font-body text-body-sm text-light-on-surface-variant tabular-nums">Kategorisasi AI: 8 menunggu kategori</p>
+    </article>
+
+    <!-- 5. Tidak ada transaksi baru -->
+    <article class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex flex-col gap-1">
+      <span class="font-label text-label-lg">5. Tidak ada transaksi baru</span>
+      <p class="font-body text-body-sm text-light-on-surface-variant">Semua notifikasi Livin&#39; terbaru sudah tercatat.</p>
+    </article>
+
+    <!-- 6. Sebagian gagal & 7. Gagal dengan Terakhir berhasil terpisah -->
+    <article class="bg-light-warning-container text-light-on-warning-container rounded-2xl p-4 flex flex-col gap-2">
+      <span class="font-label text-label-lg">6. Sebagian gagal</span>
+      <p class="font-body text-body-sm tabular-nums">9 tersimpan · 3 gagal dibaca</p>
+      <p class="font-body text-body-sm">Terakhir berhasil penuh: Kemarin, 21:10</p>
+    </article>
+
+    <article class="bg-light-error-container text-light-on-error-container rounded-2xl p-4 flex flex-col gap-2">
+      <span class="font-label text-label-lg">7. Gagal</span>
+      <p class="font-body text-body-sm">Percobaan terakhir (Baru saja): Koneksi ke Gmail terputus.</p>
+      <p class="font-body text-body-sm">Terakhir berhasil: Hari ini, 09:40</p>
+      <a href="../summary/Ringkasan.html" class="w-full min-h-[44px] rounded-lg bg-light-primary text-light-on-primary font-label text-label-lg mt-1 inline-flex items-center justify-center">Coba lagi</a>
+    </article>
+  </div>
+
+
+</body></html>

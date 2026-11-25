@@ -1,0 +1,279 @@
+<!DOCTYPE html><html lang="id"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detail Transaksi — FinancialRecap</title>
+  <script src="https://app-companion-430619.appspot.com/static/cdn/v1/tailwindcss-play.js" data-stitch-cdn-src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'canvas': '#FAFAF7',
+        'accent': '#D9F449',
+        'on-accent': '#171915',
+        'light-primary': '#171915',
+        'light-on-primary': '#FFFFFF',
+        'light-primary-container': '#EEEEEB',
+        'light-on-primary-container': '#171915',
+        'light-secondary': '#576500',
+        'light-on-secondary': '#FFFFFF',
+        'light-secondary-container': '#D9F449',
+        'light-on-secondary-container': '#171915',
+        'light-surface': '#FFFFFF',
+        'light-on-surface': '#171915',
+        'light-surface-container-lowest': '#FFFFFF',
+        'light-surface-container-low': '#F4F4F1',
+        'light-surface-container': '#EEEEEB',
+        'light-surface-container-high': '#E8E8E5',
+        'light-on-surface-variant': '#454742',
+        'light-outline': '#767871',
+        'light-outline-variant': '#E2E3DB',
+        'light-success': '#006D30',
+        'light-on-success': '#FFFFFF',
+        'light-success-container': '#E6F6EC',
+        'light-on-success-container': '#00210A',
+        'light-warning': '#9B4500',
+        'light-on-warning': '#FFFFFF',
+        'light-warning-container': '#FFEDE5',
+        'light-on-warning-container': '#331200',
+        'light-error': '#B91C1C',
+        'light-on-error': '#FFFFFF',
+        'light-error-container': '#FFEDEA',
+        'light-on-error-container': '#93000B',
+      },
+      borderRadius: {
+        'sm': '8px',
+        'DEFAULT': '12px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        '2xl': '24px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-lg': '16px',
+        'page-margin': '20px',
+        'section': '24px',
+        'block': '32px',
+      },
+      fontFamily: {
+        'display': ['"Manrope"', 'sans-serif'],
+        'headline': ['"Manrope"', 'sans-serif'],
+        'title': ['"Manrope"', 'sans-serif'],
+        'body': ['"Manrope"', 'sans-serif'],
+        'label': ['"Manrope"', 'sans-serif'],
+      },
+      fontSize: {
+        'display-lg': ['36px', { lineHeight: '44px', letterSpacing: '-0.75px', fontWeight: '700' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'headline-md': ['24px', { lineHeight: '30px', letterSpacing: '-0.3px', fontWeight: '700' }],
+        'title-lg': ['18px', { lineHeight: '24px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'title-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '500' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.15px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.2px', fontWeight: '600' }],
+      },
+      transitionDuration: {
+        'state-change': '120ms',
+        'status-label-fade': '200ms',
+        'sheet-enter': '250ms',
+        'sheet-exit': '180ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'status-label-fade': '0ms',
+        'sheet-enter': '0ms',
+        'sheet-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'status-label-fade': 'ease-in-out',
+        'sheet-enter': 'cubic-bezier(0.2, 0, 0, 1)',
+        'sheet-exit': 'cubic-bezier(0.3, 0, 1, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://app-companion-430619.appspot.com/static/cdn/fonts/v1/material-symbols-outlined.css" data-stitch-cdn-href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; font-variation-settings: 'FILL' 0, 'wght' 400; }
+  </style>
+</head>
+<body class="bg-canvas text-light-on-surface font-body antialiased">
+  <div class="min-h-[884px] max-w-[393px] mx-auto pb-10 flex flex-col justify-between" data-stitch-vh="min-h-[884px]===min-h-screen">
+    <div>
+      <header class="relative h-14 px-page-margin flex items-center justify-between">
+        <a href="../transactions/Transaksi.html" aria-label="Kembali ke daftar transaksi" class="w-12 h-12 -ml-3 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low">
+          <span class="material-symbols-outlined text-[22px]" aria-hidden="true">arrow_back</span>
+        </a>
+        <h1 class="font-headline text-title-lg text-light-on-surface absolute left-1/2 -translate-x-1/2">Detail transaksi</h1>
+        <div class="w-12 h-12"></div>
+      </header>
+
+      <main class="px-page-margin pt-2 flex flex-col gap-5">
+        <!-- Amount & Merchant Hero (source & status integrated inside the card) -->
+        <section class="bg-light-surface border border-light-outline-variant rounded-2xl p-5 flex flex-col gap-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="detail-source-badge" class="font-label text-label-sm px-2.5 py-1 rounded-md bg-light-surface-container text-light-on-surface-variant">Livin · QRIS</span>
+            <span id="detail-cat-status" class="hidden font-label text-label-sm px-2.5 py-1 rounded-full bg-light-warning-container text-light-on-warning-container">Saran AI</span>
+          </div>
+          <p id="detail-amount" class="font-display text-display-lg-mobile text-light-on-surface tabular-nums">-Rp38.000</p>
+          <h2 id="detail-title" class="font-headline text-title-lg text-light-on-surface">Kopi Kenangan</h2>
+          <p id="detail-readonly-note" class="font-body text-body-sm text-light-on-surface-variant">Nominal &amp; tanggal dari notifikasi Livin&#39;.</p>
+        </section>
+
+        <!-- Attributes -->
+        <section class="bg-light-surface border border-light-outline-variant rounded-2xl divide-y divide-light-outline-variant">
+          <div class="p-4 flex items-center justify-between gap-3">
+            <span class="font-body text-body-md text-light-on-surface-variant">Tanggal</span>
+            <span id="detail-date" class="font-label text-label-lg text-light-on-surface tabular-nums">25 Nov 2026 · 09:42</span>
+          </div>
+          <div class="p-4 flex items-center justify-between gap-3">
+            <span class="font-body text-body-md text-light-on-surface-variant">Kategori</span>
+            <button type="button" onclick="openCategoryPicker()" class="min-h-[40px] px-3 py-1.5 rounded-lg bg-light-surface-container-low hover:bg-light-surface-container inline-flex items-center gap-1.5">
+              <span id="detail-category" class="font-label text-label-lg text-light-on-surface">Makan &amp; Minum</span>
+              <span class="material-symbols-outlined text-[18px] text-light-on-surface-variant" aria-hidden="true">edit</span>
+            </button>
+          </div>
+          <div class="p-4 flex flex-col gap-2">
+            <label for="detail-note" class="font-body text-body-md text-light-on-surface-variant">Catatan</label>
+            <textarea id="detail-note" rows="2" placeholder="Catatan opsional..." class="w-full rounded-lg bg-light-surface-container-low border border-light-outline-variant font-body text-body-md text-light-on-surface p-3 focus:border-light-primary focus:ring-0">Kopi pagi sebelum rapat</textarea>
+          </div>
+        </section>
+
+        <div id="save-toast" class="hidden rounded-xl p-3.5 bg-light-success-container text-light-on-success-container font-label text-label-md text-center">
+          Kategori diperbarui.
+        </div>
+
+        <!-- Actions (vary by SRS source capability) -->
+        <div id="manual-actions" class="hidden flex flex-col gap-3">
+          <a id="btn-edit-tx" href="../add-transaction/TambahTransaksi.html?edit=3" class="w-full min-h-[48px] px-6 py-3 rounded-lg bg-light-surface border border-light-outline-variant text-light-on-surface inline-flex items-center justify-center font-label text-label-lg hover:bg-light-surface-container-low">
+            Ubah transaksi
+          </a>
+          <button type="button" onclick="openDeleteModal()" class="w-full min-h-[48px] px-6 py-3 rounded-lg bg-light-error-container text-light-on-error-container inline-flex items-center justify-center font-label text-label-lg">
+            Hapus transaksi
+          </button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Shared Category Picker Bottom Sheet -->
+  <div id="cat-backdrop" onclick="closeCategoryPicker()" class="hidden fixed inset-0 bg-light-primary/30 z-40"></div>
+  <section id="cat-sheet" role="dialog" aria-modal="true" aria-labelledby="cat-sheet-title" class="hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[393px] bg-light-surface border-t border-light-outline-variant rounded-t-2xl p-5 z-50 flex flex-col gap-4">
+    <div class="w-10 h-1 rounded-full bg-light-outline-variant mx-auto"></div>
+    <header class="flex items-center justify-between">
+      <h2 id="cat-sheet-title" class="font-headline text-title-lg text-light-on-surface">Pilih kategori</h2>
+      <button type="button" onclick="closeCategoryPicker()" aria-label="Tutup pemilih kategori" class="w-12 h-12 -mr-2 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low">
+        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
+      </button>
+    </header>
+    <ul class="divide-y divide-light-outline-variant border border-light-outline-variant rounded-xl overflow-hidden">
+      <li><button type="button" onclick="selectCategory(&#39;Makan &amp; Minum&#39;)" class="w-full min-h-[48px] px-4 py-3 text-left font-body text-body-md hover:bg-light-surface-container-low flex items-center justify-between">Makan &amp; Minum <span class="material-symbols-outlined text-[18px] text-light-outline" aria-hidden="true">chevron_right</span></button></li>
+      <li><button type="button" onclick="selectCategory(&#39;Transportasi&#39;)" class="w-full min-h-[48px] px-4 py-3 text-left font-body text-body-md hover:bg-light-surface-container-low flex items-center justify-between">Transportasi <span class="material-symbols-outlined text-[18px] text-light-outline" aria-hidden="true">chevron_right</span></button></li>
+      <li><button type="button" onclick="selectCategory(&#39;Tagihan &amp; Utilitas&#39;)" class="w-full min-h-[48px] px-4 py-3 text-left font-body text-body-md hover:bg-light-surface-container-low flex items-center justify-between">Tagihan &amp; Utilitas <span class="material-symbols-outlined text-[18px] text-light-outline" aria-hidden="true">chevron_right</span></button></li>
+      <li><button type="button" onclick="selectCategory(&#39;Belanja Harian&#39;)" class="w-full min-h-[48px] px-4 py-3 text-left font-body text-body-md hover:bg-light-surface-container-low flex items-center justify-between">Belanja Harian <span class="material-symbols-outlined text-[18px] text-light-outline" aria-hidden="true">chevron_right</span></button></li>
+      <li><button type="button" onclick="selectCategory(&#39;Lainnya&#39;)" class="w-full min-h-[48px] px-4 py-3 text-left font-body text-body-md hover:bg-light-surface-container-low flex items-center justify-between">Lainnya <span class="material-symbols-outlined text-[18px] text-light-outline" aria-hidden="true">chevron_right</span></button></li>
+    </ul>
+  </section>
+
+  <!-- Konfirmasi Hapus Transaksi Modal -->
+  <div id="delete-backdrop" onclick="closeDeleteModal()" class="hidden fixed inset-0 bg-light-primary/30 z-40"></div>
+  <section id="delete-modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[353px] bg-light-surface border border-light-outline-variant rounded-2xl p-5 z-50 flex flex-col gap-4">
+    <div>
+      <h2 id="delete-modal-title" class="font-headline text-title-lg text-light-on-surface">Hapus transaksi?</h2>
+      <p class="font-body text-body-sm text-light-on-surface-variant mt-1">Catatan transaksi ini akan dihapus permanen.</p>
+    </div>
+    <div class="grid grid-cols-2 gap-2.5">
+      <button type="button" onclick="closeDeleteModal()" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-light-surface border border-light-outline-variant font-label text-label-lg text-light-on-surface hover:bg-light-surface-container-low">Batal</button>
+      <button type="button" onclick="confirmDelete()" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-light-error-container font-label text-label-lg text-light-on-error-container">Hapus</button>
+    </div>
+  </section>
+
+  <script>
+    function initDetailFromQuery() {
+      var params = new URLSearchParams(window.location.search);
+      var id = params.get('id');
+      var badge = document.getElementById('detail-source-badge');
+      var catStatus = document.getElementById('detail-cat-status');
+      var amount = document.getElementById('detail-amount');
+      var title = document.getElementById('detail-title');
+      var note = document.getElementById('detail-readonly-note');
+      var date = document.getElementById('detail-date');
+      var cat = document.getElementById('detail-category');
+      var manualActions = document.getElementById('manual-actions');
+      var editBtn = document.getElementById('btn-edit-tx');
+      if (editBtn) {
+        editBtn.href = '../add-transaction/TambahTransaksi.html?edit=' + encodeURIComponent(id || '3');
+      }
+
+      if (id === '3') {
+        badge.textContent = 'Manual';
+        catStatus.textContent = 'Saran AI';
+        catStatus.classList.remove('hidden');
+        amount.textContent = '-Rp27.000';
+        title.textContent = 'Warung Bu Sari';
+        date.textContent = '24 Nov 2026 · 12:30';
+        cat.textContent = 'Makan & Minum';
+        note.classList.add('hidden');
+        manualActions.classList.remove('hidden');
+      } else if (id === '5') {
+        badge.textContent = 'Livin · QRIS';
+        catStatus.textContent = 'Belum berkategori';
+        catStatus.classList.remove('hidden');
+        amount.textContent = '-Rp112.000';
+        title.textContent = 'Pembayaran QRIS';
+        date.textContent = '21 Nov 2026 · 18:05';
+        cat.textContent = 'Belum berkategori';
+        note.classList.remove('hidden');
+        manualActions.classList.add('hidden');
+      }
+    }
+    initDetailFromQuery();
+
+    function openCategoryPicker() {
+      document.getElementById('cat-backdrop').classList.remove('hidden');
+      document.getElementById('cat-sheet').classList.remove('hidden');
+    }
+
+    function closeCategoryPicker() {
+      document.getElementById('cat-backdrop').classList.add('hidden');
+      document.getElementById('cat-sheet').classList.add('hidden');
+    }
+
+    function selectCategory(name) {
+      document.getElementById('detail-category').textContent = name;
+      document.getElementById('detail-cat-status').classList.add('hidden');
+      closeCategoryPicker();
+      var toast = document.getElementById('save-toast');
+      toast.classList.remove('hidden');
+      setTimeout(function() { toast.classList.add('hidden'); }, 2500);
+    }
+
+    function openDeleteModal() {
+      document.getElementById('delete-backdrop').classList.remove('hidden');
+      document.getElementById('delete-modal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('delete-backdrop').classList.add('hidden');
+      document.getElementById('delete-modal').classList.add('hidden');
+    }
+
+    function confirmDelete() {
+      window.location.href = '../transactions/Transaksi.html';
+    }
+  </script>
+
+
+</body></html>

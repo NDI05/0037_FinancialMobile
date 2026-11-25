@@ -1,0 +1,618 @@
+<!DOCTYPE html><html lang="id"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ringkasan — FinancialRecap</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'canvas': '#FAFAF7',
+        'accent': '#D9F449',
+        'on-accent': '#171915',
+        'light-primary': '#171915',
+        'light-on-primary': '#FFFFFF',
+        'light-primary-container': '#EEEEEB',
+        'light-on-primary-container': '#171915',
+        'light-secondary': '#576500',
+        'light-on-secondary': '#FFFFFF',
+        'light-secondary-container': '#D9F449',
+        'light-on-secondary-container': '#171915',
+        'light-surface': '#FFFFFF',
+        'light-on-surface': '#171915',
+        'light-surface-container-lowest': '#FFFFFF',
+        'light-surface-container-low': '#F4F4F1',
+        'light-surface-container': '#EEEEEB',
+        'light-surface-container-high': '#E8E8E5',
+        'light-on-surface-variant': '#454742',
+        'light-outline': '#767871',
+        'light-outline-variant': '#E2E3DB',
+        'light-success': '#006D30',
+        'light-on-success': '#FFFFFF',
+        'light-success-container': '#E6F6EC',
+        'light-on-success-container': '#00210A',
+        'light-warning': '#9B4500',
+        'light-on-warning': '#FFFFFF',
+        'light-warning-container': '#FFEDE5',
+        'light-on-warning-container': '#331200',
+        'light-error': '#B91C1C',
+        'light-on-error': '#FFFFFF',
+        'light-error-container': '#FFEDEA',
+        'light-on-error-container': '#93000B',
+      },
+      borderRadius: {
+        'sm': '8px',
+        'DEFAULT': '12px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        '2xl': '24px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-lg': '16px',
+        'page-margin': '20px',
+        'section': '24px',
+        'block': '32px',
+      },
+      fontFamily: {
+        'display': ['"Manrope"', 'sans-serif'],
+        'headline': ['"Manrope"', 'sans-serif'],
+        'title': ['"Manrope"', 'sans-serif'],
+        'body': ['"Manrope"', 'sans-serif'],
+        'label': ['"Manrope"', 'sans-serif'],
+      },
+      fontSize: {
+        'display-lg': ['36px', { lineHeight: '44px', letterSpacing: '-0.75px', fontWeight: '700' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'headline-md': ['24px', { lineHeight: '30px', letterSpacing: '-0.3px', fontWeight: '700' }],
+        'title-lg': ['18px', { lineHeight: '24px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'title-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '500' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.15px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.2px', fontWeight: '600' }],
+      },
+      transitionDuration: {
+        'state-change': '120ms',
+        'status-label-fade': '200ms',
+        'sheet-enter': '250ms',
+        'sheet-exit': '180ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'status-label-fade': '0ms',
+        'sheet-enter': '0ms',
+        'sheet-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'status-label-fade': 'ease-in-out',
+        'sheet-enter': 'cubic-bezier(0.2, 0, 0, 1)',
+        'sheet-exit': 'cubic-bezier(0.3, 0, 1, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; font-variation-settings: 'FILL' 0, 'wght' 400; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body class="bg-canvas text-light-on-surface font-body antialiased">
+  <div class="min-h-[884px] max-w-[393px] mx-auto flex flex-col justify-between pb-24" data-stitch-vh="min-h-[884px]===min-h-screen">
+    <div>
+      <!-- Top Bar: centered title, single status icon on right, NO settings icon -->
+      <header class="relative h-14 px-page-margin flex items-center justify-between">
+        <div class="w-12 h-12 -ml-3"></div>
+        <h1 class="font-headline text-title-lg text-light-on-surface absolute left-1/2 -translate-x-1/2">Ringkasan</h1>
+        <div class="flex items-center justify-end gap-1.5 -mr-3 relative">
+          <span id="sync-status-pill" class="opacity-0 pointer-events-none transition-opacity duration-status-label-fade px-2.5 py-1 rounded-full bg-light-surface-container text-light-on-surface font-label text-label-sm whitespace-nowrap">
+            Selesai
+          </span>
+          <button id="sync-trigger" type="button" onclick="openSyncSheet()" aria-label="Status pembaruan: siap disinkronkan" class="w-12 h-12 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-light-primary">
+            <span id="sync-header-icon" class="material-symbols-outlined text-[22px]" aria-hidden="true">sync</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="px-page-margin pt-2 flex flex-col gap-5">
+        <!-- Month Picker near title -->
+        <div class="flex items-center justify-center">
+          <div class="bg-light-surface-container-low rounded-full px-1.5 py-1 inline-flex items-center gap-1 border border-light-outline-variant">
+            <button id="prev-month" type="button" onclick="changePeriod(-1)" aria-label="Bulan sebelumnya" class="w-12 h-12 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface">
+              <span class="material-symbols-outlined text-[20px]" aria-hidden="true">chevron_left</span>
+            </button>
+            <span id="period-label" class="font-label text-label-lg text-light-on-surface px-3 min-w-[128px] text-center tabular-nums">November 2026</span>
+            <button id="next-month" type="button" onclick="changePeriod(1)" disabled aria-label="Bulan berikutnya tidak tersedia" class="w-12 h-12 rounded-full inline-flex items-center justify-center text-light-outline opacity-40 cursor-not-allowed">
+              <span class="material-symbols-outlined text-[20px]" aria-hidden="true">chevron_right</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Minimalist Stacked Slideable Bank Card (Mandiri, BRI, Jago) -->
+        <section aria-label="Ringkasan keuangan per bank" class="flex flex-col gap-3">
+          <div class="relative pt-2.5">
+            <!-- Peeking stacked card edge behind (inspired by reference) -->
+            <div class="mx-4 h-4 rounded-t-2xl bg-accent border border-b-0 border-light-outline-variant"></div>
+
+            <!-- Active Single Minimalist Card -->
+            <div id="bank-card" data-component-id="card-elevated" data-component-type="card" data-component-variant="interactive" class="relative -mt-1.5 bg-light-surface border border-light-outline-variant rounded-2xl p-5 flex flex-col gap-4">
+              <!-- Card Header: Bank Logo + Name + Slide Controls -->
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div id="bank-logo-slot" class="w-9 h-9 rounded-xl bg-light-surface-container-low border border-light-outline-variant flex items-center justify-center shrink-0"></div>
+                  <div class="min-w-0">
+                    <p id="bank-name" class="font-headline text-title-md text-light-on-surface">Bank Mandiri</p>
+                    <p id="bank-source-sub" class="font-body text-body-sm text-light-on-surface-variant">Livin&#39; by Mandiri</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button type="button" onclick="slideBank(-1)" aria-label="Bank sebelumnya" class="w-10 h-10 rounded-full inline-flex items-center justify-center text-light-on-surface-variant hover:bg-light-surface-container-low">
+                    <span class="material-symbols-outlined text-[20px]" aria-hidden="true">chevron_left</span>
+                  </button>
+                  <button type="button" onclick="slideBank(1)" aria-label="Bank berikutnya" class="w-10 h-10 rounded-full inline-flex items-center justify-center text-light-on-surface-variant hover:bg-light-surface-container-low">
+                    <span class="material-symbols-outlined text-[20px]" aria-hidden="true">chevron_right</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Primary Financial Metric: Pengeluaran tercatat -->
+              <a id="expense-card-link" href="../transactions/Transaksi.html?arah=pengeluaran&amp;periode=2026-11" class="flex flex-col gap-0.5 rounded-xl p-2 -mx-2 transition-colors duration-state-change hover:bg-light-surface-container-low">
+                <div class="flex items-center justify-between gap-2">
+                  <span data-design-text-token="label-md" class="font-label text-label-md text-light-on-surface-variant">Pengeluaran tercatat</span>
+                  <span class="material-symbols-outlined text-[18px] text-light-on-surface-variant" aria-hidden="true">arrow_outward</span>
+                </div>
+                <p id="expense-amount" data-design-text-token="display-lg-mobile" class="font-display text-display-lg-mobile text-light-on-surface tabular-nums">Rp4.285.000</p>
+                <p id="expense-meta" data-design-text-token="body-sm" class="font-body text-body-sm text-light-on-surface-variant">34 transaksi</p>
+              </a>
+
+              <!-- Companion Financial Metric: Pemasukan tercatat -->
+              <a id="income-card-link" href="../transactions/Transaksi.html?arah=pemasukan&amp;periode=2026-11" class="pt-3 border-t border-light-outline-variant flex items-center justify-between gap-3 rounded-lg transition-colors duration-state-change hover:bg-light-surface-container-low">
+                <span data-design-text-token="label-md" class="font-label text-label-md text-light-on-surface-variant">Pemasukan</span>
+                <span class="inline-flex items-center gap-1.5">
+                  <span id="income-amount" data-design-text-token="title-lg" class="font-headline text-title-lg text-light-success tabular-nums">Rp8.500.000</span>
+                  <span class="material-symbols-outlined text-[18px] text-light-on-surface-variant" aria-hidden="true">chevron_right</span>
+                </span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Minimalist Position Indicator (pill + dots like reference) -->
+          <div class="flex items-center justify-center gap-2" role="tablist" aria-label="Pilih akun bank">
+            <button type="button" onclick="selectBank(0)" id="dot-0" role="tab" aria-selected="true" aria-label="Bank Mandiri" class="h-1.5 w-6 rounded-full bg-light-primary transition-all duration-state-change"></button>
+            <button type="button" onclick="selectBank(1)" id="dot-1" role="tab" aria-selected="false" aria-label="Bank BRI" class="h-1.5 w-1.5 rounded-full bg-light-outline-variant transition-all duration-state-change"></button>
+            <button type="button" onclick="selectBank(2)" id="dot-2" role="tab" aria-selected="false" aria-label="Bank Jago" class="h-1.5 w-1.5 rounded-full bg-light-outline-variant transition-all duration-state-change"></button>
+          </div>
+        </section>
+
+        <!-- Top Categories Bar Chart (Icon-based, scalable for many categories) -->
+        <section id="category-section" aria-labelledby="cat-heading" class="bg-light-surface border border-light-outline-variant rounded-2xl p-5 flex flex-col gap-4">
+          <div class="flex items-center justify-between gap-2">
+            <h2 id="cat-heading" class="font-headline text-title-md text-light-on-surface">Kategori utama</h2>
+            <a href="../analysis/Analisis.html" class="font-label text-label-md text-light-on-surface-variant hover:text-light-on-surface">Analisis</a>
+          </div>
+
+          <!-- Vertical Bar Chart with Category Icons -->
+          <div id="category-list" class="flex items-end gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden" role="list" aria-label="Diagram batang pengeluaran per kategori">
+            <button type="button" onclick="focusCatBar(&#39;Makan &amp; Minum&#39;, &#39;Rp1.640.000&#39;, &#39;38%&#39;)" role="listitem" aria-label="Makan dan Minum 38 persen" class="shrink-0 flex-1 min-w-[44px] flex flex-col items-center gap-2 group">
+              <span class="font-label text-label-sm text-light-on-surface tabular-nums">38%</span>
+              <div class="w-8 h-24 rounded-xl bg-light-surface-container-low flex items-end overflow-hidden p-0.5">
+                <div class="w-full h-[90%] rounded-lg bg-accent border border-light-outline-variant"></div>
+              </div>
+              <span class="w-9 h-9 rounded-xl bg-light-primary text-light-on-primary inline-flex items-center justify-center">
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">restaurant</span>
+              </span>
+            </button>
+
+            <button type="button" onclick="focusCatBar(&#39;Tagihan &amp; Utilitas&#39;, &#39;Rp1.120.000&#39;, &#39;26%&#39;)" role="listitem" aria-label="Tagihan dan Utilitas 26 persen" class="shrink-0 flex-1 min-w-[44px] flex flex-col items-center gap-2 group">
+              <span class="font-label text-label-sm text-light-on-surface-variant tabular-nums">26%</span>
+              <div class="w-8 h-24 rounded-xl bg-light-surface-container-low flex items-end overflow-hidden p-0.5">
+                <div class="w-full h-[64%] rounded-lg bg-light-primary"></div>
+              </div>
+              <span class="w-9 h-9 rounded-xl bg-light-surface-container-low text-light-on-surface inline-flex items-center justify-center border border-light-outline-variant group-hover:bg-light-surface-container">
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">receipt_long</span>
+              </span>
+            </button>
+
+            <button type="button" onclick="focusCatBar(&#39;Transportasi&#39;, &#39;Rp890.000&#39;, &#39;21%&#39;)" role="listitem" aria-label="Transportasi 21 persen" class="shrink-0 flex-1 min-w-[44px] flex flex-col items-center gap-2 group">
+              <span class="font-label text-label-sm text-light-on-surface-variant tabular-nums">21%</span>
+              <div class="w-8 h-24 rounded-xl bg-light-surface-container-low flex items-end overflow-hidden p-0.5">
+                <div class="w-full h-[52%] rounded-lg bg-light-on-surface-variant"></div>
+              </div>
+              <span class="w-9 h-9 rounded-xl bg-light-surface-container-low text-light-on-surface inline-flex items-center justify-center border border-light-outline-variant group-hover:bg-light-surface-container">
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">directions_car</span>
+              </span>
+            </button>
+
+            <button type="button" onclick="focusCatBar(&#39;Belanja Harian&#39;, &#39;Rp345.000&#39;, &#39;8%&#39;)" role="listitem" aria-label="Belanja Harian 8 persen" class="shrink-0 flex-1 min-w-[44px] flex flex-col items-center gap-2 group">
+              <span class="font-label text-label-sm text-light-on-surface-variant tabular-nums">8%</span>
+              <div class="w-8 h-24 rounded-xl bg-light-surface-container-low flex items-end overflow-hidden p-0.5">
+                <div class="w-full h-[24%] rounded-lg bg-light-outline"></div>
+              </div>
+              <span class="w-9 h-9 rounded-xl bg-light-surface-container-low text-light-on-surface inline-flex items-center justify-center border border-light-outline-variant group-hover:bg-light-surface-container">
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">shopping_bag</span>
+              </span>
+            </button>
+
+            <button type="button" onclick="focusCatBar(&#39;Kesehatan&#39;, &#39;Rp170.000&#39;, &#39;4%&#39;)" role="listitem" aria-label="Kesehatan 4 persen" class="shrink-0 flex-1 min-w-[44px] flex flex-col items-center gap-2 group">
+              <span class="font-label text-label-sm text-light-on-surface-variant tabular-nums">4%</span>
+              <div class="w-8 h-24 rounded-xl bg-light-surface-container-low flex items-end overflow-hidden p-0.5">
+                <div class="w-full h-[14%] rounded-lg bg-light-outline-variant"></div>
+              </div>
+              <span class="w-9 h-9 rounded-xl bg-light-surface-container-low text-light-on-surface inline-flex items-center justify-center border border-light-outline-variant group-hover:bg-light-surface-container">
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">medical_services</span>
+              </span>
+            </button>
+
+            <button type="button" onclick="focusCatBar(&#39;Hiburan&#39;, &#39;Rp120.000&#39;, &#39;3%&#39;)" role="listitem" aria-label="Hiburan 3 persen" class="shrink-0 flex-1 min-w-[44px] flex flex-col items-center gap-2 group">
+              <span class="font-label text-label-sm text-light-on-surface-variant tabular-nums">3%</span>
+              <div class="w-8 h-24 rounded-xl bg-light-surface-container-low flex items-end overflow-hidden p-0.5">
+                <div class="w-full h-[10%] rounded-lg bg-light-outline-variant"></div>
+              </div>
+              <span class="w-9 h-9 rounded-xl bg-light-surface-container-low text-light-on-surface inline-flex items-center justify-center border border-light-outline-variant group-hover:bg-light-surface-container">
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">movie</span>
+              </span>
+            </button>
+          </div>
+
+          <!-- Active selected category summary line -->
+          <div class="pt-3 border-t border-light-outline-variant flex items-center justify-between gap-2">
+            <span id="cat-focus-name" class="font-body text-body-sm text-light-on-surface-variant">Makan &amp; Minum</span>
+            <span id="cat-focus-val" class="font-label text-label-lg text-light-on-surface tabular-nums">Rp1.640.000 · 38%</span>
+          </div>
+        </section>
+
+        <!-- Empty Period Notice (shown only for empty period) -->
+        <section id="empty-period-box" class="hidden bg-light-surface border border-light-outline-variant rounded-2xl p-5 text-center flex flex-col items-center gap-2">
+          <span class="material-symbols-outlined text-[24px] text-light-outline" aria-hidden="true">event_busy</span>
+          <p class="font-title text-title-md text-light-on-surface">Belum ada transaksi</p>
+          <p class="font-body text-body-sm text-light-on-surface-variant">Belum ada catatan di periode ini.</p>
+        </section>
+
+        <!-- 3 Recent Transactions -->
+        <section id="recent-section" aria-labelledby="recent-heading" class="flex flex-col gap-3">
+          <div class="flex items-center justify-between gap-2">
+            <h2 id="recent-heading" class="font-headline text-title-md text-light-on-surface">Transaksi terbaru</h2>
+            <a id="see-all-link" href="../transactions/Transaksi.html?periode=2026-11" class="min-h-[48px] inline-flex items-center font-label text-label-lg text-light-on-surface underline underline-offset-4">Lihat semua</a>
+          </div>
+
+          <ul class="bg-light-surface border border-light-outline-variant rounded-xl divide-y divide-light-outline-variant">
+            <li>
+              <a href="../transaction-detail/DetailTransaksi.html?id=1" class="p-4 flex items-center justify-between gap-3 min-h-[64px] hover:bg-light-surface-container-low rounded-t-xl">
+                <div class="min-w-0 flex-1">
+                  <p class="font-title text-title-md text-light-on-surface">Kopi Kenangan</p>
+                  <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                    <span class="font-body text-body-sm text-light-on-surface-variant">Makan &amp; Minum</span>
+                    <span class="text-light-on-surface-variant">·</span>
+                    <span class="font-label text-label-sm px-2 py-0.5 rounded-md bg-light-surface-container text-light-on-surface-variant">Livin · QRIS</span>
+                  </div>
+                </div>
+                <span class="font-title text-title-md text-light-on-surface tabular-nums shrink-0">-Rp38.000</span>
+              </a>
+            </li>
+            <li>
+              <a href="../transaction-detail/DetailTransaksi.html?id=2" class="p-4 flex items-center justify-between gap-3 min-h-[64px] hover:bg-light-surface-container-low">
+                <div class="min-w-0 flex-1">
+                  <p class="font-title text-title-md text-light-on-surface">PLN Pascabayar</p>
+                  <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                    <span class="font-body text-body-sm text-light-on-surface-variant">Tagihan &amp; Utilitas</span>
+                    <span class="text-light-on-surface-variant">·</span>
+                    <span class="font-label text-label-sm px-2 py-0.5 rounded-md bg-light-surface-container text-light-on-surface-variant">Livin · VA</span>
+                  </div>
+                </div>
+                <span class="font-title text-title-md text-light-on-surface tabular-nums shrink-0">-Rp485.000</span>
+              </a>
+            </li>
+            <li>
+              <a href="../transaction-detail/DetailTransaksi.html?id=3" class="p-4 flex items-center justify-between gap-3 min-h-[64px] hover:bg-light-surface-container-low rounded-b-xl">
+                <div class="min-w-0 flex-1">
+                  <p class="font-title text-title-md text-light-on-surface">Warung Bu Sari</p>
+                  <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                    <span class="font-label text-label-sm px-2 py-0.5 rounded-full bg-light-warning-container text-light-on-warning-container">Saran AI</span>
+                    <span class="font-label text-label-sm px-2 py-0.5 rounded-md bg-light-surface-container text-light-on-surface-variant">Manual</span>
+                  </div>
+                </div>
+                <span class="font-title text-title-md text-light-on-surface tabular-nums shrink-0">-Rp27.000</span>
+              </a>
+            </li>
+          </ul>
+        </section>
+      </main>
+    </div>
+
+    <!-- Bottom Navigation (4 tabs) -->
+    <nav aria-label="Navigasi utama" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[393px] bg-light-surface border-t border-light-outline-variant px-2 py-2 grid grid-cols-4 gap-1 z-20">
+      <a href="../summary/Ringkasan.html" aria-current="page" class="min-h-[48px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-light-on-surface">
+        <span class="px-4 py-1 rounded-full bg-accent text-on-accent flex items-center justify-center">
+          <span class="material-symbols-outlined text-[20px]" aria-hidden="true">home</span>
+        </span>
+        <span class="font-label text-label-sm">Ringkasan</span>
+      </a>
+      <a href="../transactions/Transaksi.html" class="min-h-[48px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-light-on-surface-variant hover:text-light-on-surface">
+        <span class="px-4 py-1 rounded-full flex items-center justify-center">
+          <span class="material-symbols-outlined text-[20px]" aria-hidden="true">receipt_long</span>
+        </span>
+        <span class="font-label text-label-sm">Transaksi</span>
+      </a>
+      <a href="../analysis/Analisis.html" class="min-h-[48px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-light-on-surface-variant hover:text-light-on-surface">
+        <span class="px-4 py-1 rounded-full flex items-center justify-center">
+          <span class="material-symbols-outlined text-[20px]" aria-hidden="true">bar_chart</span>
+        </span>
+        <span class="font-label text-label-sm">Analisis</span>
+      </a>
+      <a href="../settings/Pengaturan.html" class="min-h-[48px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-light-on-surface-variant hover:text-light-on-surface">
+        <span class="px-4 py-1 rounded-full flex items-center justify-center">
+          <span class="material-symbols-outlined text-[20px]" aria-hidden="true">settings</span>
+        </span>
+        <span class="font-label text-label-sm">Pengaturan</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Bottom Sheet: Status pembaruan (persistent state across close/reopen) -->
+  <div id="sync-backdrop" onclick="closeSyncSheet()" class="hidden fixed inset-0 bg-light-primary/30 z-40"></div>
+  <section id="sync-sheet" role="dialog" aria-modal="true" aria-labelledby="sync-sheet-title" class="hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[393px] bg-light-surface border-t border-light-outline-variant rounded-t-2xl p-5 z-50 flex flex-col gap-4">
+    <div class="w-10 h-1 rounded-full bg-light-outline-variant mx-auto"></div>
+    <header class="flex items-start justify-between gap-2">
+      <div>
+        <h2 id="sync-sheet-title" class="font-headline text-title-lg text-light-on-surface">Status pembaruan</h2>
+        <p id="sync-last-success" class="font-body text-body-sm text-light-on-surface-variant mt-0.5">Terakhir: Hari ini, 09:40</p>
+      </div>
+      <button type="button" onclick="closeSyncSheet()" aria-label="Tutup lembar status" class="w-12 h-12 -mr-2 -mt-2 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low">
+        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
+      </button>
+    </header>
+
+    <div id="sync-body" class="bg-light-surface-container-low rounded-xl p-4 flex flex-col gap-1.5">
+      <p class="font-label text-label-lg text-light-on-surface">Siap sinkronkan Gmail</p>
+      <p class="font-body text-body-sm text-light-on-surface-variant">12 tersimpan · 2 dilewati</p>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <button id="sync-action-btn" type="button" onclick="startSync()" class="w-full min-h-[48px] px-6 py-3 rounded-lg bg-light-primary text-light-on-primary inline-flex items-center justify-center gap-2">
+        <span data-design-text-token="label-lg" class="font-label text-label-lg" id="sync-action-label">Sinkronkan sekarang</span>
+      </button>
+    </div>
+  </section>
+
+  <script>
+    var banks = [
+      {
+        name: 'Bank Mandiri',
+        sub: "Livin' by Mandiri",
+        expense: 'Rp4.285.000',
+        meta: '34 transaksi',
+        income: 'Rp8.500.000',
+        logo: '<svg class="w-6 h-6" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#003D79"/><path d="M5 14c3.5-3 6.5-3 9.5 0 1.5 1.5 3 1.5 4.5 0" stroke="#FFB81C" stroke-width="2.4" stroke-linecap="round" fill="none"/><path d="M5 10.5c3.5-3 6.5-3 9.5 0" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" fill="none"/></svg>'
+      },
+      {
+        name: 'Bank BRI',
+        sub: 'BRImo · Terpisah',
+        expense: 'Rp1.140.000',
+        meta: '12 transaksi',
+        income: 'Rp2.400.000',
+        logo: '<svg class="w-6 h-6" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#00529C"/><text x="12" y="15.5" text-anchor="middle" fill="#FFFFFF" font-family="Manrope, sans-serif" font-size="8.5" font-weight="800">BRI</text></svg>'
+      },
+      {
+        name: 'Bank Jago',
+        sub: 'Kantong Utama',
+        expense: 'Rp780.000',
+        meta: '9 transaksi',
+        income: 'Rp1.500.000',
+        logo: '<svg class="w-6 h-6" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#FF9800"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="#171915" stroke-width="2.2"/><circle cx="12" cy="12" r="2" fill="#171915"/></svg>'
+      }
+    ];
+    var bankIdx = 0;
+
+    function selectBank(idx) {
+      bankIdx = (idx + banks.length) % banks.length;
+      var b = banks[bankIdx];
+      document.getElementById('bank-logo-slot').innerHTML = b.logo;
+      document.getElementById('bank-name').textContent = b.name;
+      document.getElementById('bank-source-sub').textContent = b.sub;
+      document.getElementById('expense-amount').textContent = b.expense;
+      document.getElementById('expense-meta').textContent = b.meta;
+      document.getElementById('income-amount').textContent = b.income;
+      for (var i = 0; i < banks.length; i++) {
+        var dot = document.getElementById('dot-' + i);
+        dot.setAttribute('aria-selected', i === bankIdx ? 'true' : 'false');
+        dot.className = i === bankIdx
+          ? 'h-1.5 w-6 rounded-full bg-light-primary transition-all duration-state-change'
+          : 'h-1.5 w-1.5 rounded-full bg-light-outline-variant transition-all duration-state-change';
+      }
+    }
+
+    function slideBank(delta) {
+      selectBank(bankIdx + delta);
+    }
+
+    selectBank(0);
+
+    var periods = [
+      { key: '2026-09', label: 'September 2026', expense: 'Rp0', expenseMeta: '0 transaksi', income: 'Rp0', empty: true },
+      { key: '2026-10', label: 'Oktober 2026', expense: 'Rp3.910.000', expenseMeta: '29 transaksi', income: 'Rp8.500.000', empty: false },
+      { key: '2026-11', label: 'November 2026', expense: 'Rp4.285.000', expenseMeta: '34 transaksi', income: 'Rp8.500.000', empty: false }
+    ];
+    var periodIdx = 2;
+
+    function changePeriod(delta) {
+      var next = periodIdx + delta;
+      if (next < 0 || next >= periods.length) return;
+      periodIdx = next;
+      var p = periods[periodIdx];
+      document.getElementById('period-label').textContent = p.label;
+      document.getElementById('expense-amount').textContent = p.expense;
+      document.getElementById('expense-meta').textContent = p.expenseMeta;
+      document.getElementById('income-amount').textContent = p.income;
+
+      document.getElementById('expense-card-link').href = '../transactions/Transaksi.html?arah=pengeluaran&periode=' + p.key;
+      document.getElementById('income-card-link').href = '../transactions/Transaksi.html?arah=pemasukan&periode=' + p.key;
+      document.getElementById('see-all-link').href = '../transactions/Transaksi.html?periode=' + p.key;
+
+      var prevBtn = document.getElementById('prev-month');
+      var nextBtn = document.getElementById('next-month');
+      prevBtn.disabled = periodIdx === 0;
+      prevBtn.className = periodIdx === 0
+        ? 'w-12 h-12 rounded-full inline-flex items-center justify-center text-light-outline opacity-40 cursor-not-allowed'
+        : 'w-12 h-12 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface';
+
+      nextBtn.disabled = periodIdx === periods.length - 1;
+      nextBtn.className = periodIdx === periods.length - 1
+        ? 'w-12 h-12 rounded-full inline-flex items-center justify-center text-light-outline opacity-40 cursor-not-allowed'
+        : 'w-12 h-12 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface';
+
+      document.getElementById('category-section').classList.toggle('hidden', p.empty);
+      document.getElementById('recent-section').classList.toggle('hidden', p.empty);
+      document.getElementById('empty-period-box').classList.toggle('hidden', !p.empty);
+    }
+
+    var syncState = 'ready';
+    var syncProgress = 0;
+    var syncTimer = null;
+
+    function loadSyncState() {
+      try {
+        var saved = sessionStorage.getItem('pam_sync_state');
+        if (saved) {
+          var parsed = JSON.parse(saved);
+          syncState = parsed.state || 'ready';
+          syncProgress = parsed.progress || 0;
+        }
+      } catch (e) {}
+      renderSyncUI();
+    }
+
+    function saveSyncState() {
+      try {
+        sessionStorage.setItem('pam_sync_state', JSON.stringify({ state: syncState, progress: syncProgress }));
+      } catch (e) {}
+    }
+
+    function openSyncSheet() {
+      document.getElementById('sync-backdrop').classList.remove('hidden');
+      document.getElementById('sync-sheet').classList.remove('hidden');
+      renderSyncUI();
+    }
+
+    function closeSyncSheet() {
+      document.getElementById('sync-backdrop').classList.add('hidden');
+      document.getElementById('sync-sheet').classList.add('hidden');
+    }
+
+    function showStatusPill(text) {
+      var pill = document.getElementById('sync-status-pill');
+      pill.textContent = text;
+      pill.classList.remove('opacity-0');
+      pill.classList.add('opacity-100');
+      setTimeout(function() {
+        pill.classList.remove('opacity-100');
+        pill.classList.add('opacity-0');
+      }, 2200);
+    }
+
+    function startSync() {
+      if (syncState === 'syncing') return;
+      syncState = 'syncing';
+      syncProgress = 0;
+      saveSyncState();
+      renderSyncUI();
+      showStatusPill('Menyinkronkan');
+
+      if (syncTimer) clearInterval(syncTimer);
+      syncTimer = setInterval(function() {
+        syncProgress += 4;
+        if (syncProgress >= 14) {
+          clearInterval(syncTimer);
+          syncState = 'done';
+          syncProgress = 14;
+          saveSyncState();
+          renderSyncUI();
+          showStatusPill('Selesai');
+        } else {
+          saveSyncState();
+          renderSyncUI();
+        }
+      }, 900);
+    }
+
+    function renderSyncUI() {
+      var body = document.getElementById('sync-body');
+      var btn = document.getElementById('sync-action-btn');
+      var lbl = document.getElementById('sync-action-label');
+      var icon = document.getElementById('sync-header-icon');
+      var trigger = document.getElementById('sync-trigger');
+
+      if (syncState === 'syncing') {
+        icon.textContent = 'sync';
+        icon.classList.add('animate-spin');
+        trigger.setAttribute('aria-label', 'Status pembaruan: sedang menyinkronkan');
+        var pct = Math.min(100, Math.round((syncProgress / 14) * 100));
+        body.innerHTML =
+          '<div class="flex items-center justify-between gap-2">' +
+            '<span class="font-label text-label-lg text-light-on-surface">Menyinkronkan email Livin\'</span>' +
+            '<span class="font-label text-label-md text-light-on-surface-variant tabular-nums">' + syncProgress + ' / 14</span>' +
+          '</div>' +
+          '<div class="w-full h-2 rounded-full bg-light-surface-container overflow-hidden">' +
+            '<div class="h-full bg-light-primary rounded-full" style="width:' + pct + '%"></div>' +
+          '</div>' +
+          '<p class="font-body text-body-sm text-light-on-surface-variant">Anda dapat menutup lembar ini; progres tetap tersimpan.</p>';
+        btn.disabled = true;
+        btn.className = 'w-full min-h-[48px] px-6 py-3 rounded-lg bg-light-surface-container text-light-outline inline-flex items-center justify-center gap-2 cursor-not-allowed';
+        lbl.textContent = 'Sinkronisasi berjalan...';
+      } else if (syncState === 'done') {
+        icon.textContent = 'check_circle';
+        icon.classList.remove('animate-spin');
+        trigger.setAttribute('aria-label', 'Status pembaruan: sinkronisasi selesai');
+        document.getElementById('sync-last-success').textContent = 'Terakhir berhasil: Baru saja';
+        body.innerHTML =
+          '<div class="flex items-center gap-2 text-light-success">' +
+            '<span class="material-symbols-outlined text-[20px]" aria-hidden="true">check_circle</span>' +
+            '<span class="font-label text-label-lg">Sinkronisasi selesai</span>' +
+          '</div>' +
+          '<p class="font-body text-body-md text-light-on-surface tabular-nums">12 tersimpan · 2 dilewati</p>' +
+          '<p class="font-body text-body-sm text-light-on-surface-variant tabular-nums">Kategorisasi AI: 8 menunggu kategori</p>';
+        btn.disabled = false;
+        btn.className = 'w-full min-h-[48px] px-6 py-3 rounded-lg bg-light-primary text-light-on-primary inline-flex items-center justify-center gap-2';
+        lbl.textContent = 'Sinkronkan lagi';
+      } else {
+        icon.textContent = 'sync';
+        icon.classList.remove('animate-spin');
+        trigger.setAttribute('aria-label', 'Status pembaruan: siap disinkronkan');
+      }
+    }
+
+    function focusCatBar(name, amount, pct) {
+      var nameEl = document.getElementById('cat-focus-name');
+      var valEl = document.getElementById('cat-focus-val');
+      if (nameEl) nameEl.textContent = name;
+      if (valEl) valEl.textContent = amount + ' \u00B7 ' + pct;
+    }
+
+    function initWidgetQuery() {
+      var params = new URLSearchParams(window.location.search);
+      var b = params.get('bank');
+      if (b === 'bri') selectBank(1);
+      else if (b === 'jago') selectBank(2);
+      else if (b === 'mandiri') selectBank(0);
+    }
+
+    initWidgetQuery();
+    loadSyncState();
+  </script>
+
+
+</body></html>

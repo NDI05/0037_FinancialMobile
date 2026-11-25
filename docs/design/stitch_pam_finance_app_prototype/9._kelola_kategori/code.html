@@ -1,0 +1,360 @@
+<!DOCTYPE html><html lang="id"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kelola Kategori — FinancialRecap</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'canvas': '#FAFAF7',
+        'accent': '#D9F449',
+        'on-accent': '#171915',
+        'light-primary': '#171915',
+        'light-on-primary': '#FFFFFF',
+        'light-primary-container': '#EEEEEB',
+        'light-on-primary-container': '#171915',
+        'light-secondary': '#576500',
+        'light-on-secondary': '#FFFFFF',
+        'light-secondary-container': '#D9F449',
+        'light-on-secondary-container': '#171915',
+        'light-surface': '#FFFFFF',
+        'light-on-surface': '#171915',
+        'light-surface-container-lowest': '#FFFFFF',
+        'light-surface-container-low': '#F4F4F1',
+        'light-surface-container': '#EEEEEB',
+        'light-surface-container-high': '#E8E8E5',
+        'light-on-surface-variant': '#454742',
+        'light-outline': '#767871',
+        'light-outline-variant': '#E2E3DB',
+        'light-success': '#006D30',
+        'light-on-success': '#FFFFFF',
+        'light-success-container': '#E6F6EC',
+        'light-on-success-container': '#00210A',
+        'light-warning': '#9B4500',
+        'light-on-warning': '#FFFFFF',
+        'light-warning-container': '#FFEDE5',
+        'light-on-warning-container': '#331200',
+        'light-error': '#B91C1C',
+        'light-on-error': '#FFFFFF',
+        'light-error-container': '#FFEDEA',
+        'light-on-error-container': '#93000B',
+      },
+      borderRadius: {
+        'sm': '8px',
+        'DEFAULT': '12px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        '2xl': '24px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-lg': '16px',
+        'page-margin': '20px',
+        'section': '24px',
+        'block': '32px',
+      },
+      fontFamily: {
+        'display': ['"Manrope"', 'sans-serif'],
+        'headline': ['"Manrope"', 'sans-serif'],
+        'title': ['"Manrope"', 'sans-serif'],
+        'body': ['"Manrope"', 'sans-serif'],
+        'label': ['"Manrope"', 'sans-serif'],
+      },
+      fontSize: {
+        'display-lg': ['36px', { lineHeight: '44px', letterSpacing: '-0.75px', fontWeight: '700' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'headline-md': ['24px', { lineHeight: '30px', letterSpacing: '-0.3px', fontWeight: '700' }],
+        'title-lg': ['18px', { lineHeight: '24px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'title-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '500' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.15px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.2px', fontWeight: '600' }],
+      },
+      transitionDuration: {
+        'state-change': '120ms',
+        'status-label-fade': '200ms',
+        'sheet-enter': '250ms',
+        'sheet-exit': '180ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'status-label-fade': '0ms',
+        'sheet-enter': '0ms',
+        'sheet-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'status-label-fade': 'ease-in-out',
+        'sheet-enter': 'cubic-bezier(0.2, 0, 0, 1)',
+        'sheet-exit': 'cubic-bezier(0.3, 0, 1, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; font-variation-settings: 'FILL' 0, 'wght' 400; }
+  </style>
+</head>
+<body class="bg-canvas text-light-on-surface font-body antialiased">
+  <div class="min-h-[884px] max-w-[393px] mx-auto pb-28 flex flex-col justify-between relative" data-stitch-vh="min-h-[884px]===min-h-screen">
+    <div>
+      <header class="relative h-14 px-page-margin flex items-center justify-between">
+        <a href="../settings/Pengaturan.html" aria-label="Kembali ke Pengaturan" class="w-12 h-12 -ml-3 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low">
+          <span class="material-symbols-outlined text-[22px]" aria-hidden="true">arrow_back</span>
+        </a>
+        <h1 class="font-headline text-title-lg text-light-on-surface absolute left-1/2 -translate-x-1/2">Kelola kategori</h1>
+        <div class="w-12 h-12"></div>
+      </header>
+
+      <main class="px-page-margin pt-2 flex flex-col gap-4">
+        <div class="relative">
+          <span class="material-symbols-outlined text-[20px] text-light-outline absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true">search</span>
+          <input id="cat-search" type="search" oninput="renderCats()" placeholder="Cari kategori..." aria-label="Cari kategori" class="w-full min-h-[48px] pl-11 pr-4 py-2.5 rounded-lg bg-light-surface border border-light-outline-variant font-body text-body-md text-light-on-surface placeholder:text-light-outline focus:border-light-primary focus:ring-0">
+        </div>
+
+        <ul id="cat-list" class="bg-light-surface border border-light-outline-variant rounded-2xl divide-y divide-light-outline-variant"></ul>
+      </main>
+    </div>
+
+    <!-- Floating Action Button (FAB): Icon-only Tambah kategori -->
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-[393px] px-page-margin flex justify-end pointer-events-none z-30">
+      <button type="button" onclick="openCatFormModal(null)" data-component-id="button-icon" data-component-type="button" data-component-variant="fab" aria-label="Tambah kategori" class="pointer-events-auto w-14 h-14 rounded-2xl bg-accent text-on-accent border border-light-outline-variant inline-flex items-center justify-center transition-opacity duration-state-change hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-light-primary">
+        <span class="material-symbols-outlined text-[26px]" aria-hidden="true">add</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Pop-up Tambah / Ubah Kategori -->
+  <div id="cat-form-backdrop" onclick="closeCatFormModal()" class="hidden fixed inset-0 bg-light-primary/30 z-40"></div>
+  <section id="cat-form-modal" role="dialog" aria-modal="true" aria-labelledby="cat-form-title" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[353px] bg-light-surface border border-light-outline-variant rounded-2xl p-5 z-50 flex flex-col gap-4">
+    <header class="flex items-center justify-between gap-2">
+      <h2 id="cat-form-title" class="font-headline text-title-lg text-light-on-surface">Tambah kategori</h2>
+      <button type="button" onclick="closeCatFormModal()" aria-label="Tutup" class="w-12 h-12 -mr-2 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low">
+        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
+      </button>
+    </header>
+    <div class="flex items-center gap-3">
+      <button type="button" onclick="openIconPickerForForm()" aria-label="Pilih ikon" class="w-12 h-12 rounded-xl bg-accent text-on-accent border border-light-outline-variant inline-flex items-center justify-center shrink-0">
+        <span id="cat-form-icon-preview" class="material-symbols-outlined text-[22px]" aria-hidden="true">category</span>
+      </button>
+      <input id="cat-form-name" type="text" placeholder="Nama kategori..." class="flex-1 min-h-[48px] px-3.5 rounded-lg bg-light-surface-container-low border border-light-outline-variant font-body text-body-md text-light-on-surface focus:border-light-primary focus:ring-0">
+    </div>
+    <button type="button" onclick="saveCatForm()" class="w-full min-h-[48px] px-6 py-3 rounded-lg bg-light-primary text-light-on-primary font-label text-label-lg">
+      Simpan
+    </button>
+  </section>
+
+  <!-- Pop-up Pemilih Ikon Kategori -->
+  <div id="icon-backdrop" onclick="closeIconPicker()" class="hidden fixed inset-0 bg-light-primary/30 z-40"></div>
+  <section id="icon-modal" role="dialog" aria-modal="true" aria-labelledby="icon-modal-title" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[353px] bg-light-surface border border-light-outline-variant rounded-2xl p-5 z-50 flex flex-col gap-4">
+    <header class="flex items-center justify-between gap-2">
+      <div>
+        <h2 id="icon-modal-title" class="font-headline text-title-lg text-light-on-surface">Pilih ikon</h2>
+        <p id="icon-modal-sub" class="font-body text-body-sm text-light-on-surface-variant">Ketuk ikon untuk memilih.</p>
+      </div>
+      <button type="button" onclick="closeIconPicker()" aria-label="Tutup pemilih ikon" class="w-12 h-12 -mr-2 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low">
+        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
+      </button>
+    </header>
+
+    <div id="icon-grid" class="grid grid-cols-4 gap-2.5"></div>
+  </section>
+
+  <!-- Pop-up Konfirmasi Hapus Kategori -->
+  <div id="delete-cat-backdrop" onclick="closeDeleteCatModal()" class="hidden fixed inset-0 bg-light-primary/30 z-40"></div>
+  <section id="delete-cat-modal" role="dialog" aria-modal="true" aria-labelledby="delete-cat-title" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[353px] bg-light-surface border border-light-outline-variant rounded-2xl p-5 z-50 flex flex-col gap-4">
+    <div>
+      <h2 id="delete-cat-title" class="font-headline text-title-lg text-light-on-surface">Hapus kategori?</h2>
+      <p id="delete-cat-sub" class="font-body text-body-sm text-light-on-surface-variant mt-1">Transaksi terkait dipindahkan ke Lainnya.</p>
+    </div>
+    <div class="grid grid-cols-2 gap-2.5">
+      <button type="button" onclick="closeDeleteCatModal()" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-light-surface border border-light-outline-variant font-label text-label-lg text-light-on-surface">Batal</button>
+      <button type="button" onclick="confirmDeleteCat()" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-light-error-container font-label text-label-lg text-light-on-error-container">Hapus</button>
+    </div>
+  </section>
+
+  <script>
+    var availableIcons = [
+      { id: 'restaurant', label: 'Makanan' },
+      { id: 'local_cafe', label: 'Minum' },
+      { id: 'directions_car', label: 'Transport' },
+      { id: 'local_gas_station', label: 'BBM' },
+      { id: 'receipt_long', label: 'Tagihan' },
+      { id: 'bolt', label: 'Listrik' },
+      { id: 'shopping_bag', label: 'Belanja' },
+      { id: 'shopping_cart', label: 'Kebutuhan' },
+      { id: 'medical_services', label: 'Kesehatan' },
+      { id: 'school', label: 'Edukasi' },
+      { id: 'movie', label: 'Hiburan' },
+      { id: 'flight', label: 'Travel' },
+      { id: 'home', label: 'Rumah' },
+      { id: 'payments', label: 'Gaji' },
+      { id: 'savings', label: 'Tabungan' },
+      { id: 'category', label: 'Lainnya' }
+    ];
+
+    var categories = [
+      { id: 1, name: 'Makan & Minum', icon: 'restaurant', count: 18 },
+      { id: 2, name: 'Transportasi', icon: 'directions_car', count: 7 },
+      { id: 3, name: 'Tagihan & Utilitas', icon: 'receipt_long', count: 4 },
+      { id: 4, name: 'Belanja Harian', icon: 'shopping_bag', count: 3 },
+      { id: 5, name: 'Penghasilan', icon: 'payments', count: 2 },
+      { id: 6, name: 'Lainnya', icon: 'category', count: 2 }
+    ];
+
+    var editingCatId = null;
+    var formCatId = null;
+    var formSelectedIcon = 'category';
+    var iconPickerTarget = 'row';
+    var deletingCatId = null;
+
+    function renderCats() {
+      var q = (document.getElementById('cat-search').value || '').toLowerCase();
+      var list = document.getElementById('cat-list');
+      list.innerHTML = '';
+      categories.filter(function(c) {
+        return !q || c.name.toLowerCase().indexOf(q) !== -1;
+      }).forEach(function(c) {
+        var li = document.createElement('li');
+        li.className = 'p-4 flex items-center justify-between gap-2 min-h-[64px]';
+        li.innerHTML =
+          '<div class="flex items-center gap-3 min-w-0">' +
+            '<button type="button" onclick="openIconPicker(' + c.id + ')" aria-label="Pilih ikon untuk ' + c.name + '" class="w-12 h-12 rounded-xl bg-light-surface-container-low border border-light-outline-variant hover:bg-light-surface-container inline-flex items-center justify-center text-light-on-surface shrink-0">' +
+              '<span class="material-symbols-outlined text-[22px]" aria-hidden="true">' + c.icon + '</span>' +
+            '</button>' +
+            '<div class="min-w-0">' +
+              '<p class="font-title text-title-md text-light-on-surface">' + c.name + '</p>' +
+              '<p class="font-body text-body-sm text-light-on-surface-variant tabular-nums">' + c.count + ' transaksi</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="flex items-center gap-1">' +
+            '<button type="button" onclick="openCatFormModal(' + c.id + ')" aria-label="Ubah ' + c.name + '" class="w-12 h-12 rounded-full inline-flex items-center justify-center text-light-on-surface-variant hover:bg-light-surface-container-low"><span class="material-symbols-outlined text-[20px]" aria-hidden="true">edit</span></button>' +
+            '<button type="button" onclick="openDeleteCatModal(' + c.id + ')" aria-label="Hapus ' + c.name + '" class="w-12 h-12 rounded-full inline-flex items-center justify-center text-light-error hover:bg-light-error-container"><span class="material-symbols-outlined text-[20px]" aria-hidden="true">delete</span></button>' +
+          '</div>';
+        list.appendChild(li);
+      });
+    }
+
+    function openCatFormModal(id) {
+      formCatId = id;
+      var cat = id ? categories.find(function(x) { return x.id === id; }) : null;
+      document.getElementById('cat-form-title').textContent = cat ? 'Ubah kategori' : 'Tambah kategori';
+      document.getElementById('cat-form-name').value = cat ? cat.name : '';
+      formSelectedIcon = cat ? cat.icon : 'category';
+      document.getElementById('cat-form-icon-preview').textContent = formSelectedIcon;
+      document.getElementById('cat-form-backdrop').classList.remove('hidden');
+      document.getElementById('cat-form-modal').classList.remove('hidden');
+    }
+
+    function closeCatFormModal() {
+      document.getElementById('cat-form-backdrop').classList.add('hidden');
+      document.getElementById('cat-form-modal').classList.add('hidden');
+    }
+
+    function saveCatForm() {
+      var name = (document.getElementById('cat-form-name').value || '').trim();
+      if (!name) return;
+      if (formCatId) {
+        var cat = categories.find(function(x) { return x.id === formCatId; });
+        if (cat) {
+          cat.name = name;
+          cat.icon = formSelectedIcon;
+        }
+      } else {
+        categories.push({ id: Date.now(), name: name, icon: formSelectedIcon, count: 0 });
+      }
+      renderCats();
+      closeCatFormModal();
+    }
+
+    function openIconPickerForForm() {
+      iconPickerTarget = 'form';
+      renderIconGrid(formSelectedIcon, 'Ikon kategori baru');
+    }
+
+    function openIconPicker(catId) {
+      iconPickerTarget = 'row';
+      editingCatId = catId;
+      var cat = categories.find(function(x) { return x.id === catId; });
+      renderIconGrid(cat ? cat.icon : '', cat ? ('Ikon untuk "' + cat.name + '"') : 'Pilih ikon');
+    }
+
+    function renderIconGrid(activeIcon, sub) {
+      document.getElementById('icon-modal-sub').textContent = sub;
+      var grid = document.getElementById('icon-grid');
+      grid.innerHTML = '';
+      availableIcons.forEach(function(ic) {
+        var active = activeIcon === ic.id;
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('aria-label', ic.label);
+        btn.onclick = function() { pickIcon(ic.id); };
+        btn.className = active
+          ? 'min-h-[56px] rounded-xl bg-accent text-on-accent border border-light-outline-variant flex flex-col items-center justify-center gap-1 p-1.5'
+          : 'min-h-[56px] rounded-xl bg-light-surface-container-low hover:bg-light-surface-container text-light-on-surface border border-light-outline-variant flex flex-col items-center justify-center gap-1 p-1.5';
+        btn.innerHTML =
+          '<span class="material-symbols-outlined text-[22px]" aria-hidden="true">' + ic.id + '</span>' +
+          '<span class="font-label text-label-sm leading-none">' + ic.label + '</span>';
+        grid.appendChild(btn);
+      });
+      document.getElementById('icon-backdrop').classList.remove('hidden');
+      document.getElementById('icon-modal').classList.remove('hidden');
+    }
+
+    function closeIconPicker() {
+      document.getElementById('icon-backdrop').classList.add('hidden');
+      document.getElementById('icon-modal').classList.add('hidden');
+    }
+
+    function pickIcon(iconId) {
+      if (iconPickerTarget === 'form') {
+        formSelectedIcon = iconId;
+        document.getElementById('cat-form-icon-preview').textContent = iconId;
+      } else {
+        var cat = categories.find(function(x) { return x.id === editingCatId; });
+        if (cat) {
+          cat.icon = iconId;
+          renderCats();
+        }
+      }
+      closeIconPicker();
+    }
+
+    function openDeleteCatModal(id) {
+      deletingCatId = id;
+      var cat = categories.find(function(x) { return x.id === id; });
+      if (cat) document.getElementById('delete-cat-title').textContent = 'Hapus "' + cat.name + '"?';
+      document.getElementById('delete-cat-backdrop').classList.remove('hidden');
+      document.getElementById('delete-cat-modal').classList.remove('hidden');
+    }
+
+    function closeDeleteCatModal() {
+      document.getElementById('delete-cat-backdrop').classList.add('hidden');
+      document.getElementById('delete-cat-modal').classList.add('hidden');
+    }
+
+    function confirmDeleteCat() {
+      categories = categories.filter(function(x) { return x.id !== deletingCatId; });
+      renderCats();
+      closeDeleteCatModal();
+    }
+
+    renderCats();
+  </script>
+
+
+</body></html>

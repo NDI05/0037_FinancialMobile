@@ -1,0 +1,422 @@
+<!DOCTYPE html><html lang="id"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget Layar Utama — PAM</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'canvas': '#FAFAF7',
+        'accent': '#D9F449',
+        'on-accent': '#171915',
+        'light-primary': '#171915',
+        'light-on-primary': '#FFFFFF',
+        'light-primary-container': '#EEEEEB',
+        'light-on-primary-container': '#171915',
+        'light-secondary': '#576500',
+        'light-on-secondary': '#FFFFFF',
+        'light-secondary-container': '#D9F449',
+        'light-on-secondary-container': '#171915',
+        'light-surface': '#FFFFFF',
+        'light-on-surface': '#171915',
+        'light-surface-container-lowest': '#FFFFFF',
+        'light-surface-container-low': '#F4F4F1',
+        'light-surface-container': '#EEEEEB',
+        'light-surface-container-high': '#E8E8E5',
+        'light-on-surface-variant': '#454742',
+        'light-outline': '#767871',
+        'light-outline-variant': '#E2E3DB',
+        'light-success': '#006D30',
+        'light-on-success': '#FFFFFF',
+        'light-success-container': '#E6F6EC',
+        'light-on-success-container': '#00210A',
+        'light-warning': '#9B4500',
+        'light-on-warning': '#FFFFFF',
+        'light-warning-container': '#FFEDE5',
+        'light-on-warning-container': '#331200',
+        'light-error': '#B91C1C',
+        'light-on-error': '#FFFFFF',
+        'light-error-container': '#FFEDEA',
+        'light-on-error-container': '#93000B',
+      },
+      borderRadius: {
+        'sm': '8px',
+        'DEFAULT': '12px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        '2xl': '24px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-lg': '16px',
+        'page-margin': '20px',
+        'section': '24px',
+        'block': '32px',
+      },
+      fontFamily: {
+        'display': ['"Manrope"', 'sans-serif'],
+        'headline': ['"Manrope"', 'sans-serif'],
+        'title': ['"Manrope"', 'sans-serif'],
+        'body': ['"Manrope"', 'sans-serif'],
+        'label': ['"Manrope"', 'sans-serif'],
+      },
+      fontSize: {
+        'display-lg': ['36px', { lineHeight: '44px', letterSpacing: '-0.75px', fontWeight: '700' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'headline-md': ['24px', { lineHeight: '30px', letterSpacing: '-0.3px', fontWeight: '700' }],
+        'title-lg': ['18px', { lineHeight: '24px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'title-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '500' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.15px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.2px', fontWeight: '600' }],
+      },
+      transitionDuration: {
+        'state-change': '120ms',
+        'status-label-fade': '200ms',
+        'sheet-enter': '250ms',
+        'sheet-exit': '180ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'status-label-fade': '0ms',
+        'sheet-enter': '0ms',
+        'sheet-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'status-label-fade': 'ease-in-out',
+        'sheet-enter': 'cubic-bezier(0.2, 0, 0, 1)',
+        'sheet-exit': 'cubic-bezier(0.3, 0, 1, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; font-variation-settings: 'FILL' 0, 'wght' 400; }
+  </style>
+</head>
+<body class="bg-canvas text-light-on-surface font-body antialiased">
+  <div class="min-h-[884px] max-w-[393px] mx-auto pb-10 flex flex-col gap-4" data-stitch-vh="min-h-[884px]===min-h-screen">
+    <header class="relative h-14 px-page-margin flex items-center justify-between">
+      <a href="../summary/Ringkasan.html" aria-label="Kembali ke Ringkasan" class="w-12 h-12 -ml-3 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low">
+        <span class="material-symbols-outlined text-[22px]" aria-hidden="true">arrow_back</span>
+      </a>
+      <h1 class="font-headline text-title-lg text-light-on-surface absolute left-1/2 -translate-x-1/2">Widget layar utama</h1>
+      <div class="w-12 h-12"></div>
+    </header>
+
+    <main class="px-page-margin flex flex-col gap-4">
+      <!-- Mode Switcher: Terang / Gelap / Pemilih / Bank -->
+      <div class="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden" role="tablist" aria-label="Pratinjau launcher dan pemilih">
+        <button type="button" onclick="setView(&#39;light&#39;)" id="v-light" role="tab" aria-selected="true" class="shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-primary text-light-on-primary font-label text-label-md whitespace-nowrap">Wallpaper terang</button>
+        <button type="button" onclick="setView(&#39;dark&#39;)" id="v-dark" role="tab" aria-selected="false" class="shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-surface border border-light-outline-variant text-light-on-surface-variant font-label text-label-md whitespace-nowrap">Wallpaper gelap</button>
+        <button type="button" onclick="setView(&#39;picker&#39;)" id="v-picker" role="tab" aria-selected="false" class="shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-surface border border-light-outline-variant text-light-on-surface-variant font-label text-label-md whitespace-nowrap">Pemilih widget</button>
+        <button type="button" onclick="setView(&#39;bank-concept&#39;)" id="v-bank-concept" role="tab" aria-selected="false" class="shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-surface border border-light-outline-variant text-light-on-surface-variant font-label text-label-md whitespace-nowrap">Pemilih bank (v2)</button>
+      </div>
+
+      <!-- Widget State Switcher & Large Text Toggle -->
+      <section id="controls-bar" class="bg-light-surface border border-light-outline-variant rounded-2xl p-3 flex flex-col gap-2.5">
+        <div class="flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden" role="group" aria-label="Keadaan widget">
+          <button type="button" onclick="setState(&#39;available&#39;)" id="st-available" class="shrink-0 min-h-[36px] px-3 py-1 rounded-full bg-accent text-on-accent font-label text-label-sm whitespace-nowrap">Tersedia</button>
+          <button type="button" onclick="setState(&#39;empty&#39;)" id="st-empty" class="shrink-0 min-h-[36px] px-3 py-1 rounded-full bg-light-surface-container-low text-light-on-surface-variant font-label text-label-sm whitespace-nowrap">Kosong</button>
+          <button type="button" onclick="setState(&#39;offline&#39;)" id="st-offline" class="shrink-0 min-h-[36px] px-3 py-1 rounded-full bg-light-surface-container-low text-light-on-surface-variant font-label text-label-sm whitespace-nowrap">Offline</button>
+          <button type="button" onclick="setState(&#39;logged_out&#39;)" id="st-logged_out" class="shrink-0 min-h-[36px] px-3 py-1 rounded-full bg-light-surface-container-low text-light-on-surface-variant font-label text-label-sm whitespace-nowrap">Belum masuk</button>
+          <button type="button" onclick="setState(&#39;error&#39;)" id="st-error" class="shrink-0 min-h-[36px] px-3 py-1 rounded-full bg-light-surface-container-low text-light-on-surface-variant font-label text-label-sm whitespace-nowrap">Gagal</button>
+        </div>
+        <label class="flex items-center justify-between gap-2 px-1 cursor-pointer min-h-[36px]">
+          <span class="font-label text-label-md text-light-on-surface-variant">Simulasi teks besar (aksesibilitas)</span>
+          <input id="large-text-toggle" type="checkbox" onchange="toggleLargeText()" class="w-5 h-5 rounded text-light-primary focus:ring-light-primary border-light-outline">
+        </label>
+      </section>
+
+      <!-- 1 & 2. Android Launcher Preview (Light & Dark Wallpaper) -->
+      <section id="launcher-frame" aria-label="Pratinjau launcher Android" class="rounded-2xl border border-light-outline-variant p-4 flex flex-col gap-4 bg-light-surface-container">
+        <!-- Simulated Android Status Bar -->
+        <div id="launcher-statusbar" class="flex items-center justify-between px-1 font-label text-label-sm text-light-on-surface">
+          <span class="tabular-nums">10.20</span>
+          <div class="flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[14px]" aria-hidden="true">signal_cellular_alt</span>
+            <span class="material-symbols-outlined text-[14px]" aria-hidden="true">wifi</span>
+            <span class="material-symbols-outlined text-[14px]" aria-hidden="true">battery_full</span>
+          </div>
+        </div>
+
+        <!-- 2x2 Widget Row + App Icons -->
+        <div class="grid grid-cols-4 gap-3 items-start">
+          <!-- PAM Ringkasan 2x2 Widget -->
+          <div class="col-span-2 flex flex-col gap-1.5">
+            <a id="widget-2x2" href="../summary/Ringkasan.html?bank=mandiri&amp;periode=2026-11" aria-label="Mandiri, November 2026, 42 transaksi" class="min-h-[144px] rounded-2xl bg-canvas border border-light-outline-variant p-3.5 flex flex-col justify-between gap-2 hover:bg-light-surface transition-colors duration-state-change">
+              <div class="flex items-center justify-between gap-1.5">
+                <span class="px-2 py-0.5 rounded-md bg-light-primary text-light-on-primary font-label text-label-sm">Mandiri</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-accent border border-light-outline-variant shrink-0" aria-hidden="true"></span>
+              </div>
+              <div id="w2-body" class="flex flex-col gap-0.5">
+                <p id="w2-count" class="font-display text-headline-md text-light-on-surface tabular-nums">42</p>
+                <p id="w2-unit" class="font-title text-title-md text-light-on-surface">transaksi</p>
+                <p id="w2-sub" class="font-body text-body-sm text-light-on-surface-variant">November 2026</p>
+              </div>
+            </a>
+            <span id="w2-caption" class="font-label text-label-sm text-center text-light-on-surface-variant">PAM Ringkasan · 2×2</span>
+          </div>
+
+          <!-- Simulated Launcher App Icons -->
+          <a href="../gmail-link/TautkanGmail.html" class="flex flex-col items-center gap-1 pt-1 group">
+            <div class="w-12 h-12 rounded-2xl bg-light-surface border border-light-outline-variant group-hover:bg-light-surface-container-low flex items-center justify-center text-light-on-surface">
+              <span class="material-symbols-outlined text-[22px]" aria-hidden="true">mail</span>
+            </div>
+            <span id="app-lbl-1" class="font-label text-label-sm text-light-on-surface">Gmail</span>
+          </a>
+          <div class="flex flex-col items-center gap-1 pt-1">
+            <div class="w-12 h-12 rounded-2xl bg-light-surface border border-light-outline-variant flex items-center justify-center text-light-on-surface">
+              <span class="material-symbols-outlined text-[22px]" aria-hidden="true">calendar_month</span>
+            </div>
+            <span id="app-lbl-2" class="font-label text-label-sm text-light-on-surface">Kalender</span>
+          </div>
+          <a href="../summary/Ringkasan.html" class="flex flex-col items-center gap-1 group">
+            <div class="w-12 h-12 rounded-2xl bg-light-primary text-light-on-primary group-hover:opacity-90 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[22px]" aria-hidden="true">account_balance_wallet</span>
+            </div>
+            <span id="app-lbl-3" class="font-label text-label-sm text-light-on-surface">PAM</span>
+          </a>
+          <a href="../settings/Pengaturan.html" class="flex flex-col items-center gap-1 group">
+            <div class="w-12 h-12 rounded-2xl bg-light-surface border border-light-outline-variant group-hover:bg-light-surface-container-low flex items-center justify-center text-light-on-surface">
+              <span class="material-symbols-outlined text-[22px]" aria-hidden="true">settings</span>
+            </div>
+            <span id="app-lbl-4" class="font-label text-label-sm text-light-on-surface">Setelan</span>
+          </a>
+        </div>
+
+        <!-- 4x2 Widget -->
+        <div class="flex flex-col gap-1.5">
+          <a id="widget-4x2" href="../summary/Ringkasan.html?bank=mandiri&amp;periode=2026-11" aria-label="Mandiri, November 2026, 42 transaksi" class="min-h-[124px] rounded-2xl bg-canvas border border-light-outline-variant p-4 flex items-center justify-between gap-3 hover:bg-light-surface transition-colors duration-state-change">
+            <div id="w4-left" class="flex flex-col gap-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-md bg-light-primary text-light-on-primary font-label text-label-sm">Mandiri</span>
+                <span id="w4-period" class="font-body text-body-sm text-light-on-surface-variant">November 2026</span>
+              </div>
+              <p id="w4-title" class="font-display text-display-lg-mobile text-light-on-surface tabular-nums">42 transaksi</p>
+              <p id="w4-meta" class="hidden font-body text-body-sm text-light-on-surface-variant">Diperbarui 10.15</p>
+            </div>
+            <span class="w-11 h-11 rounded-xl bg-accent text-on-accent border border-light-outline-variant inline-flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px]" aria-hidden="true">arrow_outward</span>
+            </span>
+          </a>
+          <span id="w4-caption" class="font-label text-label-sm text-center text-light-on-surface-variant">PAM Ringkasan · 4×2</span>
+        </div>
+      </section>
+
+      <!-- 3. Android Widget Picker Preview -->
+      <section id="picker-frame" aria-label="Pemilih widget Android" class="hidden bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="font-headline text-title-lg text-light-on-surface">Pemilih widget Android</h2>
+            <p class="font-body text-body-sm text-light-on-surface-variant">PAM · 2 ukuran tersedia</p>
+          </div>
+          <span class="px-2.5 py-1 rounded-full bg-light-surface-container font-label text-label-sm text-light-on-surface-variant">Sistem</span>
+        </div>
+
+        <div class="bg-light-surface-container-low rounded-xl p-4 flex flex-col gap-3 border border-light-outline-variant">
+          <div class="flex items-center justify-between">
+            <span class="font-title text-title-md text-light-on-surface">PAM Ringkasan</span>
+            <span class="font-label text-label-sm text-light-on-surface-variant">2×2 · 4×2</span>
+          </div>
+          <div class="bg-canvas border border-light-outline-variant rounded-2xl p-4 flex items-center justify-between gap-3">
+            <div>
+              <span class="px-2 py-0.5 rounded-md bg-light-primary text-light-on-primary font-label text-label-sm">Mandiri</span>
+              <p class="font-headline text-headline-md text-light-on-surface tabular-nums mt-1.5">42 transaksi</p>
+              <p class="font-body text-body-sm text-light-on-surface-variant">November 2026</p>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-accent text-on-accent inline-flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_outward</span>
+            </span>
+          </div>
+          <button type="button" onclick="installWidget()" class="w-full min-h-[48px] px-5 py-2.5 rounded-lg bg-light-primary text-light-on-primary font-label text-label-lg">
+            Pasang ke layar utama
+          </button>
+        </div>
+      </section>
+
+      <!-- 4. Next-Phase Concept: Bank Picker (Mandiri, Jago, BRI) -->
+      <section id="bank-concept-frame" aria-label="Konsep pemilih bank widget tahap berikutnya" class="hidden bg-light-surface border border-light-outline-variant rounded-2xl p-5 flex flex-col gap-4">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <span class="px-2.5 py-0.5 rounded-full bg-accent text-on-accent font-label text-label-sm">Konsep tahap berikutnya</span>
+            <h2 class="font-headline text-title-lg text-light-on-surface mt-1.5">Pilih bank untuk widget ini</h2>
+          </div>
+        </div>
+        <p class="font-body text-body-sm text-light-on-surface-variant">Satu widget menampilkan satu bank tetap. Anda dapat memasang lebih dari satu widget dengan bank berbeda.</p>
+
+        <div class="flex flex-col gap-2" role="radiogroup" aria-label="Pilih bank widget">
+          <button type="button" onclick="pickConceptBank(&#39;Mandiri&#39;)" id="cb-Mandiri" class="min-h-[56px] p-3.5 rounded-xl bg-light-surface-container-low border-2 border-light-primary flex items-center justify-between">
+            <span class="font-title text-title-md text-light-on-surface">Mandiri</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-light-success-container text-light-on-success-container font-label text-label-sm">Tersedia</span>
+          </button>
+          <button type="button" onclick="pickConceptBank(&#39;Jago&#39;)" id="cb-Jago" class="min-h-[56px] p-3.5 rounded-xl bg-light-surface border border-light-outline-variant flex items-center justify-between">
+            <span class="font-title text-title-md text-light-on-surface">Jago</span>
+            <span class="font-label text-label-sm text-light-on-surface-variant">Tahap berikutnya</span>
+          </button>
+          <button type="button" onclick="pickConceptBank(&#39;BRI&#39;)" id="cb-BRI" class="min-h-[56px] p-3.5 rounded-xl bg-light-surface border border-light-outline-variant flex items-center justify-between">
+            <span class="font-title text-title-md text-light-on-surface">BRI</span>
+            <span class="font-label text-label-sm text-light-on-surface-variant">Tahap berikutnya</span>
+          </button>
+        </div>
+
+        <button type="button" onclick="installWidget()" class="w-full min-h-[48px] px-5 py-2.5 rounded-lg bg-light-primary text-light-on-primary font-label text-label-lg">
+          Pasang widget ke layar utama
+        </button>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    var currentView = 'light';
+    var currentState = 'available';
+    var isLargeText = false;
+
+    function setView(v) {
+      currentView = v;
+      ['light', 'dark', 'picker', 'bank-concept'].forEach(function(k) {
+        var el = document.getElementById('v-' + k);
+        el.setAttribute('aria-selected', k === v ? 'true' : 'false');
+        el.className = k === v
+          ? 'shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-primary text-light-on-primary font-label text-label-md whitespace-nowrap'
+          : 'shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full bg-light-surface border border-light-outline-variant text-light-on-surface-variant font-label text-label-md whitespace-nowrap';
+      });
+
+      var isLauncher = v === 'light' || v === 'dark';
+      document.getElementById('launcher-frame').classList.toggle('hidden', !isLauncher);
+      document.getElementById('controls-bar').classList.toggle('hidden', !isLauncher);
+      document.getElementById('picker-frame').classList.toggle('hidden', v !== 'picker');
+      document.getElementById('bank-concept-frame').classList.toggle('hidden', v !== 'bank-concept');
+
+      if (isLauncher) {
+        var lf = document.getElementById('launcher-frame');
+        var sb = document.getElementById('launcher-statusbar');
+        var caps = ['w2-caption', 'w4-caption', 'app-lbl-1', 'app-lbl-2', 'app-lbl-3', 'app-lbl-4'];
+        if (v === 'dark') {
+          lf.className = 'rounded-2xl border border-light-outline-variant p-4 flex flex-col gap-4 bg-light-primary';
+          sb.className = 'flex items-center justify-between px-1 font-label text-label-sm text-light-on-primary';
+          caps.forEach(function(id) { document.getElementById(id).className = 'font-label text-label-sm text-center text-light-on-primary'; });
+        } else {
+          lf.className = 'rounded-2xl border border-light-outline-variant p-4 flex flex-col gap-4 bg-light-surface-container';
+          sb.className = 'flex items-center justify-between px-1 font-label text-label-sm text-light-on-surface';
+          caps.forEach(function(id) { document.getElementById(id).className = 'font-label text-label-sm text-center text-light-on-surface-variant'; });
+        }
+      }
+    }
+
+    function setState(st) {
+      currentState = st;
+      ['available', 'empty', 'offline', 'logged_out', 'error'].forEach(function(s) {
+        var el = document.getElementById('st-' + s);
+        el.className = s === st
+          ? 'shrink-0 min-h-[36px] px-3 py-1 rounded-full bg-accent text-on-accent font-label text-label-sm whitespace-nowrap'
+          : 'shrink-0 min-h-[36px] px-3 py-1 rounded-full bg-light-surface-container-low text-light-on-surface-variant font-label text-label-sm whitespace-nowrap';
+      });
+      renderWidgets();
+    }
+
+    function toggleLargeText() {
+      isLargeText = document.getElementById('large-text-toggle').checked;
+      renderWidgets();
+    }
+
+    function renderWidgets() {
+      var w2 = document.getElementById('widget-2x2');
+      var w4 = document.getElementById('widget-4x2');
+      var w2Count = document.getElementById('w2-count');
+      var w2Unit = document.getElementById('w2-unit');
+      var w2Sub = document.getElementById('w2-sub');
+      var w4Period = document.getElementById('w4-period');
+      var w4Title = document.getElementById('w4-title');
+      var w4Meta = document.getElementById('w4-meta');
+
+      var targetHref = currentState === 'logged_out'
+        ? '../auth-login/Masuk.html'
+        : '../summary/Ringkasan.html?bank=mandiri&periode=2026-11';
+      w2.href = targetHref;
+      w4.href = targetHref;
+
+      w4Meta.classList.add('hidden');
+      w2Count.className = isLargeText
+        ? 'font-display text-display-lg text-light-on-surface tabular-nums'
+        : 'font-display text-headline-md text-light-on-surface tabular-nums';
+      w2Unit.className = isLargeText
+        ? 'font-headline text-title-lg text-light-on-surface'
+        : 'font-title text-title-md text-light-on-surface';
+
+      if (currentState === 'available') {
+        w2Count.textContent = '42';
+        w2Unit.textContent = 'transaksi';
+        w2Sub.textContent = 'November 2026';
+        w4Period.textContent = 'November 2026';
+        w4Title.textContent = '42 transaksi';
+        w2.setAttribute('aria-label', 'Mandiri, November 2026, 42 transaksi');
+        w4.setAttribute('aria-label', 'Mandiri, November 2026, 42 transaksi');
+      } else if (currentState === 'empty') {
+        w2Count.textContent = '0';
+        w2Unit.textContent = 'transaksi tercatat';
+        w2Sub.textContent = 'November 2026';
+        w4Period.textContent = 'November 2026';
+        w4Title.textContent = '0 transaksi tercatat';
+        w2.setAttribute('aria-label', 'Mandiri, November 2026, 0 transaksi tercatat');
+        w4.setAttribute('aria-label', 'Mandiri, November 2026, 0 transaksi tercatat');
+      } else if (currentState === 'offline') {
+        w2Count.textContent = '42';
+        w2Unit.textContent = 'transaksi';
+        w2Sub.textContent = 'Diperbarui 10.15';
+        w4Period.textContent = 'November 2026';
+        w4Title.textContent = '42 transaksi';
+        w4Meta.textContent = 'Diperbarui 10.15';
+        w4Meta.classList.remove('hidden');
+        w2.setAttribute('aria-label', 'Mandiri, November 2026, 42 transaksi, diperbarui 10.15');
+        w4.setAttribute('aria-label', 'Mandiri, November 2026, 42 transaksi, diperbarui 10.15');
+      } else if (currentState === 'logged_out') {
+        w2Count.textContent = 'Masuk';
+        w2Unit.textContent = 'untuk melihat ringkasan';
+        w2Sub.textContent = 'Ketuk untuk masuk';
+        w4Period.textContent = 'Akun diperlukan';
+        w4Title.textContent = 'Masuk untuk melihat ringkasan';
+        w2.setAttribute('aria-label', 'Masuk untuk melihat ringkasan');
+        w4.setAttribute('aria-label', 'Masuk untuk melihat ringkasan');
+      } else if (currentState === 'error') {
+        w2Count.textContent = '—';
+        w2Unit.textContent = 'Ringkasan belum tersedia';
+        w2Sub.textContent = 'Ketuk untuk muat ulang';
+        w4Period.textContent = 'Mandiri';
+        w4Title.textContent = 'Ringkasan belum tersedia';
+        w2.setAttribute('aria-label', 'Ringkasan belum tersedia');
+        w4.setAttribute('aria-label', 'Ringkasan belum tersedia');
+      }
+    }
+
+    function installWidget() {
+      setView('light');
+      setState('available');
+    }
+
+    function pickConceptBank(b) {
+      ['Mandiri', 'Jago', 'BRI'].forEach(function(k) {
+        document.getElementById('cb-' + k).className = k === b
+          ? 'min-h-[56px] p-3.5 rounded-xl bg-light-surface-container-low border-2 border-light-primary flex items-center justify-between'
+          : 'min-h-[56px] p-3.5 rounded-xl bg-light-surface border border-light-outline-variant flex items-center justify-between';
+      });
+    }
+  </script>
+
+
+</body></html>

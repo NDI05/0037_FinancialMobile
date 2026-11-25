@@ -1,0 +1,327 @@
+<!DOCTYPE html><html lang="id"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tambah Transaksi — FinancialRecap</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'canvas': '#FAFAF7',
+        'accent': '#D9F449',
+        'on-accent': '#171915',
+        'light-primary': '#171915',
+        'light-on-primary': '#FFFFFF',
+        'light-primary-container': '#EEEEEB',
+        'light-on-primary-container': '#171915',
+        'light-secondary': '#576500',
+        'light-on-secondary': '#FFFFFF',
+        'light-secondary-container': '#D9F449',
+        'light-on-secondary-container': '#171915',
+        'light-surface': '#FFFFFF',
+        'light-on-surface': '#171915',
+        'light-surface-container-lowest': '#FFFFFF',
+        'light-surface-container-low': '#F4F4F1',
+        'light-surface-container': '#EEEEEB',
+        'light-surface-container-high': '#E8E8E5',
+        'light-on-surface-variant': '#454742',
+        'light-outline': '#767871',
+        'light-outline-variant': '#E2E3DB',
+        'light-success': '#006D30',
+        'light-on-success': '#FFFFFF',
+        'light-success-container': '#E6F6EC',
+        'light-on-success-container': '#00210A',
+        'light-warning': '#9B4500',
+        'light-on-warning': '#FFFFFF',
+        'light-warning-container': '#FFEDE5',
+        'light-on-warning-container': '#331200',
+        'light-error': '#B91C1C',
+        'light-on-error': '#FFFFFF',
+        'light-error-container': '#FFEDEA',
+        'light-on-error-container': '#93000B',
+      },
+      borderRadius: {
+        'sm': '8px',
+        'DEFAULT': '12px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        '2xl': '24px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-lg': '16px',
+        'page-margin': '20px',
+        'section': '24px',
+        'block': '32px',
+      },
+      fontFamily: {
+        'display': ['"Manrope"', 'sans-serif'],
+        'headline': ['"Manrope"', 'sans-serif'],
+        'title': ['"Manrope"', 'sans-serif'],
+        'body': ['"Manrope"', 'sans-serif'],
+        'label': ['"Manrope"', 'sans-serif'],
+      },
+      fontSize: {
+        'display-lg': ['36px', { lineHeight: '44px', letterSpacing: '-0.75px', fontWeight: '700' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'headline-md': ['24px', { lineHeight: '30px', letterSpacing: '-0.3px', fontWeight: '700' }],
+        'title-lg': ['18px', { lineHeight: '24px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'title-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '500' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.15px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.2px', fontWeight: '600' }],
+      },
+      transitionDuration: {
+        'state-change': '120ms',
+        'status-label-fade': '200ms',
+        'sheet-enter': '250ms',
+        'sheet-exit': '180ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'status-label-fade': '0ms',
+        'sheet-enter': '0ms',
+        'sheet-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'status-label-fade': 'ease-in-out',
+        'sheet-enter': 'cubic-bezier(0.2, 0, 0, 1)',
+        'sheet-exit': 'cubic-bezier(0.3, 0, 1, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; font-variation-settings: 'FILL' 0, 'wght' 400; }
+  </style>
+</head>
+<body class="bg-canvas text-light-on-surface font-body antialiased">
+  <div class="min-h-[884px] max-w-[393px] mx-auto flex flex-col justify-between pb-24" data-stitch-vh="min-h-[884px]===min-h-screen">
+    <div>
+      <header class="relative h-14 px-page-margin flex items-center justify-between">
+        <a href="../transactions/Transaksi.html" aria-label="Batal dan kembali ke Transaksi" class="w-12 h-12 -ml-3 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low">
+          <span class="material-symbols-outlined text-[22px]" aria-hidden="true">arrow_back</span>
+        </a>
+        <h1 id="page-title" class="font-headline text-title-lg text-light-on-surface absolute left-1/2 -translate-x-1/2">Tambah transaksi</h1>
+        <div class="w-12 h-12"></div>
+      </header>
+
+      <main class="px-page-margin pt-2 flex flex-col gap-4">
+        <!-- Reviewer state switcher -->
+        
+
+        <!-- Direction Toggle: Pengeluaran / Pemasukan -->
+        <div class="bg-light-surface-container-low p-1 rounded-xl grid grid-cols-2 gap-1 border border-light-outline-variant" role="radiogroup" aria-label="Jenis transaksi">
+          <button type="button" onclick="setDir(&#39;pengeluaran&#39;)" id="dir-out" class="min-h-[44px] rounded-lg bg-light-surface text-light-on-surface font-label text-label-lg border border-light-outline-variant">Pengeluaran</button>
+          <button type="button" onclick="setDir(&#39;pemasukan&#39;)" id="dir-in" class="min-h-[44px] rounded-lg text-light-on-surface-variant font-label text-label-lg">Pemasukan</button>
+        </div>
+
+        <!-- Error banner (draft preserved) -->
+        <div id="form-error-banner" class="hidden rounded-xl p-3.5 bg-light-error-container text-light-on-error-container flex items-start gap-2.5">
+          <span class="material-symbols-outlined text-[20px] mt-0.5" aria-hidden="true">error</span>
+          <div>
+            <p class="font-label text-label-lg">Gagal menyimpan</p>
+            <p class="font-body text-body-sm">Draf tetap tersimpan. Coba lagi.</p>
+          </div>
+        </div>
+
+        <!-- Nominal Display (driven by custom numeric keyboard) -->
+        <div class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex flex-col gap-1.5">
+          <span class="font-label text-label-md text-light-on-surface-variant">Nominal</span>
+          <div class="flex items-baseline gap-1">
+            <span class="font-headline text-title-lg text-light-on-surface-variant">Rp</span>
+            <span id="nominal-display" class="font-display text-display-lg-mobile text-light-on-surface tabular-nums">45.000</span>
+          </div>
+          <p id="err-nominal" class="hidden font-body text-body-sm text-light-error">Masukkan nominal lebih dari Rp0.</p>
+        </div>
+
+        <!-- Form fields -->
+        <div class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex flex-col gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label for="input-desc" class="font-label text-label-md text-light-on-surface-variant">Deskripsi</label>
+            <input id="input-desc" type="text" value="Makan siang" placeholder="Nama transaksi..." class="w-full min-h-[48px] px-3.5 rounded-lg bg-light-surface-container-low border border-light-outline-variant font-body text-body-md text-light-on-surface focus:border-light-primary focus:ring-0">
+            <p id="err-desc" class="hidden font-body text-body-sm text-light-error">Deskripsi wajib diisi.</p>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label for="input-date" class="font-label text-label-md text-light-on-surface-variant">Tanggal</label>
+            <input id="input-date" type="date" value="2026-11-25" max="2026-11-25" class="w-full min-h-[48px] px-3.5 rounded-lg bg-light-surface-container-low border border-light-outline-variant font-body text-body-md text-light-on-surface tabular-nums focus:border-light-primary focus:ring-0">
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <span class="font-label text-label-md text-light-on-surface-variant">Kategori</span>
+            <button type="button" onclick="openCatSheet()" class="w-full min-h-[48px] px-3.5 rounded-lg bg-light-surface-container-low border border-light-outline-variant flex items-center justify-between text-left">
+              <span id="selected-cat" class="font-body text-body-md text-light-on-surface">Makan &amp; Minum</span>
+              <span class="material-symbols-outlined text-[20px] text-light-on-surface-variant" aria-hidden="true">expand_more</span>
+            </button>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label for="input-note" class="font-label text-label-md text-light-on-surface-variant">Catatan</label>
+            <textarea id="input-note" rows="2" placeholder="Catatan opsional..." class="w-full p-3.5 rounded-lg bg-light-surface-container-low border border-light-outline-variant font-body text-body-md text-light-on-surface focus:border-light-primary focus:ring-0"></textarea>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Bottom Docked CTA + Custom PAM Numeric Keyboard (Koval-inspired layout) -->
+    <div class="sticky bottom-0 w-full bg-canvas pt-3 z-20 flex flex-col gap-3">
+      <div class="px-page-margin">
+        <button id="btn-save" type="button" onclick="submitTx()" class="w-full min-h-[48px] px-6 py-3 rounded-full bg-accent text-on-accent inline-flex items-center justify-center gap-1.5 font-label text-label-lg">
+          <span id="btn-save-label">Simpan transaksi</span>
+          <span class="material-symbols-outlined text-[18px]" aria-hidden="true">chevron_right</span>
+        </button>
+      </div>
+
+      <section aria-label="Keyboard input nominal" class="bg-light-surface-container-low border-t border-light-outline-variant px-3 pt-3 pb-4 grid grid-cols-3 gap-2">
+        <button type="button" onclick="keyPress(&#39;1&#39;)" class="min-h-[48px] rounded-xl bg-light-surface border border-light-outline-variant hover:bg-light-surface-container font-headline text-title-lg text-light-on-surface tabular-nums">1</button>
+        <button type="button" onclick="keyPress(&#39;2&#39;)" class="min-h-[48px] rounded-xl bg-light-surface border border-light-outline-variant hover:bg-light-surface-container font-headline text-title-lg text-light-on-surface tabular-nums">2</button>
+        <button type="button" onclick="keyPress(&#39;3&#39;)" class="min-h-[48px] rounded-xl bg-light-surface border border-light-outline-variant hover:bg-light-surface-container font-headline text-title-lg text-light-on-surface tabular-nums">3</button>
+        <button type="button" onclick="keyPress(&#39;4&#39;)" class="min-h-[48px] rounded-xl bg-light-surface border border-light-outline-variant hover:bg-light-surface-container font-headline text-title-lg text-light-on-surface tabular-nums">4</button>
+        <button type="button" onclick="keyPress(&#39;5&#39;)" class="min-h-[48px] rounded-xl bg-light-surface border border-light-outline-variant hover:bg-light-surface-container font-headline text-title-lg text-light-on-surface tabular-nums">5</button>
+        <button type="button" onclick="keyPress(&#39;6&#39;)" class="min-h-[48px] rounded-xl bg-light-surface border border-light-outline-variant hover:bg-light-surface-container font-headline text-title-lg text-light-on-surface tabular-nums">6</button>
+        <button type="button" onclick="keyPress(&#39;7&#39;)" class="min-h-[48px] rounded-xl bg-light-surface border border-light-outline-variant hover:bg-light-surface-container font-headline text-title-lg text-light-on-surface tabular-nums">7</button>
+        <button type="button" onclick="keyPress(&#39;8&#39;)" class="min-h-[48px] rounded-xl bg-light-surface border border-light-outline-variant hover:bg-light-surface-container font-headline text-title-lg text-light-on-surface tabular-nums">8</button>
+        <button type="button" onclick="keyPress(&#39;9&#39;)" class="min-h-[48px] rounded-xl bg-light-surface border border-light-outline-variant hover:bg-light-surface-container font-headline text-title-lg text-light-on-surface tabular-nums">9</button>
+        <button type="button" onclick="keyPress(&#39;000&#39;)" class="min-h-[48px] rounded-xl hover:bg-light-surface-container font-label text-label-lg text-light-on-surface-variant tabular-nums">000</button>
+        <button type="button" onclick="keyPress(&#39;0&#39;)" class="min-h-[48px] rounded-xl bg-light-surface border border-light-outline-variant hover:bg-light-surface-container font-headline text-title-lg text-light-on-surface tabular-nums">0</button>
+        <button type="button" onclick="keyBackspace()" aria-label="Hapus angka" class="min-h-[48px] rounded-xl hover:bg-light-surface-container inline-flex items-center justify-center text-light-on-surface">
+          <span class="material-symbols-outlined text-[22px]" aria-hidden="true">backspace</span>
+        </button>
+      </section>
+    </div>
+  </div>
+
+  <!-- Shared Category Picker -->
+  <div id="cat-backdrop" onclick="closeCatSheet()" class="hidden fixed inset-0 bg-light-primary/30 z-40"></div>
+  <section id="cat-sheet" role="dialog" aria-modal="true" aria-labelledby="cat-title" class="hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[393px] bg-light-surface border-t border-light-outline-variant rounded-t-2xl p-5 z-50 flex flex-col gap-4">
+    <div class="w-10 h-1 rounded-full bg-light-outline-variant mx-auto"></div>
+    <header class="flex items-center justify-between">
+      <h2 id="cat-title" class="font-headline text-title-lg text-light-on-surface">Pilih kategori</h2>
+      <button type="button" onclick="closeCatSheet()" aria-label="Tutup pemilih kategori" class="w-12 h-12 -mr-2 rounded-full inline-flex items-center justify-center text-light-on-surface">
+        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
+      </button>
+    </header>
+    <ul class="divide-y divide-light-outline-variant border border-light-outline-variant rounded-xl overflow-hidden">
+      <li><button type="button" onclick="pickCat(&#39;Makan &amp; Minum&#39;)" class="w-full min-h-[48px] px-4 py-3 text-left font-body text-body-md hover:bg-light-surface-container-low">Makan &amp; Minum</button></li>
+      <li><button type="button" onclick="pickCat(&#39;Transportasi&#39;)" class="w-full min-h-[48px] px-4 py-3 text-left font-body text-body-md hover:bg-light-surface-container-low">Transportasi</button></li>
+      <li><button type="button" onclick="pickCat(&#39;Tagihan &amp; Utilitas&#39;)" class="w-full min-h-[48px] px-4 py-3 text-left font-body text-body-md hover:bg-light-surface-container-low">Tagihan &amp; Utilitas</button></li>
+      <li><button type="button" onclick="pickCat(&#39;Belanja Harian&#39;)" class="w-full min-h-[48px] px-4 py-3 text-left font-body text-body-md hover:bg-light-surface-container-low">Belanja Harian</button></li>
+      <li><button type="button" onclick="pickCat(&#39;Lainnya&#39;)" class="w-full min-h-[48px] px-4 py-3 text-left font-body text-body-md hover:bg-light-surface-container-low">Lainnya</button></li>
+    </ul>
+  </section>
+
+  <script>
+    var rawNominal = '45000';
+
+    function formatRupiahDigits(digits) {
+      if (!digits || digits === '0') return '0';
+      return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function keyPress(val) {
+      if (rawNominal === '0') rawNominal = '';
+      if ((rawNominal + val).length > 10) return;
+      rawNominal += val;
+      if (!rawNominal) rawNominal = '0';
+      document.getElementById('nominal-display').textContent = formatRupiahDigits(rawNominal);
+    }
+
+    function keyBackspace() {
+      rawNominal = rawNominal.slice(0, -1);
+      if (!rawNominal) rawNominal = '0';
+      document.getElementById('nominal-display').textContent = formatRupiahDigits(rawNominal);
+    }
+
+    function setDir(d) {
+      var outBtn = document.getElementById('dir-out');
+      var inBtn = document.getElementById('dir-in');
+      if (d === 'pengeluaran') {
+        outBtn.className = 'min-h-[44px] rounded-lg bg-light-surface text-light-on-surface font-label text-label-lg border border-light-outline-variant';
+        inBtn.className = 'min-h-[44px] rounded-lg text-light-on-surface-variant font-label text-label-lg';
+      } else {
+        inBtn.className = 'min-h-[44px] rounded-lg bg-light-surface text-light-on-surface font-label text-label-lg border border-light-outline-variant';
+        outBtn.className = 'min-h-[44px] rounded-lg text-light-on-surface-variant font-label text-label-lg';
+      }
+    }
+
+    function setFormState(st) {
+      ['normal', 'validation', 'saving', 'error'].forEach(function(s) {
+        var el = document.getElementById('st-' + s);
+        if (!el) return;
+        el.className = s === st
+          ? 'min-h-[36px] px-3 py-1.5 rounded-full font-label text-label-md bg-light-primary text-light-on-primary'
+          : 'min-h-[36px] px-3 py-1.5 rounded-full font-label text-label-md bg-light-surface border border-light-outline-variant text-light-on-surface-variant';
+      });
+      document.getElementById('err-nominal').classList.toggle('hidden', st !== 'validation');
+      document.getElementById('err-desc').classList.toggle('hidden', st !== 'validation');
+      document.getElementById('form-error-banner').classList.toggle('hidden', st !== 'error');
+
+      var btn = document.getElementById('btn-save');
+      var lbl = document.getElementById('btn-save-label');
+      if (st === 'saving') {
+        btn.disabled = true;
+        btn.className = 'w-full min-h-[48px] px-6 py-3 rounded-full bg-light-surface-container text-light-outline inline-flex items-center justify-center gap-1.5 font-label text-label-lg cursor-not-allowed';
+        lbl.textContent = 'Menyimpan...';
+      } else {
+        btn.disabled = false;
+        btn.className = 'w-full min-h-[48px] px-6 py-3 rounded-full bg-accent text-on-accent inline-flex items-center justify-center gap-1.5 font-label text-label-lg';
+        lbl.textContent = st === 'error' ? 'Coba simpan lagi' : 'Simpan transaksi';
+      }
+    }
+
+    function openCatSheet() {
+      document.getElementById('cat-backdrop').classList.remove('hidden');
+      document.getElementById('cat-sheet').classList.remove('hidden');
+    }
+    function closeCatSheet() {
+      document.getElementById('cat-backdrop').classList.add('hidden');
+      document.getElementById('cat-sheet').classList.add('hidden');
+    }
+    function pickCat(c) {
+      document.getElementById('selected-cat').textContent = c;
+      closeCatSheet();
+    }
+    function submitTx() {
+      var desc = (document.getElementById('input-desc').value || '').trim();
+      var badNominal = !rawNominal || rawNominal === '0';
+      document.getElementById('err-nominal').classList.toggle('hidden', !badNominal);
+      document.getElementById('err-desc').classList.toggle('hidden', !!desc);
+      if (badNominal || !desc) return;
+      setFormState('saving');
+      setTimeout(function() {
+        window.location.href = '../transactions/Transaksi.html';
+      }, 600);
+    }
+
+    function initEditMode() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('edit') === '3') {
+        document.getElementById('page-title').textContent = 'Ubah transaksi';
+        rawNominal = '27000';
+        document.getElementById('nominal-display').textContent = '27.000';
+        document.getElementById('input-desc').value = 'Warung Bu Sari';
+        document.getElementById('input-date').value = '2026-11-24';
+        document.getElementById('selected-cat').textContent = 'Makan & Minum';
+        document.getElementById('btn-save-label').textContent = 'Simpan perubahan';
+      }
+    }
+    initEditMode();
+  </script>
+
+
+</body></html>

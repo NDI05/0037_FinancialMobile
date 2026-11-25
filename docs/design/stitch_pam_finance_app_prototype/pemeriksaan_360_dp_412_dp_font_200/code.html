@@ -1,0 +1,179 @@
+<!DOCTYPE html><html lang="id"><head>
+  <meta charset="UTF-8">
+  <title>Pemeriksaan 360 dp, 412 dp &amp; Font 200% — PAM</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'canvas': '#FAFAF7',
+        'accent': '#D9F449',
+        'on-accent': '#171915',
+        'light-primary': '#171915',
+        'light-on-primary': '#FFFFFF',
+        'light-primary-container': '#EEEEEB',
+        'light-on-primary-container': '#171915',
+        'light-secondary': '#576500',
+        'light-on-secondary': '#FFFFFF',
+        'light-secondary-container': '#D9F449',
+        'light-on-secondary-container': '#171915',
+        'light-surface': '#FFFFFF',
+        'light-on-surface': '#171915',
+        'light-surface-container-lowest': '#FFFFFF',
+        'light-surface-container-low': '#F4F4F1',
+        'light-surface-container': '#EEEEEB',
+        'light-surface-container-high': '#E8E8E5',
+        'light-on-surface-variant': '#454742',
+        'light-outline': '#767871',
+        'light-outline-variant': '#E2E3DB',
+        'light-success': '#006D30',
+        'light-on-success': '#FFFFFF',
+        'light-success-container': '#E6F6EC',
+        'light-on-success-container': '#00210A',
+        'light-warning': '#9B4500',
+        'light-on-warning': '#FFFFFF',
+        'light-warning-container': '#FFEDE5',
+        'light-on-warning-container': '#331200',
+        'light-error': '#B91C1C',
+        'light-on-error': '#FFFFFF',
+        'light-error-container': '#FFEDEA',
+        'light-on-error-container': '#93000B',
+      },
+      borderRadius: {
+        'sm': '8px',
+        'DEFAULT': '12px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        '2xl': '24px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-lg': '16px',
+        'page-margin': '20px',
+        'section': '24px',
+        'block': '32px',
+      },
+      fontFamily: {
+        'display': ['"Manrope"', 'sans-serif'],
+        'headline': ['"Manrope"', 'sans-serif'],
+        'title': ['"Manrope"', 'sans-serif'],
+        'body': ['"Manrope"', 'sans-serif'],
+        'label': ['"Manrope"', 'sans-serif'],
+      },
+      fontSize: {
+        'display-lg': ['36px', { lineHeight: '44px', letterSpacing: '-0.75px', fontWeight: '700' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'headline-md': ['24px', { lineHeight: '30px', letterSpacing: '-0.3px', fontWeight: '700' }],
+        'title-lg': ['18px', { lineHeight: '24px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'title-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '500' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.15px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.2px', fontWeight: '600' }],
+      },
+      transitionDuration: {
+        'state-change': '120ms',
+        'status-label-fade': '200ms',
+        'sheet-enter': '250ms',
+        'sheet-exit': '180ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'status-label-fade': '0ms',
+        'sheet-enter': '0ms',
+        'sheet-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'status-label-fade': 'ease-in-out',
+        'sheet-enter': 'cubic-bezier(0.2, 0, 0, 1)',
+        'sheet-exit': 'cubic-bezier(0.3, 0, 1, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>.material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; font-variation-settings: 'FILL' 0, 'wght' 400; }</style>
+</head>
+<body class="bg-canvas text-light-on-surface font-body p-6">
+  <div class="grid grid-cols-3 gap-6 items-start">
+    <!-- 360 dp -->
+    <section class="w-[360px] bg-canvas border border-light-outline-variant rounded-2xl overflow-hidden">
+      <div class="bg-light-surface-container-low px-4 py-2 border-b border-light-outline-variant font-label text-label-md">Varian 360 dp (margin 16 dp)</div>
+      <header class="relative h-14 px-4 flex items-center justify-between">
+        <div class="w-12 h-12"></div>
+        <h2 class="font-headline text-title-lg absolute left-1/2 -translate-x-1/2">Ringkasan</h2>
+        <span class="w-12 h-12 inline-flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">sync</span></span>
+      </header>
+      <div class="px-4 pb-5 flex flex-col gap-4">
+        <div class="bg-light-surface border border-light-outline-variant rounded-2xl p-4">
+          <p class="font-label text-label-md text-light-on-surface-variant">Pengeluaran tercatat</p>
+          <p class="font-display text-display-lg-mobile tabular-nums mt-1">Rp4.285.000</p>
+          <p class="font-body text-body-sm text-light-on-surface-variant mt-1">34 transaksi · November 2026</p>
+        </div>
+        <div class="bg-light-surface border border-light-outline-variant rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p class="font-label text-label-md text-light-on-surface-variant">Pemasukan tercatat</p>
+            <p class="font-headline text-headline-md text-light-success tabular-nums">Rp8.500.000</p>
+          </div>
+          <span class="material-symbols-outlined text-[20px] text-light-outline">chevron_right</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 412 dp -->
+    <section class="w-[412px] bg-canvas border border-light-outline-variant rounded-2xl overflow-hidden">
+      <div class="bg-light-surface-container-low px-5 py-2 border-b border-light-outline-variant font-label text-label-md">Varian 412 dp (margin 20 dp)</div>
+      <header class="relative h-14 px-5 flex items-center justify-between">
+        <div class="w-12 h-12"></div>
+        <h2 class="font-headline text-title-lg absolute left-1/2 -translate-x-1/2">Ringkasan</h2>
+        <span class="w-12 h-12 inline-flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">sync</span></span>
+      </header>
+      <div class="px-5 pb-5 flex flex-col gap-4">
+        <div class="bg-light-surface border border-light-outline-variant rounded-2xl p-5">
+          <p class="font-label text-label-lg text-light-on-surface-variant">Pengeluaran tercatat</p>
+          <p class="font-display text-display-lg-mobile tabular-nums mt-1">Rp4.285.000</p>
+          <p class="font-body text-body-sm text-light-on-surface-variant mt-1">34 transaksi · November 2026</p>
+        </div>
+        <div class="bg-light-surface border border-light-outline-variant rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p class="font-label text-label-md text-light-on-surface-variant">Pemasukan tercatat</p>
+            <p class="font-headline text-headline-md text-light-success tabular-nums">Rp8.500.000</p>
+          </div>
+          <span class="material-symbols-outlined text-[20px] text-light-outline">chevron_right</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Font 200% reflow check on 393 dp -->
+    <section class="w-[393px] bg-canvas border border-light-outline-variant rounded-2xl overflow-hidden">
+      <div class="bg-accent text-on-accent px-5 py-2 border-b border-light-outline-variant font-label text-label-md">Simulasi Font 200% (393 dp · tanpa tinggi tetap)</div>
+      <div class="p-5 flex flex-col gap-4">
+        <div class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex flex-col gap-2">
+          <p class="font-label text-[24px] leading-tight text-light-on-surface-variant">Pengeluaran tercatat</p>
+          <p class="font-display text-[36px] leading-tight font-bold tabular-nums break-words">Rp4.285.000</p>
+        </div>
+        <div class="bg-light-surface border border-light-outline-variant rounded-xl p-4 flex flex-col gap-2">
+          <p class="font-title text-[26px] leading-snug font-semibold">Kopi Kenangan</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-3 py-1 rounded-md bg-light-surface-container font-label text-[20px]">Livin · QRIS</span>
+          </div>
+          <p class="font-title text-[26px] font-bold tabular-nums">-Rp38.000</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+
+</body></html>

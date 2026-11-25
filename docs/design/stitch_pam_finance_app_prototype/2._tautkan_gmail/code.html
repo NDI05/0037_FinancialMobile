@@ -1,0 +1,232 @@
+<!DOCTYPE html><html lang="id"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tautkan Gmail — FinancialRecap</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'canvas': '#FAFAF7',
+        'accent': '#D9F449',
+        'on-accent': '#171915',
+        'light-primary': '#171915',
+        'light-on-primary': '#FFFFFF',
+        'light-primary-container': '#EEEEEB',
+        'light-on-primary-container': '#171915',
+        'light-secondary': '#576500',
+        'light-on-secondary': '#FFFFFF',
+        'light-secondary-container': '#D9F449',
+        'light-on-secondary-container': '#171915',
+        'light-surface': '#FFFFFF',
+        'light-on-surface': '#171915',
+        'light-surface-container-lowest': '#FFFFFF',
+        'light-surface-container-low': '#F4F4F1',
+        'light-surface-container': '#EEEEEB',
+        'light-surface-container-high': '#E8E8E5',
+        'light-on-surface-variant': '#454742',
+        'light-outline': '#767871',
+        'light-outline-variant': '#E2E3DB',
+        'light-success': '#006D30',
+        'light-on-success': '#FFFFFF',
+        'light-success-container': '#E6F6EC',
+        'light-on-success-container': '#00210A',
+        'light-warning': '#9B4500',
+        'light-on-warning': '#FFFFFF',
+        'light-warning-container': '#FFEDE5',
+        'light-on-warning-container': '#331200',
+        'light-error': '#B91C1C',
+        'light-on-error': '#FFFFFF',
+        'light-error-container': '#FFEDEA',
+        'light-on-error-container': '#93000B',
+      },
+      borderRadius: {
+        'sm': '8px',
+        'DEFAULT': '12px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        '2xl': '24px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-lg': '16px',
+        'page-margin': '20px',
+        'section': '24px',
+        'block': '32px',
+      },
+      fontFamily: {
+        'display': ['"Manrope"', 'sans-serif'],
+        'headline': ['"Manrope"', 'sans-serif'],
+        'title': ['"Manrope"', 'sans-serif'],
+        'body': ['"Manrope"', 'sans-serif'],
+        'label': ['"Manrope"', 'sans-serif'],
+      },
+      fontSize: {
+        'display-lg': ['36px', { lineHeight: '44px', letterSpacing: '-0.75px', fontWeight: '700' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'headline-md': ['24px', { lineHeight: '30px', letterSpacing: '-0.3px', fontWeight: '700' }],
+        'title-lg': ['18px', { lineHeight: '24px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'title-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '500' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.15px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.2px', fontWeight: '600' }],
+      },
+      transitionDuration: {
+        'state-change': '120ms',
+        'status-label-fade': '200ms',
+        'sheet-enter': '250ms',
+        'sheet-exit': '180ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'status-label-fade': '0ms',
+        'sheet-enter': '0ms',
+        'sheet-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'status-label-fade': 'ease-in-out',
+        'sheet-enter': 'cubic-bezier(0.2, 0, 0, 1)',
+        'sheet-exit': 'cubic-bezier(0.3, 0, 1, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; font-variation-settings: 'FILL' 0, 'wght' 400; }
+  </style>
+</head>
+<body class="bg-canvas text-light-on-surface font-body antialiased">
+  <main class="min-h-[884px] max-w-[393px] mx-auto px-page-margin pb-8 flex flex-col justify-between" data-stitch-vh="min-h-[884px]===min-h-screen">
+    <div>
+      <header class="relative h-14 flex items-center justify-between">
+        <a href="../auth-login/Masuk.html" aria-label="Kembali ke halaman masuk" class="w-12 h-12 -ml-3 rounded-full inline-flex items-center justify-center text-light-on-surface hover:bg-light-surface-container-low">
+          <span class="material-symbols-outlined text-[22px]" aria-hidden="true">arrow_back</span>
+        </a>
+        <h1 class="font-headline text-title-lg text-light-on-surface absolute left-1/2 -translate-x-1/2">Tautkan Gmail</h1>
+        <div class="w-12 h-12"></div>
+      </header>
+
+      <!-- State preview switcher for reviewer -->
+      
+
+      <div class="flex flex-col gap-5">
+        <div class="w-14 h-14 rounded-2xl bg-accent text-on-accent inline-flex items-center justify-center">
+          <span class="material-symbols-outlined text-[28px]" aria-hidden="true">mail</span>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <h2 class="font-headline text-headline-md text-light-on-surface text-balance">
+            Baca notifikasi Livin&#39; otomatis
+          </h2>
+          <p class="font-body text-body-md text-light-on-surface-variant text-pretty">
+            Opsional. Hanya membaca email notifikasi Livin&#39; by Mandiri.
+          </p>
+        </div>
+
+        <div class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex flex-col gap-3">
+          <div class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-[20px] text-light-on-surface-variant mt-0.5" aria-hidden="true">visibility</span>
+            <p class="font-body text-body-sm text-light-on-surface-variant">Akses baca-saja untuk email notifikasi.</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-[20px] text-light-on-surface-variant mt-0.5" aria-hidden="true">tune</span>
+            <p class="font-body text-body-sm text-light-on-surface-variant">Izin AI diatur terpisah di Pengaturan.</p>
+          </div>
+        </div>
+
+        <!-- Dynamic state feedback box -->
+        <div id="state-box" class="hidden rounded-xl p-4"></div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3 pt-6">
+      <button id="btn-link" type="button" onclick="startAuth()" class="w-full min-h-[48px] px-6 py-3 rounded-lg bg-accent text-on-accent inline-flex items-center justify-center gap-2 transition-opacity duration-state-change hover:opacity-90">
+        <span data-design-text-token="label-lg" class="font-label text-label-lg" id="btn-link-label">Tautkan Gmail</span>
+      </button>
+
+      <a id="btn-skip" href="../summary/Ringkasan.html" class="w-full min-h-[48px] px-6 py-3 rounded-lg bg-light-surface border border-light-outline-variant text-light-on-surface inline-flex items-center justify-center transition-colors duration-state-change hover:bg-light-surface-container-low">
+        <span data-design-text-token="label-lg" class="font-label text-label-lg" id="btn-skip-label">Lewati</span>
+      </a>
+    </div>
+  </main>
+
+  <script>
+    function setState(state) {
+      var tabs = ['idle', 'loading', 'success', 'cancelled'];
+      tabs.forEach(function(t) {
+        var el = document.getElementById('tab-' + t);
+        if (!el) return;
+        if (t === state) {
+          el.className = 'min-h-[36px] px-3 py-1.5 rounded-full font-label text-label-md bg-light-primary text-light-on-primary';
+        } else {
+          el.className = 'min-h-[36px] px-3 py-1.5 rounded-full font-label text-label-md bg-light-surface border border-light-outline-variant text-light-on-surface-variant';
+        }
+      });
+
+      var box = document.getElementById('state-box');
+      var btnLink = document.getElementById('btn-link');
+      var btnLinkLabel = document.getElementById('btn-link-label');
+      var btnSkip = document.getElementById('btn-skip');
+      var btnSkipLabel = document.getElementById('btn-skip-label');
+
+      if (state === 'idle') {
+        box.className = 'hidden';
+        box.innerHTML = '';
+        btnLink.disabled = false;
+        btnLink.className = 'w-full min-h-[48px] px-6 py-3 rounded-lg bg-accent text-on-accent inline-flex items-center justify-center gap-2';
+        btnLinkLabel.textContent = 'Tautkan Gmail';
+        btnLink.onclick = startAuth;
+        btnSkip.classList.remove('hidden');
+        btnSkipLabel.textContent = 'Lewati';
+      } else if (state === 'loading') {
+        box.className = 'rounded-xl p-4 bg-light-surface-container-low border border-light-outline-variant flex items-center gap-3';
+        box.innerHTML = '<span class="material-symbols-outlined text-[20px] text-light-on-surface animate-spin" aria-hidden="true">progress_activity</span><div><p class="font-label text-label-lg text-light-on-surface">Menunggu izin Google...</p><p class="font-body text-body-sm text-light-on-surface-variant">Selesaikan persetujuan akses Gmail di jendela otorisasi.</p></div>';
+        btnLink.disabled = true;
+        btnLink.className = 'w-full min-h-[48px] px-6 py-3 rounded-lg bg-light-surface-container text-light-outline inline-flex items-center justify-center gap-2 cursor-not-allowed';
+        btnLinkLabel.textContent = 'Memproses otorisasi...';
+        btnSkip.classList.remove('hidden');
+        btnSkipLabel.textContent = 'Batalkan';
+      } else if (state === 'success') {
+        box.className = 'rounded-xl p-4 bg-light-success-container text-light-on-success-container flex items-center gap-3';
+        box.innerHTML = '<span class="material-symbols-outlined text-[22px]" aria-hidden="true">check_circle</span><div><p class="font-label text-label-lg">Gmail berhasil ditautkan</p><p class="font-body text-body-sm">nadya.pratama@gmail.com siap disinkronkan.</p></div>';
+        btnLink.disabled = false;
+        btnLink.className = 'w-full min-h-[48px] px-6 py-3 rounded-lg bg-light-primary text-light-on-primary inline-flex items-center justify-center gap-2';
+        btnLinkLabel.textContent = 'Lanjut ke Ringkasan';
+        btnLink.onclick = function() { window.location.href = '../summary/Ringkasan.html'; };
+        btnSkip.classList.add('hidden');
+      } else if (state === 'cancelled') {
+        box.className = 'rounded-xl p-4 bg-light-warning-container text-light-on-warning-container flex items-start gap-3';
+        box.innerHTML = '<span class="material-symbols-outlined text-[20px] mt-0.5" aria-hidden="true">info</span><div><p class="font-label text-label-lg">Penautan Gmail dibatalkan</p><p class="font-body text-body-sm">Anda tetap dapat mencatat transaksi secara manual atau mencoba menautkan lagi nanti.</p></div>';
+        btnLink.disabled = false;
+        btnLink.className = 'w-full min-h-[48px] px-6 py-3 rounded-lg bg-accent text-on-accent inline-flex items-center justify-center gap-2';
+        btnLinkLabel.textContent = 'Coba lagi';
+        btnLink.onclick = startAuth;
+        btnSkip.classList.remove('hidden');
+        btnSkipLabel.textContent = 'Lewati';
+      }
+    }
+
+    function startAuth() {
+      setState('loading');
+      setTimeout(function() {
+        setState('success');
+      }, 1200);
+    }
+  </script>
+
+
+</body></html>

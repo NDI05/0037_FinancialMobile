@@ -1,0 +1,383 @@
+<!DOCTYPE html><html lang="id"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengaturan — FinancialRecap</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'canvas': '#FAFAF7',
+        'accent': '#D9F449',
+        'on-accent': '#171915',
+        'light-primary': '#171915',
+        'light-on-primary': '#FFFFFF',
+        'light-primary-container': '#EEEEEB',
+        'light-on-primary-container': '#171915',
+        'light-secondary': '#576500',
+        'light-on-secondary': '#FFFFFF',
+        'light-secondary-container': '#D9F449',
+        'light-on-secondary-container': '#171915',
+        'light-surface': '#FFFFFF',
+        'light-on-surface': '#171915',
+        'light-surface-container-lowest': '#FFFFFF',
+        'light-surface-container-low': '#F4F4F1',
+        'light-surface-container': '#EEEEEB',
+        'light-surface-container-high': '#E8E8E5',
+        'light-on-surface-variant': '#454742',
+        'light-outline': '#767871',
+        'light-outline-variant': '#E2E3DB',
+        'light-success': '#006D30',
+        'light-on-success': '#FFFFFF',
+        'light-success-container': '#E6F6EC',
+        'light-on-success-container': '#00210A',
+        'light-warning': '#9B4500',
+        'light-on-warning': '#FFFFFF',
+        'light-warning-container': '#FFEDE5',
+        'light-on-warning-container': '#331200',
+        'light-error': '#B91C1C',
+        'light-on-error': '#FFFFFF',
+        'light-error-container': '#FFEDEA',
+        'light-on-error-container': '#93000B',
+      },
+      borderRadius: {
+        'sm': '8px',
+        'DEFAULT': '12px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        '2xl': '24px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-lg': '16px',
+        'page-margin': '20px',
+        'section': '24px',
+        'block': '32px',
+      },
+      fontFamily: {
+        'display': ['"Manrope"', 'sans-serif'],
+        'headline': ['"Manrope"', 'sans-serif'],
+        'title': ['"Manrope"', 'sans-serif'],
+        'body': ['"Manrope"', 'sans-serif'],
+        'label': ['"Manrope"', 'sans-serif'],
+      },
+      fontSize: {
+        'display-lg': ['36px', { lineHeight: '44px', letterSpacing: '-0.75px', fontWeight: '700' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'headline-md': ['24px', { lineHeight: '30px', letterSpacing: '-0.3px', fontWeight: '700' }],
+        'title-lg': ['18px', { lineHeight: '24px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'title-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '500' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.15px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.2px', fontWeight: '600' }],
+      },
+      transitionDuration: {
+        'state-change': '120ms',
+        'status-label-fade': '200ms',
+        'sheet-enter': '250ms',
+        'sheet-exit': '180ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'status-label-fade': '0ms',
+        'sheet-enter': '0ms',
+        'sheet-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'status-label-fade': 'ease-in-out',
+        'sheet-enter': 'cubic-bezier(0.2, 0, 0, 1)',
+        'sheet-exit': 'cubic-bezier(0.3, 0, 1, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; font-variation-settings: 'FILL' 0, 'wght' 400; }
+  </style>
+</head>
+<body class="bg-canvas text-light-on-surface font-body antialiased">
+  <div class="min-h-[884px] max-w-[393px] mx-auto flex flex-col justify-between pb-24" data-stitch-vh="min-h-[884px]===min-h-screen">
+    <div>
+      <header class="relative h-14 px-page-margin flex items-center justify-between">
+        <div class="w-12 h-12 -ml-3"></div>
+        <h1 class="font-headline text-title-lg text-light-on-surface absolute left-1/2 -translate-x-1/2">Pengaturan</h1>
+        <div class="w-12 h-12"></div>
+      </header>
+
+      <main class="px-page-margin pt-2 flex flex-col gap-5">
+        <!-- Akun Google -->
+        <section class="flex flex-col gap-2">
+          <h2 class="font-label text-label-md text-light-on-surface-variant px-1">Akun Google</h2>
+          <div class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex items-center gap-3">
+            <div class="w-11 h-11 rounded-full bg-light-primary text-light-on-primary flex items-center justify-center font-headline text-title-md shrink-0">NP</div>
+            <div class="min-w-0">
+              <p class="font-title text-title-md text-light-on-surface">Nadya Pratama</p>
+              <p class="font-body text-body-sm text-light-on-surface-variant">nadya.pratama@gmail.com</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Koneksi Gmail -->
+        <section class="flex flex-col gap-2">
+          <h2 class="font-label text-label-md text-light-on-surface-variant px-1">Koneksi Gmail</h2>
+          <div class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex flex-col gap-3">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <p class="font-title text-title-md text-light-on-surface">Notifikasi Livin&#39; by Mandiri</p>
+                <p id="gmail-status-sub" class="font-body text-body-sm text-light-on-surface-variant">Baca-saja</p>
+              </div>
+              <span id="gmail-badge" class="px-2.5 py-1 rounded-full bg-light-success-container text-light-on-success-container font-label text-label-sm">Aktif</span>
+            </div>
+            <button id="gmail-action-btn" type="button" onclick="handleGmailAction()" class="w-full min-h-[48px] px-4 py-2.5 rounded-lg bg-light-surface-container-low border border-light-outline-variant text-light-on-surface font-label text-label-lg hover:bg-light-surface-container">
+              Putuskan Gmail
+            </button>
+          </div>
+        </section>
+
+        <!-- Izin AI -->
+        <section class="flex flex-col gap-2">
+          <h2 class="font-label text-label-md text-light-on-surface-variant px-1">Izin AI</h2>
+          <div class="bg-light-surface border border-light-outline-variant rounded-2xl divide-y divide-light-outline-variant">
+            <label class="p-4 flex items-center justify-between gap-3 cursor-pointer min-h-[64px]">
+              <div>
+                <p class="font-title text-title-md text-light-on-surface">Kategorisasi AI</p>
+                <p class="font-body text-body-sm text-light-on-surface-variant">Saran kategori otomatis</p>
+              </div>
+              <input type="checkbox" checked class="w-6 h-6 rounded text-light-primary focus:ring-light-primary border-light-outline">
+            </label>
+            <label class="p-4 flex items-center justify-between gap-3 cursor-pointer min-h-[64px]">
+              <div>
+                <p class="font-title text-title-md text-light-on-surface">Analisis AI</p>
+                <p class="font-body text-body-sm text-light-on-surface-variant">Ringkasan pola di tab Analisis</p>
+              </div>
+              <input type="checkbox" checked class="w-6 h-6 rounded text-light-primary focus:ring-light-primary border-light-outline">
+            </label>
+          </div>
+        </section>
+
+        <!-- Notifikasi -->
+        <section class="flex flex-col gap-2">
+          <h2 class="font-label text-label-md text-light-on-surface-variant px-1">Notifikasi</h2>
+          <div class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex flex-col gap-3">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p class="font-title text-title-md text-light-on-surface">Notifikasi transaksi baru</p>
+                <p class="font-body text-body-sm text-light-on-surface-variant">Beri tahu saya saat transaksi Livin baru tercatat.</p>
+              </div>
+              <input id="notif-toggle" type="checkbox" onchange="onNotifToggle()" aria-label="Aktifkan notifikasi transaksi baru" class="w-6 h-6 rounded text-light-primary focus:ring-light-primary border-light-outline shrink-0">
+            </div>
+
+            <div class="flex items-center justify-between gap-2">
+              <span id="notif-state-badge" class="px-2.5 py-1 rounded-full bg-light-surface-container text-light-on-surface-variant font-label text-label-sm">Nonaktif</span>
+              <a href="../notifications/NotifikasiTransaksi.html" class="font-label text-label-md text-light-on-surface underline underline-offset-4">Pratinjau notifikasi</a>
+            </div>
+
+            <!-- Denied system permission banner -->
+            <div id="notif-denied-box" class="hidden rounded-xl p-3.5 bg-light-warning-container text-light-on-warning-container flex flex-col gap-2.5">
+              <p class="font-body text-body-sm">Izin notifikasi sistem ditolak. Anda tetap dapat melihat dan menyinkronkan transaksi.</p>
+              <button type="button" onclick="openSystemSettingsNotice()" class="min-h-[44px] px-4 py-2 rounded-lg bg-light-primary text-light-on-primary font-label text-label-md self-start">
+                Buka pengaturan sistem
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Kategori -->
+        <section class="flex flex-col gap-2">
+          <h2 class="font-label text-label-md text-light-on-surface-variant px-1">Kategori</h2>
+          <a href="../categories/KelolaKategori.html" class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex items-center justify-between gap-3 min-h-[60px] hover:bg-light-surface-container-low">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-[22px] text-light-on-surface" aria-hidden="true">label</span>
+              <div>
+                <p class="font-title text-title-md text-light-on-surface">Kelola kategori</p>
+                <p class="font-body text-body-sm text-light-on-surface-variant">Daftar &amp; ikon kategori</p>
+              </div>
+            </div>
+            <span class="material-symbols-outlined text-[20px] text-light-on-surface-variant" aria-hidden="true">chevron_right</span>
+          </a>
+        </section>
+
+        <!-- Widget Layar Utama -->
+        <section class="flex flex-col gap-2">
+          <h2 class="font-label text-label-md text-light-on-surface-variant px-1">Widget</h2>
+          <a href="../widget-launcher/WidgetLayarUtama.html" class="bg-light-surface border border-light-outline-variant rounded-2xl p-4 flex items-center justify-between gap-3 min-h-[60px] hover:bg-light-surface-container-low">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-[22px] text-light-on-surface" aria-hidden="true">widgets</span>
+              <div>
+                <p class="font-title text-title-md text-light-on-surface">Widget layar utama</p>
+                <p class="font-body text-body-sm text-light-on-surface-variant">Pratinjau widget 2×2 &amp; 4×2</p>
+              </div>
+            </div>
+            <span class="material-symbols-outlined text-[20px] text-light-on-surface-variant" aria-hidden="true">chevron_right</span>
+          </a>
+        </section>
+
+        <!-- Keluar -->
+        <section class="pt-2">
+          <button type="button" onclick="openLogoutModal()" class="w-full min-h-[48px] px-6 py-3 rounded-lg bg-light-error-container text-light-on-error-container inline-flex items-center justify-center font-label text-label-lg">
+            Keluar
+          </button>
+        </section>
+      </main>
+    </div>
+
+    <nav aria-label="Navigasi utama" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[393px] bg-light-surface border-t border-light-outline-variant px-2 py-2 grid grid-cols-4 gap-1 z-20">
+      <a href="../summary/Ringkasan.html" class="min-h-[48px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-light-on-surface-variant hover:text-light-on-surface">
+        <span class="px-4 py-1 rounded-full flex items-center justify-center"><span class="material-symbols-outlined text-[20px]" aria-hidden="true">home</span></span>
+        <span class="font-label text-label-sm">Ringkasan</span>
+      </a>
+      <a href="../transactions/Transaksi.html" class="min-h-[48px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-light-on-surface-variant hover:text-light-on-surface">
+        <span class="px-4 py-1 rounded-full flex items-center justify-center"><span class="material-symbols-outlined text-[20px]" aria-hidden="true">receipt_long</span></span>
+        <span class="font-label text-label-sm">Transaksi</span>
+      </a>
+      <a href="../analysis/Analisis.html" class="min-h-[48px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-light-on-surface-variant hover:text-light-on-surface">
+        <span class="px-4 py-1 rounded-full flex items-center justify-center"><span class="material-symbols-outlined text-[20px]" aria-hidden="true">bar_chart</span></span>
+        <span class="font-label text-label-sm">Analisis</span>
+      </a>
+      <a href="../settings/Pengaturan.html" aria-current="page" class="min-h-[48px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-light-on-surface">
+        <span class="px-4 py-1 rounded-full bg-accent text-on-accent flex items-center justify-center"><span class="material-symbols-outlined text-[20px]" aria-hidden="true">settings</span></span>
+        <span class="font-label text-label-sm">Pengaturan</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Simulasi Dialog Izin Android -->
+  <div id="perm-backdrop" class="hidden fixed inset-0 bg-light-primary/30 z-40"></div>
+  <section id="perm-modal" role="dialog" aria-modal="true" aria-labelledby="perm-title" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[330px] bg-light-surface border border-light-outline-variant rounded-2xl p-5 z-50 flex flex-col gap-4">
+    <div class="flex flex-col items-center text-center gap-2">
+      <span class="w-10 h-10 rounded-full bg-light-surface-container-low text-light-on-surface inline-flex items-center justify-center">
+        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">notifications</span>
+      </span>
+      <h2 id="perm-title" class="font-headline text-title-md text-light-on-surface">Izinkan PAM mengirim notifikasi?</h2>
+    </div>
+    <div class="flex flex-col gap-2">
+      <button type="button" onclick="allowNotifPermission()" class="w-full min-h-[44px] rounded-lg bg-light-primary text-light-on-primary font-label text-label-lg">Izinkan</button>
+      <button type="button" onclick="denyNotifPermission()" class="w-full min-h-[44px] rounded-lg bg-light-surface-container-low text-light-on-surface font-label text-label-lg">Jangan izinkan</button>
+    </div>
+  </section>
+
+  <!-- Pop-up Putuskan Gmail -->
+  <div id="disconnect-backdrop" onclick="closeDisconnectModal()" class="hidden fixed inset-0 bg-light-primary/30 z-40"></div>
+  <section id="disconnect-modal" role="dialog" aria-modal="true" aria-labelledby="disconnect-title" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[353px] bg-light-surface border border-light-outline-variant rounded-2xl p-5 z-50 flex flex-col gap-4">
+    <div>
+      <h2 id="disconnect-title" class="font-headline text-title-lg text-light-on-surface">Putuskan Gmail?</h2>
+      <p class="font-body text-body-sm text-light-on-surface-variant mt-1">Impor otomatis berhenti. Catatan yang sudah tersimpan tetap ada.</p>
+    </div>
+    <div class="grid grid-cols-2 gap-2.5">
+      <button type="button" onclick="closeDisconnectModal()" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-light-surface border border-light-outline-variant font-label text-label-lg text-light-on-surface">Batal</button>
+      <button type="button" onclick="confirmDisconnect()" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-light-primary font-label text-label-lg text-light-on-primary">Putuskan</button>
+    </div>
+  </section>
+
+  <!-- Pop-up Keluar -->
+  <div id="logout-backdrop" onclick="closeLogoutModal()" class="hidden fixed inset-0 bg-light-primary/30 z-40"></div>
+  <section id="logout-modal" role="dialog" aria-modal="true" aria-labelledby="logout-title" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[353px] bg-light-surface border border-light-outline-variant rounded-2xl p-5 z-50 flex flex-col gap-4">
+    <div>
+      <h2 id="logout-title" class="font-headline text-title-lg text-light-on-surface">Keluar dari FinancialRecap?</h2>
+      <p class="font-body text-body-sm text-light-on-surface-variant mt-1">Sesi akun Google di perangkat ini akan diakhiri.</p>
+    </div>
+    <div class="grid grid-cols-2 gap-2.5">
+      <button type="button" onclick="closeLogoutModal()" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-light-surface border border-light-outline-variant font-label text-label-lg text-light-on-surface">Batal</button>
+      <a href="../auth-login/Masuk.html" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-light-error-container font-label text-label-lg text-light-on-error-container inline-flex items-center justify-center">Keluar</a>
+    </div>
+  </section>
+
+  <script>
+    var gmailConnected = true;
+
+    function onNotifToggle() {
+      var chk = document.getElementById('notif-toggle');
+      if (chk.checked) {
+        document.getElementById('perm-backdrop').classList.remove('hidden');
+        document.getElementById('perm-modal').classList.remove('hidden');
+      } else {
+        setNotifState('off');
+      }
+    }
+
+    function allowNotifPermission() {
+      document.getElementById('perm-backdrop').classList.add('hidden');
+      document.getElementById('perm-modal').classList.add('hidden');
+      setNotifState('active');
+    }
+
+    function denyNotifPermission() {
+      document.getElementById('perm-backdrop').classList.add('hidden');
+      document.getElementById('perm-modal').classList.add('hidden');
+      document.getElementById('notif-toggle').checked = false;
+      setNotifState('denied');
+    }
+
+    function openSystemSettingsNotice() {
+      setNotifState('active');
+      document.getElementById('notif-toggle').checked = true;
+    }
+
+    function setNotifState(st) {
+      var badge = document.getElementById('notif-state-badge');
+      var deniedBox = document.getElementById('notif-denied-box');
+      if (st === 'active') {
+        badge.textContent = 'Aktif';
+        badge.className = 'px-2.5 py-1 rounded-full bg-light-success-container text-light-on-success-container font-label text-label-sm';
+        deniedBox.classList.add('hidden');
+      } else if (st === 'denied') {
+        badge.textContent = 'Izin sistem ditolak';
+        badge.className = 'px-2.5 py-1 rounded-full bg-light-warning-container text-light-on-warning-container font-label text-label-sm';
+        deniedBox.classList.remove('hidden');
+      } else {
+        badge.textContent = 'Nonaktif';
+        badge.className = 'px-2.5 py-1 rounded-full bg-light-surface-container text-light-on-surface-variant font-label text-label-sm';
+        deniedBox.classList.add('hidden');
+      }
+    }
+
+    function handleGmailAction() {
+      if (gmailConnected) {
+        document.getElementById('disconnect-backdrop').classList.remove('hidden');
+        document.getElementById('disconnect-modal').classList.remove('hidden');
+      } else {
+        window.location.href = '../gmail-link/TautkanGmail.html';
+      }
+    }
+
+    function closeDisconnectModal() {
+      document.getElementById('disconnect-backdrop').classList.add('hidden');
+      document.getElementById('disconnect-modal').classList.add('hidden');
+    }
+
+    function confirmDisconnect() {
+      gmailConnected = false;
+      document.getElementById('gmail-badge').textContent = 'Nonaktif';
+      document.getElementById('gmail-badge').className = 'px-2.5 py-1 rounded-full bg-light-surface-container text-light-on-surface-variant font-label text-label-sm';
+      document.getElementById('gmail-status-sub').textContent = 'Belum terhubung';
+      document.getElementById('gmail-action-btn').textContent = 'Tautkan Gmail';
+      closeDisconnectModal();
+    }
+
+    function openLogoutModal() {
+      document.getElementById('logout-backdrop').classList.remove('hidden');
+      document.getElementById('logout-modal').classList.remove('hidden');
+    }
+
+    function closeLogoutModal() {
+      document.getElementById('logout-backdrop').classList.add('hidden');
+      document.getElementById('logout-modal').classList.add('hidden');
+    }
+  </script>
+
+
+</body></html>
