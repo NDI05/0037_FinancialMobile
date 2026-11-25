@@ -23,6 +23,9 @@ internal object BackendErrorCodes {
 
     /** Every Gmail route answers this when the server ships with `GMAIL_ENABLED=false`. */
     const val GMAIL_DISABLED = "gmail_disabled"
+
+    /** Category routes answer this when the server ships with `CATEGORY_LLM_ENABLED=false`. */
+    const val CATEGORY_UNAVAILABLE = "category_unavailable"
 }
 
 /**
@@ -47,6 +50,10 @@ internal fun backendError(status: Int, code: String?): AppError = when {
     // server has not enabled linking instead of offering a connect button that cannot work.
     status == 503 && code == BackendErrorCodes.GMAIL_DISABLED ->
         AppError.Validation(AppErrorRules.GMAIL_DISABLED)
+    // The classifier is off by server configuration, not down: explain the state instead of
+    // letting "backend_503" read like a network failure.
+    status == 503 && code == BackendErrorCodes.CATEGORY_UNAVAILABLE ->
+        AppError.Validation(AppErrorRules.CATEGORY_DISABLED)
     status >= 500 -> AppError.Network("backend_$status")
     else -> AppError.Network("backend_$status")
 }

@@ -643,4 +643,5 @@
     <string name="gmail_link_browser_missing">Tidak ada browser untuk membuka izin Gmail.</string>
     <string name="settings_open_gmail_link">Tautkan Gmail lewat browser</string>
     <string name="gmail_link_backend_disabled">Server PAM belum mengaktifkan tautan Gmail, jadi fitur ini belum bisa dipakai. Coba lagi nanti.</string>
+    <string name="error_category_disabled">Kategorisasi AI belum diaktifkan di server ini. Transaksi tetap bisa dicatat dan dikategorikan manual.</string>
 </resources>

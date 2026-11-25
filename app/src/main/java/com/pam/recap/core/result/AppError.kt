@@ -117,6 +117,9 @@ object AppErrorRules {
     const val IMAP_CREDENTIALS_REQUIRED = "imap_credentials_required"
     const val BROWSER_UNAVAILABLE = "browser_unavailable"
     const val GMAIL_DISABLED = "gmail_disabled"
+    // Runtime-disabled AI classifier: the server is honest about it, so the app must say so too
+    // instead of showing a generic network error (owner report 25 Nov 2026).
+    const val CATEGORY_DISABLED = "category_unavailable"
     const val GMAIL_NOT_CONNECTED = "gmail_not_connected"
     const val SYNC_COOLDOWN = "sync_cooldown"
 
