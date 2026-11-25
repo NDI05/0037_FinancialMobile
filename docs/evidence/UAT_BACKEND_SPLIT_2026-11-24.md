@@ -135,7 +135,7 @@ cd /tmp/pam-split-clone
 rm -f /tmp/pam-split-run/db/pam.db*
 PORT=18095 APP_ENV=development \
  DATABASE_URL=file:/tmp/pam-split-run/db/pam.db \
- JWT_SECRET=wqa-split-2026-secret-0123456789abcdef-0123 \
+ JWT_SECRET=<dummy-lokal-lama-diredaksi> \
  JWT_ISSUER=pam-api JWT_AUDIENCE=pam-android ACCESS_TOKEN_TTL_SECONDS=900 \
  REGISTRATION_INVITE_CODE=pam-dev DATA_ENCRYPTION_KEY="$(openssl rand -base64 32)" \
  DATA_KEY_VERSION=1 CATEGORY_LLM_ENABLED=false GMAIL_SYNC_ENABLED=false \
