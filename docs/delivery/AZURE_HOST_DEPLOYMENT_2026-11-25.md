@@ -115,6 +115,25 @@ di-force-stop lalu dibuka ulang dan tetap memuat Ringkasan ("Dari email", arus k
 dari host Azure. Sinkronisasi Gmail berjalan di server (polling 15 menit), jadi email baru tetap
 diproses walau aplikasi tertutup dan HP tidak terhubung kabel.
 
+### Cakupan data dari email Livin (audit 25 Nov 2026)
+
+Audit kotak masuk (100 email Livin terakhir, 60 hari) menemukan hanya template transaksi
+**keluar**: “Pembayaran Berhasil!” (QRIS), “Transfer dengan BI Fast Berhasil”, dan
+“Tagihan Anda Sudah Dibayar”. **Tidak ada email “dana masuk/transfer masuk”** — Livin tidak
+mengirim notifikasi email untuk uang masuk (notifikasinya hanya push/in-app), sehingga connector
+Gmail memang tidak punya bahan untuk transaksi masuk. Ini batasan sumber data, bukan bug
+kategorisasi AI.
+
+Konsekuensinya: DB per 25 Nov berisi 77 transaksi November yang seluruhnya `DEBIT`; 42 transaksi
+`CREDIT` yang ada berasal dari email Juli–Agustus 2026 (periode backfill lama), bukan November.
+`import_skipped` 742 baris (662 `merchant_missing`, 67 `amount_missing`, 13 `outside_retention`)
+sebagian besar adalah email non-transaksi (promo/statement/OTP) ditambah template
+“Tagihan Anda Sudah Dibayar” yang tidak punya label `Penerima/Merchant`.
+
+Jalur untuk uang masuk: (1) input **manual** di aplikasi (fitur sudah ada), (2) impor
+mutasi/statement Livin (belum ada, perlu Fitur baru), atau (3) pembaca notifikasi Android
+(butuh izin Notification Access). Opsi 2/3 menunggu keputusan pemilik.
+
 ### Operasional: polling, backup, rollback
 
 - **Polling**: `GMAIL_MODE=polling`; delta tiap **900 dtk** dan cooldown sync manual **60 dtk**.

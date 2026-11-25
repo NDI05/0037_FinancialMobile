@@ -583,6 +583,12 @@ Uji run `45609200337` **success** (1m24s); host terverifikasi `uptimeSeconds:0` 
 Aplikasi Android juga terbukti tetap jalan setelah `adb reverse` dihapus dan kabel USB dicabut,
 karena APK memakai URL HTTPS host.
 
+**Cakupan data Livin.** Audit 100 email Livin terakhir: semua transaksi yang dikirim via email
+adalah **keluar** (QRIS, transfer BI Fast, tagihan dibayar); tidak ada email dana masuk, sehingga
+uang masuk di Livin tidak bisa masuk lewat connector Gmail (Livin hanya notifikasi push in-app).
+November: 77 `DEBIT`, 0 `CREDIT`; 42 `CREDIT` lama hanya dari Juli–Agustus. Opsi uang masuk:
+input manual (sudah ada), impor mutasi/statement, atau notification listener Android.
+
 Permintaan UI pemilik dieksekusi di `a2876df`: kartu **Kotak Masuk** dan kartu **Persetujuan** pada
 Settings dihapus karena pengaturan koneksi sudah terpusat di section Akun dan riwayat persetujuan
 sudah punya layar sendiri; parameter `onOpenGmailLink` di `SettingsScreen` dan string mati ikut
