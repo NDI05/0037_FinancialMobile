@@ -72,3 +72,8 @@ dikembalikan ke backend UAT pemilik dan data aplikasi emulator dibersihkan.
 
 Batas: emulator bukan HP pemilik; provider Gmail adalah fake dan datanya sintetis; bukti email Livin
 alami saat aplikasi tertutup (G36) tetap tugas pemilik.
+
+Catatan batas teknis yang diketahui (dari audit independen, bukan blocker rilis lokal): format `25,5`
+dibaca `25.500` minor karena koma hanya dianggap desimal bila dua digit — Livin selalu mencetak dua
+digit desimal sehingga risiko rendah; cabang `ON CONFLICT` pada `month_revisions` dan idempotensi
+buka-ulang migrasi belum diuji langsung, melainkan lewat runner migrasi sekali-jalan.

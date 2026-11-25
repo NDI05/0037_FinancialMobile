@@ -60,7 +60,7 @@ Gate teknis pada pasangan ini:
 |---|---|---|---|
 | **G14** drill hapus/restore | Fixture DB terpisah | **PASS** | 60/60 pemeriksaan, termasuk restore; `G14_DELETION_RESTORE_DRILL_2026-11-24.md` |
 | | Data pemilik nyata (salinan + izin + drill hapus) | **NOT RUN** | Butuh salinan DB pemilik dan izin eksplisit; tidak ada operasi hapus terhadap DB aktif |
-| **G24** kesiapan rilis | Matriks requirement v0.7 + bukti | **PASS** (dokumen ini) | `FINAL_GATES_SRS_V07_2026-11-24.md`, UAT, audit |
+| **G24** kesiapan rilis | Matriks requirement v0.7 + bukti | **PARTIAL** — dokumen kesiapan PASS; merge/deploy/SRS resmi **NOT RUN** (owner). Status mutakhir: lihat `GATE_RECHECK_2026-11-25.md` | `FINAL_GATES_SRS_V07_2026-11-24.md`, UAT, audit |
 | | Persetujuan owner atas CR-005/006/007/008 + SRS v0.7 | **NOT RUN** | Menunggu keputusan owner |
 | | Merge `feat/c2-android`/`integration/2026-11-24` → `main`, deploy | **NOT RUN** | Butuh instruksi owner; `main` tidak disentuh |
 | **G29/G37** Rp0 | Audit read-only GCP/billing | **NOT RUN / OPEN** | Tidak ada akses GCP/billing dari sesi ini; `GCP_READONLY_RP0_2026-11-24.md` |
