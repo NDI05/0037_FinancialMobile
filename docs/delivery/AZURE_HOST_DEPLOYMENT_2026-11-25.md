@@ -1,6 +1,6 @@
 # Deploy Host Sementara Azure (Indonesia Central) — 25 November 2026
 
-Status: **DEPLOYED (sementara, memakai credit Azure for Students) · Gmail NOT RUN · G36 belum ditutup**
+Status: **DEPLOYED (sementara, memakai credit Azure for Students) · Gmail AKTIF (redirect terdaftar 25 Nov) · G36 NOT RUN**
 
 ## Mengapa Azure, bukan Oracle
 
@@ -39,8 +39,7 @@ Status: **DEPLOYED (sementara, memakai credit Azure for Students) · Gmail NOT R
 - Analisis: `LLM_MAX_OUTPUT_TOKENS=1200`, timeout 12 dtk, `DAILY_AI_CEILING_USD=0.25`.
 - Kategorisasi: `CATEGORY_LLM_ENABLED=true`, plafon harian **USD 0.10**, bulanan **USD 2.00**,
   harga per 1K token diisi sehingga biaya terhitung dan pagar `daily_ceiling_reached` aktif.
-- `GMAIL_ENABLED=false` sampai redirect URI didaftarkan pemilik → tidak ada polling yang bisa
-  memicu panggilan AI berulang saat belum siap.
+- `GMAIL_ENABLED=true` setelah pemilik mendaftarkan redirect URI; polling 900 dtk, cooldown sync 60 dtk.
 
 ## Bukti verifikasi (25 Nov 2026, WIB)
 
@@ -52,6 +51,7 @@ Status: **DEPLOYED (sementara, memakai credit Azure for Students) · Gmail NOT R
 | TLS | issuer Let's Encrypt, CN `pam-70-153-86-163.sslip.io`, valid 25 Nov 2026 – 23 Feb 2027 |
 | Turso `pam-azure-uat` | tabel `transactions`, `analyses`, `gmail_connections`, `auth_sessions`, dll. terbentuk |
 | APK debug diarahkan ke host | `PAM_BACKEND_BASE_URL=https://pam-70-153-86-163.sslip.io`, build `:app:assembleDebug` sukses, terpasang di HP fisik |
+| Gmail aktif | `GMAIL_ENABLED=true`; `POST /v1/gmail/connect/start` tanpa auth **401** (rute siap), callback state invalid redirect ke `pam://gmail/connected?reason=state_invalid` |
 
 ## Biaya dan pagar
 
@@ -64,13 +64,10 @@ Status: **DEPLOYED (sementara, memakai credit Azure for Students) · Gmail NOT R
 
 ## Aksi pemilik yang masih diperlukan
 
-1. **Daftarkan redirect URI Gmail** di Google Cloud Console → OAuth client (tipe Web) yang dipakai
-   `GMAIL_CLIENT_ID`:
-   `https://pam-70-153-86-163.sslip.io/v1/gmail/connect/callback`
-2. Balas "redirect sudah didaftarkan" → agent menyalakan `GMAIL_ENABLED=true`, restart service,
-   lalu pemilik menjalankan **Run** dari Android Studio (local.properties sudah menunjuk host Azure)
-   dan menguji **G36**: login Google → Lewati → Tautkan Gmail + consent → force stop → email Livin
-   alami → tunggu ±15 menit → laporkan jumlah/nominal transaksi.
+1. ~~Daftarkan redirect URI Gmail~~ **SELESAI** (`https://pam-70-153-86-163.sslip.io/v1/gmail/connect/callback`, dikonfirmasi pemilik 25 Nov).
+2. Uji **G36** dari **Run** Android Studio (local.properties menunjuk host Azure): login Google →
+   Lewati → Tautkan Gmail + consent → force stop → email Livin alami → tunggu ±15 menit →
+   laporkan jumlah/nominal transaksi.
 
 ## Rollback
 

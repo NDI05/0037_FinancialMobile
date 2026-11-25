@@ -546,12 +546,14 @@ dipakai **`Standard_B2ats_v2`** (2 vCPU, 1 GiB) di **Indonesia Central** (±USD 
 Hasil: VM `pam-api-vm` + systemd + Caddy TLS untuk `https://pam-70-153-86-163.sslip.io`,
 DB Turso terpisah `pam-azure-uat` (22 migrasi, tabel terbentuk), swap 1 GB, secret hanya di
 `/etc/pam/pam-api.env` mode 600, AI Azure aktif dengan plafon analisis USD 0.25/hari dan
-kategorisasi USD 0.10/hari + USD 2.00/bulan, `GMAIL_ENABLED=false` sampai redirect didaftarkan.
+kategorisasi USD 0.10/hari + USD 2.00/bulan. Pemilik mendaftarkan redirect URI Gmail, sehingga
+`GMAIL_ENABLED=true` diaktifkan dan service di-restart; rute `POST /v1/gmail/connect/start`
+menjawab **401** tanpa auth dan callback mengarah ke deep link `pam://gmail/connected`.
 Verifikasi: `/healthz` **200**, `/readyz` **200**, TLS Let's Encrypt valid 25 Nov 2026–23 Feb 2027,
 APK debug dibangun ulang menunjuk host Azure dan terpasang di HP fisik
 (sha256 `dc1f12be…`). Budget alert `pam-host-monthly-15usd` aktif.
 
-Sisa aksi pemilik: daftarkan redirect `https://pam-70-153-86-163.sslip.io/v1/gmail/connect/callback`
-di Google Cloud Console, lalu uji G36 dari tombol Run Android Studio (local.properties sudah
-menunjuk host Azure). Deploy produksi/merge tetap milik pemilik. Bukti:
+Sisa aksi pemilik: uji G36 dari tombol Run Android Studio (local.properties sudah menunjuk host
+Azure) — login Google, lewati onboarding, tautkan Gmail + consent, force stop, email Livin alami,
+tunggu ±15 menit, laporkan jumlah/nominal transaksi. Deploy produksi/merge tetap milik pemilik. Bukti:
 [AZURE_HOST_DEPLOYMENT](delivery/AZURE_HOST_DEPLOYMENT_2026-11-25.md).
