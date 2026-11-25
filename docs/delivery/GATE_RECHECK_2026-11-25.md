@@ -10,19 +10,18 @@ build/lingkungan yang disebut; sisanya PARTIAL atau NOT RUN.
 
 | Item | Nilai |
 |---|---|
-| Android `main` | `8de8f75` == `origin/main`, worktree bersih; kode auth `a53f45e`, perbaikan mode daftar `8de8f75`, dokumentasi/skrip `651f807` |
+| Android `main` | `0d8affa` == `origin/main`, worktree bersih; kode auth `a53f45e`, perbaikan mode daftar `8de8f75`, dokumentasi/skrip `651f807` + `0d8affa` (`0d8affa` docs-only) |
 | Backend `main` | `1325d3d` == `origin/main`, worktree bersih; kode auth `6c941d9`, dokumentasi kontrak `1325d3d`; perbaikan nominal sebelumnya `d42d7c4`/`aa33fb8`/`68f1ba4`/`b6ce917` tetap ada |
 | APK debug terpasang di perangkat fisik & emulator | `app-debug.apk` 47.668.107 B sha256 `a0498c2904b7d129dc471c5e09a65e6f59f3ae7d96c180bd63a1901440da114d` (build dari `main` `8de8f75`), `adb install -r` di emulator-5556 dan perangkat fisik Xiaomi **Redmi 10** (model `21061119AG`, seri diredaksi) yang terhubung saat verifikasi; HP pemilik (model `24069PC21G`) tidak terhubung pada putaran ini; APK sebelumnya `fefd7041…` dipakai smoke emulator putaran pertama |
 | Binary backend diverifikasi | `/tmp/pam-api-head` (dibangun dari `1325d3d`/kode `6c941d9`) sha256 `3878814bbb3c3c5ba21fbe2802ca375299f4b1346a813662590e118558cf7ffe`; binary UAT loopback aktif sha256 `cbd882ea86cc684e3beb6fc38981205b226d2e70c4114e9d61db512f7824abc7` (backup biner lama: `pam-api-loopback.bak-20261125-auth`) |
 | CI backend | `6c941d9` **success**; `1325d3d` **success** (docs); commit sebelumnya (`d42d7c4`, `aa33fb8`, `68f1ba4`, `b6ce917`) juga success |
-| CI Android | tidak ada workflow CI di repo Android (tetap seperti sebelumnya) |
 | CI Android | tidak ada workflow CI di repo Android (tetap seperti sebelumnya) |
 
 ## Kebersihan repo
 
 | Item | Hasil |
 |---|---|
-| Branch sementara | `feat/c2-android` (Android) dan `integration/2026-11-24` (backend), keduanya sudah merged ke `main`, dihapus dari lokal dan `origin`; tersisa `main` (kedua repo) + `develop` lama yang belum merged (milik pemilik, tidak disentuh) |
+| Branch sementara | `feat/c2-android` (Android) dan `integration/2026-11-24` (backend), keduanya sudah merged ke `main`, dihapus dari lokal dan `origin`; tersisa `main` (kedua repo); tidak ada branch `develop` (klaim lama keliru) dan tidak ada branch sementara lain |
 | Worktree | Satu worktree per repo, bersih; tidak ada worktree sementara |
 | Temporary artifact | Fixture/log DB uji nominal di `/tmp` dibersihkan; binary/DB UAT yang masih dirujuk bukti dipertahankan |
 | Tautan dokumen | Pemeriksaan tautan relatif Markdown di `README.md` + `docs/**`: 8 tautan rusak ditemukan dan diperbaiki, hasil akhir **0 rusak** |
@@ -43,7 +42,7 @@ build/lingkungan yang disebut; sisanya PARTIAL atau NOT RUN.
 
 | Gate | Status | Bukti (build/lingkungan) | Batas |
 |---|---|---|---|
-| Integritas repo pasca-merge | **PASS** | Android `main`=`origin`=`651f807` bersih (kode auth `a53f45e`); backend `main`=`origin`=`1325d3d` bersih (kode auth `6c941d9`); CI backend kedua commit **success**; tidak ada force-push; SRS DOCX/PDF tidak diubah | — |
+| Integritas repo pasca-merge | **PASS** | Android `main`=`origin`=`0d8affa` bersih (kode auth `a53f45e`, fix mode daftar `8de8f75`); backend `main`=`origin`=`1325d3d` bersih (kode auth `6c941d9`); CI backend kedua commit **success**; tidak ada force-push; SRS DOCX/PDF tidak diubah | — |
 | FR-67 — backfill awal menahan antrean kategori; setelah selesai batch dibatasi | **PASS (diuji ulang pada build auth)** | Runtime terisolasi dibangun dari HEAD `1325d3d` (`/tmp/pam-api-head`), fake Gmail + classifier stub port 18091/18191: `GATE_MONTHS 1/13`; enqueue `200 {"pending":4}`; drain `state:"not_due"`; **stub 0 panggilan** saat backfill belum lengkap; `BACKFILL_COMPLETE_AT 51`; sesudahnya tepat **4** panggilan (batch `[2,2,1,2]`), poll berikutnya `not_due`; `FINAL_TX_COUNT 4` | Uji runtime terisolasi, bukan HP pemilik; log `/tmp/pm25_fr67_e2e_authfix2.log` |
 | NFR-15 — tanggal masa depan ditolak; entri manual hari ini WIB berhasil; retry identik menghasilkan satu transaksi | **PASS (diuji ulang pada build auth)** | Binary HEAD `1325d3d` pada backend terisolasi port 18094, DB `/tmp` (akun sintetis): future `2026-11-27T00:00:00+07:00` → **400** `outside_retention`; hari ini date-only → **201** `tx_77d0f32e…` (`eventAt 2026-11-24T17:00:00Z` = 25 Nov 00:00 WIB); retry identik → **200** id sama; list tepat **1** baris | Transaksi probe sintetis di DB sementara, bukan data pemilik |
 | G14 — drill retensi/hapus/restore pada fixture DB terpisah | **PASS (fixture, diuji ulang pada build auth)** | Harness `/tmp/pam-g14/drill_new.py` (kontrak registrasi terbuka) memakai binary HEAD `1325d3d`, DB/port terisolasi (18091/18092): **59/59** skenario lulus termasuk restore, audit, eligible counts; laporan `/tmp/G14_DRILL_AUTH_2026-11-25.md`; binary sha256 `3878814bbb3c3c5ba21fbe2802ca375299f4b1346a813662590e118558cf7ffe` | Drill pada **data pemilik tetap NOT RUN** (butuh izin + salinan eksplisit) |

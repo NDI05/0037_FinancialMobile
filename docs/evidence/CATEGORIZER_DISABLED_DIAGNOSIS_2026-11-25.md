@@ -15,8 +15,8 @@ tidak menghasilkan apa pun.
    Semua jalur auto-kategori (enqueue/drain) menjadi tidak aktif.
 3. Kategorisasi otomatis juga bergantung pada consent `AI_CATEGORIZATION` berstatus `GRANTED` dan
    pada backfill Gmail awal selesai; tanpa dua hal itu pun antrean tidak berjalan.
-4. Kredensial Azure classifier tidak ada di env UAT loopback (`~/.config/pam/gmail-uat.env` hanya
-   berisi kunci Gmail/SSO); kredensial classifier ada di file env privat terpisah
+4. Kredensial Azure classifier tidak ada di env UAT loopback (`~/.config/pam/gmail-uat.env` berisi kunci Gmail/SSO serta
+   setelan DB/JWT, tetapi tidak memuat kredensial Azure); kredensial classifier ada di file env privat terpisah
    `~/.config/pam/azure-classifier.env`.
 
 ## Kesimpulan

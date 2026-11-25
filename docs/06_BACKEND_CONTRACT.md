@@ -489,8 +489,9 @@ dicatat dengan context background terbatas; bila pencatatan gagal, respons error
 konservatif tetap ada.
 
 Konfigurasi wajib produksi: `DATA_ENCRYPTION_KEY` base64 32 byte yang bukan key development;
-`JWT_SECRET`/`REFRESH_PEPPER` ≥32 byte bukan nilai development; `REGISTRATION_INVITE_CODE` bukan
-`pam-dev`. Boot produksi gagal sebelum database dibuka bila salah satu tidak aman.
+`JWT_SECRET`/`REFRESH_PEPPER` ≥32 byte bukan nilai development. Boot produksi gagal sebelum
+database dibuka bila salah satu tidak aman. Tidak ada lagi kode undangan registrasi: `POST
+/v1/accounts` terbuka dan field `inviteCode`/`invitationToken` lama ditolak `400` (CR-009).
 Konfigurasi auth (environment backend, tidak pernah di APK):
 `JWT_SECRET` (≥32 byte), `JWT_ISSUER=pam-api`, `JWT_AUDIENCE=pam-android`,
 `ACCESS_TOKEN_TTL_SECONDS=900`, `REFRESH_TOKEN_TTL_DAYS=30`, `REFRESH_PEPPER` (≥32 byte),

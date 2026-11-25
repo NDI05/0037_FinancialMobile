@@ -37,7 +37,7 @@ Backend biner baru dijalankan pada port 18093 dengan database sementara (bukan D
   `pam-api-loopback.bak-20261125-auth`); proses lama dihentikan lalu `start.py` dijalankan ulang.
 - `/healthz` 200, `/readyz` 200; probe `POST /v1/accounts` email tidak valid → 400 dan body dengan
   `inviteCode` → 400, membuktikan biner baru aktif (biner lama menjawab 403 `invalid_invite`).
-- APK debug baru dipasang di perangkat `927a…` (model 24069PC21G), `adb reverse tcp:18090` aktif.
+- APK debug baru saat itu dipasang di perangkat uji fisik yang terhubung (seri `927a…`, model 24069PC21G), `adb reverse tcp:18090` aktif. Pada verifikasi gate akhir perangkat tersebut tidak terhubung; APK hasil fix `a0498c29…` dipasang di perangkat fisik Redmi 10 (`21061119AG`) dan emulator-5556.
 
 ## Belum diverifikasi (jujur)
 
