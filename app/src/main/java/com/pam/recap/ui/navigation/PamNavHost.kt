@@ -227,7 +227,6 @@ fun PamNavHost(
 
             composable<PamDestination.Settings> {
                 SettingsScreen(
-                    onOpenGmailLink = { navController.navigate(PamDestination.GmailLink()) },
                     onOpenConsentHistory = { navController.navigate(PamDestination.ConsentHistory) },
                     onOpenCategories = { navController.navigate(PamDestination.CategoryManagement) },
                     onOpenDeletion = { navController.navigate(PamDestination.DataDeletion) },

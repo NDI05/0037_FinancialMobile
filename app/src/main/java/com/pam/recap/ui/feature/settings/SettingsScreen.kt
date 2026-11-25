@@ -20,7 +20,6 @@ import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Logout
-import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -36,18 +35,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pam.recap.R
-import com.pam.recap.domain.model.Consent
 import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassCard
 import com.pam.recap.ui.components.GlassTopBar
-import com.pam.recap.ui.components.KeyValueRow
 import com.pam.recap.ui.components.MoneyTone
 import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
 import com.pam.recap.ui.components.PillButton
 import com.pam.recap.ui.components.PillButtonStyle
-import com.pam.recap.ui.components.StatusChip
-import com.pam.recap.ui.components.StatusChipKind
 import com.pam.recap.ui.theme.BodyM
 import com.pam.recap.ui.theme.GlassFill
 import com.pam.recap.ui.theme.OnInk
@@ -62,7 +57,6 @@ import com.pam.recap.ui.util.appErrorRes
 /** §8 Settings: connection state, consent entry points, privacy actions, sign out. */
 @Composable
 fun SettingsScreen(
-    onOpenGmailLink: () -> Unit,
     onOpenConsentHistory: () -> Unit,
     onOpenCategories: () -> Unit,
     onOpenDeletion: () -> Unit,
@@ -93,50 +87,6 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(PamSpacing.sm),
         ) {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                EyebrowText(text = stringResource(R.string.settings_mailbox_eyebrow))
-                Spacer(modifier = Modifier.height(PamSpacing.xs))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = state.connection?.mailboxLabel
-                            ?: stringResource(R.string.gmail_state_not_connected),
-                        style = TitleM,
-                        color = OnInk,
-                        modifier = Modifier.weight(1f),
-                    )
-                    StatusChip(
-                        kind = if (state.connection?.state?.grantsAccess == true) {
-                            StatusChipKind.Connected
-                        } else {
-                            StatusChipKind.Empty
-                        },
-                    )
-                }
-                Spacer(modifier = Modifier.height(PamSpacing.xs))
-                KeyValueRow(
-                    label = stringResource(R.string.settings_last_import),
-                    value = state.connection?.lastImportAt?.let { PamDateFormat.dateTime(it) }
-                        ?: stringResource(R.string.gmail_never_imported),
-                )
-                KeyValueRow(
-                    label = stringResource(R.string.settings_last_ai),
-                    value = state.connection?.lastAiAt?.let { PamDateFormat.dateTime(it) }
-                        ?: stringResource(R.string.settings_never),
-                )
-                KeyValueRow(
-                    label = stringResource(R.string.settings_scope),
-                    value = stringResource(R.string.settings_scope_value),
-                )
-                Spacer(modifier = Modifier.height(PamSpacing.sm))
-                PillButton(
-                    text = stringResource(R.string.settings_open_gmail_link),
-                    onClick = onOpenGmailLink,
-                    style = PillButtonStyle.Secondary,
-                    leadingIcon = Icons.Rounded.Link,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-
             if (state.error != null) {
                 NoticeBanner(text = stringResource(appErrorRes(requireNotNull(state.error))))
             }
@@ -144,19 +94,6 @@ fun SettingsScreen(
                 NoticeBanner(
                     text = stringResource(R.string.gmail_revoke_failed),
                     tone = MoneyTone.Expense,
-                )
-            }
-
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                EyebrowText(text = stringResource(R.string.settings_privacy_eyebrow))
-                Spacer(modifier = Modifier.height(PamSpacing.xs))
-                ConsentSummaryRow(
-                    label = stringResource(R.string.settings_consent_gmail),
-                    consent = state.gmailConsent,
-                )
-                ConsentSummaryRow(
-                    label = stringResource(R.string.settings_consent_ai),
-                    consent = state.aiConsent,
                 )
             }
 
@@ -265,24 +202,6 @@ fun SettingsScreen(
                 style = BodyM,
                 color = OnInkMuted,
             )
-        }
-    }
-}
-
-@Composable
-private fun ConsentSummaryRow(label: String, consent: Consent?) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = PamSpacing.xxs),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(text = label, style = TitleM, color = OnInkMuted, modifier = Modifier.weight(1f))
-        when {
-            consent == null -> StatusChip(kind = StatusChipKind.Empty)
-            consent.isGranted -> StatusChip(kind = StatusChipKind.Granted)
-            consent.isWithdrawn -> StatusChip(kind = StatusChipKind.Historical)
-            else -> StatusChip(kind = StatusChipKind.Declined)
         }
     }
 }

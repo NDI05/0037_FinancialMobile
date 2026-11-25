@@ -436,7 +436,6 @@ class ScreenScreenshotsTest {
 
         shot("06b-settings-demo-purge") {
             SettingsScreen(
-                onOpenGmailLink = {},
                 onOpenConsentHistory = {},
                 onOpenCategories = {},
                 onOpenDeletion = {},
@@ -470,7 +469,6 @@ class ScreenScreenshotsTest {
 
         shot("06-settings") {
             SettingsScreen(
-                onOpenGmailLink = {},
                 onOpenConsentHistory = {},
                 onOpenCategories = {},
                 onOpenDeletion = {},

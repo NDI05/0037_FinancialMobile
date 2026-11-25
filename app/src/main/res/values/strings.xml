@@ -314,14 +314,7 @@
     <string name="category_more_hint">Menampilkan %1$d kategori dari %2$d yang diperiksa; persempit pencarian untuk melihat sisanya.</string>
 
     <!-- Settings -->
-    <string name="settings_mailbox_eyebrow">Kotak masuk</string>
-    <string name="settings_last_import">Impor terakhir</string>
-    <string name="settings_last_ai">Analisis terakhir</string>
-    <string name="settings_never">belum pernah</string>
-    <string name="settings_scope">Izin</string>
-    <string name="settings_scope_value">Email Livin hanya-baca (tanpa akses tulis)</string>
     <string name="settings_manage_mailbox">Kelola kotak masuk</string>
-    <string name="settings_privacy_eyebrow">Persetujuan</string>
     <string name="settings_consent_gmail">Baca email Livin</string>
     <string name="settings_consent_ai">Analisis AI</string>
     <string name="settings_consent_history">Riwayat persetujuan</string>
@@ -641,7 +634,6 @@
     <string name="gmail_link_watch_until">Pemantauan otomatis sampai</string>
     <string name="gmail_link_never">belum pernah</string>
     <string name="gmail_link_browser_missing">Tidak ada browser untuk membuka izin Gmail.</string>
-    <string name="settings_open_gmail_link">Tautkan Gmail lewat browser</string>
     <string name="gmail_link_backend_disabled">Server PAM belum mengaktifkan tautan Gmail, jadi fitur ini belum bisa dipakai. Coba lagi nanti.</string>
     <string name="error_category_disabled">Kategorisasi AI belum diaktifkan di server ini. Transaksi tetap bisa dicatat dan dikategorikan manual.</string>
 </resources>
