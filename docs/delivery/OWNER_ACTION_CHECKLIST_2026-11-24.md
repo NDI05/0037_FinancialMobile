@@ -1,94 +1,72 @@
-# Checklist aksi pemilik — penutupan gate Gmail/SSO/Rp0 (24 November 2026)
+# Checklist aksi pemilik — penutupan gate PAM (diperbarui 25 November 2026, 19:25 WIB)
 
-Dokumen ini merangkum satu-satunya pekerjaan yang tersisa. Semua prasyarat otomatis sudah
-diverifikasi siap (`scripts/verify/uat_readiness.sh` → exit 0; backend `00bb515`, Android
-`8824fff`, APK sha256 `5368c92f…`, DB live 914 transaksi / 21 job COMPLETE). Untuk putaran SRS v0.7, pasangan build yang berlaku adalah Android `a629c41` + backend `dd5bc88` ([gate v0.7](FINAL_GATES_SRS_V07_2026-11-24.md), [UAT final](../evidence/FINAL_UAT_SRS_V07_2026-11-24.md)); status gate pemilik di bawah tidak berubah.
+Dokumen ini adalah **satu-satunya daftar pekerjaan tersisa** setelah seluruh verifikasi otomatis
+selesai. Isinya sudah disesuaikan dengan kondisi pasca-merge 25 November; instruksi lama 24 Nov
+(hapus kode undangan, pilih host Oracle/Render, merge branch kerja) **tidak berlaku lagi** dan
+hanya tersimpan sebagai riwayat di [verifikasi ulang gate](GATE_RECHECK_2026-11-25.md).
 
-> **Update 25 November 2026:** pasangan build terbaru adalah Android `0cf7faf` (APK sha256
-> `5a2f71a1…`) + backend `d42d7c4` (dokumentasi `aa33fb8`, migrasi **22**). Backend UAT lokal sudah
-> memakai binary perbaikan nominal; DB UAT lokal sudah dimigrasi sekali jalan (915 baris EMAIL
-> diskalakan, 10 baris MANUAL utuh). Karena itu, setelah membuka aplikasi, **refresh daftar
-> Transaksi/Ringkasan** dan pastikan nominal email Livin sudah sesuai (tidak lagi 100x kecil).
-> Analisis lama yang tersimpan perlu dibuat ulang. Sisa gate pemilik tidak berubah; lihat
-> [verifikasi ulang gate 25 Nov](GATE_RECHECK_2026-11-25.md). Untuk G36, ikuti langkah praktis di
-> [runbook G36](OWNER_G36_RUNBOOK_2026-11-25.md) (prasyarat, Run literal, onboarding Gmail, email
-> Livin alami, dan bukti yang perlu dikirim).
+Pasangan build yang berlaku:
 
-> **Update 25 November 2026 (malam, pasca-merge).** Checklist ini dokumen historis 24 Nov;
-> langkah merge di bagian 3 **sudah selesai**: branch kerja Android dan backend sudah
-> diintegrasikan ke `main` (kedua `HEAD == origin`, worktree bersih). Perubahan keputusan pemilik
-> 25 Nov juga sudah berlaku: **kode undangan registrasi dihapus**, login/daftar memakai **Google
-> SSO langsung** (tanpa Settings), dan **Azure penuh** dipakai untuk Analisis + Kategorisasi di UAT
-> lokal dengan pagar token/biaya. Karena itu abaikan instruksi merge/undangan di bawah dan gunakan
-> status terkini di [GATE_RECHECK_2026-11-25](GATE_RECHECK_2026-11-25.md).
->
-> **Sisa aksi pemilik saat ini (bukti terverifikasi):**
-> 1. **G36** — Run literal, login/logout/relogin Google, Lewati/Tautkan Gmail + consent, lalu satu
->    email Livin alami saat app tertutup ([runbook G36](OWNER_G36_RUNBOOK_2026-11-25.md)); prasyarat
->    otomatis sudah `exit 0` pada 25 Nov 15:20 WIB.
-> 2. **G29/G37** — konfirmasi Billing GCP tidak tertaut + biaya Rp0 di konsol.
-> 3. **Pilihan host gratis** (Vercel tidak cocok untuk polling) — Oracle Always Free (rekomendasi)
->    atau Render Free; langkah ada di [FREE_HOST_DEPLOYMENT_2026-11-25](FREE_HOST_DEPLOYMENT_2026-11-25.md).
-> 4. **OI-27** — keputusan pemetaan akademik ([memo](DECISION_MEMO_OI27_OI28_2026-11-25.md));
->    OI-28 sudah diputuskan.
-> 5. **Produksi** — merge/deploy/revisi SRS resmi tetap keputusan pemilik; deployment demo Vercel
->    bukan produksi.
+- Android `main` **`1432557`** (kode terakhir `112c556`), APK terpasang sha256 `54095330…`
+  (47.746.357 B), worktree bersih, `HEAD == origin/main`.
+- Backend `main` **`54618f9`**, CI `45609200445` (backend) + `45609200337` (deploy-host) **success**,
+  host Azure **`https://pam-70-153-86-163.sslip.io`** (`/healthz` + `/readyz` **200**), polling
+  Gmail 15 menit aktif.
 
+## 1. G36 — UAT SSO Google + onboarding Gmail + email Livin alami
 
-## 1. G36 — UAT SSO Google + tombol Run Android Studio
+**Sudah terbukti:** tombol **Run** dari Android Studio dipakai pemilik ke HP fisik; login →
+logout → relogin Google terekam backend (204/200, sesi baru); test user OAuth tersedia.
+**Sisa yang hanya bisa dilakukan pemilik:**
 
-Prasyarat (sudah siap): Web Client ID terpasang di `local.properties`/`PAM_GOOGLE_SSO_CLIENT_ID`,
-SHA-1 debug `com.pam.recap.debug` terdaftar pada OAuth Android client, backend berjalan di
-`127.0.0.1:18090`, `adb reverse tcp:18090 tcp:18090` aktif, HP `(serial diredaksi)` terhubung.
+1. Buka `pam-app` di Android Studio → konfigurasi **app** varian `debug` → **Run** ke HP fisik
+   (bukan `adb install`).
+2. Login dengan **akun Google uji** (bukan akun pribadi).
+3. Pertama tekan **Lewati** (aplikasi tetap bisa dipakai tanpa Gmail), lalu dari **Pengaturan →
+   Akun → Tautkan Gmail** selesaikan consent (hanya baca email Livin).
+4. **Force stop** aplikasi, lalu kirim satu email notifikasi Livin baru ke Gmail yang ditautkan.
+   Tunggu minimal satu siklus polling (±15 menit), buka aplikasi lagi.
+5. Periksa: **tepat satu** transaksi baru, nominal sesuai email (contoh `Rp25.000` → `Rp25.000`),
+   tidak ada duplikat.
 
-**Sudah terbukti 24 Nov 21:49–21:50 WIB:** login Google nyata dari HP + sesi PAM terbit + binding
-identitas + 914 transaksi tetap unik (0 duplikat), dengan bukti perangkat `MainActivity` resumed
-dan picker Credential Manager — lihat [SSO_LIVE_PHONE](../evidence/SSO_LIVE_PHONE_2026-11-24.md).
-Sisa G36: tombol **Run literal**, onboarding Gmail (tautkan/skip), dan email baru saat app tertutup.
-
-Langkah:
-1. Buka proyek `pam-app` di Android Studio, pilih konfigurasi **app**, tekan **Run** pada HP fisik.
-2. Di aplikasi: tekan **Masuk dengan Google**, pilih akun Google uji pada picker.
-3. Bila akun lama: login PAM dulu, lalu buka sheet **"Tautkan Gmail untuk impor Livin"** dan
-   sambungkan (atau tekan **Lewati** untuk menguji jalur skip).
-4. Catat hasil yang terlihat: login berhasil/gagal, akun tertaut tanpa duplikat transaksi,
-   sheet onboarding tampil, tombol **Sinkronkan sekarang** berfungsi.
-
-Bukti yang dikirim balik: tangkapan layar alur + konfirmasi bahwa tombol Run dipakai (bukan
-`adb install`). Server akan mencatat `POST /v1/auth/google` (dan `/link` bila menautkan) —
-tim dapat memverifikasi signature/issuer/audience/nonce serta munculnya baris `google_identities`
-tanpa perlu data pribadi di chat.
+Detail prasyarat, waktu tunggu, dan bukti yang perlu dikirim: [runbook G36](OWNER_G36_RUNBOOK_2026-11-25.md).
+Baseline verifikasi otomatis sudah dicatat (876 transaksi `EMAIL`; ekspektasi **+1** setelah uji).
+Jangan mengulang impor berkali-kali bila gagal — laporkan waktu kejadian + `logcat`.
 
 ## 2. G29/G37 — Gate biaya GCP Rp0
 
-Langkah:
-1. Buka Google Cloud Console untuk project OAuth yang dipakai, cek **Billing**.
-2. Lepas tautan Billing (atau konfirmasi project memang tanpa Billing aktif).
-3. Pastikan tidak ada Pub/Sub topic/subscription/Cloud Run/OIDC audience yang dipakai
-   (mode default polling tidak memerlukannya).
-4. Konfirmasi tagihan Rp0 dan kuota Gmail API gratis pada halaman Billing/Quotas.
+1. Google Cloud Console → **Billing**: pastikan project OAuth tidak tertaut ke akun penagihan
+   (atau konfirmasi tanpa Billing aktif).
+2. Pastikan tidak ada Pub/Sub, Cloud Run, atau OIDC audience yang dipakai — mode default
+   **polling 15 menit** tidak memerlukannya.
+3. Cek **Billing/Quotas**: tagihan **Rp0** dan kuota Gmail API dalam batas gratis.
 
-Bukti yang dikirim balik: status Billing (tertaut/tidak) + tangkapan halaman biaya/kuota.
-Gate Rp0 baru boleh PASS setelah Billing tidak tertaut **dan** alur live (G25/G36) lulus.
+Bukti yang dikirim: status Billing (tertaut/tidak) + tangkapan halaman biaya/kuota. Gate Rp0 baru
+boleh PASS setelah Billing tidak tertaut dan alur live G36 lulus.
 
-## 3. G24 — Keputusan merge/deploy/SRS (menunggu keputusan pemilik)
+## 3. G24 — Deploy produksi dan SRS resmi (keputusan pemilik)
 
-Langkah:
-1. Tinjau tiga usulan perubahan: CR-005 (auto-sync batch/status), CR-006 (UI sync/kategori),
-   CR-007 (Gmail API + workflow setahun; default polling 15 menit, backend harus hidup).
-2. Beri keputusan: setujui/tolak/tunda per CR.
-3. Setelah disetujui: merge `feat/c2-android`→`main` (Android) dan `integration/2026-11-24`→`main`
-   (backend), deploy, lalu revisi SRS resmi.
+Merge branch kerja ke `main` **sudah selesai** untuk kedua repo. Yang masih milik pemilik:
 
-## 4. G14 — Drill hapus retensi nyata (opsional, owner-gated)
+1. Tinjau usulan CR-005/CR-006/CR-007 dan keputusan cakupan SRS v0.7 (CR-008/CR-009).
+2. Putuskan apakah host Azure saat ini dipakai sebagai produksi atau diganti; demo Vercel hanya
+   demo (AI fake).
+3. Setelah setuju: deploy produksi + revisi SRS resmi. Agent tidak melakukan merge/deploy/SRS.
 
-Langkah: salin DB ke berkas terpisah, aktifkan `RETENTION_DELETE_ENABLED` + token internal pada
-salinan, jalankan sweep hapus untuk data di luar jendela setahun, lalu restore dari backup dan
-pastikan data kembali. Jangan jalankan pada DB live tanpa backup.
+## 4. OI-27 — Keputusan pemetaan akademik
 
-## Batasan yang tetap berlaku
+Baca [memo keputusan OI-27/OI-28](DECISION_MEMO_OI27_OI28_2026-11-25.md) dan addendumnya; putuskan
+pemetaan modul ke pedoman akademik. OI-28 sudah diputuskan lewat CR-009 (SSO langsung).
 
-- Proxy/runtime di sesi ini tidak punya akses `gcloud`; verifikasi Billing harus dilakukan pemilik.
-- Timer/otomasi macOS tidak dapat menekan tombol Run di Android Studio; langkah 1 harus manual.
-- Jangan mengirim password/OTP/token/secret ke chat atau repo; cukup status dan tangkapan layar
-  yang tidak memuat nilai rahasia.
+## 5. G14 — Drill hapus retensi pada data pemilik (opsional, owner-gated)
+
+Drill fixture **59/59 PASS** sudah ada. Untuk data pemilik: setujui salinan DB terpisah, aktifkan
+`RETENTION_DELETE_ENABLED` + token internal **hanya pada salinan**, jalankan sweep baris di luar
+jendela setahun, lalu restore dari backup dan pastikan data kembali. Jangan dijalankan pada DB live
+tanpa backup.
+
+## Batasan
+
+- Proxy sesi ini tidak punya `gcloud`; verifikasi Billing harus dilakukan pemilik.
+- Timer/otomasi macOS tidak bisa menekan tombol Run; langkah G36 nomor 1 manual.
+- Jangan mengirim password/OTP/token/secret/email asli/serial perangkat ke chat atau repo.
