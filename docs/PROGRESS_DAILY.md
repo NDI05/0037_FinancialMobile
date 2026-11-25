@@ -669,3 +669,11 @@ consent-aware copy ("Yang dikirim hanya angka agregat…") dan analisis tersimpa
 panggilan provider baru (tanpa biaya). Tab Ringkasan/Transaksi/Pengaturan tetap normal; aplikasi
 dikembalikan ke Ringkasan. Tidak ada perubahan data pemilik.
 
+**Verifikasi baseline SRS + UI status sinkron (25 Nov 19:27 WIB).** sha256 SRS final cocok dengan
+klaim gate: DOCX `87617571…`, PDF `5d18570b…`; commit terakhir yang menyentuh
+`docs/specifications/` adalah `0cf7faf`, jadi isi resmi tidak berubah. Pemeriksaan tautan relatif
+`README.md` + 114 berkas `docs/**/*.md`: **0 tautan rusak**. Di HP, sheet Status pembaruan kini
+menampilkan "Terakhir berhasil sinkron **1 menit lalu**" dan "Sinkron berikutnya sekitar **19:40**"
+— konsisten dengan siklus polling otonom 19:25:53 WIB; status "Menunggu" di antara siklus adalah
+normal. Aplikasi dikembalikan ke Ringkasan; tidak ada perubahan data.
+
