@@ -632,3 +632,10 @@ terisolasi: **59/59** check PASS (token gate, report-only vs delete, jendela 12 
 `.prev` tersedia, env **600**, **60** event polling Gmail dalam 1 jam, sertifikat LE valid s.d.
 23 Feb 2027, disk 12%. Gate G14 data pemilik tetap **NOT RUN**; deploy produksi tetap milik pemilik.
 
+**Baseline G36 + bukti polling host (25 Nov 19:30 WIB).** Kueri agregat baca-saja ke DB Turso
+`pam-azure-uat` (tanpa isi email/nama/PII): **876** transaksi `EMAIL` non-deleted (terbaru 17:49 WIB),
+**1** koneksi Gmail (update 19:09 WIB), **19** `gmail_sync_jobs COMPLETE` (terakhir 19:09 WIB →
+polling hidup), **358 CLASSIFIED / 515 NEEDS_REVIEW**, 0 pending. Baseline dan ekspektasi
+**tepat +1 transaksi EMAIL** dicatat di runbook G36 dan gate doc; setelah uji pemilik, kueri yang
+sama dipakai untuk menutup gate. Tidak ada data mentah email/pemilik yang dibaca atau disimpan.
+

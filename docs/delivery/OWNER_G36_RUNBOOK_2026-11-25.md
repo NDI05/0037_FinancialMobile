@@ -66,6 +66,20 @@ Email Livin harus benar-benar dikirim ke alamat Gmail yang ditautkan (bukan emai
 7. **Laporkan** hasil ke agent/PM: gate G36 PASS/PARTIAL/FAIL + bukti di atas. Agent akan
    memperbarui `GATE_RECHECK_2026-11-25.md` dan log harian; merge/deploy tetap keputusan pemilik.
 
+## Baseline verifikasi otomatis (diisi agent, 25 Nov 19:30 WIB)
+
+Sebelum uji pemilik, agent mencatat baseline **agregat tanpa PII** langsung dari DB Turso `pam-azure-uat`
+(baca-saja, tanpa isi email/nama):
+
+- transaksi non-deleted: **876**, semuanya `EMAIL`; transaksi terbaru `2026-11-25T10:49:51Z` (17:49 WIB)
+- `gmail_connections`: **1**, terakhir diperbarui `2026-11-25T12:09:53Z` (19:09 WIB)
+- `gmail_sync_jobs`: **19 COMPLETE**, terakhir `2026-11-25T12:09:12Z` (19:09 WIB) → polling hidup
+- `category_jobs`: **358 CLASSIFIED / 515 NEEDS_REVIEW**, 0 pending
+
+Setelah uji pemilik, agent akan mengulang kueri yang sama dan mengharapkan **tepat +1 transaksi
+`EMAIL`** dengan nominal sesuai email; bila +0 atau +2, gate G36 tidak lulus dan tidak boleh
+diulang berkali-kali (lihat bagian "Bila gagal").
+
 ## Kriteria lulus
 
 - Run literal dari Android Studio berhasil pada varian `debug` di HP fisik.
