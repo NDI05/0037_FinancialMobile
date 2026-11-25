@@ -90,8 +90,16 @@ class AccountViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
+    // Type-safe Navigation delivers the enum object in the SavedStateHandle, while older callers
+    // and tests put the enum name there; accept both so Welcome -> "Buat akun" really opens
+    // register mode instead of silently falling back to SIGN_IN.
     private val initialMode: AccountMode = runCatching {
-        AccountMode.valueOf(savedStateHandle.get<String>(MODE_ARGUMENT) ?: AccountMode.SIGN_IN.name)
+        when (val raw = savedStateHandle.get<Any?>(MODE_ARGUMENT)) {
+            is AccountMode -> raw
+            is String -> AccountMode.valueOf(raw)
+            null -> AccountMode.SIGN_IN
+            else -> AccountMode.valueOf(raw.toString())
+        }
     }.getOrDefault(AccountMode.SIGN_IN)
 
     private val _state = MutableStateFlow(

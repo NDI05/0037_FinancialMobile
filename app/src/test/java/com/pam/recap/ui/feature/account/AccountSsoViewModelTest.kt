@@ -75,6 +75,26 @@ class AccountSsoViewModelTest {
     }
 
     @Test
+    fun `register mode survives the type-safe navigation argument`() {
+        // Navigation Compose puts the enum itself in SavedStateHandle for type-safe routes.
+        val fromEnum = AccountViewModel(
+            accounts,
+            sessions,
+            gateway,
+            SavedStateHandle(mapOf("mode" to AccountMode.REGISTER)),
+        )
+        assertEquals(AccountMode.REGISTER, fromEnum.state.value.mode)
+
+        val fromName = AccountViewModel(
+            accounts,
+            sessions,
+            gateway,
+            SavedStateHandle(mapOf("mode" to AccountMode.REGISTER.name)),
+        )
+        assertEquals(AccountMode.REGISTER, fromName.state.value.mode)
+    }
+
+    @Test
     fun `google button only appears when the client id is configured`() {
         val enabled = viewModel()
         assertTrue(enabled.state.value.googleSsoEnabled)
