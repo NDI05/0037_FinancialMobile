@@ -18,8 +18,8 @@ Screenshot diambil dengan `adb exec-out screencap` setelah memasang APK hasil
 | Tambah transaksi (FAB ikon saja) | **PASS (runtime)** | `08_tambah_transaksi_393dp.png` |
 | Lebar 360 dp / 412 dp | **PASS (runtime, visual)** | `09_ringkasan_360dp.png`, `10_ringkasan_412dp.png` |
 | Font 200% pada 360 dp | **PARTIAL (runtime dump)** | `11_ringkasan_font200_360dp.png`, `font200_360dp_dump.txt` — semua label utama & bottom nav ada; review visual piksel belum dilakukan model |
-| Widget Glance 2×2 / 4×2 | **PARTIAL** | Render nyata Glance lewat host debug: `14_widget_2x2_debug_host.png` (Mandiri + “Masuk untuk melihat ringkasan”), `13_widget_4x2_debug_host.png` (Mandiri + November 2026 + CTA), state signed-out. Provider terdaftar di `dumpsys appwidget`, minWidth/minHeight 2×2/4×2. Instance di launcher belum ditambahkan (otomasi picker launcher tidak dapat melakukan long-press-drag) |
-| Notifikasi transaksi baru (single/group, dedupe, privasi lockscreen) | **PARTIAL** | Channel `pam_transaction_new` dibuat runtime; toggle tersimpan; 8 unit test planner lulus. Notifikasi nyata butuh baris Livin baru dan izin aplikasi aktif — level aplikasi perangkat ini masih `importance=NONE` saat diuji |
+| Widget Glance 2×2 / 4×2 | **PASS (runtime, state signed-out)** | Instance nyata di launcher lewat `requestPinAppWidget` lalu dialog “Add to home screen”: `15_widget_2x2_launcher.png` (Mandiri + CTA). Render 4×2 nyata lewat host debug: `13_widget_4x2_debug_host.png` (Mandiri + November 2026 + CTA); 2×2 pembanding `14_widget_2x2_debug_host.png`. Provider terdaftar di `dumpsys appwidget` |
+| Notifikasi transaksi baru (single/group, dedupe, privasi lockscreen) | **PASS (fixture runtime) + PARTIAL (live)** | Builder produksi dipanggil dengan kandidat sintetis: `16_notifikasi_single_fixture.png` (“Transaksi baru tercatat”, tanpa nominal/merchant) dan `17_notifikasi_group_fixture.png` (“3 transaksi baru tercatat”). Copy lockscreen generik; 9 unit test planner/privasi lulus. Pengiriman dari email Livin nyata **NOT RUN** (butuh baris baru + notifikasi app aktif; perangkat uji level aplikasi `importance=NONE`) |
 | FCM/live background delivery | **NOT RUN** | Belum diimplementasikan; pipeline lokal hanya saat proses app hidup |
 | Literal Android Studio Run (tombol Run hijau) | **NOT RUN** | Instalasi/launch dilakukan via `adb`; langkah Run manual ada di laporan akhir |
 
@@ -41,3 +41,14 @@ Ditambah perbaikan P2: transaksi baru dengan timestamp sama dengan watermark kin
 dinotifikasi, dengan penjaga `seenIds`. Gate ulang: **640 tes/0 gagal**, assembleDebug PASS,
 lintDebug **0 error/153 warning**. Host widget debug-only (`src/debug`) ditambahkan untuk
 membuktikan render Glance tanpa launcher; tidak ikut build release.
+
+### Bukti launcher/pin dan notifikasi fixture (25 Nov 21:20 WIB)
+
+- `15_widget_2x2_launcher.png`: widget 2×2 benar-benar terpasang di home screen emulator setelah
+  `PinWidgetActivity` (debug-only) memanggil `AppWidgetManager.requestPinAppWidget` dan dialog
+  sistem “Add to home screen” ditekan. State widget logged-out, sesuai perilaku.
+- `16`/`17`: notifikasi dibangun oleh `TransactionNotifications.post` (builder produksi) dengan
+  kandidat sintetis lewat `NotificationDemoActivity` (debug-only); tidak ada nominal, merchant,
+  atau nomor akun pada judul/isi. Ini bukti fixture, bukan pengiriman email Livin nyata.
+- Activity debug (`WidgetPreviewHostActivity`, `PinWidgetActivity`, `NotificationDemoActivity`)
+  hanya ada di source set `debug`, tidak masuk APK release/assessment.

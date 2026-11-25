@@ -22,7 +22,7 @@ Kesembilan layar sudah dipetakan dan diimplementasikan pada branch `feature/stit
 Bukti runtime per layar, batas bukti, dan screenshot ada di
 [evidence/stitch_2026-11-25](../evidence/stitch_2026-11-25/README.md). Gate saat ini: 640 unit test
 lulus, `assembleDebug` dan `lintDebug` (0 error) lulus. Widget/notifikasi CR-010 sudah terpasang
-secara kode; instance widget di launcher dan notifikasi Livin nyata masih PARTIAL/NOT RUN.
+dan dirender nyata (widget 2×2 di launcher, 4×2 di host debug; copy notifikasi generik). Pengiriman notifikasi dari email Livin nyata dan Run Android Studio literal masih NOT RUN.
 
 ## Komponen bersama
 

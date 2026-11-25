@@ -718,3 +718,11 @@ baris karena `OverviewViewModel` memuat seluruh halaman bulan. P2 timestamp sama
 Widget Glance dirender nyata lewat host debug-only 2×2 dan 4×2 (state signed-out); instance di
 launcher tetap belum ditambahkan. Gate ulang: **640 tes/0 gagal**, assembleDebug PASS,
 lintDebug **0 error/153 warning**, APK sha256 `af334072…`.
+
+**Bukti launcher widget dan notifikasi fixture (25 Nov 21:20 WIB).** Widget 2×2 dipasang nyata di
+home screen emulator lewat `requestPinAppWidget` + dialog launcher (“Add to home screen”) —
+screenshot `15_widget_2x2_launcher.png`; render 4×2 nyata dari host debug
+`13_widget_4x2_debug_host.png`. Notifikasi produksi diuji dengan kandidat sintetis: single dan
+group menampilkan copy generik tanpa nominal/merchant (`16`, `17`). Semua helper ini debug-only,
+tidak ikut release. Pengiriman notifikasi dari email Livin nyata serta Run Android Studio literal
+tetap NOT RUN dan dicatat di manifest bukti.
