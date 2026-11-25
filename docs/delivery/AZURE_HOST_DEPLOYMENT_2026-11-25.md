@@ -130,9 +130,11 @@ Konsekuensinya: DB per 25 Nov berisi 77 transaksi November yang seluruhnya `DEBI
 sebagian besar adalah email non-transaksi (promo/statement/OTP) ditambah template
 “Tagihan Anda Sudah Dibayar” yang tidak punya label `Penerima/Merchant`.
 
-Jalur untuk uang masuk: (1) input **manual** di aplikasi (fitur sudah ada), (2) impor
-mutasi/statement Livin (belum ada, perlu Fitur baru), atau (3) pembaca notifikasi Android
-(butuh izin Notification Access). Opsi 2/3 menunggu keputusan pemilik.
+Keputusan pemilik: uang masuk **hanya lewat input manual**, tidak diotomatiskan. Bukti uji
+25 Nov: entri manual "Masuk" Rp1.000 dari aplikasi tersimpan sebagai `CREDIT`/`MANUAL` di server,
+Ringkasan langsung menampilkan **MASUK Rp1.000** dan "Pemasukan terklasifikasi Rp1.000"; baris uji
+kemudian dihapus sehingga data kembali Rp0. Jalur otomatis lain (impor mutasi/statement atau
+notification listener) tidak dipakai pada UAT ini.
 
 ### Operasional: polling, backup, rollback
 

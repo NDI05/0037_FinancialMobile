@@ -586,8 +586,10 @@ karena APK memakai URL HTTPS host.
 **Cakupan data Livin.** Audit 100 email Livin terakhir: semua transaksi yang dikirim via email
 adalah **keluar** (QRIS, transfer BI Fast, tagihan dibayar); tidak ada email dana masuk, sehingga
 uang masuk di Livin tidak bisa masuk lewat connector Gmail (Livin hanya notifikasi push in-app).
-November: 77 `DEBIT`, 0 `CREDIT`; 42 `CREDIT` lama hanya dari Juli–Agustus. Opsi uang masuk:
-input manual (sudah ada), impor mutasi/statement, atau notification listener Android.
+November: 77 `DEBIT`, 0 `CREDIT`; 42 `CREDIT` lama hanya dari Juli–Agustus. Keputusan pemilik:
+uang masuk **hanya via input manual** (tidak diotomatiskan). Diuji 25 Nov: entri manual "Masuk"
+Rp1.000 tersimpan `CREDIT`/`MANUAL` dan Ringkasan menampilkan MASUK Rp1.000; baris uji dihapus
+lagi sehingga data kembali Rp0.
 
 Permintaan UI pemilik dieksekusi di `a2876df`: kartu **Kotak Masuk** dan kartu **Persetujuan** pada
 Settings dihapus karena pengaturan koneksi sudah terpusat di section Akun dan riwayat persetujuan
