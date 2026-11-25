@@ -37,12 +37,17 @@ Backend biner baru dijalankan pada port 18093 dengan database sementara (bukan D
   `pam-api-loopback.bak-20261125-auth`); proses lama dihentikan lalu `start.py` dijalankan ulang.
 - `/healthz` 200, `/readyz` 200; probe `POST /v1/accounts` email tidak valid → 400 dan body dengan
   `inviteCode` → 400, membuktikan biner baru aktif (biner lama menjawab 403 `invalid_invite`).
-- APK debug baru saat itu dipasang di perangkat fisik yang terhubung (seri `927a…`, `adb reverse tcp:18090` aktif). Pemilik mengonfirmasi 25 Nov bahwa HP-nya adalah **Redmi 10 `21061119AG` (seri `105397ba0507`)**; APK hasil fix `a0498c29…` dipasang di HP tersebut dan emulator-5556. Catatan model `24069PC21G` pada ronde sebelumnya keliru.
+- APK debug baru saat itu dipasang di perangkat fisik yang terhubung (seri diredaksi, `adb reverse tcp:18090` aktif); APK terbaru `39f2cd6e…` (commit `13b7a2a`) dipasang 25 Nov 14:42 WIB. Pemilik mengonfirmasi 25 Nov bahwa HP-nya adalah **Redmi 10 `21061119AG` (seri `105397ba0507`)**; APK hasil fix `a0498c29…` dipasang di HP tersebut dan emulator-5556. Catatan model `24069PC21G` pada ronde sebelumnya keliru.
 
-## Belum diverifikasi (jujur)
+## Status verifikasi (jujur)
 
-- **Google SSO live belum diuji** dengan akun Google asli: butuh pemilik menambahkan email tester
-  sebagai Test user pada OAuth consent screen dan menyelesaikan consent di perangkat.
+- **Google SSO live sudah teruji login** dengan akun Google asli di HP pemilik 25 Nov ±14:37 WIB.
+  Rantai bukti backend: `DELETE /v1/sessions` **204** 14:37:08 WIB (logout) → `GET
+  /v1/auth/google/nonce` **200** 14:37:10 → nonce terpakai `07:37:15Z` → `POST /v1/auth/google`
+  **200** 1257 ms 14:37:16 → `google_identities.last_login_at` + `auth_sessions` baru owner
+  identik `07:37:16.467436Z` → `GET /v1/me` **200**, app memuat Ringkasan.
+  **Belum:** rekaman layar, login dengan akun Google kedua, dan login/registrasi akun baru lewat UI
+  (registrasi live hanya diuji di DB sementara).
 - Registrasi tidak dilakukan ke database UAT pemilik (sengaja; tidak membuat akun sintetis di data
   pemilik). Uji end-to-end memakai database sementara.
 - SRS resmi DOCX/PDF tidak diubah.
@@ -65,6 +70,7 @@ Backend biner baru dijalankan pada port 18093 dengan database sementara (bukan D
   detik yang sama dibuat `auth_session` baru untuk akun pemilik; layar HP menampilkan Ringkasan.
   Ini bukti token Google asli diterima, bukan fixture. Logout/relogin berurutan dan login dengan
   akun Google kedua belum dicatat.
-- **Tetap NOT RUN:** logout/relogin berurutan, onboarding Gmail akun uji, email Livin alami, dan
-  Run literal Android Studio dan Run literal G36
-  lewat Android Studio pada HP pemilik (**Redmi 10 `21061119AG`**, terhubung).
+- **Run literal G36 dikonfirmasi pemilik** (chat 25 Nov): tombol **Run** Android Studio ditekan pada
+  HP pemilik **Redmi 10 `21061119AG`**; app aktif dan memuat Ringkasan.
+- **Tetap NOT RUN:** onboarding Gmail akun uji (Lewati + Tautkan + consent) dan email Livin alami
+  saat app tertutup.
