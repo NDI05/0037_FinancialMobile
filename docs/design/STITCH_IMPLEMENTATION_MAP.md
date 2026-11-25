@@ -16,6 +16,14 @@ prototipe ke route, komponen, dan sumber data aktual sebelum perubahan UI. Sumbe
 | 8. Pengaturan | `Settings`, `AccountSettings`, `ConsentHistory`, `DataDeletion` | grup Akun/Gmail/AI/Kategori, **toggle notifikasi transaksi baru (default off)**, Keluar | `SettingsScreen`, `AccountViewModel`; outlet CR-010 |
 | 9. Kelola Kategori | `CategoryManagement` | daftar, tambah/ubah/arsip kategori | `CategoryManagementViewModel` |
 
+## Status implementasi (25 November 2026)
+
+Kesembilan layar sudah dipetakan dan diimplementasikan pada branch `feature/stitch-redesign`.
+Bukti runtime per layar, batas bukti, dan screenshot ada di
+[evidence/stitch_2026-11-25](../evidence/stitch_2026-11-25/README.md). Gate saat ini: 639 unit test
+lulus, `assembleDebug` dan `lintDebug` (0 error) lulus. Widget/notifikasi CR-010 sudah terpasang
+secara kode; instance widget di launcher dan notifikasi Livin nyata masih PARTIAL/NOT RUN.
+
 ## Komponen bersama
 
 - Tema `PamWarm*` diganti token Stitch: canvas `#FAFAF7`, surface `#FFFFFF`, ink `#171915`,

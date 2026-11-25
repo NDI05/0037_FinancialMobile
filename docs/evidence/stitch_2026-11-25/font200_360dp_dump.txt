@@ -1,0 +1,2 @@
+FIRST: Ringkasan | November 2026 | Pengeluaran tercatat | Rp3.222.373 | 77 transaksi | Pemasukan tercatat | Rp0 | 0 transaksi | M | Mandiri | Livin' by Mandiri | 77 transaksi
+HAS_BANK: False HAS_NAV: True

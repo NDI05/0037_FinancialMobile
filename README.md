@@ -69,6 +69,17 @@ harus tampil sebagai keadaan berbeda.
 
 Rincian bukti per gate dan sisa pekerjaan pemilik ada di [laporan gate akhir](docs/delivery/FINAL_GATES_GMAIL_YEARLY_WORKFLOW_2026-11-24.md) (38 gate: 29 PASS, 5 PARTIAL, 4 NOT RUN). Langkah penutupan gate tersisa untuk pemilik: [checklist aksi pemilik](docs/delivery/OWNER_ACTION_CHECKLIST_2026-11-24.md).
 
+### Redesign Stitch (branch `feature/stitch-redesign`)
+
+Implementasi native Kotlin/Compose dari 16 prototipe Stitch: Ringkasan opsi B dengan kartu per bank,
+satu layar Transaksi yang membawa filter dan kembali ke Ringkasan, sheet "Status pembaruan" tunggal,
+serta CR-010 widget Glance 2×2/4×2 + notifikasi transaksi baru. Pemetaan mockup→rute→kontrak ada di
+[STITCH_IMPLEMENTATION_MAP](docs/design/STITCH_IMPLEMENTATION_MAP.md), bukti runtime per layar di
+[evidence/stitch_2026-11-25](docs/evidence/stitch_2026-11-25/README.md). Mandiri ditampilkan dari data
+nyata; Jago/BRI adalah pratinjau berlabel karena backend belum punya dimensi bank. Batas yang masih
+terbuka: Android Studio Run literal, instance widget di launcher, notifikasi single/group nyata, dan
+FCM live (belum diimplementasikan). Merge/deploy tetap menunggu izin pemilik.
+
 ### Implementasi versus acceptance
 
 | Area | Yang sudah tersedia | Yang masih perlu dibuktikan/diselesaikan |

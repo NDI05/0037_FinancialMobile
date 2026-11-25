@@ -692,3 +692,19 @@ login/logout/relogin tampak sudah dijalankan, tetapi **Tautkan Gmail + consent d
 alami belum terjadi**; G36 tetap PARTIAL. Bila pemilik belum menautkan Gmail pada akun uji, lanjutkan
 langkah 3–5 runbook.
 
+
+**Redesign Stitch PAM (25 Nov 2026, 20:30–21:10 WIB).** Implementasi native Compose dari 16
+prototipe Stitch di branch `feature/stitch-redesign`: token warna/Manrope/radius baru, Ringkasan
+opsi B dengan carousel kartu bank (Mandiri nyata lebih dulu; Jago/BRI pratinjau berlabel), satu
+layar Transaksi dengan filter arah/sumber/kategori/hari dan kembali ke Ringkasan, sheet Status
+pembaruan tunggal, serta CR-010 widget Glance + notifikasi transaksi lokal. Wiring lintas lane yang
+dikerjakan Lead: jumlah transaksi per bank dari baris bulan berjalan, `PamPendingNavigation` untuk
+tap widget/notifikasi (widget → Ringkasan, notifikasi → Detail/Transaksi dengan validasi sesi),
+judul Transaksi terpusat, dan penerjemahan string `en` agar lint tetap 0 error.
+Gate: `:app:testDebugUnitTest` **639 tes/0 gagal**, `:app:assembleDebug` lulus, `:app:lintDebug`
+**0 error/151 warning**; APK debug sha256 `69228b8d…`. Runtime di HP fisik: Ringkasan, Transaksi,
+sheet status, Pengaturan, Analisis, Kelola Kategori, Detail, Tambah, serta 360/393/412 dp dan font
+200% (dump) terverifikasi; screenshot di [evidence/stitch_2026-11-25](evidence/stitch_2026-11-25/README.md).
+Batas: Android Studio Run literal, instance widget di launcher, notifikasi single/group nyata, dan
+FCM live **NOT RUN/PARTIAL**; backend tetap tanpa dimensi bank sehingga Jago/BRI hanya pratinjau;
+tidak ada merge/deploy produksi.
