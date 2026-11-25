@@ -2,7 +2,7 @@
 
 Tujuan: menjawab permintaan pemilik apakah backend Go bisa di-deploy ke akun Vercel
 gratisnya, lalu melakukannya bila memungkinkan. Dokumen ini mencatat hasil, batasan, dan
-langkah lanjutan. **Ini belum deploy produksi final**: G24 tetap NOT RUN dan merge/deploy
+langkah lanjutan. **Ini demo, belum deploy produksi final**: G24 **PARTIAL** (demo Vercel; produksi NOT RUN) dan merge/deploy
 produksi tetap keputusan pemilik.
 
 ## Hasil singkat
@@ -17,7 +17,7 @@ produksi tetap keputusan pemilik.
 | Kode backend | working tree `main` setara `1325d3d` (tanpa perubahan fitur) |
 | Auth Google | `GOOGLE_SSO_ENABLED=true` dengan Web OAuth client ID yang sama seperti UAT |
 | Gmail | **nonaktif** (`GMAIL_ENABLED=false`) — lihat batasan di bawah |
-| Kategori AI | tetap nonaktif (`CATEGORY_LLM_ENABLED=false`, `LLM_PROVIDER=fake`) — sama dengan gate Rp0 |
+| Kategori AI | tetap nonaktif (`CATEGORY_LLM_ENABLED=false`, `LLM_PROVIDER=fake`) — sama dengan gate Rp0. Sengaja **tidak** memakai Azure di demo publik ini; Azure penuh aktif hanya di UAT lokal pemilik ([AZURE_FULL_OPTIMIZATION](AZURE_FULL_OPTIMIZATION_2026-11-25.md)) |
 | Vercel Authentication | dimatikan untuk project ini (`ssoProtection: null`) agar API bisa dipanggil HP |
 
 Vercel sekarang punya **Go Framework Preset (Beta)** yang menjalankan server
@@ -28,7 +28,7 @@ Vercel sekarang punya **Go Framework Preset (Beta)** yang menjalankan server
 ## Bukti smoke (production alias, 25 Nov 2026 WIB)
 
 Semua permintaan di bawah langsung ke <https://pam-api-vercel.vercel.app> tanpa
-`vercel curl` (proteksi deployment sudah dimatikan).
+`vercel curl` (proteksi deployment sudah dimatikan). **Risiko demo publik:** registrasi terbuka dan belum ada rate-limit middleware, jadi siapa pun dapat membuat akun sintetis dan memakai kuota Hobby/Turso. Mitigasi saat ini: LLM tetap `fake` (tanpa biaya Azure), DB demo terpisah, hanya data sintetis; project dapat dihapus/di-pause pemilik kapan saja.
 
 | Waktu (WIB) | Permintaan | Hasil |
 | --- | --- | --- |
@@ -99,12 +99,12 @@ migrasi dulu (satu instance), jangan biarkan banyak instance balapan migrasi.
 
 - **Backup Turso (diuji nyata):**
   `turso db export pam-vercel --output-file /tmp/pam-vercel-backup.db` berhasil; file SQLite
-  640 KB (+WAL) berisi `schema_migrations` 22 dan data demo; dapat dibuka `sqlite3` untuk
+  581.632 B (568 KiB) + WAL 0 B berisi `schema_migrations` 22 dan 36 tabel; dapat dibuka `sqlite3` untuk
   `PRAGMA integrity_check` atau dipulihkan ke DB baru dengan `turso db import`.
 - **Restore/rollback data:** buat DB Turso baru lalu `turso db import <file>`; atau gunakan
   fitur restore dashboard Turso. Rollback **kode** memakai `vercel rollback <deployment-url>`
   (deploy demo ini tidak mengubah migrasi; DB demo terpisah).
-- **Kesehatan dan latensi:** `GET /healthz` dari jaringan publik ±15:20 WIB: **200** dalam
+- **Kesehatan dan latensi:** `GET /healthz` dari jaringan publik ±15:09 WIB: **200** dalam
   **0,37–0,40 dtk** (3 kali berturut-turut). Belum ada alert/monitoring otomatis.
 - **CI backend:** commit `5789f54` → run GitHub Actions **45573339049 success** (57 dtk).
   Satu annotation non-blocking: `actions/checkout@v4`/`setup-go@v5` masih Node 20.

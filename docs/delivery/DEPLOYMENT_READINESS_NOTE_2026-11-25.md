@@ -87,11 +87,11 @@ Batasan penting bila memilih Vercel: worker Gmail berjalan sebagai goroutine di 
 sehingga **tidak dijamin** hidup saat Functions scale-to-zero; Cron Hobby hanya 1×/hari dan
 Daemon Hobby hanya 5 CPU-jam + 420 GB-jam memori/bulan. Gmail otomatis andal butuh host proses
 panjang (opsi Fly.io/Render/Koyeb di atas). Gmail di Vercel juga belum diaktifkan karena redirect
-OAuth HTTPS harus didaftarkan dulu di Google Cloud Console. **G24 tetap NOT RUN** sampai pemilik
+OAuth HTTPS harus didaftarkan dulu di Google Cloud Console. **G24 PARTIAL (demo Vercel; produksi NOT RUN)** sampai pemilik
 memutuskan platform final, domain, backup, dan merge/deploy produksi.
 
 ## Yang belum dilakukan
 
 Deployment **produksi final** tetap belum dilakukan: project Vercel di atas adalah demo/UAT
 terpisah (DB Turso baru), belum ada domain kustom, backup otomatis, atau pendaftaran redirect
-Gmail produksi. Gate G24 tetap NOT RUN sampai pemilik memberi instruksi deploy produksi terpisah.
+Gmail produksi. Gate G24 tetap PARTIAL (demo Vercel; produksi NOT RUN) sampai pemilik memberi instruksi deploy produksi terpisah.

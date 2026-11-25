@@ -1,0 +1,171 @@
+{
+  "purpose": "Isolated Azure analysis E2E; synthetic account only, not owner UAT",
+  "checks": [
+    {
+      "name": "consent_gate",
+      "pass": true,
+      "detail": "403 consent_required without AI_PROCESSING consent"
+    },
+    {
+      "name": "no_provider_before_consent",
+      "pass": true,
+      "detail": "0 stored analyses before consent"
+    },
+    {
+      "name": "azure_response",
+      "pass": true,
+      "detail": "CURRENT analysis-v1, observations=3, limitations=1, 2.64s"
+    },
+    {
+      "name": "token_counters",
+      "pass": true,
+      "detail": "promptTokens=409 completionTokens=156"
+    },
+    {
+      "name": "stored_provider_label",
+      "pass": true,
+      "detail": "provider=azure-openai-compatible model=pam-category-gptoss120b regenerations=0 status=AVAILABLE"
+    },
+    {
+      "name": "provider_call_accounted",
+      "pass": true,
+      "detail": "providerCalls=1 promptTokens=409 completionTokens=156 costUSD=0.00015495"
+    },
+    {
+      "name": "category_ledger_untouched",
+      "pass": true,
+      "detail": "0 category_usage rows: analysis accounting separate from classifier ledger"
+    },
+    {
+      "name": "get_replay",
+      "pass": true,
+      "detail": "GET returns the same stored analysis (CURRENT)"
+    },
+    {
+      "name": "post_replay",
+      "pass": true,
+      "detail": "same Idempotency-Key returns stored analysis"
+    },
+    {
+      "name": "no_second_provider_call",
+      "pass": true,
+      "detail": "providerCalls still 1 after GET + POST replay"
+    },
+    {
+      "name": "single_analysis_row",
+      "pass": true,
+      "detail": "1 stored analysis row; replay did not create another"
+    },
+    {
+      "name": "freshness_stale",
+      "pass": true,
+      "detail": "remaining transaction change turns freshness into STALE without a provider call"
+    },
+    {
+      "name": "stale_replay_without_provider",
+      "pass": true,
+      "detail": "same-key replay returns STALE analysis; provider calls still 1"
+    },
+    {
+      "name": "freshness_historical",
+      "pass": true,
+      "detail": "withdrawn AI_PROCESSING consent marks the stored analysis HISTORICAL"
+    },
+    {
+      "name": "consent_recheck",
+      "pass": true,
+      "detail": "consent is re-checked on every POST (no stale grant reuse)"
+    },
+    {
+      "name": "provider_usage_log",
+      "pass": true,
+      "detail": "one 'analysis provider usage' log line: {'correlationId': 'req_d07c7ea24a1b4917295c1c62778a85e8', 'provider': 'azure-openai-compatible', 'promptTokens': 409, 'completionTokens': 156, 'reasoningTokens': 0, 'totalTokens': 565}"
+    },
+    {
+      "name": "daily_ceiling_blocked",
+      "pass": true,
+      "detail": "429 daily_ceiling_reached before any provider reservation/call"
+    }
+  ],
+  "server_log_excerpt": {
+    "postAnalyses200": {
+      "correlationId": "req_3d6b3897037d012f7d9ef3ebeefeff89",
+      "method": "POST",
+      "route": "/v1/analyses",
+      "status": 200,
+      "ms": 0
+    },
+    "postAnalyses403": {
+      "correlationId": "req_515722ab771ade71bbce0f32d28bfbac",
+      "method": "POST",
+      "route": "/v1/analyses",
+      "status": 403,
+      "ms": 0
+    },
+    "providerUsage": [
+      {
+        "correlationId": "req_d07c7ea24a1b4917295c1c62778a85e8",
+        "provider": "azure-openai-compatible",
+        "promptTokens": 409,
+        "completionTokens": 156,
+        "reasoningTokens": 0,
+        "totalTokens": 565
+      }
+    ],
+    "requestLatencyMs": 0
+  },
+  "environment": {
+    "backend": "isolated Go API on 127.0.0.1:61532",
+    "database": "throwaway SQLite file smoke.db",
+    "provider": "azure (LLM_PROVIDER=azure) profile ~/.config/pam/azure-classifier.env",
+    "ollama": "not used",
+    "limits": {
+      "dailyCeilingUSD": 0.25,
+      "categoryDailyCeilingUSD": 0.1,
+      "maxOutputTokens": 1200,
+      "timeoutMs": 12000
+    },
+    "syntheticTransaction": "tx_2a11916c3375800a9f6d5769d612c007",
+    "monthId": "2026-11",
+    "revision": 1
+  },
+  "freshness": {
+    "first": "CURRENT",
+    "afterMutation": "STALE",
+    "afterConsentWithdrawal": "HISTORICAL"
+  },
+  "tokens": {
+    "prompt": 409,
+    "completion": 156,
+    "logReasoning": 0,
+    "logTotal": 565,
+    "dbPrompt": 409,
+    "dbCompletion": 156,
+    "dbCostUSD": 0.00015495
+  },
+  "correlationIds": {
+    "postAnalyses200": "req_3d6b3897037d012f7d9ef3ebeefeff89",
+    "postAnalyses403": "req_515722ab771ade71bbce0f32d28bfbac"
+  },
+  "ceilingEnforcement": {
+    "configuredDailyCeilingUSD": 1e-06,
+    "categoryDailyCeilingUSD": 0.1,
+    "responseCode": "daily_ceiling_reached",
+    "providerUsageLines": 0,
+    "usageRows": [
+      {
+        "scope": "owner",
+        "providerCalls": 0,
+        "costUSD": 0.0
+      },
+      {
+        "scope": "owner",
+        "providerCalls": 0,
+        "costUSD": 0.0
+      }
+    ],
+    "correlationId": "req_52619461fea5698d99294315d94d3f4d"
+  },
+  "durationSeconds": 4.0,
+  "overall": "PASS"
+}

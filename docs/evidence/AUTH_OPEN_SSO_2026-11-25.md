@@ -37,7 +37,7 @@ Backend biner baru dijalankan pada port 18093 dengan database sementara (bukan D
   `pam-api-loopback.bak-20261125-auth`); proses lama dihentikan lalu `start.py` dijalankan ulang.
 - `/healthz` 200, `/readyz` 200; probe `POST /v1/accounts` email tidak valid → 400 dan body dengan
   `inviteCode` → 400, membuktikan biner baru aktif (biner lama menjawab 403 `invalid_invite`).
-- APK debug baru saat itu dipasang di perangkat fisik yang terhubung (seri diredaksi, `adb reverse tcp:18090` aktif); APK terbaru `39f2cd6e…` (commit `13b7a2a`) dipasang 25 Nov 14:42 WIB. Pemilik mengonfirmasi 25 Nov bahwa HP-nya adalah **Redmi 10 `21061119AG` (seri `105397ba0507`)**; APK hasil fix `a0498c29…` dipasang di HP tersebut dan emulator-5556. Catatan model `24069PC21G` pada ronde sebelumnya keliru.
+- APK debug baru saat itu dipasang di perangkat fisik yang terhubung (seri diredaksi, `adb reverse tcp:18090` aktif); APK terbaru `39f2cd6e…` (commit `13b7a2a`) dipasang 25 Nov 14:42 WIB. Pemilik mengonfirmasi 25 Nov bahwa HP-nya adalah **Redmi 10 `21061119AG` (seri diredaksi)**; APK hasil fix `a0498c29…` dipasang di HP tersebut dan emulator-5556. Catatan model `24069PC21G` pada ronde sebelumnya keliru.
 
 ## Status verifikasi (jujur)
 
