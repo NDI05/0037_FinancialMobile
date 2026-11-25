@@ -309,7 +309,6 @@
     <string name="settings_delete_body">Remove local data after re-verification.</string>
     <string name="settings_sign_out">Sign out</string>
     <string name="settings_sign_out_body">Clears the financial cache on this device.</string>
-    <string name="settings_disconnect">Disconnect mailbox</string>
     <string name="settings_footer">PAM shows no balance and moves no money. Every figure comes from email.</string>
 
     <string name="consent_history_title">Consent history</string>

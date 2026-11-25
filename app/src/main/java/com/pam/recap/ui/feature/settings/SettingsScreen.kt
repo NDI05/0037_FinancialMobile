@@ -190,13 +190,6 @@ fun SettingsScreen(
                 onClick = viewModel::signOut,
             )
 
-            PillButton(
-                text = stringResource(R.string.settings_disconnect),
-                onClick = viewModel::disconnect,
-                style = PillButtonStyle.Ghost,
-                loading = state.isBusy,
-                modifier = Modifier.fillMaxWidth(),
-            )
             Text(
                 text = stringResource(R.string.settings_footer),
                 style = BodyM,

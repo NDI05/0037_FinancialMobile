@@ -323,7 +323,6 @@
     <string name="settings_delete_body">Hapus data lokal setelah verifikasi ulang.</string>
     <string name="settings_sign_out">Keluar</string>
     <string name="settings_sign_out_body">Menghapus cache keuangan di perangkat ini.</string>
-    <string name="settings_disconnect">Putuskan kotak masuk</string>
     <string name="settings_footer">PAM tidak menampilkan saldo dan tidak memindahkan uang. Semua angka berasal dari email.</string>
 
     <!-- Consent history -->
