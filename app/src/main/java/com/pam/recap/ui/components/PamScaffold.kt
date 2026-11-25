@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -131,10 +132,14 @@ fun GlassTopBar(
     onBack: (() -> Unit)? = null,
     subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
+    // Dedicated top-right slot for the sync/update status control. Kept separate from [actions] so
+    // screens cannot accidentally move it, and additive so every existing caller keeps compiling.
+    status: (@Composable () -> Unit)? = null,
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .heightIn(min = 56.dp)
             .padding(horizontal = PamSpacing.md, vertical = PamSpacing.xs),
         contentAlignment = Alignment.Center,
     ) {
@@ -175,8 +180,10 @@ fun GlassTopBar(
             modifier = Modifier.align(Alignment.CenterEnd),
             horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
             verticalAlignment = Alignment.CenterVertically,
-            content = actions,
-        )
+        ) {
+            status?.invoke()
+            actions()
+        }
     }
 }
 

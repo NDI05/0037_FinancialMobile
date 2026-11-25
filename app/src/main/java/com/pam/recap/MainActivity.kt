@@ -21,6 +21,14 @@ import com.pam.recap.ui.theme.Ink
 import com.pam.recap.BuildConfig
 import com.pam.recap.ui.theme.PamTheme
 import androidx.lifecycle.lifecycleScope
+import com.pam.recap.data.notification.PamPendingNavigation
+import com.pam.recap.data.notification.PamPendingTarget
+import com.pam.recap.data.notification.TransactionNotificationIntents
+import com.pam.recap.data.widget.HomeSurfaceCoordinator
+import com.pam.recap.core.result.Outcome
+import com.pam.recap.domain.repository.ServerFinanceRepository
+import com.pam.recap.domain.repository.TransactionRepository
+import com.pam.recap.ui.widget.WidgetIntents
 import com.pam.recap.domain.repository.AutoCategoryScheduler
 import com.pam.recap.domain.repository.AutoSyncScheduler
 import com.pam.recap.domain.repository.GmailLinkRepository
@@ -72,6 +80,16 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var activityHost: ActivityHost
 
+    /** CR-010: widget snapshot + local notification baseline refresher. */
+    @Inject
+    lateinit var homeSurface: HomeSurfaceCoordinator
+
+    @Inject
+    lateinit var transactions: TransactionRepository
+
+    @Inject
+    lateinit var serverFinance: ServerFinanceRepository
+
     /**
      * The only activity. Its base context is created from the system configuration, so the
      * Indonesian pin has to be applied here as well as in the application (see [AppLocale]).
@@ -93,10 +111,12 @@ class MainActivity : ComponentActivity() {
             )
         }
         activityHost.attach(this)
+        homeSurface.start()
         gmailLinkIntentGate = GmailLinkIntentGate(
             savedInstanceState?.getString(GmailLinkIntentGate.KEY_HANDLED_INTENT),
         )
         readGmailLink(intent)
+        readSurfaceIntent(intent)
         setContent {
             PamTheme {
                 com.pam.recap.ui.feature.status.UpdateStatusActionProvider {
@@ -119,6 +139,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         readGmailLink(intent)
+        readSurfaceIntent(intent)
     }
 
     override fun onDestroy() {
@@ -140,6 +161,66 @@ class MainActivity : ComponentActivity() {
         gmailLinkResult = result
     }
 
+    /**
+     * CR-010 deep-link routing. The navigation graph is deliberately untouched: validated targets
+     * are exposed through [PamPendingNavigation] for the Lead to collect in `PamNavHost`.
+     */
+    private fun readSurfaceIntent(intent: Intent?) {
+        val action = intent?.action ?: return
+        val widgetAction = action == WidgetIntents.ACTION_OPEN_OVERVIEW
+        val singleAction = action == TransactionNotificationIntents.ACTION_OPEN_TRANSACTION
+        val groupAction = action == TransactionNotificationIntents.ACTION_OPEN_TRANSACTIONS
+        if (!widgetAction && !singleAction && !groupAction) return
+        val bank = intent.getStringExtra(WidgetIntents.EXTRA_BANK)
+        val monthId = intent.getStringExtra(WidgetIntents.EXTRA_MONTH)
+        val transactionId = intent.getStringExtra(TransactionNotificationIntents.EXTRA_TRANSACTION_ID)
+        val transactionIds = intent
+            .getStringExtra(TransactionNotificationIntents.EXTRA_TRANSACTION_IDS)
+            ?.split(',')
+            ?.filter { it.isNotBlank() }
+            .orEmpty()
+        // Consume now: a configuration change or replayed launch must not re-navigate.
+        intent.action = null
+
+        lifecycleScope.launch {
+            val session = sessions.current()
+            if (session == null) {
+                PamPendingNavigation.emit(PamPendingTarget.SignIn)
+                return@launch
+            }
+            when {
+                widgetAction -> PamPendingNavigation.emit(
+                    PamPendingTarget.Overview(bank = bank, monthId = monthId),
+                )
+                groupAction -> PamPendingNavigation.emit(
+                    PamPendingTarget.Transactions(transactionIds),
+                )
+                singleAction && transactionId != null -> {
+                    val exists = transactionExists(session.ownerId, transactionId)
+                    PamPendingNavigation.emit(
+                        if (exists) {
+                            PamPendingTarget.TransactionDetail(transactionId)
+                        } else {
+                            PamPendingTarget.Transactions(emptyList())
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun transactionExists(ownerId: String, transactionId: String): Boolean {
+        return runCatching {
+            if (transactions.get(ownerId, transactionId) != null) {
+                true
+            } else if (serverFinance.isEnabled) {
+                serverFinance.get(ownerId, transactionId) is Outcome.Success
+            } else {
+                false
+            }
+        }.getOrDefault(false)
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(
@@ -155,6 +236,9 @@ class MainActivity : ComponentActivity() {
      */
     override fun onStart() {
         super.onStart()
+        // CR-010: refresh the widget aggregate and advance the notification watermark before any
+        // foreground sync. A slow/failed backend must never block the existing sync path below.
+        lifecycleScope.launch { runCatching { homeSurface.onForeground() } }
         lifecycleScope.launch {
             val ownerId = sessions.current()?.ownerId ?: return@launch
             // Hosted builds delegate Gmail import to the Go backend (contract §9). The legacy
@@ -175,6 +259,9 @@ class MainActivity : ComponentActivity() {
             // One bounded drain attempt: the server answers "not_due" without any provider call
             // when its 2-hour window is closed, and this is what fills the status panel.
             runCatching { autoCategoryRun.runIfConnected(ownerId) }
+            // The foreground sync above may have committed rows after the first refresh; run one
+            // more cycle so the widget count and notification watermark include them immediately.
+            runCatching { homeSurface.onForeground() }
         }
     }
 }

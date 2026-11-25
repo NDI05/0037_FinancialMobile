@@ -31,6 +31,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.pam.recap.R
+import com.pam.recap.data.notification.PamPendingNavigation
+import com.pam.recap.data.notification.PamPendingTarget
 import com.pam.recap.ui.components.BottomNavBar
 import com.pam.recap.ui.components.BottomNavItem
 import com.pam.recap.ui.feature.analysis.AnalysisScreen
@@ -82,6 +84,29 @@ fun PamNavHost(
 
     LaunchedEffect(gate, destination) {
         gateRedirect(gate, destination)?.let(navController::replaceWith)
+    }
+
+    // CR-010: widget/notification taps are validated by MainActivity and parked here. The graph
+    // itself stays unchanged; targets are applied only once the session gate is Ready.
+    LaunchedEffect(gate) {
+        if (gate !is GateState.Ready) return@LaunchedEffect
+        fun openPending(target: PamPendingTarget) {
+            when (target) {
+                is PamPendingTarget.Overview -> navController.navigate(
+                    PamDestination.Overview(monthId = target.monthId),
+                )
+                is PamPendingTarget.TransactionDetail -> navController.navigate(
+                    PamDestination.TransactionDetail(target.transactionId),
+                )
+                // A group/fallback opens the single Transaksi route on the month it can show.
+                is PamPendingTarget.Transactions -> navController.navigate(
+                    PamDestination.Transactions(),
+                )
+                PamPendingTarget.SignIn -> Unit
+            }
+        }
+        PamPendingNavigation.consume()?.let(::openPending)
+        PamPendingNavigation.targets.collect { openPending(it) }
     }
 
     // The browser returns through the pam://gmail/connected deep link. Only navigate once the gate

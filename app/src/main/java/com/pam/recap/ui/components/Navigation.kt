@@ -2,7 +2,6 @@ package com.pam.recap.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,12 +13,13 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.Icon
@@ -71,45 +71,79 @@ fun MonthSelector(
     canGoNext: Boolean = true,
     partial: Boolean = false,
 ) {
+    // Stitch: a compact bordered pill centred under the title, not a full-width control row.
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = PamSize.minTouch),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
     ) {
-        CircularIconWell(
-            icon = Icons.Rounded.ChevronLeft,
-            contentDescription = stringResource(R.string.action_previous),
-            onClick = onPrevious,
-            enabled = canGoPrevious,
-        )
-        Column(
+        Row(
             modifier = Modifier
-                .padding(horizontal = PamSpacing.md)
-                .weight(1f, fill = false),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .clip(RoundedCornerShape(PamRadius.pill))
+                .background(com.pam.recap.ui.theme.SurfaceLow)
+                .border(1.dp, com.pam.recap.ui.theme.OutlineVariant, RoundedCornerShape(PamRadius.pill))
+                .padding(horizontal = PamSpacing.xxs, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = label,
-                style = com.pam.recap.ui.theme.HeadlineM,
-                color = OnInk,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            MonthArrow(
+                icon = Icons.Rounded.ChevronLeft,
+                contentDescription = stringResource(R.string.action_previous),
+                enabled = canGoPrevious,
+                onClick = onPrevious,
             )
-            if (partial) {
+            Column(
+                modifier = Modifier
+                    .widthIn(min = 128.dp)
+                    .padding(horizontal = PamSpacing.sm),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Text(
-                    text = stringResource(R.string.month_selector_partial),
-                    style = com.pam.recap.ui.theme.BodyS,
-                    color = OnInkMuted,
+                    text = label,
+                    style = com.pam.recap.ui.theme.TitleM,
+                    color = OnInk,
+                    maxLines = 1,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
+                if (partial) {
+                    Text(
+                        text = stringResource(R.string.month_selector_partial),
+                        style = com.pam.recap.ui.theme.BodyS,
+                        color = OnInkMuted,
+                        maxLines = 1,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
             }
+            MonthArrow(
+                icon = Icons.Rounded.ChevronRight,
+                contentDescription = stringResource(R.string.action_next),
+                enabled = canGoNext,
+                onClick = onNext,
+            )
         }
-        CircularIconWell(
-            icon = Icons.Rounded.ChevronRight,
-            contentDescription = stringResource(R.string.action_next),
-            onClick = onNext,
-            enabled = canGoNext,
+    }
+}
+
+@Composable
+private fun MonthArrow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .minimumInteractiveComponentSize()
+            .size(44.dp)
+            .clip(CircleShape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (enabled) OnInk else OnInkFaint.copy(alpha = 0.38f),
+            modifier = Modifier.size(20.dp),
         )
     }
 }
@@ -201,7 +235,7 @@ fun MonthStrip(
     }
 }
 
-/** One destination of the floating bottom bar. */
+/** One destination of the Stitch bottom navigation. */
 data class BottomNavItem(
     val key: String,
     val label: String,
@@ -210,8 +244,9 @@ data class BottomNavItem(
 )
 
 /**
- * Floating glass pill with four destinations and a raised import action in the middle, mirroring
- * the reference's bottom navigation with its centre circle.
+ * Flat Stitch bottom navigation: four labelled destinations with a lime pill behind the active
+ * icon, plus the update-status trigger that used to sit in the raised centre circle. Keeping the
+ * status trigger here preserves access to the sync sheet from every top-level tab.
  */
 @Composable
 fun BottomNavBar(
@@ -221,78 +256,95 @@ fun BottomNavBar(
     statusLabel: String,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = PamSize.bottomBarGutter, vertical = PamSpacing.sm),
-        contentAlignment = Alignment.Center,
+            .background(com.pam.recap.ui.theme.Surface),
     ) {
+        androidx.compose.material3.HorizontalDivider(
+            color = com.pam.recap.ui.theme.OutlineVariant,
+            thickness = 1.dp,
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(PamSize.bottomBar)
-                .clip(RoundedCornerShape(PamRadius.pill))
-                .background(GlassFill)
-                .border(1.dp, GlassBorder, RoundedCornerShape(PamRadius.pill))
-                .padding(horizontal = PamSpacing.xs),
+                .heightIn(min = PamSize.bottomBar)
+                .padding(horizontal = PamSpacing.xxs, vertical = PamSpacing.xxs),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            val half = items.size / 2
-            items.take(half).forEach { item ->
-                BottomNavCell(item = item, onSelect = onSelect)
+            items.forEach { item ->
+                BottomNavCell(
+                    item = item,
+                    onSelect = onSelect,
+                    modifier = Modifier.weight(1f),
+                )
             }
-            // Centre raised action: the single update-status sheet, which owns the sync trigger.
             Box(
                 modifier = Modifier
                     .size(PamSize.minTouch)
                     .clip(CircleShape)
-                    .background(PamGradients.brand)
-                    .clickable(onClick = onOpenStatus)
+                    .clickable(role = Role.Button, onClick = onOpenStatus)
                     .semantics { contentDescription = statusLabel },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Add,
+                    imageVector = Icons.Rounded.Sync,
                     contentDescription = null,
-                    tint = Ink,
+                    tint = OnInkMuted,
                     modifier = Modifier.size(22.dp),
                 )
-            }
-            items.drop(half).forEach { item ->
-                BottomNavCell(item = item, onSelect = onSelect)
             }
         }
     }
 }
 
 @Composable
-private fun BottomNavCell(item: BottomNavItem, onSelect: (String) -> Unit) {
-    val tint = if (item.selected) com.pam.recap.ui.theme.Violet else OnInkMuted
+private fun BottomNavCell(
+    item: BottomNavItem,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val active = item.selected
     Column(
-        modifier = Modifier
+        modifier = modifier
             .minimumInteractiveComponentSize()
-            .clip(RoundedCornerShape(PamRadius.md))
+            .clip(RoundedCornerShape(PamRadius.sm))
             .clickable(role = Role.Tab) { onSelect(item.key) }
             .semantics {
                 contentDescription = item.label
                 selected = item.selected
             }
-            .padding(horizontal = PamSpacing.xs, vertical = PamSpacing.xxs),
+            .padding(vertical = PamSpacing.xxs),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Icon(imageVector = item.icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-        CircleUnder(tint = tint, visible = item.selected)
+        Box(
+            modifier = Modifier
+                .height(28.dp)
+                .widthIn(min = 40.dp)
+                .clip(RoundedCornerShape(PamRadius.pill))
+                .background(
+                    if (active) {
+                        com.pam.recap.ui.theme.SecondaryContainer
+                    } else {
+                        androidx.compose.ui.graphics.Color.Transparent
+                    },
+                )
+                .padding(horizontal = PamSpacing.xs),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = item.icon,
+                contentDescription = null,
+                tint = if (active) OnInk else OnInkFaint,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Text(
+            text = item.label,
+            style = com.pam.recap.ui.theme.LabelM,
+            color = if (active) OnInk else OnInkFaint,
+            maxLines = 1,
+        )
     }
-}
-
-@Composable
-private fun CircleUnder(tint: androidx.compose.ui.graphics.Color, visible: Boolean) {
-    Box(
-        modifier = Modifier
-            .size(4.dp)
-            .clip(CircleShape)
-            .background(if (visible) tint else androidx.compose.ui.graphics.Color.Transparent),
-    )
 }

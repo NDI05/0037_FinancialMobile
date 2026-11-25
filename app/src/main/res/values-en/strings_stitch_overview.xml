@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="overview_expense_recorded">Recorded spending</string>
+    <string name="overview_income_recorded">Recorded income</string>
+    <plurals name="overview_recorded_count">
+        <item quantity="one">%1$d transaction</item>
+        <item quantity="other">%1$d transactions</item>
+    </plurals>
+    <string name="bank_card_mandiri">Mandiri</string>
+    <string name="bank_card_mandiri_product">Livin\' by Mandiri</string>
+    <string name="bank_card_jago">Jago</string>
+    <string name="bank_card_jago_product">Main Pocket</string>
+    <string name="bank_card_bri">BRI</string>
+    <string name="bank_card_bri_product">BRImo</string>
+    <string name="bank_card_preview">Preview</string>
+    <string name="bank_card_preview_note">Sample layout, not account data</string>
+    <string name="bank_card_period">Period %1$s</string>
+    <string name="bank_card_data_source">From Livin emails</string>
+    <string name="bank_card_recorded">recorded this month</string>
+    <string name="bank_card_carousel">Bank cards</string>
+    <string name="bank_card_position">Card %1$d of %2$d</string>
+    <string name="bank_card_previous">Previous bank card</string>
+    <string name="bank_card_next">Next bank card</string>
+    <string name="bank_card_select">Select %1$s card</string>
+</resources>

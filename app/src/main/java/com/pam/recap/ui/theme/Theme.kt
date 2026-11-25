@@ -15,8 +15,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 /**
- * PAM Warm R1 is a light, warm-surface theme. The old dark names remain as compatibility
- * aliases in Color.kt so un-migrated screens stay readable while R1 rolls out.
+ * PAM Stitch is a light, warm-surface theme. The old token names remain as compatibility
+ * aliases in Color.kt so un-migrated screens stay readable while the redesign rolls out.
  */
 private val PamColorScheme = lightColorScheme(
     primary = Primary,
@@ -35,9 +35,9 @@ private val PamColorScheme = lightColorScheme(
     onBackground = OnInk,
     surface = Surface,
     onSurface = OnInk,
-    surfaceVariant = SurfaceLow,
+    surfaceVariant = SurfaceContainer,
     onSurfaceVariant = OnInkMuted,
-    surfaceTint = Primary,
+    surfaceTint = Surface,
     outline = Outline,
     outlineVariant = OutlineVariant,
     error = DangerRed,
@@ -68,8 +68,9 @@ fun PamTheme(
             val window = (view.context as Activity).window
             WindowCompat.setDecorFitsSystemWindows(window, false)
             WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = false
-                isAppearanceLightNavigationBars = false
+                // Light canvas needs dark system-bar icons for contrast.
+                isAppearanceLightStatusBars = true
+                isAppearanceLightNavigationBars = true
             }
         }
     }

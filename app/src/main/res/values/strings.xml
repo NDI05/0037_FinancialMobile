@@ -635,4 +635,35 @@
     <string name="gmail_link_browser_missing">Tidak ada browser untuk membuka izin Gmail.</string>
     <string name="gmail_link_backend_disabled">Server PAM belum mengaktifkan tautan Gmail, jadi fitur ini belum bisa dipakai. Coba lagi nanti.</string>
     <string name="error_category_disabled">Kategorisasi AI belum diaktifkan di server ini. Transaksi tetap bisa dicatat dan dikategorikan manual.</string>
+
+    <!-- CR-010: settings opt-in, widget states, and local transaction notifications. -->
+    <string name="settings_notifications_title">Notifikasi transaksi baru</string>
+    <string name="settings_notifications_body">Beri tahu saya saat transaksi Livin baru tercatat.</string>
+    <string name="settings_notifications_denied">Izin notifikasi belum aktif. Aktifkan di pengaturan sistem agar pemberitahuan bisa tampil.</string>
+    <string name="settings_notifications_open_settings">Buka pengaturan sistem</string>
+    <string name="notification_channel_name">Transaksi baru</string>
+    <string name="notification_channel_description">Pemberitahuan saat transaksi Livin baru tercatat.</string>
+    <string name="notification_single_title">Transaksi baru tercatat</string>
+    <string name="notification_single_body">Buka PAM untuk melihat detail</string>
+    <string name="notification_group_title">%1$d transaksi baru tercatat</string>
+    <string name="notification_group_body">Buka PAM untuk melihat transaksi</string>
+    <string name="widget_description">Ringkasan transaksi Mandiri bulan ini.</string>
+    <string name="widget_preview_description">Pratinjau widget PAM Ringkasan</string>
+    <string name="widget_logged_out">Masuk untuk melihat ringkasan</string>
+    <string name="widget_loading">Memuat ringkasan…</string>
+    <string name="widget_empty">0 transaksi tercatat</string>
+    <string name="widget_error">Ringkasan belum tersedia</string>
+    <string name="widget_updated">Diperbarui %1$s</string>
+    <string name="widget_transactions">transaksi</string>
+    <string name="widget_config_eyebrow">PAM Ringkasan</string>
+    <string name="widget_config_title">Pilih bank untuk widget</string>
+    <string name="widget_config_body">Satu widget menampilkan satu bank. Mandiri tersedia pada tahap ini.</string>
+    <string name="widget_config_preview">Jago dan BRI baru tersedia sebagai pratinjau desain.</string>
+    <string name="widget_config_available">Tersedia</string>
+    <string name="widget_config_unavailable">Pratinjau — belum tersedia</string>
+    <string name="widget_config_confirm">Tambahkan widget</string>
+    <string name="widget_config_cancel">Batal</string>
+    <string name="widget_preview_month">November 2026</string>
+    <string name="widget_preview_count">42 transaksi</string>
+    <string name="widget_preview_subtitle">Ringkasan bulan ini</string>
 </resources>

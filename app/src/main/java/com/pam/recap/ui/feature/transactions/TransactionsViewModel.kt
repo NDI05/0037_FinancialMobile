@@ -13,6 +13,7 @@ import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionFilter
+import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.FinanceRefreshBus
 import com.pam.recap.domain.repository.ServerCategoryJob
 import com.pam.recap.domain.repository.ServerFinanceRepository
@@ -51,6 +52,12 @@ data class TransactionsUiState(
     val selectedDay: LocalDate? = null,
     val category: Category? = null,
     val direction: Direction? = null,
+    /**
+     * Manual vs Livin mail. Kept client-side because the paged search contract has no source
+     * predicate; the chip therefore narrows the rows already loaded and the paging footer stays the
+     * honest way to look for more (documented gap, see STITCH_IMPLEMENTATION_MAP).
+     */
+    val source: TransactionSource? = null,
     val query: String = "",
     val items: List<Transaction> = emptyList(),
     val monthTransactionCount: Int = 0,
@@ -74,14 +81,23 @@ data class TransactionsUiState(
     val scanned: Int = 0,
     val truncated: Boolean = false,
 ) {
+    /**
+     * Rows that survive the source chip. The other predicates are already applied by the query
+     * (locally or by the server), so this is the only dimension filtered at render time.
+     */
+    val visibleItems: List<Transaction>
+        get() = if (source == null) items else items.filter { it.source == source }
+
     /** FR-20: "no data for the month" and "nothing matches the filter" are different states. */
     val isEmptyMonth: Boolean get() = !isLoading && monthTransactionCount == 0 && !hasMore && !isFiltered
 
-    val isNoMatch: Boolean get() = !isLoading && items.isEmpty() && (isFiltered || monthTransactionCount > 0)
+    val isNoMatch: Boolean
+        get() = !isLoading && visibleItems.isEmpty() && (isFiltered || monthTransactionCount > 0)
 
     /** True when any predicate other than the month narrows the result, locally or server-side. */
     val isFiltered: Boolean
-        get() = query.isNotBlank() || category != null || direction != null || selectedDay != null
+        get() = query.isNotBlank() || category != null || direction != null ||
+            selectedDay != null || source != null
 }
 
 /**
@@ -114,12 +130,24 @@ class TransactionsViewModel @Inject constructor(
     private val direction = MutableStateFlow(
         savedStateHandle.get<String>("direction")?.let { runCatching { Direction.valueOf(it) }.getOrNull() },
     )
+    private val source = MutableStateFlow<TransactionSource?>(null)
     private val query = MutableStateFlow("")
     private val refreshTick = MutableStateFlow(0L)
     private val classification = MutableStateFlow(ClassificationState())
 
     private val _state = MutableStateFlow(TransactionsUiState())
     val state: StateFlow<TransactionsUiState> = _state.asStateFlow()
+
+    /**
+     * The filters this instance was *created* with, i.e. the ones a Ringkasan drill-down carried in
+     * its route. The screen uses them to decide that clearing the last one should leave through the
+     * existing back stack instead of leaving an unfiltered list under a filtered route.
+     */
+    val carriedFilters: Set<ActiveTransactionFilter> = buildSet {
+        if (category.value != null) add(ActiveTransactionFilter.CATEGORY)
+        if (direction.value != null) add(ActiveTransactionFilter.DIRECTION)
+        if (selectedDay.value != null) add(ActiveTransactionFilter.DAY)
+    }
 
     /** Bumped for every month/query/category/direction/day/owner change. */
     private val generation = AtomicLong(0)
@@ -184,6 +212,11 @@ class TransactionsViewModel @Inject constructor(
                     )
                 }
             }
+        }
+        viewModelScope.launch {
+            // The source chip does not change the query (the contract has no source predicate), so
+            // it is published straight into the state and re-derived from the loaded rows.
+            source.collect { value -> _state.update { it.copy(source = value) } }
         }
         viewModelScope.launch {
             val filters = combine(
@@ -287,6 +320,7 @@ class TransactionsViewModel @Inject constructor(
             selectedDay = input.day,
             category = input.category,
             direction = input.direction,
+            source = source.value,
             query = input.query,
             items = filtered,
             monthTransactionCount = all.size,
@@ -505,6 +539,7 @@ class TransactionsViewModel @Inject constructor(
             selectedDay = input.day,
             category = input.category,
             direction = input.direction,
+            source = source.value,
             query = input.query,
             items = visible,
             monthTransactionCount = allItems.size,
@@ -613,6 +648,11 @@ class TransactionsViewModel @Inject constructor(
         this.direction.value = if (this.direction.value == direction) null else direction
     }
 
+    /** Cycles Semua → Manual → Email Livin → Semua; re-renders from the rows already loaded. */
+    fun selectSource(value: TransactionSource?) {
+        this.source.value = if (this.source.value == value) null else value
+    }
+
     fun setQuery(value: String) {
         query.value = value
     }
@@ -621,6 +661,7 @@ class TransactionsViewModel @Inject constructor(
         selectedDay.value = null
         category.value = null
         direction.value = null
+        source.value = null
         query.value = ""
     }
 

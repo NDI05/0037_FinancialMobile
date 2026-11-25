@@ -44,6 +44,8 @@ data class OverviewUiState(
     val summary: MonthlySummary? = null,
     val comparison: SummaryComparison? = null,
     val recent: List<Transaction> = emptyList(),
+    /** Every row loaded for the selected month; feeds the bank cards' real Mandiri count. */
+    val monthTransactions: List<Transaction> = emptyList(),
     val connection: GmailConnection? = null,
     val error: AppError? = null,
 ) {
@@ -148,6 +150,7 @@ class OverviewViewModel @Inject constructor(
                                     )
                                 },
                                 recent = recent,
+                                monthTransactions = (rows as? Outcome.Success)?.value?.items.orEmpty(),
                                 error = if (rows is Outcome.Failure) rows.error else null,
                             ),
                         )
@@ -164,6 +167,7 @@ class OverviewViewModel @Inject constructor(
                             summary = comparison.summary,
                             comparison = comparison,
                             recent = rows.sortedByDescending { it.eventAt }.take(RECENT_COUNT),
+                            monthTransactions = rows,
                         )
                     },
                     connections.observe(ownerId),

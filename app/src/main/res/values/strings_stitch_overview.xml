@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stitch overview + bank-card copy. Kept in a separate file so the redesign can merge without
+     renumbering the shared strings.xml. -->
+<resources>
+    <string name="overview_expense_recorded">Pengeluaran tercatat</string>
+    <string name="overview_income_recorded">Pemasukan tercatat</string>
+    <plurals name="overview_recorded_count">
+        <item quantity="one">%1$d transaksi</item>
+        <item quantity="other">%1$d transaksi</item>
+    </plurals>
+
+    <string name="bank_card_mandiri">Mandiri</string>
+    <string name="bank_card_mandiri_product">Livin\' by Mandiri</string>
+    <string name="bank_card_jago">Jago</string>
+    <string name="bank_card_jago_product">Kantong Utama</string>
+    <string name="bank_card_bri">BRI</string>
+    <string name="bank_card_bri_product">BRImo</string>
+    <string name="bank_card_preview">Pratinjau</string>
+    <string name="bank_card_preview_note">Contoh tampilan, bukan data akun</string>
+    <string name="bank_card_period">Periode %1$s</string>
+    <string name="bank_card_data_source">Dari email Livin</string>
+    <string name="bank_card_recorded">tercatat bulan ini</string>
+    <string name="bank_card_carousel">Kartu bank</string>
+    <string name="bank_card_position">Kartu %1$d dari %2$d</string>
+    <string name="bank_card_previous">Kartu bank sebelumnya</string>
+    <string name="bank_card_next">Kartu bank berikutnya</string>
+    <string name="bank_card_select">Pilih kartu %1$s</string>
+</resources>

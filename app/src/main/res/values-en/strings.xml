@@ -293,14 +293,7 @@
     <string name="analysis_stale_dependency_body">This analysis was built from data that has changed since (revision %1$d), even though the month revision number did not move. Regenerate the analysis to match the latest data.</string>
 
 
-    <string name="settings_mailbox_eyebrow">Mailbox</string>
-    <string name="settings_last_import">Last import</string>
-    <string name="settings_last_ai">Last analysis</string>
-    <string name="settings_never">never</string>
-    <string name="settings_scope">Scope</string>
-    <string name="settings_scope_value">Livin email read-only (no write access)</string>
     <string name="settings_manage_mailbox">Manage mailbox</string>
-    <string name="settings_privacy_eyebrow">Consent</string>
     <string name="settings_consent_gmail">Read Livin email</string>
     <string name="settings_consent_ai">AI analysis</string>
     <string name="settings_consent_history">Consent history</string>
@@ -619,7 +612,35 @@
     <string name="gmail_link_watch_until">Automatic watch until</string>
     <string name="gmail_link_never">never</string>
     <string name="gmail_link_browser_missing">No browser is available to open the Gmail consent page.</string>
-    <string name="settings_open_gmail_link">Link Gmail through browser</string>
     <string name="gmail_link_backend_disabled">The PAM server has not enabled Gmail linking, so this feature is not available yet. Try again later.</string>
     <string name="error_category_disabled">AI categorisation is not enabled on this server. You can still record transactions and categorise them manually.</string>
+    <string name="settings_notifications_title">New transaction notifications</string>
+    <string name="settings_notifications_body">Tell me when a new Livin transaction is recorded.</string>
+    <string name="settings_notifications_denied">Notification permission is off. Enable it in system settings so alerts can appear.</string>
+    <string name="settings_notifications_open_settings">Open system settings</string>
+    <string name="notification_channel_name">New transactions</string>
+    <string name="notification_channel_description">Alerts when a new Livin transaction is recorded.</string>
+    <string name="notification_single_title">New transaction recorded</string>
+    <string name="notification_single_body">Open PAM to see the details</string>
+    <string name="notification_group_title">%1$d new transactions recorded</string>
+    <string name="notification_group_body">Open PAM to see the transactions</string>
+    <string name="widget_description">This month\'s Mandiri transaction summary.</string>
+    <string name="widget_preview_description">PAM summary widget preview</string>
+    <string name="widget_logged_out">Sign in to see your summary</string>
+    <string name="widget_loading">Loading summary…</string>
+    <string name="widget_empty">0 transactions recorded</string>
+    <string name="widget_error">Summary is not available yet</string>
+    <string name="widget_updated">Updated %1$s</string>
+    <string name="widget_transactions">transactions</string>
+    <string name="widget_config_eyebrow">PAM Summary</string>
+    <string name="widget_config_title">Choose a bank for the widget</string>
+    <string name="widget_config_body">One widget shows one bank. Mandiri is available at this stage.</string>
+    <string name="widget_config_preview">Jago and BRI are available as design previews only.</string>
+    <string name="widget_config_available">Available</string>
+    <string name="widget_config_unavailable">Preview — not available yet</string>
+    <string name="widget_config_confirm">Add widget</string>
+    <string name="widget_config_cancel">Cancel</string>
+    <string name="widget_preview_month">November 2026</string>
+    <string name="widget_preview_count">42 transactions</string>
+    <string name="widget_preview_subtitle">This month\'s summary</string>
 </resources>

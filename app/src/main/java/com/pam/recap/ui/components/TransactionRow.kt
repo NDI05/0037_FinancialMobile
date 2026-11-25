@@ -33,21 +33,26 @@ import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.ui.theme.GlassBorder
 import com.pam.recap.ui.theme.GlassFill
+import com.pam.recap.ui.theme.IncomeMint
 import com.pam.recap.ui.theme.LabelM
 import com.pam.recap.ui.theme.OnInk
 import com.pam.recap.ui.theme.OnInkFaint
 import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.PamRadius
 import com.pam.recap.ui.theme.PamSpacing
+import com.pam.recap.ui.theme.Surface
+import com.pam.recap.ui.theme.SurfaceLow
 import com.pam.recap.ui.theme.Violet
 import com.pam.recap.ui.theme.TitleM
 import com.pam.recap.ui.theme.TitleS
 import com.pam.recap.ui.theme.WarningAmber
 
 /**
- * One transaction row: circular category glyph, description, meta line, right-aligned amount and a
- * chevron. Direction is expressed by the amount tone *and* the visible "Masuk"/"Keluar" meta, and a
- * low-confidence row carries an explicit marker (FR-24) instead of a silent guess.
+ * One transaction row in the reference's shape: category glyph, description, a meta line that ends
+ * in the visible source (Livin mail or manual entry), and a right-aligned *signed* amount — `+`
+ * green for income, `−` ink for spending — so direction never depends on colour alone. A
+ * low-confidence row carries an explicit marker (FR-24) instead of a silent guess, and an
+ * unconfirmed model suggestion is labelled (FR-25).
  */
 @Composable
 fun TransactionRow(
@@ -63,11 +68,14 @@ fun TransactionRow(
     currency: String = "IDR",
     onClick: (() -> Unit)? = null,
 ) {
+    val isIncome = direction == Direction.CREDIT
+    val shape = RoundedCornerShape(PamRadius.md)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(PamRadius.md))
-            .background(GlassFill)
+            .clip(shape)
+            .background(Surface)
+            .border(1.dp, GlassBorder, shape)
             .then(
                 if (onClick != null) {
                     Modifier.clickable(onClick = onClick)
@@ -82,7 +90,10 @@ fun TransactionRow(
     ) {
         CategoryGlyph(category = category, size = 40.dp)
 
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             Text(
                 text = title,
                 style = TitleS,
@@ -92,7 +103,7 @@ fun TransactionRow(
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
+                horizontalArrangement = Arrangement.spacedBy(PamSpacing.xs),
             ) {
                 Text(
                     text = meta,
@@ -102,50 +113,49 @@ fun TransactionRow(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                if (isLowConfidence) {
-                    Icon(
-                        imageVector = Icons.Rounded.WarningAmber,
-                        contentDescription = null,
-                        tint = WarningAmber,
-                        modifier = Modifier.size(12.dp),
-                    )
-                }
-                if (hasUnconfirmedSuggestion) {
-                    // A model-suggested category the user has not confirmed yet: a distinct label,
-                    // not the low-confidence warning (which is about data quality).
-                    Text(
-                        text = stringResource(com.pam.recap.R.string.status_ai_suggestion),
-                        style = LabelM,
-                        color = Violet,
-                        maxLines = 1,
-                    )
-                }
-                if (isManual) {
-                    // FR-26: a manual entry must be identifiable on every surface.
-                    Text(
-                        text = stringResource(com.pam.recap.R.string.status_manual),
-                        style = LabelM,
-                        color = Violet,
-                        maxLines = 1,
-                    )
-                }
-                if (!com.pam.recap.core.money.IdrFormatter.isIdr(currency)) {
-                    Text(
-                        text = stringResource(com.pam.recap.R.string.non_idr_marker),
-                        style = LabelM,
-                        color = WarningAmber,
-                        maxLines = 1,
-                    )
+                SourceTag(isManual = isManual)
+            }
+            if (isLowConfidence || hasUnconfirmedSuggestion ||
+                !com.pam.recap.core.money.IdrFormatter.isIdr(currency)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
+                ) {
+                    if (isLowConfidence) {
+                        Icon(
+                            imageVector = Icons.Rounded.WarningAmber,
+                            contentDescription = null,
+                            tint = WarningAmber,
+                            modifier = Modifier.size(12.dp),
+                        )
+                    }
+                    if (hasUnconfirmedSuggestion) {
+                        // A model-suggested category the user has not confirmed yet: a distinct
+                        // label, not the low-confidence warning (which is about data quality).
+                        Text(
+                            text = stringResource(com.pam.recap.R.string.status_ai_suggestion),
+                            style = LabelM,
+                            color = Violet,
+                            maxLines = 1,
+                        )
+                    }
+                    if (!com.pam.recap.core.money.IdrFormatter.isIdr(currency)) {
+                        Text(
+                            text = stringResource(com.pam.recap.R.string.non_idr_marker),
+                            style = LabelM,
+                            color = WarningAmber,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         }
 
         Text(
-            text = amountLabel(amount, currency),
+            text = amountWithSign(amount, currency, isIncome),
             style = TitleM.copy(fontFeatureSettings = "tnum"),
-            color = moneyToneColor(
-                if (direction == Direction.CREDIT) MoneyTone.Income else MoneyTone.Expense,
-            ),
+            color = if (isIncome) IncomeMint else OnInk,
             maxLines = 1,
         )
 
@@ -158,6 +168,31 @@ fun TransactionRow(
             )
         }
     }
+}
+
+/** `+Rp…` for income, `−Rp…` for spending; the sign is copy, the colour only reinforces it. */
+private fun amountWithSign(amount: Money, currency: String, isIncome: Boolean): String =
+    (if (isIncome) "+" else "-") + amountLabel(amount, currency)
+
+/**
+ * Where the row came from. Only Livin mail is ingested today, so the email source is named for the
+ * mailbox instead of a generic "Email"; manual entries stay labelled as such (FR-26).
+ */
+@Composable
+private fun SourceTag(isManual: Boolean) {
+    Text(
+        text = stringResource(
+            if (isManual) com.pam.recap.R.string.status_manual else com.pam.recap.R.string.detail_source_email,
+        ),
+        style = LabelM,
+        color = OnInkMuted,
+        maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(PamRadius.pill))
+            .background(SurfaceLow)
+            .border(1.dp, GlassBorder, RoundedCornerShape(PamRadius.pill))
+            .padding(horizontal = PamSpacing.xs, vertical = 1.dp),
+    )
 }
 
 /**

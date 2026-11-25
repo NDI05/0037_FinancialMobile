@@ -1,5 +1,9 @@
 package com.pam.recap.ui.feature.settings
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,17 +28,28 @@ import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pam.recap.R
+import com.pam.recap.data.notification.TransactionNotificationSettings
+import com.pam.recap.data.notification.TransactionNotifications
+import com.pam.recap.ui.components.ConsentSwitchRow
 import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassCard
 import com.pam.recap.ui.components.GlassTopBar
@@ -103,6 +118,81 @@ fun SettingsScreen(
                 subtitle = stringResource(R.string.settings_account_row),
                 onClick = onOpenAccount,
             )
+            val context = LocalContext.current
+            val lifecycleOwner = LocalLifecycleOwner.current
+            val notificationSettings = remember(context) {
+                TransactionNotificationSettings(context)
+            }
+            var notificationsEnabled by remember {
+                mutableStateOf(notificationSettings.isEnabled())
+            }
+            var notificationsDenied by remember {
+                mutableStateOf(
+                    notificationSettings.isEnabled() &&
+                        !TransactionNotifications.canPost(context),
+                )
+            }
+            val permissionLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission(),
+            ) {
+                notificationsDenied = notificationsEnabled &&
+                    !TransactionNotifications.canPost(context)
+            }
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        val enabled = notificationSettings.isEnabled()
+                        notificationsEnabled = enabled
+                        notificationsDenied = enabled && !TransactionNotifications.canPost(context)
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
+            LaunchedEffect(Unit) { TransactionNotifications.ensureChannel(context) }
+
+            ConsentSwitchRow(
+                title = stringResource(R.string.settings_notifications_title),
+                body = stringResource(R.string.settings_notifications_body),
+                checked = notificationsEnabled,
+                onCheckedChange = { checked ->
+                    notificationSettings.setEnabled(checked)
+                    notificationsEnabled = checked
+                    if (checked) {
+                        TransactionNotifications.ensureChannel(context)
+                        if (
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            !TransactionNotifications.hasPermission(context)
+                        ) {
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        notificationsDenied = !TransactionNotifications.canPost(context)
+                    } else {
+                        notificationsDenied = false
+                        TransactionNotifications.cancel(context)
+                    }
+                },
+            )
+            if (notificationsEnabled && notificationsDenied) {
+                Column(verticalArrangement = Arrangement.spacedBy(PamSpacing.xs)) {
+                    Text(
+                        text = stringResource(R.string.settings_notifications_denied),
+                        style = BodyM,
+                        color = OnInkMuted,
+                    )
+                    PillButton(
+                        text = stringResource(R.string.settings_notifications_open_settings),
+                        onClick = {
+                            context.startActivity(
+                                TransactionNotifications.systemSettingsIntent(context),
+                            )
+                        },
+                        style = PillButtonStyle.Ghost,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
             SettingsRow(
                 icon = Icons.Rounded.Shield,
                 title = stringResource(R.string.settings_consent_history),
