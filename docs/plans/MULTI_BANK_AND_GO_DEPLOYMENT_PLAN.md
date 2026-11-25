@@ -54,4 +54,12 @@ Backend **0037-Backend-Financial** tetap terpisah dari Android. Timer polling sa
 4. Sebelum cutover, buktikan backup dan restore database terisolasi. Pindai kompatibilitas migrasi dan rancang rollback binary serta database sesuai kontrak. Tentukan pemilik host, domain, backup, secret, dan jadwal pemeliharaan.
 5. Jika tidak tersedia host dan URL yang memenuhi batas biaya, jalankan UAT lokal dan biarkan deployment 24/7 terbuka sampai pemilik memilih host. Tidak perlu menambah layanan GCP sebagai syarat UAT.
 
+> **Keputusan pemilik 25 November 2026:** karena Vercel Functions membatasi proses latar, pemilik
+> meminta deploy pindah ke host gratis. Kandidat: **OCI Always Free** (rekomendasi, proses 24/7),
+> **Render Free** (cepat, tetapi tidur saat idle), **GCP e2-micro Always Free** (akun sudah ada,
+> egress 1 GB/bulan). Artefak siap di repo backend (`Dockerfile`, `render.yaml`,
+> `deploy/free-host/`); langkah pemilik + batas biaya ada di
+> [runbook host gratis](../delivery/FREE_HOST_DEPLOYMENT_2026-11-25.md). Platform final menunggu
+> akun/VM dibuat pemilik; deploy nyata belum dijalankan.
+
 [Panduan container Go](https://docs.docker.com/guides/golang/) · [Batas Render Free](https://render.com/docs/free) · [Cloud Run dan CPU untuk pekerjaan latar](https://docs.cloud.google.com/run/docs/configuring/billing-settings) · [Oracle Always Free](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm)
