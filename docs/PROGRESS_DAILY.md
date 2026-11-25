@@ -570,9 +570,10 @@ untuk `ImportBatch` dan `FinalizeImportJob`, error finalize ikut dilog, throughp
 bulan menghasilkan **876** transaksi `EMAIL`, classifier drain 22 job pertama (**12 `CLASSIFIED`**,
 **19 `NEEDS_REVIEW`**) dan attempt Azure tercatat di `category_usage` tanpa mengubah plafon biaya.
 Karena job backfill mewarisi jendela 2 jam, antrean awal dipercepat di `fed2547`
-(`CATEGORY_LLM_DRAIN_INTERVAL_SECONDS=60` + pembukaan queue saat backfill selesai): per 11:26 UTC
-**109 transaksi berkategori** dari 876, attempts 80, biaya **USD 0.0097**, sisa 521 job terus
-drain tiap menit.
+(`CATEGORY_LLM_DRAIN_INTERVAL_SECONDS=60` + pembukaan queue saat backfill selesai): antrean awal
+habis ±20 menit; per 11:55 UTC **358 `CLASSIFIED`**, **515 `NEEDS_REVIEW`**, **0 PENDING**, biaya
+**USD 0.0246** dari 205 attempt. `NEEDS_REVIEW` = merchant ambigu/transfer personal, sengaja tidak
+ditebak.
 
 Permintaan UI pemilik dieksekusi di `a2876df`: kartu **Kotak Masuk** dan kartu **Persetujuan** pada
 Settings dihapus karena pengaturan koneksi sudah terpusat di section Akun dan riwayat persetujuan

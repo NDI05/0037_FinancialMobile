@@ -78,8 +78,12 @@ Insiden dan perbaikan (commit backend `3e95727`, sudah di `main`+CI):
   jadi classifier hanya bisa jalan 3 hari sekali. Kini saat bulan backfill terakhir selesai queue
   dibuka ulang (semua job PENDING dibuat due) dan jeda jendela dapat diatur lewat
   `CATEGORY_LLM_DRAIN_INTERVAL_SECONDS` (default tetap 2 jam; host UAT memakai **60 detik**).
-  Sesudah deploy `fed2547`: **109 transaksi berkategori** dan **521 job tersisa** (per 11:26 UTC),
-  biaya tercatat **USD 0.0097** dari 80 attempt, jauh di bawah plafon harian USD 0.10.
+  Sesudah deploy `fed2547`: antrean awal habis dalam ±20 menit. Hasil akhir per 11:55 UTC:
+  **358 transaksi `CLASSIFIED`**, **515 `NEEDS_REVIEW`**, **0 job tersisa**, biaya **USD 0.0246**
+  dari 205 attempt (masih di bawah plafon harian USD 0.10). `NEEDS_REVIEW` bukan kegagalan:
+  label merchant ambigu atau transfer personal memang sengaja tidak dikategorikan otomatis
+  (keputusan manual lewat aksi “Kategorikan dengan AI”/review), sesuai aturan produk agar tidak
+  menebak kategori.
 
 ### Operasional: polling, backup, rollback
 
