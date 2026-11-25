@@ -10,7 +10,9 @@ diverifikasi siap (`scripts/verify/uat_readiness.sh` → exit 0; backend `00bb51
 > diskalakan, 10 baris MANUAL utuh). Karena itu, setelah membuka aplikasi, **refresh daftar
 > Transaksi/Ringkasan** dan pastikan nominal email Livin sudah sesuai (tidak lagi 100x kecil).
 > Analisis lama yang tersimpan perlu dibuat ulang. Sisa gate pemilik tidak berubah; lihat
-> [verifikasi ulang gate 25 Nov](GATE_RECHECK_2026-11-25.md).
+> [verifikasi ulang gate 25 Nov](GATE_RECHECK_2026-11-25.md). Untuk G36, ikuti langkah praktis di
+> [runbook G36](OWNER_G36_RUNBOOK_2026-11-25.md) (prasyarat, Run literal, onboarding Gmail, email
+> Livin alami, dan bukti yang perlu dikirim).
 
 ## 1. G36 — UAT SSO Google + tombol Run Android Studio
 

@@ -39,8 +39,9 @@ menargetkan libSQL. Sebelum provisioning:
    `libsql://` (bukan URL engine baru yang memerlukan SDK lain).
 2. Jalankan `backend` dengan `DATABASE_URL` + `DATABASE_AUTH_TOKEN` dari environment; jangan pernah
    menaruh token di APK, repo, log, atau laporan.
-3. Boot dua kali dan periksa `schema_migrations` 1–3; ulangi acceptance
-   [`schemaV04.test.ts`](../backend/test/schemaV04.test.ts) pada database uji.
+3. Boot dua kali dan periksa `schema_migrations` 1–22; jalankan tes migrasi backend Go
+   (`./scripts/go.sh test ./internal/store -count=1`, termasuk `migration_amount_repair_test.go`)
+   pada database uji.
 4. Jika dashboard hanya menawarkan engine baru dengan SDK berbeda, **jangan** mengganti dependency
    secara diam-diam. Laporkan dependency konkret dan tunda cloud acceptance; pekerjaan lokal tetap
    memakai `file:`.
