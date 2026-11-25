@@ -533,3 +533,25 @@ Git per minggu (Minggu 1: 16–22 Nov, Minggu 2: 23–29 Nov; data sampai 24 Nov
 yang dapat diverifikasi dan penanda status implementasi/uji/parsial. Tabel progres harian di
 bawah tetap menjadi detail per tanggal dan gate terbuka. README backend Go mendapat bagian yang
 sama untuk riwayat server, termasuk penjelasan repo Go berdiri sendiri sejak `327d876`.
+
+### Deploy host sementara Azure — 25 November 2026 (WIB)
+
+Oracle Cloud Free Tier berhasil didaftarkan pemilik, tetapi pembuatan instance selalu gagal
+`Out of capacity` untuk `VM.Standard.A1.Flex` maupun `VM.Standard.E2.1.Micro`. Atas keputusan
+pemilik, backend sementara dideploy ke **Azure for Students** (credit ±USD 100, tanpa uang tunai
+keluar). Policy subscription mahasiswa hanya mengizinkan region malaysiawest, centralindia,
+eastasia, japanwest, indonesiacentral; `Standard_B1s` tidak tersedia di semua region itu, sehingga
+dipakai **`Standard_B2ats_v2`** (2 vCPU, 1 GiB) di **Indonesia Central** (±USD 7.81/bulan).
+
+Hasil: VM `pam-api-vm` + systemd + Caddy TLS untuk `https://pam-70-153-86-163.sslip.io`,
+DB Turso terpisah `pam-azure-uat` (22 migrasi, tabel terbentuk), swap 1 GB, secret hanya di
+`/etc/pam/pam-api.env` mode 600, AI Azure aktif dengan plafon analisis USD 0.25/hari dan
+kategorisasi USD 0.10/hari + USD 2.00/bulan, `GMAIL_ENABLED=false` sampai redirect didaftarkan.
+Verifikasi: `/healthz` **200**, `/readyz` **200**, TLS Let's Encrypt valid 25 Nov 2026–23 Feb 2027,
+APK debug dibangun ulang menunjuk host Azure dan terpasang di HP fisik
+(sha256 `dc1f12be…`). Budget alert `pam-host-monthly-15usd` aktif.
+
+Sisa aksi pemilik: daftarkan redirect `https://pam-70-153-86-163.sslip.io/v1/gmail/connect/callback`
+di Google Cloud Console, lalu uji G36 dari tombol Run Android Studio (local.properties sudah
+menunjuk host Azure). Deploy produksi/merge tetap milik pemilik. Bukti:
+[AZURE_HOST_DEPLOYMENT](delivery/AZURE_HOST_DEPLOYMENT_2026-11-25.md).
