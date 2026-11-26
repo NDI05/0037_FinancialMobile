@@ -196,6 +196,7 @@ fun AnalysisScreen(
 
                     analysis == null -> GenerateCard(
                         canGenerate = state.canGenerate,
+                        hasData = state.summary?.hasData == true,
                         isGenerating = state.isGenerating,
                         errorMessage = state.error?.let { stringResource(appErrorRes(it)) },
                         usesServerAnalysis = viewModel.usesServerAnalysis,
@@ -607,6 +608,7 @@ private fun ConsentGateCard(
 @Composable
 private fun GenerateCard(
     canGenerate: Boolean,
+    hasData: Boolean,
     isGenerating: Boolean,
     errorMessage: String?,
     usesServerAnalysis: Boolean,
@@ -643,6 +645,12 @@ private fun GenerateCard(
             style = BodyM,
             color = OnInkMuted,
         )
+        if (!hasData) {
+            // A non-empty consent state with an empty month used to leave the CTA disabled with no
+            // explanation; name the actual blocker instead of looking broken.
+            Spacer(modifier = Modifier.height(PamSpacing.sm))
+            NoticeBanner(text = stringResource(R.string.analysis_no_data))
+        }
         if (errorMessage != null) {
             Spacer(modifier = Modifier.height(PamSpacing.sm))
             NoticeBanner(text = errorMessage)

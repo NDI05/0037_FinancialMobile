@@ -8,8 +8,12 @@ import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.CategoryOrigin
 import com.pam.recap.domain.model.CategoryQueuePhase
 import com.pam.recap.domain.model.CategoryQueueSnapshot
+import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.Transaction
+import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.ServerFinanceRepository
+import com.pam.recap.domain.repository.TransactionRepository
+import kotlinx.coroutines.yield
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,11 +24,28 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Instant
 
-/** Bounded slice of the queue the client may offer in one round. */
-private const val ENQUEUE_LIMIT = 50
+/** The category-job endpoint accepts at most five ids per call (backend `categoryllm.MaxCandidates`). */
+private const val CLASSIFY_BATCH = 5
 
-/** How many months back the client looks for uncategorized candidates. */
-private const val ENQUEUE_MONTHS = 2
+/** The enqueue endpoint accepts at most fifty ids per call. */
+private const val ENQUEUE_BATCH = 50
+
+/** How many months back the client looks for uncategorized candidates (the rolling year). */
+private const val SCAN_MONTHS = 12
+
+/**
+ * Outcome of one owner-triggered sweep. [processed] can be lower than [total] when the server budget
+ * or the connection stops the run; the remaining rows stay eligible for the next sweep.
+ */
+data class CategorySweepResult(
+    val total: Int,
+    val processed: Int,
+    val classified: Int,
+    val needsReview: Int,
+    val failed: Int,
+    val reviewReasons: List<String> = emptyList(),
+    val stoppedError: AppError? = null,
+)
 
 /**
  * Process-wide, owner-scoped status for the automatic category queue. The status panel reads it; the
@@ -56,6 +77,10 @@ class AutoCategoryUseCase @Inject constructor(
     private val serverFinance: ServerFinanceRepository,
     private val status: CategoryStatusHolder,
     private val clock: ClockProvider,
+    /** Optional in legacy tests; production binds the ledger used to gate the classifier call. */
+    private val consents: ConsentRepository? = null,
+    /** Optional in legacy tests; production binds the local store used for per-import sweeps. */
+    private val transactions: TransactionRepository? = null,
 ) {
     private val gate = Mutex()
     private val running = AtomicBoolean(false)
@@ -79,18 +104,153 @@ class AutoCategoryUseCase @Inject constructor(
         if (!running.compareAndSet(false, true)) return null
         return try {
             gate.withLock {
-                val candidates = eligibleCandidates(ownerId, clock.now())
+                val candidates = when (val scan = scanEligible(ownerId, clock.now())) {
+                    is Outcome.Failure -> return@withLock null
+                    is Outcome.Success -> scan.value
+                }
                 if (candidates.isEmpty()) return@withLock 0
-                when (val enqueued = serverFinance.enqueueCategories(ownerId, candidates)) {
-                    is Outcome.Failure -> null
-                    is Outcome.Success -> {
-                        status.update { it.copy(pending = enqueued.value.pending) }
-                        enqueued.value.queued
+                // The contract caps one enqueue request at 50 ids; send every remaining candidate
+                // instead of silently leaving the tail of the month unqueued.
+                var queued = 0
+                for (chunk in candidates.chunked(ENQUEUE_BATCH)) {
+                    when (val enqueued = serverFinance.enqueueCategories(ownerId, chunk)) {
+                        is Outcome.Failure -> return@withLock null
+                        is Outcome.Success -> {
+                            queued += enqueued.value.queued
+                            status.update { it.copy(pending = enqueued.value.pending) }
+                        }
                     }
                 }
+                queued
             }
         } finally {
             running.set(false)
+        }
+    }
+
+    /**
+     * Owner-triggered sweep: classify **every** eligible row, five ids per request, using the manual
+     * job endpoint that bypasses the two-hour drain window. The server still batches unique merchants
+     * and fans cached labels out to duplicate rows, so the provider cost is per merchant, not per row.
+     * Budget or transport failures stop the sweep honestly and leave the tail queued.
+     */
+    suspend fun classifyAll(
+        ownerId: String,
+        onProgress: (processed: Int, total: Int) -> Unit = { _, _ -> },
+    ): Outcome<CategorySweepResult> {
+        if (!serverFinance.isEnabled) return Outcome.Failure(AppError.Configuration("backend_disabled"))
+        // Classification has its own consent purpose; AI analysis consent does not imply it.
+        val consent = consents
+        if (consent != null && !consent.hasGranted(ownerId, ConsentPurpose.AI_CATEGORIZATION)) {
+            return Outcome.Failure(AppError.Validation("ai_category_consent_required"))
+        }
+        return gate.withLock {
+            val ids = when (val scan = scanEligible(ownerId, clock.now())) {
+                is Outcome.Failure -> return@withLock Outcome.Failure(scan.error)
+                is Outcome.Success -> scan.value
+            }
+            var processed = 0
+            var classified = 0
+            var needsReview = 0
+            var failed = 0
+            val reviewReasons = mutableListOf<String>()
+            onProgress(0, ids.size)
+            for (batch in ids.chunked(CLASSIFY_BATCH)) {
+                when (val result = serverFinance.classifyTransactions(ownerId, batch)) {
+                    is Outcome.Failure -> {
+                        return@withLock Outcome.Success(
+                            CategorySweepResult(
+                                total = ids.size,
+                                processed = processed,
+                                classified = classified,
+                                needsReview = needsReview,
+                                failed = failed,
+                                reviewReasons = reviewReasons.distinct(),
+                                stoppedError = result.error,
+                            ),
+                        )
+                    }
+                    is Outcome.Success -> {
+                        processed += batch.size
+                        for (job in result.value) {
+                            when (job.state) {
+                                "CLASSIFIED" -> classified++
+                                "NEEDS_REVIEW" -> needsReview++
+                                "FAILED" -> failed++
+                            }
+                            job.reasonCode?.let { reviewReasons += it }
+                        }
+                        onProgress(processed, ids.size)
+                    }
+                }
+                yield()
+            }
+            Outcome.Success(
+                CategorySweepResult(
+                    total = ids.size,
+                    processed = processed,
+                    classified = classified,
+                    needsReview = needsReview,
+                    failed = failed,
+                    reviewReasons = reviewReasons.distinct(),
+                ),
+            )
+        }
+    }
+
+    /**
+     * Categorize the rows a just-acknowledged import produced, without waiting for the two-hour
+     * queue window. Ids are read from the local run snapshot, so only fresh rows are sent.
+     */
+    suspend fun classifyImportJob(ownerId: String, importJobId: String): Outcome<CategorySweepResult>? {
+        val local = transactions ?: return null
+        if (!serverFinance.isEnabled) return null
+        val consent = consents
+        if (consent != null && !consent.hasGranted(ownerId, ConsentPurpose.AI_CATEGORIZATION)) {
+            return Outcome.Failure(AppError.Validation("ai_category_consent_required"))
+        }
+        val ids = runCatching { local.listByImportJob(ownerId, importJobId) }
+            .getOrDefault(emptyList())
+            .filter(::isEligible)
+            .map { it.id }
+            .distinct()
+        if (ids.isEmpty()) return Outcome.Success(CategorySweepResult(0, 0, 0, 0, 0))
+        return gate.withLock {
+            var processed = 0
+            var classified = 0
+            var needsReview = 0
+            var failed = 0
+            val reviewReasons = mutableListOf<String>()
+            for (batch in ids.chunked(CLASSIFY_BATCH)) {
+                when (val result = serverFinance.classifyTransactions(ownerId, batch)) {
+                    is Outcome.Failure -> return@withLock Outcome.Success(
+                        CategorySweepResult(
+                            total = ids.size,
+                            processed = processed,
+                            classified = classified,
+                            needsReview = needsReview,
+                            failed = failed,
+                            reviewReasons = reviewReasons.distinct(),
+                            stoppedError = result.error,
+                        ),
+                    )
+                    is Outcome.Success -> {
+                        processed += batch.size
+                        for (job in result.value) {
+                            when (job.state) {
+                                "CLASSIFIED" -> classified++
+                                "NEEDS_REVIEW" -> needsReview++
+                                "FAILED" -> failed++
+                            }
+                            job.reasonCode?.let { reviewReasons += it }
+                        }
+                    }
+                }
+                yield()
+            }
+            Outcome.Success(
+                CategorySweepResult(ids.size, processed, classified, needsReview, failed, reviewReasons.distinct()),
+            )
         }
     }
 
@@ -143,25 +303,37 @@ class AutoCategoryUseCase @Inject constructor(
      * transfer, and a debit/credit row the server may classify. Personal counterparties are filtered
      * again server-side; the client only narrows the request.
      */
-    suspend fun eligibleCandidates(ownerId: String, now: Instant): List<String> {
+    suspend fun eligibleCandidates(ownerId: String, now: Instant): List<String> =
+        when (val scan = scanEligible(ownerId, now)) {
+            is Outcome.Success -> scan.value
+            is Outcome.Failure -> emptyList()
+        }
+
+    /**
+     * Every eligible row in the rolling year, deduplicated across month/page boundaries. There is no
+     * client-side cap: leaving rows out was why only the first five (previously) or fifty were
+     * categorized. The caller batches to the endpoint limits.
+     */
+    private suspend fun scanEligible(
+        ownerId: String,
+        now: Instant,
+    ): Outcome<List<String>> {
         val month = JakartaMonth.of(now)
-        // A row must be offered once even when the page cursor repeats it across months.
         val ids = LinkedHashSet<String>()
-        for (offset in 0 until ENQUEUE_MONTHS) {
+        for (offset in 0 until SCAN_MONTHS) {
             val target = month.minusMonths(offset)
             var page: String? = null
             do {
                 val result = serverFinance.listMonth(ownerId, target, limit = 100, cursor = page)
-                if (result is Outcome.Failure) return ids.toList()
-                val items = (result as Outcome.Success).value.items
-                for (tx in items) {
+                if (result is Outcome.Failure) return Outcome.Failure(result.error)
+                val pageResult = result as Outcome.Success
+                for (tx in pageResult.value.items) {
                     if (isEligible(tx)) ids += tx.id
-                    if (ids.size >= ENQUEUE_LIMIT) return ids.toList()
                 }
-                page = result.value.nextCursor
+                page = pageResult.value.nextCursor
             } while (page != null)
         }
-        return ids.toList()
+        return Outcome.Success(ids.toList())
     }
 
     private fun isEligible(tx: Transaction): Boolean {

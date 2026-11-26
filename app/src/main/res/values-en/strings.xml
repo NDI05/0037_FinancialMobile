@@ -439,7 +439,6 @@
     <string name="consent_category_body">A sanitized business merchant name (max 120 characters), direction, method and category codes are sent to Microsoft Azure (GlobalStandard) for a category suggestion. No amount, date, email body, note, message ID or personal data is sent. GlobalStandard may process outside Japan West; this is not a guarantee of Indonesia-only processing or zero retention. Declining does not block import or summaries.</string>
     <string name="settings_consent_category">Azure merchant categorization</string>
     <string name="transactions_classify_ai">Categorize with AI</string>
-    <string name="transactions_classify_none">No eligible uncategorized transactions.</string>
     <string name="transactions_classify_result">Categorization result: %1$s</string>
     <string name="transactions_classify_review_merchant_not_identifiable">Needs review: the email only contains a reference number, not a merchant name. Pick a category manually.</string>
     <string name="transactions_classify_review_merchant_missing">Needs review: the email has no merchant name. Pick a category manually.</string>
@@ -644,4 +643,18 @@
     <string name="widget_preview_count">42 transactions</string>
     <string name="widget_preview_subtitle">This month\'s summary</string>
     <string name="update_status_last_success_short">Last: %1$s</string>
+
+    <string name="transactions_classify_preparing">Preparing transactions…</string>
+    <string name="transactions_classify_progress">Categorizing %1$d of %2$d transactions…</string>
+    <string name="transactions_classify_consent">AI categorization consent is off. Turn on the AI categorization switch in Settings › App access.</string>
+    <string name="transactions_classify_open_settings">Open Settings</string>
+    <string name="transactions_classify_local_pending">This transaction is stored only on the device and is not known to the server yet. Sync Gmail first, then categorize again.</string>
+    <string name="transactions_classify_partial">The sweep stopped at %1$d of %2$d transactions. The rest will be retried when you tap Categorize with AI.</string>
+    <string name="transactions_classify_done">%1$d transactions processed by AI.</string>
+    <string name="settings_section_access">App access</string>
+    <string name="settings_access_notifications_body">Allow local notifications for new transactions.</string>
+    <string name="settings_access_history_body">See the Gmail, analysis, and categorization consent ledger.</string>
+    <string name="analysis_no_data">Analysis needs transactions in this month. Sync Gmail or add a transaction first, then reopen Analysis.</string>
+    <string name="transactions_classify_none">No transactions are eligible for AI categorization.</string>
+    <string name="transactions_classify_manual">Manual transactions left as "Uncategorized" are not sent to AI. Pick a category from the transaction detail.</string>
 </resources>

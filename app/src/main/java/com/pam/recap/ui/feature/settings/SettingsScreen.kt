@@ -32,12 +32,10 @@ import androidx.compose.material.icons.rounded.Label
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Widgets
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -62,7 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pam.recap.R
 import com.pam.recap.data.notification.TransactionNotificationSettings
 import com.pam.recap.data.notification.TransactionNotifications
-import com.pam.recap.domain.model.Consent
+import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.ui.components.MoneyTone
 import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
@@ -141,8 +139,6 @@ fun SettingsScreen(
     }
     LaunchedEffect(Unit) { TransactionNotifications.ensureChannel(context) }
 
-    var confirmingGmailDisconnect by remember { mutableStateOf(false) }
-    val connected = state.connection?.state?.grantsAccess == true
     val mailbox = state.connection?.mailboxLabel
 
     PamScaffold(
@@ -201,130 +197,35 @@ fun SettingsScreen(
                 }
             }
 
-            // Koneksi Gmail -------------------------------------------------------------
-            SettingsSection(title = stringResource(R.string.settings_section_gmail)) {
+            // Akses aplikasi ---------------------------------------------------------------
+            // The consent ledger is the only place decisions are recorded, so the switches live
+            // here next to the notification toggle instead of in three separate sections. Gmail is
+            // connected from "Akun Google" above, so no duplicate KONEKSI GMAIL card remains.
+            SettingsSection(title = stringResource(R.string.settings_section_access)) {
                 SettingsCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.settings_gmail_card_title),
-                                style = TitleM,
-                                color = OnInk,
-                            )
-                            Text(
-                                text = stringResource(R.string.settings_gmail_readonly),
-                                style = BodyS,
-                                color = OnInkMuted,
-                            )
-                        }
-                        StatusBadge(
-                            text = if (connected) {
-                                stringResource(R.string.settings_notif_on)
-                            } else {
-                                stringResource(R.string.settings_gmail_disconnected)
-                            },
-                            tone = if (connected) BadgeTone.Success else BadgeTone.Neutral,
-                        )
-                    }
-                    Spacer(Modifier.height(PamSpacing.sm))
-                    PillButton(
-                        text = if (connected) {
-                            stringResource(R.string.gmail_link_disconnect)
-                        } else {
-                            stringResource(R.string.gmail_link_connect)
-                        },
-                        onClick = {
-                            if (connected) confirmingGmailDisconnect = true else onOpenAccount()
-                        },
-                        style = PillButtonStyle.Secondary,
-                        enabled = !state.isBusy,
-                        loading = state.isBusy,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-
-            // Izin AI -------------------------------------------------------------------
-            // The decisions themselves are recorded on the consent surface; these rows show the
-            // recorded state and open the consent history. Nothing is toggled locally.
-            SettingsSection(title = stringResource(R.string.settings_section_ai)) {
-                SettingsCard {
-                    AiConsentRow(
-                        title = stringResource(R.string.settings_ai_categorization),
-                        body = stringResource(R.string.settings_ai_categorization_sub),
-                        onClick = onOpenConsentHistory,
-                    )
-                    SectionDivider()
-                    AiConsentRow(
-                        title = stringResource(R.string.settings_ai_analysis),
-                        body = stringResource(R.string.settings_ai_analysis_sub),
-                        onClick = onOpenConsentHistory,
-                        status = state.aiConsent,
-                    )
-                    SectionDivider()
-                    LinkRow(
-                        icon = Icons.Rounded.Shield,
-                        title = stringResource(R.string.settings_consent_history),
-                        body = stringResource(R.string.settings_consent_history_body),
-                        onClick = onOpenConsentHistory,
-                    )
-                }
-            }
-
-            // Notifikasi -----------------------------------------------------------------
-            SettingsSection(title = stringResource(R.string.settings_section_notifications)) {
-                SettingsCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.settings_notifications_title),
-                                style = TitleM,
-                                color = OnInk,
-                            )
-                            Text(
-                                text = stringResource(R.string.settings_notifications_body),
-                                style = BodyS,
-                                color = OnInkMuted,
-                            )
-                        }
-                        Switch(
-                            checked = notificationsEnabled,
-                            onCheckedChange = { checked ->
-                                notificationSettings.setEnabled(checked)
-                                notificationsEnabled = checked
-                                if (checked) {
-                                    TransactionNotifications.ensureChannel(context)
-                                    if (
-                                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                        !TransactionNotifications.hasPermission(context)
-                                    ) {
-                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    }
-                                    notificationsDenied = !TransactionNotifications.canPost(context)
-                                } else {
-                                    notificationsDenied = false
-                                    TransactionNotifications.cancel(context)
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.settings_notifications_title),
+                        body = stringResource(R.string.settings_access_notifications_body),
+                        checked = notificationsEnabled,
+                        onCheckedChange = { checked ->
+                            notificationSettings.setEnabled(checked)
+                            notificationsEnabled = checked
+                            if (checked) {
+                                TransactionNotifications.ensureChannel(context)
+                                if (
+                                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                    !TransactionNotifications.hasPermission(context)
+                                ) {
+                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                 }
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = OnPrimary,
-                                checkedTrackColor = Primary,
-                                checkedBorderColor = Primary,
-                                uncheckedThumbColor = Surface,
-                                uncheckedTrackColor = SurfaceContainer,
-                                uncheckedBorderColor = OnInkFaint,
-                            ),
-                        )
-                    }
-                    Spacer(Modifier.height(PamSpacing.sm))
+                                notificationsDenied = !TransactionNotifications.canPost(context)
+                            } else {
+                                notificationsDenied = false
+                                TransactionNotifications.cancel(context)
+                            }
+                        },
+                    )
+                    Spacer(Modifier.height(PamSpacing.xs))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -336,11 +237,7 @@ fun SettingsScreen(
                             } else {
                                 stringResource(R.string.settings_notif_off)
                             },
-                            tone = if (notificationsEnabled) {
-                                BadgeTone.Success
-                            } else {
-                                BadgeTone.Neutral
-                            },
+                            tone = if (notificationsEnabled) BadgeTone.Success else BadgeTone.Neutral,
                         )
                         Spacer(Modifier.weight(1f))
                         Text(
@@ -364,6 +261,34 @@ fun SettingsScreen(
                             tone = MoneyTone.Expense,
                         )
                     }
+
+                    SectionDivider()
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.settings_ai_categorization),
+                        body = stringResource(R.string.settings_ai_categorization_sub),
+                        checked = state.categoryConsent?.isGranted == true,
+                        enabled = state.consentBusyPurpose == null,
+                        onCheckedChange = {
+                            viewModel.setConsent(ConsentPurpose.AI_CATEGORIZATION, it)
+                        },
+                    )
+                    SectionDivider()
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.settings_ai_analysis),
+                        body = stringResource(R.string.settings_ai_analysis_sub),
+                        checked = state.aiConsent?.isGranted == true,
+                        enabled = state.consentBusyPurpose == null,
+                        onCheckedChange = {
+                            viewModel.setConsent(ConsentPurpose.AI_PROCESSING, it)
+                        },
+                    )
+                    SectionDivider()
+                    LinkRow(
+                        icon = Icons.Rounded.Shield,
+                        title = stringResource(R.string.settings_consent_history),
+                        body = stringResource(R.string.settings_access_history_body),
+                        onClick = onOpenConsentHistory,
+                    )
                 }
             }
 
@@ -571,42 +496,6 @@ fun SettingsScreen(
         }
     }
 
-    if (confirmingGmailDisconnect) {
-        AlertDialog(
-            onDismissRequest = { confirmingGmailDisconnect = false },
-            title = {
-                Text(
-                    text = stringResource(R.string.gmail_link_disconnect_title),
-                    style = TitleM,
-                    color = OnInk,
-                )
-            },
-            text = {
-                Text(
-                    text = stringResource(R.string.gmail_link_disconnect_body),
-                    style = BodyM,
-                    color = OnInkMuted,
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmingGmailDisconnect = false
-                        viewModel.disconnect()
-                    },
-                ) {
-                    Text(stringResource(R.string.gmail_link_disconnect))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmingGmailDisconnect = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            },
-            containerColor = Surface,
-            shape = RoundedCornerShape(PamRadius.xl),
-        )
-    }
 }
 
 @Composable
@@ -730,33 +619,37 @@ private fun SectionDivider() {
 }
 
 @Composable
-private fun AiConsentRow(
+private fun SettingsSwitchRow(
     title: String,
     body: String,
-    onClick: () -> Unit,
-    status: Consent? = null,
+    checked: Boolean,
+    enabled: Boolean = true,
+    onCheckedChange: (Boolean) -> Unit,
 ) {
-    val suffix = status?.let {
-        " · " + if (it.isGranted) {
-            stringResource(R.string.settings_notif_on)
-        } else {
-            stringResource(R.string.settings_notif_off)
-        }
-    }.orEmpty()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(PamRadius.sm))
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(vertical = PamSpacing.xs),
+            .padding(vertical = PamSpacing.xxs),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = TitleM, color = OnInk)
-            Text(text = body + suffix, style = BodyS, color = OnInkMuted)
+            Text(text = body, style = BodyS, color = OnInkMuted)
         }
-        Chevron()
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = OnPrimary,
+                checkedTrackColor = Primary,
+                checkedBorderColor = Primary,
+                uncheckedThumbColor = Surface,
+                uncheckedTrackColor = SurfaceContainer,
+                uncheckedBorderColor = OnInkFaint,
+            ),
+        )
     }
 }
 

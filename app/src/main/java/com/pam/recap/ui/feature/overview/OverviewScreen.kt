@@ -58,6 +58,8 @@ import com.pam.recap.ui.components.MoneyTone
 import com.pam.recap.ui.components.MonthSelector
 import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
+import com.pam.recap.ui.components.PillButton
+import com.pam.recap.ui.components.PillButtonStyle
 import com.pam.recap.ui.components.TransactionRow
 import com.pam.recap.ui.components.categoryColor
 import com.pam.recap.ui.components.categoryIcon
@@ -245,9 +247,33 @@ fun OverviewScreen(
                     }
                 } else if (state.error != null) {
                     item {
-                        NoticeBanner(
-                            text = stringResource(appErrorRes(requireNotNull(state.error))),
-                        )
+                        // Same connection failure treatment as Transaksi: centred copy and CTA.
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = PamSpacing.lg, vertical = PamSpacing.xl),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.transactions_retry_banner_title),
+                                style = TitleM,
+                                color = OnInk,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(PamSpacing.xs))
+                            Text(
+                                text = stringResource(appErrorRes(requireNotNull(state.error))),
+                                style = BodyM,
+                                color = OnInkMuted,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(PamSpacing.md))
+                            PillButton(
+                                text = stringResource(R.string.action_retry),
+                                onClick = viewModel::retry,
+                                style = PillButtonStyle.Secondary,
+                            )
+                        }
                     }
                 }
             }

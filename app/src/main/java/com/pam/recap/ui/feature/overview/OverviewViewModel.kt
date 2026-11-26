@@ -205,6 +205,11 @@ class OverviewViewModel @Inject constructor(
         return Outcome.Success(items)
     }
 
+    /** Re-emits the month so a failed summary request can be retried without leaving the tab. */
+    fun retry() {
+        refreshTick.update { it + 1 }
+    }
+
     fun previousMonth() {
         val current = month.value ?: return
         if (!window().canGoEarlier(current)) return

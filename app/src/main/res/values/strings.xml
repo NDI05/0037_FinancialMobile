@@ -465,7 +465,6 @@
     <string name="consent_category_body">Nama merchant usaha yang tersanitasi (maksimal 120 karakter), arah, metode, dan kode kategori dikirim ke Microsoft Azure (GlobalStandard) untuk saran kategori. Tidak ada nominal, tanggal, isi email, catatan, ID pesan, atau data pribadi. GlobalStandard dapat memproses di luar Japan West; ini bukan jaminan lokasi Indonesia atau zero-retention. Menolak tidak menghalangi impor/ringkasan.</string>
     <string name="settings_consent_category">Kategorisasi merchant Azure</string>
     <string name="transactions_classify_ai">Kategorikan dengan AI</string>
-    <string name="transactions_classify_none">Tidak ada transaksi uncategorized yang bisa diproses.</string>
     <string name="transactions_classify_result">Hasil kategorisasi: %1$s</string>
     <string name="transactions_classify_review_merchant_not_identifiable">Perlu tinjauan: email hanya memuat nomor referensi, bukan nama merchant. Pilih kategori secara manual.</string>
     <string name="transactions_classify_review_merchant_missing">Perlu tinjauan: email tidak memuat nama merchant. Pilih kategori secara manual.</string>
@@ -667,4 +666,18 @@
     <string name="widget_preview_count">42 transaksi</string>
     <string name="widget_preview_subtitle">Ringkasan bulan ini</string>
     <string name="update_status_last_success_short">Terakhir: %1$s</string>
+
+    <string name="transactions_classify_preparing">Menyiapkan transaksi…</string>
+    <string name="transactions_classify_progress">Mengategorikan %1$d dari %2$d transaksi…</string>
+    <string name="transactions_classify_consent">Izin Kategorisasi AI belum aktif. Aktifkan switch Kategorisasi AI di Pengaturan › Akses aplikasi.</string>
+    <string name="transactions_classify_open_settings">Buka Pengaturan</string>
+    <string name="transactions_classify_local_pending">Transaksi ini baru tersimpan di perangkat dan belum diakui server. Sinkronkan Gmail dulu, lalu kategorikan lagi.</string>
+    <string name="transactions_classify_partial">Sweep berhenti di %1$d dari %2$d transaksi. Sisa transaksi akan dicoba lagi saat Anda menekan Kategorikan AI.</string>
+    <string name="transactions_classify_done">%1$d transaksi selesai diproses AI.</string>
+    <string name="settings_section_access">Akses aplikasi</string>
+    <string name="settings_access_notifications_body">Izinkan notifikasi lokal untuk transaksi baru.</string>
+    <string name="settings_access_history_body">Lihat catatan izin Gmail, analisis, dan kategorisasi.</string>
+    <string name="analysis_no_data">Analisis butuh transaksi pada bulan ini. Sinkronkan Gmail atau tambahkan transaksi dulu, lalu buka Analisis lagi.</string>
+    <string name="transactions_classify_none">Tidak ada transaksi yang memenuhi syarat kategorisasi AI.</string>
+    <string name="transactions_classify_manual">Transaksi manual yang dibiarkan "Belum berkategori" tidak dikirim ke AI. Pilih kategori lewat detail transaksi.</string>
 </resources>

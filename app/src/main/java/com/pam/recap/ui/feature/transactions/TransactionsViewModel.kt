@@ -19,6 +19,8 @@ import com.pam.recap.domain.repository.ServerCategoryJob
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.repository.TransactionRepository
+import com.pam.recap.domain.usecase.AutoCategoryUseCase
+import com.pam.recap.domain.usecase.CategorySweepResult
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
 import com.pam.recap.ui.components.DayStripCell
 import com.pam.recap.ui.selection.ActiveMonthStore
@@ -72,6 +74,11 @@ data class TransactionsUiState(
      * maps each code to localized copy; the codes themselves are never shown to the owner.
      */
     val classificationReviewReasons: List<String> = emptyList(),
+    /** Progress of the owner-triggered sweep, so a long run never looks frozen. */
+    val classificationProcessed: Int = 0,
+    val classificationTotal: Int = 0,
+    /** The classifier purpose itself is missing; the screen points at the Settings switch. */
+    val classificationConsentRequired: Boolean = false,
     /** Server mode pages the month instead of reading one local snapshot (S2.4). */
     val isServerMode: Boolean = false,
     val isLoadingMore: Boolean = false,
@@ -120,6 +127,7 @@ class TransactionsViewModel @Inject constructor(
     private val activeMonth: ActiveMonthStore = ActiveMonthStore(),
     private val clock: ClockProvider = SystemClockProvider(),
     private val server: ServerFinanceRepository? = null,
+    private val autoCategory: AutoCategoryUseCase? = null,
 ) : ViewModel() {
 
     private val month = MutableStateFlow<JakartaMonth?>(null)
@@ -209,6 +217,9 @@ class TransactionsViewModel @Inject constructor(
                         classificationStatus = classifier.status,
                         classificationError = classifier.error,
                         classificationReviewReasons = classifier.reviewReasons,
+                        classificationProcessed = classifier.processed,
+                        classificationTotal = classifier.total,
+                        classificationConsentRequired = classifier.consentRequired,
                     )
                 }
             }
@@ -329,6 +340,9 @@ class TransactionsViewModel @Inject constructor(
             classificationStatus = classifier.status,
             classificationError = classifier.error,
             classificationReviewReasons = classifier.reviewReasons,
+            classificationProcessed = classifier.processed,
+            classificationTotal = classifier.total,
+            classificationConsentRequired = classifier.consentRequired,
         )
     }
 
@@ -548,6 +562,9 @@ class TransactionsViewModel @Inject constructor(
             classificationStatus = classifier.status,
             classificationError = classifier.error,
             classificationReviewReasons = classifier.reviewReasons,
+            classificationProcessed = classifier.processed,
+            classificationTotal = classifier.total,
+            classificationConsentRequired = classifier.consentRequired,
             isServerMode = true,
             isLoadingMore = isLoadingMore,
             hasMore = hasMore,
@@ -575,37 +592,61 @@ class TransactionsViewModel @Inject constructor(
     }
 
     /** Requests Azure for at most five visible, eligible uncategorized rows. */
+    /**
+     * Sweeps every eligible uncategorized row in the rolling year, five ids per request. The previous
+     * implementation looked only at the loaded page and stopped after five rows, so the rest of the
+     * month silently stayed uncategorized. Progress is observable and the run can be retried.
+     */
     fun classifyUncategorized() {
-        if (classification.value.isRunning || server?.isEnabled != true) return
+        if (classification.value.isRunning) return
+        val sweep = autoCategory
+        if (sweep == null || server?.isEnabled != true) {
+            classification.value = ClassificationState(error = AppError.Configuration("backend_disabled"))
+            return
+        }
         viewModelScope.launch {
             val owner = sessions.current()?.ownerId ?: return@launch
-            val ids = state.value.items
-                .filter {
-                    it.category == Category.UNCATEGORIZED &&
-                        it.categoryOrigin != com.pam.recap.domain.model.CategoryOrigin.USER
-                }
-                .map { it.id }
-                .distinct()
-                .take(5)
-            if (ids.isEmpty()) {
-                classification.value = ClassificationState(status = "no_eligible_transactions")
-                return@launch
-            }
             classification.value = ClassificationState(isRunning = true)
-            classification.value = when (val result = server.classifyTransactions(owner, ids)) {
-                is Outcome.Failure -> ClassificationState(error = result.error)
-                is Outcome.Success -> {
-                    refreshTick.update { it + 1 }
-                    val needsReview = result.value.count { it.state == "NEEDS_REVIEW" }
-                    val failed = result.value.count { it.state == "FAILED" }
-                    val classified = result.value.count { it.state == "CLASSIFIED" }
-                    ClassificationState(
-                        status = "classified=$classified needsReview=$needsReview failed=$failed",
-                        reviewReasons = reviewReasonCodes(result.value),
+            when (val result = sweep.classifyAll(owner) { processed, total ->
+                classification.update { it.copy(processed = processed, total = total) }
+            }) {
+                is Outcome.Failure -> {
+                    val needsConsent = (result.error as? AppError.Validation)?.rule ==
+                        "ai_category_consent_required"
+                    classification.value = ClassificationState(
+                        error = if (needsConsent) null else result.error,
+                        consentRequired = needsConsent,
                     )
+                }
+                is Outcome.Success -> {
+                    val sweepResult = result.value
+                    refreshTick.update { it + 1 }
+                    classification.value = fromSweep(sweepResult)
                 }
             }
         }
+    }
+
+    private fun fromSweep(result: CategorySweepResult): ClassificationState {
+        val visibleUncategorized = state.value.items.filter { it.category == Category.UNCATEGORIZED }
+        val status = when {
+            result.total == 0 && visibleUncategorized.isEmpty() -> "no_eligible_transactions"
+            // A locally created uncategorized row is not server-known yet; an explicitly manual
+            // "uncategorized" decision is intentionally excluded from AI, so the copy differs.
+            result.total == 0 && visibleUncategorized.all {
+                it.source == com.pam.recap.domain.model.TransactionSource.MANUAL
+            } -> "none_manual_uncategorized"
+            result.total == 0 -> "local_pending_upload"
+            result.stoppedError != null -> "partial"
+            else -> "done"
+        }
+        return ClassificationState(
+            status = status,
+            error = result.stoppedError,
+            reviewReasons = result.reviewReasons,
+            processed = result.processed,
+            total = result.total,
+        )
     }
 
     private data class ClassificationState(
@@ -613,6 +654,9 @@ class TransactionsViewModel @Inject constructor(
         val status: String? = null,
         val error: AppError? = null,
         val reviewReasons: List<String> = emptyList(),
+        val processed: Int = 0,
+        val total: Int = 0,
+        val consentRequired: Boolean = false,
     )
 
     /** The rolling one-year window the arrows are bounded by (DRAFT-RET-01/02). */

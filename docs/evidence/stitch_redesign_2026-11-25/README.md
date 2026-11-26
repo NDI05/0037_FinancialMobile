@@ -25,16 +25,16 @@ pada viewport **393×852, DPR 2**, font Manrope dan ikon Material Symbols termua
 | 1. Masuk/Daftar | `before/12_masuk_daftar_448dp_emulator.png` | `reference/1._masuk.png` | belum diambil ulang di sesi ini (state login) | top bar terpusat, kartu putih radius 24, CTA accent lebar penuh |
 | 2. Tautkan Gmail | — | `reference/2._tautkan_gmail.png` | `after/after_gmail_link_393dp_v1.png` | hero + chip status, kartu izin/retensi, CTA "Tautkan Gmail" |
 | 3. Ringkasan | `before/01_ringkasan_393dp.png` | `reference/3._ringkasan.png` | `after/after_ringkasan_393dp_v6.png` | kartu bank per bank (opsi B), hero pengeluaran, baris pemasukan, kartu kategori 6 track, daftar terbaru grouped card |
-| 4. Transaksi | `before/02_transaksi_393dp.png` | `reference/4._transaksi.png` | `after/after_transaksi_393dp_v6.png` (daftar); `after_transaksi_393dp_v5.png` (state sesi Gmail berakhir, sebelum perbaikan bar) | search 48 dp, chip filter 36 dp, grup tanggal, baris 84 dp, FAB lime 56 dp radius 24 |
+| 4. Transaksi | `before/02_transaksi_393dp.png` | `reference/4._transaksi.png` | `after/after_transaksi_393dp_v6.png` (daftar); `after/after_transaksi_fab_actions_393dp.png` (FAB dua opsi, 26 Nov); `after/after_transaksi_classify_manual_393dp.png` (feedback sweep) | search 48 dp, chip filter 36 dp, grup tanggal, baris 84 dp, FAB lime 56 dp radius 24; opsi AI + tambah dalam satu FAB |
 | 5. Detail transaksi | `before/07_detail_transaksi_393dp.png` | `reference/5._detail_transaksi.png` | `after/after_detail_393dp_v1.png` | hero 24 dp: chip sumber, nominal 32/700, judul, caption; kartu Tanggal/Kategori/Catatan |
 | 6. Tambah transaksi | `before/08_tambah_transaksi_393dp.png` | `reference/6._tambah_transaksi.png` | `after/after_manual_393dp_v2.png` | segmented 20 dp, kartu nominal (prefix Rp + pemisah ribuan), kartu field, CTA accent |
-| 7. Analisis | `before/05_analisis_393dp.png` | `reference/7._analisis.png` | `after/after_analisis_393dp_v2.png` | pill bulan, kartu insight lime, kartu kategori, temuan ringkas; banner kedaluwarsa dipertahankan |
-| 8. Pengaturan | `before/04_pengaturan_393dp.png` | `reference/8._pengaturan.png` | `after/after_pengaturan_393dp_v2.png` (atas), `after_pengaturan_bottom_393dp_v2.png` (bawah), `after_pengaturan_font200_top.png` / `_bottom` | section uppercase 12/600, kartu putih radius 24, badge Gmail, baris nyata untuk izin/notifikasi/kategori/widget; kartu kembali vertikal sehingga CTA Keluar terlihat dan tidak tertimpa nav |
+| 7. Analisis | `before/05_analisis_393dp.png` | `reference/7._analisis.png` | `after/after_analisis_393dp_v2.png`; `after/after_analisis_393dp_v3.png` (consent aktif, 26 Nov) | pill bulan, kartu insight lime, kartu kategori, temuan ringkas; banner kedaluwarsa dipertahankan; state tanpa data menjelaskan sync/tambah transaksi |
+| 8. Pengaturan | `before/04_pengaturan_393dp.png` | `reference/8._pengaturan.png` | `after/after_pengaturan_akses_aplikasi_393dp.png` (26 Nov), `after/after_pengaturan_akses_360dp.png`, `after/after_pengaturan_akses_412dp.png`, `after/after_pengaturan_akses_font200_top.png` | section uppercase 12/600, kartu putih radius 24; section **AKSES APLIKASI** berisi switch notifikasi + Kategorisasi AI + Analisis AI + riwayat; section Gmail/AI terpisah dihapus |
 | 9. Kelola kategori | `before/06_kelola_kategori_393dp.png` | `reference/9._kelola_kategori.png` | `after/after_kategori_393dp_v1.png` (state sesi berakhir) | judul + back, search 48 dp, grouped list radius 24, FAB accent |
 | Sheet status pembaruan | `before/03_sync_sheet_393dp.png` | `reference/keadaan_sinkronisasi_semua_state.png` | `after/after_status_sheet_393dp_v2.png`, `after_status_running_393dp.png`, `after_status_reopen_393dp.png`, `after_status_result_393dp.png` | header ringkas + "Terakhir", kartu status padat, aksi tunggal, hasil/progress di sheet yang sama |
-| 360 dp | `before/09_ringkasan_360dp.png` | `reference/pemeriksaan_360_dp_412_dp_font_200.png` | `after_ringkasan_360dp.png`, `after_transaksi_360dp.png` | margin 16 dp; tidak ada teks terpotong |
-| 412 dp | `before/10_ringkasan_412dp.png` | idem | `after_ringkasan_412dp.png`, `after_transaksi_412dp.png` | "Transaksi terbaru" terlihat tepat di atas nav (785 dp), sama seperti referensi |
-| Font 200% | `before/11_ringkasan_font200.png` | idem | `after_ringkasan_font200.png` | tidak ada clipping horizontal; konten bawah menjadi scroll |
+| 360 dp | `before/09_ringkasan_360dp.png` | `reference/pemeriksaan_360_dp_412_dp_font_200.png` | `after_ringkasan_360dp.png`, `after_transaksi_360dp.png`, `after_pengaturan_akses_360dp.png` | margin 16 dp; tidak ada teks terpotong |
+| 412 dp | `before/10_ringkasan_412dp.png` | idem | `after_ringkasan_412dp.png`, `after_transaksi_412dp.png`, `after_pengaturan_akses_412dp.png` | "Transaksi terbaru" terlihat tepat di atas nav (785 dp), sama seperti referensi |
+| Font 200% | `before/11_ringkasan_font200.png` | idem | `after_ringkasan_font200.png`, `after_pengaturan_akses_font200_top.png` | tidak ada clipping horizontal; konten bawah menjadi scroll |
 
 ## Ukuran yang dicocokkan (393 dp, dp dari atas window)
 
@@ -106,3 +106,26 @@ pada viewport **393×852, DPR 2**, font Manrope dan ikon Material Symbols termua
 - Sesi Gmail server berakhir di akhir sesi; layar data yang butuh server (Transaksi/Kategori) hanya
   bisa direkam sebagai state error. Screenshot daftar diambil sebelum kedaluwarsa.
 - Gate akhir: lihat laporan ringkas di `PROGRESS_DAILY` tanggal 26 November 2026.
+
+## Iterasi 26 November 2026 — consent kategori, FAB gabungan, dan state koneksi
+
+Perubahan yang diuji pada APK berjalan (emulator Android 17, override **393 dp** 1179×2627 @480 dpi;
+360 dp 1080×2400; 412 dp 1236×2747; font 200%):
+
+- **Kategorisasi AI**: consent `AI_CATEGORIZATION` sekarang punya switch nyata di Pengaturan. Sweep
+  manual tidak lagi berhenti di 5 baris: seluruh kandidat 12 bulan dikirim dalam chunk 5 dan progress
+  dilaporkan per baris. Baris masuk dari sync langsung diklasifikasi sebelum antrean 2 jam.
+- **Satu FAB**: `after/after_transaksi_fab_actions_393dp.png` menunjukkan opsi “Kategorikan dengan AI”
+  dan “Tambah transaksi” muncul dari FAB lime yang sama; nav bawah tetap utuh.
+- **Feedback jujur**: `after/after_transaksi_classify_manual_393dp.png` menjelaskan baris manual
+  “Belum berkategori” memang tidak dikirim ke AI, bukan menampilkan “semua selesai”.
+- **Pengaturan**: `after/after_pengaturan_akses_aplikasi_393dp.png` menggantikan tiga section lama
+  dengan satu **AKSES APLIKASI** berisi switch notifikasi, Kategorisasi AI (aktif), Analisis AI
+  (aktif), dan tautan riwayat persetujuan. Diuji juga pada 360/412 dp dan font 200% tanpa clipping.
+- **State gagal koneksi**: `after/after_ringkasan_retry_centered_393dp.png` (jaringan dimatikan)
+  menunjukkan judul, body, dan tombol “Coba lagi” tepat di tengah layar; menyalakan jaringan lalu
+  menekan tombol memulihkan Ringkasan. Feedback klasifikasi berada inline di antara filter dan daftar,
+  sehingga tidak menutupi baris/nav.
+
+Rincian mekanisme sinkronisasi otomatis vs tombol, batas token provider, gate, dan batas bukti ada di
+[AI_CATEGORY_SYNC_UI_2026-11-26](../AI_CATEGORY_SYNC_UI_2026-11-26.md).

@@ -245,6 +245,7 @@ fun PamNavHost(
                         },
                         savedMonthId = savedMonthId,
                         onSavedMonthHandled = { entry.savedStateHandle.remove<String>(MANUAL_SAVE_MONTH_KEY) },
+                        onOpenSettings = { navController.navigate(PamDestination.Settings) },
                     )
                 }
 

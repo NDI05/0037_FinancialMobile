@@ -1,6 +1,15 @@
 package com.pam.recap.ui.feature.transactions
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.clickable
@@ -18,6 +27,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Surface
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -25,9 +38,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -47,13 +64,18 @@ import com.pam.recap.ui.components.PillButtonStyle
 import com.pam.recap.ui.components.SearchField
 import com.pam.recap.ui.components.TransactionRow
 import com.pam.recap.ui.theme.Accent
+import com.pam.recap.ui.theme.BodyM
+import com.pam.recap.ui.theme.Ink
 import com.pam.recap.ui.theme.LabelM
 import com.pam.recap.ui.theme.OnInk
 import com.pam.recap.ui.theme.OnInkFaint
+import com.pam.recap.ui.theme.Surface as PamSurface
 import com.pam.recap.ui.theme.OnInkMuted
+import com.pam.recap.ui.theme.SurfaceContainer
 import com.pam.recap.ui.theme.OutlineVariant
 import com.pam.recap.ui.theme.PamRadius
 import com.pam.recap.ui.theme.PamSpacing
+import com.pam.recap.ui.theme.TitleM
 import com.pam.recap.ui.util.PamDateFormat
 import com.pam.recap.ui.util.categoryLabelRes
 
@@ -77,6 +99,8 @@ fun TransactionsScreen(
      */
     savedMonthId: String? = null,
     onSavedMonthHandled: () -> Unit = {},
+    /** Consent feedback links to the "Akses aplikasi" switches in Settings. */
+    onOpenSettings: () -> Unit = {},
     viewModel: TransactionsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -121,6 +145,7 @@ fun TransactionsScreen(
             return@PamScaffold
         }
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            var addMenuOpen by remember { mutableStateOf(false) }
             Column(modifier = Modifier.fillMaxSize()) {
                 SearchField(
                     value = state.query,
@@ -162,20 +187,47 @@ fun TransactionsScreen(
                     modifier = Modifier.padding(top = PamSpacing.xs),
                 )
 
+                ClassificationFeedback(
+                    isRunning = state.isClassifying,
+                    processed = state.classificationProcessed,
+                    total = state.classificationTotal,
+                    status = state.classificationStatus,
+                    error = state.classificationError,
+                    consentRequired = state.classificationConsentRequired,
+                    reviewReasons = state.classificationReviewReasons,
+                    onRetry = viewModel::classifyUncategorized,
+                    onOpenSettings = onOpenSettings,
+                )
+
                 when {
                     state.isLoading -> LoadingShimmer(rows = 4, showHero = false)
 
-                    state.error != null -> Column(modifier = Modifier.padding(top = PamSpacing.sm)) {
-                        NoticeBanner(
+                    // Connection failure owns the viewport: the retry action is centred instead of
+                    // sitting off to the left and the list never renders stale rows underneath.
+                    state.error != null -> Column(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = PamSpacing.lg),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.transactions_retry_banner_title),
+                            style = TitleM,
+                            color = OnInk,
+                        )
+                        Spacer(modifier = Modifier.height(PamSpacing.xs))
+                        Text(
                             text = stringResource(
                                 com.pam.recap.ui.util.appErrorRes(requireNotNull(state.error)),
                             ),
+                            style = BodyM,
+                            color = OnInkMuted,
+                            textAlign = TextAlign.Center,
                         )
+                        Spacer(modifier = Modifier.height(PamSpacing.md))
                         PillButton(
                             text = stringResource(R.string.action_retry),
                             onClick = viewModel::retry,
                             style = PillButtonStyle.Secondary,
-                            modifier = Modifier.padding(top = PamSpacing.xs),
                         )
                     }
 
@@ -212,11 +264,6 @@ fun TransactionsScreen(
                         onLoadMore = viewModel::loadMore,
                         onRetryLoadMore = viewModel::retryLoadMore,
                         onOpenTransaction = onOpenTransaction,
-                        isClassifying = state.isClassifying,
-                        classificationStatus = state.classificationStatus,
-                        classificationReviewReasons = state.classificationReviewReasons,
-                        classificationError = state.classificationError,
-                        onClassify = viewModel::classifyUncategorized,
                         isServerMode = state.isServerMode,
                         truncated = state.truncated,
                         scanned = state.scanned,
@@ -225,24 +272,186 @@ fun TransactionsScreen(
                 }
             }
 
-            Box(
+            // One lime control for both creations the screen owns. Tapping it reveals the two
+            // actions instead of hiding AI categorisation at the end of the list.
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(bottom = PamSpacing.md)
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(PamRadius.xl))
-                    .background(Accent)
-                    .clickable(role = Role.Button, onClick = onOpenManualEntry)
-                    .semantics { contentDescription = addLabel },
-                contentAlignment = Alignment.Center,
+                    .padding(bottom = PamSpacing.md),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(PamSpacing.sm),
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Add,
-                    contentDescription = null,
-                    tint = OnInk,
-                    modifier = Modifier.size(24.dp),
+                AnimatedVisibility(
+                    visible = addMenuOpen,
+                    enter = fadeIn() + slideInVertically { it / 3 },
+                    exit = fadeOut() + slideOutVertically { it / 3 },
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(PamSpacing.sm),
+                    ) {
+                        FabAction(
+                            label = stringResource(R.string.transactions_classify_ai),
+                            icon = Icons.Rounded.AutoAwesome,
+                            onClick = {
+                                addMenuOpen = false
+                                viewModel.classifyUncategorized()
+                            },
+                        )
+                        FabAction(
+                            label = addLabel,
+                            icon = Icons.Rounded.Add,
+                            onClick = {
+                                addMenuOpen = false
+                                onOpenManualEntry()
+                            },
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(PamRadius.xl))
+                        .background(Accent)
+                        .clickable(role = Role.Button) { addMenuOpen = !addMenuOpen }
+                        .semantics { contentDescription = addLabel },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (addMenuOpen) Icons.Rounded.Close else Icons.Rounded.Add,
+                        contentDescription = null,
+                        tint = OnInk,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Classification is a screen-level state, not a list footer: progress, the consent gate and the
+ * result sit between the filters and the rows so the FAB and the last row stay reachable. At most two
+ * review reasons are shown; the rest stay in the review flow instead of flooding the screen.
+ */
+@Composable
+private fun ClassificationFeedback(
+    isRunning: Boolean,
+    processed: Int,
+    total: Int,
+    status: String?,
+    error: com.pam.recap.core.result.AppError?,
+    consentRequired: Boolean,
+    reviewReasons: List<String>,
+    onRetry: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    val visible = isRunning || status != null || error != null || consentRequired
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(),
+        exit = fadeOut(),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(top = PamSpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(PamSpacing.xs),
+        ) {
+            if (isRunning) {
+                Text(
+                    text = if (total > 0) {
+                        stringResource(R.string.transactions_classify_progress, processed, total)
+                    } else {
+                        stringResource(R.string.transactions_classify_preparing)
+                    },
+                    style = LabelM,
+                    color = OnInkMuted,
+                )
+                LinearProgressIndicator(
+                    progress = {
+                        if (total > 0) processed.toFloat() / total.toFloat() else 0f
+                    },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(PamRadius.pill)),
+                    color = Accent,
+                    trackColor = SurfaceContainer,
                 )
             }
+            if (consentRequired) {
+                NoticeBanner(
+                    text = stringResource(R.string.transactions_classify_consent),
+                    tone = MoneyTone.Neutral,
+                )
+                PillButton(
+                    text = stringResource(R.string.transactions_classify_open_settings),
+                    onClick = onOpenSettings,
+                    style = PillButtonStyle.Ghost,
+                )
+            }
+            status?.let { code ->
+                NoticeBanner(
+                    text = when (code) {
+                        "no_eligible_transactions" -> stringResource(R.string.transactions_classify_none)
+                        "none_manual_uncategorized" -> stringResource(R.string.transactions_classify_manual)
+                        "local_pending_upload" -> stringResource(R.string.transactions_classify_local_pending)
+                        "partial" -> stringResource(
+                            R.string.transactions_classify_partial,
+                            processed,
+                            total,
+                        )
+                        "done" -> stringResource(R.string.transactions_classify_done, processed)
+                        else -> stringResource(R.string.transactions_classify_result, code)
+                    },
+                    tone = if (error != null) MoneyTone.Expense else MoneyTone.Neutral,
+                )
+            }
+            reviewReasons.take(2).forEach { reason ->
+                NoticeBanner(
+                    text = stringResource(classificationReasonRes(reason)),
+                    tone = MoneyTone.Neutral,
+                )
+            }
+            error?.let { failure ->
+                NoticeBanner(
+                    text = stringResource(com.pam.recap.ui.util.appErrorRes(failure)),
+                    tone = MoneyTone.Expense,
+                )
+                PillButton(
+                    text = stringResource(R.string.action_retry),
+                    onClick = onRetry,
+                    style = PillButtonStyle.Ghost,
+                )
+            }
+        }
+    }
+}
+
+/** White pill above the FAB: readable over any row, no shadow, 48 dp touch target. */
+@Composable
+private fun FabAction(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+) {
+    Surface(
+        color = PamSurface,
+        contentColor = Ink,
+        shape = RoundedCornerShape(PamRadius.lg),
+        border = BorderStroke(1.dp, OutlineVariant),
+        modifier = Modifier
+            .height(48.dp)
+            .clickable(role = Role.Button, onClick = onClick),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = PamSpacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PamSpacing.xs),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Ink,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(text = label, style = LabelM, color = Ink)
         }
     }
 }
@@ -256,11 +465,6 @@ private fun TransactionList(
     onLoadMore: () -> Unit,
     onRetryLoadMore: () -> Unit,
     onOpenTransaction: (String) -> Unit,
-    isClassifying: Boolean,
-    classificationStatus: String?,
-    classificationReviewReasons: List<String>,
-    classificationError: com.pam.recap.core.result.AppError?,
-    onClassify: () -> Unit,
     isServerMode: Boolean,
     truncated: Boolean,
     scanned: Int,
@@ -350,46 +554,6 @@ private fun TransactionList(
                 }
             }
         }
-        // Moved out of the reference's above-the-fold composition but still reachable.
-        item(key = "classify") {
-            Column(modifier = Modifier.fillMaxWidth().padding(top = PamSpacing.md)) {
-                if (isClassifying) {
-                    Text(
-                        text = stringResource(R.string.transactions_refreshing),
-                        style = LabelM,
-                        color = OnInkFaint,
-                    )
-                }
-                classificationStatus?.let { status ->
-                    NoticeBanner(
-                        text = when (status) {
-                            "no_eligible_transactions" -> stringResource(R.string.transactions_classify_none)
-                            else -> stringResource(R.string.transactions_classify_result, status)
-                        },
-                        tone = if (classificationError != null) MoneyTone.Expense else MoneyTone.Neutral,
-                    )
-                }
-                classificationReviewReasons.forEach { reason ->
-                    NoticeBanner(
-                        text = stringResource(classificationReasonRes(reason)),
-                        tone = MoneyTone.Neutral,
-                    )
-                }
-                classificationError?.let { error ->
-                    NoticeBanner(
-                        text = stringResource(com.pam.recap.ui.util.appErrorRes(error)),
-                        tone = MoneyTone.Expense,
-                    )
-                }
-                PillButton(
-                    text = stringResource(R.string.transactions_classify_ai),
-                    onClick = onClassify,
-                    style = PillButtonStyle.Ghost,
-                    loading = isClassifying,
-                )
-            }
-        }
-
         coverage?.let { text ->
             item(key = "coverage") {
                 Text(
