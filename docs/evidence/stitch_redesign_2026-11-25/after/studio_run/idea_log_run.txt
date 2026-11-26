@@ -1,0 +1,10 @@
+2026-11-27 00:42:17,611 [231047421]   INFO - #com.android.tools.idea.run.AndroidRunConfigurationExecutor - Launching on device Pixel_10_Pro_XL [emulator-5554]
+2026-11-27 00:42:17,611 [231047421]   INFO - #com.android.tools.idea.run.GradleApkProvider - APKs for Module: 'PAM.app':
+2026-11-27 00:42:17,611 [231047421]   INFO - #com.android.tools.idea.run.GradleApkProvider -   com.pam.recap.debug =>
+2026-11-27 00:42:17,611 [231047421]   INFO - #com.android.tools.idea.run.GradleApkProvider -     apk from PAM.app : /Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/build/intermediates/apk/debug/app-debug.apk
+2026-11-27 00:42:17,612 [231047422]   INFO - #com.android.tools.idea.run.tasks.DeployTask - Installing application: com.pam.recap.debug
+2026-11-27 00:42:23,631 [231053441]   INFO - #com.android.tools.idea.run.GradleApkProvider - APKs for Module: 'PAM.app':
+2026-11-27 00:42:23,631 [231053441]   INFO - #com.android.tools.idea.run.GradleApkProvider -   com.pam.recap.debug =>
+2026-11-27 00:42:23,632 [231053442]   INFO - #com.android.tools.idea.run.GradleApkProvider -     apk from PAM.app : /Users/user/Documents/Gabut-Code/Pertemuan_KeenamBelas_TugasAKhir/pam-app/app/build/intermediates/apk/debug/app-debug.apk
+2026-11-27 00:42:23,635 [231053445]   INFO - #com.android.tools.idea.run.activity.launch.ActivityLaunchOptionState - Activating Activity 'com.pam.recap.MainActivity'  on device emulator-5554
+2026-11-27 00:42:23,925 [231053735]   INFO - #com.android.tools.idea.execution.common.processhandler.AndroidProcessHandler - Adding device Pixel_10_Pro_XL [emulator-5554] to monitor for launched app: com.pam.recap.debug

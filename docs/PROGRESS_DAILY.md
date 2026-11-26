@@ -787,3 +787,19 @@ batch, revision bump membuka baris, enqueue mengecualikan baris ditinjau), `asse
 tap kedua pada baris server `NEEDS_REVIEW` tidak dapat direproduksi lewat UI; dibuktikan unit test +
 idempotensi backend. Android Studio Run literal tetap **NOT RUN**; backend tidak diubah; merge/deploy
 menunggu izin pemilik.
+
+**Verifikasi Android Studio Run literal (27 Nov 2026, 00:42–00:55 WIB).** Menindaklanjuti permintaan
+pemilik agar pengujian dilakukan langsung dari Android Studio dengan emulator, konfigurasi `app`
+dijalankan melalui menu **Run → Run 'app'** (bukan `adb install` manual) ke emulator
+Pixel_10_Pro_XL, Android 17/API 37. `idea.log` Android Studio mencatat “Launching on device
+Pixel_10_Pro_XL [emulator-5554]”, instalasi `com.pam.recap.debug`, dan `am start MainActivity`;
+proses aplikasi tetap hidup (pid 3759) dan fokus jendela Android berpindah ke `MainActivity`.
+Dari proses hasil Run tersebut diuji ulang: dua opsi FAB berlatar `OnInk` `#171915` dengan teks
+`Ink` dan label dalam layar; Analisis hanya memuat tiga kartu Stitch tanpa toggle/pager/saran pada
+393 dp, 360 dp, dan 412 dp; font 200% membungkus body tanpa tumpang-tindih label/nominal; tap
+“Kategorikan dengan AI” pada baris manual menampilkan pesan jujur dan tap kedua tidak memicu proses
+baru; navigasi Ringkasan/Transaksi/Analisis/Pengaturan (sampai “Keluar”)/Detail/Tambah berjalan tanpa
+crash atau ANR (`logcat -b crash` kosong). Gate tetap 646 tes/0 gagal, `assembleDebug` lulus, lint
+0 error/264 warning/1 hint. Bukti: `after/studio_run/` + `idea_log_run.txt`, rincian di
+[ANDROID_STUDIO_RUN_2026-11-27](evidence/ANDROID_STUDIO_RUN_2026-11-27.md). Ini menggantikan status
+“Run literal NOT RUN” pada entri sebelumnya; merge/deploy tetap menunggu persetujuan pemilik.

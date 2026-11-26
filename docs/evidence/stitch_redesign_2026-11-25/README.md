@@ -149,6 +149,10 @@ APK berjalan (emulator Android 17, 393 dp override 1179×2627 @480 dpi; 360 dp 1
   menjadi catatan setelah disclosure. Body insight memakai aritmetika bulan berjalan.
 
 Gate: `:app:testDebugUnitTest` **646 tes/0 gagal**, `assembleDebug` lulus, `lintDebug`
-**0 error/264 warning/1 hint**. Android Studio Run literal tetap **NOT RUN**; merge/deploy menunggu
-izin pemilik. Rincian ada di
+**0 error/264 warning/1 hint**. **Android Studio Run literal PASS** pada 27 November 2026 00:42 WIB:
+konfigurasi `app` dijalankan dari menu Run IDE ke emulator Pixel_10_Pro_XL (Android 17/API 37), lalu
+FAB, Analisis 393/360/412 dp + font 200%, kategorisasi manual, dan navigasi diuji ulang dari proses
+hasil Run. Screenshot Run ada di `after/studio_run/`; log IDE dan rincian di
+[ANDROID_STUDIO_RUN_2026-11-27](../ANDROID_STUDIO_RUN_2026-11-27.md). Merge/deploy menunggu izin
+pemilik. Rincian ada di
 [AI_CATEGORY_SYNC_UI_2026-11-26](../AI_CATEGORY_SYNC_UI_2026-11-26.md#7-koreksi-malam-26-november-2026-tiga-temuan-pemilik).

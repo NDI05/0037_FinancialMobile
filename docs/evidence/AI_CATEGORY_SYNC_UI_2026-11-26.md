@@ -185,5 +185,8 @@ layout/struktur, bukan klasifikasi AI pada keempat baris tersebut. Ini tidak men
   (warning lama + string baru, tidak ada error).
 - APK hasil build dipasang ulang dengan `adb install -r`, lalu screenshot/dump diambil dari proses
   yang sama.
-- Android Studio **Run literal tetap NOT RUN**; verifikasi memakai ADB. Merge/deploy aplikasi dan
-  backend tetap menunggu izin pemilik.
+- Android Studio **Run literal dilaksanakan 27 November 2026 00:42 WIB** (menu Run → Run 'app' ke
+  emulator Pixel_10_Pro_XL, Android 17/API 37): instal, launch, dan seluruh uji runtime di bawah
+  diulang dari proses yang diluncurkan IDE. Bukti log + screenshot:
+  [ANDROID_STUDIO_RUN_2026-11-27](ANDROID_STUDIO_RUN_2026-11-27.md). Merge/deploy aplikasi dan backend
+  tetap menunggu izin pemilik.
