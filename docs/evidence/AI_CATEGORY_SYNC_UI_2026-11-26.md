@@ -66,6 +66,7 @@ Branch `feature/stitch-redesign` · APK debug `com.pam.recap.debug` · backend
 | `after/after_pengaturan_akses_360dp.png`, `_412dp.png`, `_font200_top.png` | Tidak ada clipping; switch tetap terbaca pada 360/412 dp dan font 200%. |
 | `after/after_ringkasan_retry_centered_393dp.png` | Saat jaringan dimatikan: judul/body center, tombol “Coba lagi” center (bbox x494–685 pada layar 1179 px → tepat di tengah); pemulihan setelah jaringan hidup menghasilkan Ringkasan normal. |
 | `after/after_analisis_393dp_v3.png` | Analisis berjalan dengan consent aktif (insight + temuan + batasan), bukan state kosong. |
+| Dump switch consent | Kategorisasi AI diubah OFF → aplikasi di-force-stop dan dibuka ulang → switch tetap **OFF** (persisten di ledger), lalu diubah ON kembali → **ON**. Analisis AI tetap ON dan tidak terpengaruh, membuktikan kedua purpose terpisah. |
 | `after/after_transaksi_fab_actions_393dp.txt`, `.txt` pendamping | Dump `uiautomator` sebagai bukti posisi terukur. |
 
 ## 5. Gate
