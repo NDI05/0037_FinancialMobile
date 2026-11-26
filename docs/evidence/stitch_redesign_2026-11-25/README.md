@@ -133,7 +133,9 @@ Rincian mekanisme sinkronisasi otomatis vs tombol, batas token provider, gate, d
 ## Iterasi 26 November 2026 malam — kontras FAB, anti-klasifikasi-ulang, Analisis Stitch
 
 APK berjalan (emulator Android 17, 393 dp override 1179×2627 @480 dpi; 360 dp 1080×2400; 412 dp
-1236×2748; font 200%) membuktikan tiga koreksi terakhir:
+1236×2748; font 200%) membuktikan tiga koreksi terakhir. Lembar banding sebelum/Stitch/sesudah:
+`comparison/fab_before_stitch_after_393dp.png` dan
+`comparison/analisis_before_stitch_after_393dp.png`.
 
 - **Kontras FAB**: `after/after_transaksi_fab_actions_dark_393dp.png` dan varian 360/412/font 200%
   menunjukkan kedua opsi terbaca gelap-di-atas-lime; akar masalahnya `PamSurface` putih + `Ink`
