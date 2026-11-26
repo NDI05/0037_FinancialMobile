@@ -171,28 +171,33 @@ fun SettingsScreen(
             // Akun Google ----------------------------------------------------------------
             SettingsSection(title = stringResource(R.string.settings_section_google)) {
                 SettingsCard(onClick = onOpenAccount) {
-                    Avatar(
-                        initials = mailbox
-                            ?.substringBefore('@')
-                            ?.take(2)
-                            ?.uppercase()
-                            ?.ifBlank { null },
-                    )
-                    Spacer(Modifier.width(PamSpacing.sm))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.settings_account),
-                            style = TitleM,
-                            color = OnInk,
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Avatar(
+                            initials = mailbox
+                                ?.substringBefore('@')
+                                ?.take(2)
+                                ?.uppercase()
+                                ?.ifBlank { null },
                         )
-                        Text(
-                            text = mailbox
-                                ?: stringResource(R.string.settings_account_row),
-                            style = BodyS,
-                            color = OnInkMuted,
-                        )
+                        Spacer(Modifier.width(PamSpacing.sm))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.settings_account),
+                                style = TitleM,
+                                color = OnInk,
+                            )
+                            Text(
+                                text = mailbox
+                                    ?: stringResource(R.string.settings_account_row),
+                                style = BodyS,
+                                color = OnInkMuted,
+                            )
+                        }
+                        Chevron()
                     }
-                    Chevron()
                 }
             }
 
@@ -366,30 +371,35 @@ fun SettingsScreen(
             SettingsSection(title = stringResource(R.string.settings_section_categories)) {
                 SettingsCard(onClick = onOpenCategories) {
                     Row(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Label,
-                            contentDescription = null,
-                            tint = OnInk,
-                            modifier = Modifier.size(22.dp),
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.category_manage_title),
-                                style = TitleM,
-                                color = OnInk,
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Label,
+                                contentDescription = null,
+                                tint = OnInk,
+                                modifier = Modifier.size(22.dp),
                             )
-                            Text(
-                                text = stringResource(R.string.settings_categories_sub),
-                                style = BodyS,
-                                color = OnInkMuted,
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.category_manage_title),
+                                    style = TitleM,
+                                    color = OnInk,
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_categories_sub),
+                                    style = BodyS,
+                                    color = OnInkMuted,
+                                )
+                            }
                         }
+                        Chevron()
                     }
-                    Chevron()
                 }
             }
 
@@ -411,30 +421,35 @@ fun SettingsScreen(
                     },
                 ) {
                     Row(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Widgets,
-                            contentDescription = null,
-                            tint = OnInk,
-                            modifier = Modifier.size(22.dp),
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.settings_widget_title),
-                                style = TitleM,
-                                color = OnInk,
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Widgets,
+                                contentDescription = null,
+                                tint = OnInk,
+                                modifier = Modifier.size(22.dp),
                             )
-                            Text(
-                                text = stringResource(R.string.settings_widget_sub),
-                                style = BodyS,
-                                color = OnInkMuted,
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.settings_widget_title),
+                                    style = TitleM,
+                                    color = OnInk,
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_widget_sub),
+                                    style = BodyS,
+                                    color = OnInkMuted,
+                                )
+                            }
                         }
+                        Chevron()
                     }
-                    Chevron()
                 }
             }
 
@@ -442,26 +457,31 @@ fun SettingsScreen(
             SettingsSection(title = stringResource(R.string.settings_section_privacy)) {
                 Column(verticalArrangement = Arrangement.spacedBy(PamSpacing.sm)) {
                     SettingsCard(onClick = onOpenDeletion) {
-                        Icon(
-                            imageVector = Icons.Rounded.DeleteOutline,
-                            contentDescription = null,
-                            tint = OnInkMuted,
-                            modifier = Modifier.size(22.dp),
-                        )
-                        Spacer(Modifier.width(PamSpacing.sm))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.settings_delete),
-                                style = TitleM,
-                                color = OnInk,
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.DeleteOutline,
+                                contentDescription = null,
+                                tint = OnInkMuted,
+                                modifier = Modifier.size(22.dp),
                             )
-                            Text(
-                                text = stringResource(R.string.settings_delete_body),
-                                style = BodyS,
-                                color = OnInkMuted,
-                            )
+                            Spacer(Modifier.width(PamSpacing.sm))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.settings_delete),
+                                    style = TitleM,
+                                    color = OnInk,
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_delete_body),
+                                    style = BodyS,
+                                    color = OnInkMuted,
+                                )
+                            }
+                            Chevron()
                         }
-                        Chevron()
                     }
 
                     if (state.demoRowCount > 0) {
@@ -630,7 +650,7 @@ private fun SettingsSection(
 private fun SettingsCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     val base = modifier
         .fillMaxWidth()
@@ -644,10 +664,7 @@ private fun SettingsCard(
             },
         )
         .padding(PamSpacing.md)
-    Row(
-        modifier = base,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Column(modifier = base) {
         content()
     }
 }

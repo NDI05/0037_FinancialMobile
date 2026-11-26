@@ -76,7 +76,6 @@ import com.pam.recap.ui.theme.OnInkFaint
 import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.OutlineVariant
 import com.pam.recap.ui.theme.PamRadius
-import com.pam.recap.ui.theme.PamSize
 import com.pam.recap.ui.theme.PamSpacing
 import com.pam.recap.ui.theme.Surface
 import com.pam.recap.ui.theme.SurfaceLow
@@ -130,7 +129,7 @@ fun OverviewScreen(
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = PamSize.bottomBarContentPadding),
+                contentPadding = PaddingValues(bottom = PamSpacing.md),
             ) {
                 item {
                     // Arrows stop at the rolling-year boundaries; no month outside the window is reachable.

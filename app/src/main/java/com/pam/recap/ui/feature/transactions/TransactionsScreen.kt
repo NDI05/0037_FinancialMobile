@@ -53,7 +53,6 @@ import com.pam.recap.ui.theme.OnInkFaint
 import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.OutlineVariant
 import com.pam.recap.ui.theme.PamRadius
-import com.pam.recap.ui.theme.PamSize
 import com.pam.recap.ui.theme.PamSpacing
 import com.pam.recap.ui.util.PamDateFormat
 import com.pam.recap.ui.util.categoryLabelRes
@@ -229,7 +228,7 @@ fun TransactionsScreen(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(bottom = PamSize.bottomBarContentPadding - 4.dp)
+                    .padding(bottom = PamSpacing.md)
                     .size(56.dp)
                     .clip(RoundedCornerShape(PamRadius.xl))
                     .background(Accent)
@@ -285,7 +284,7 @@ private fun TransactionList(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             top = PamSpacing.sm,
-            bottom = PamSize.bottomBarContentPadding,
+            bottom = PamSpacing.md,
         ),
         verticalArrangement = Arrangement.spacedBy(PamSpacing.sm),
     ) {

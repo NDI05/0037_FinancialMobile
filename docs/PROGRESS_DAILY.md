@@ -749,3 +749,19 @@ berjalan. Gate: `:app:testDebugUnitTest` 640 tes/0 gagal, `assembleDebug` lulus,
 sesi Gmail server berakhir saat sesi verifikasi sehingga layar Transaksi/Kategori hanya terekam
 sebagai state error pada capture terakhir; relink butuh OAuth pemilik. Android Studio Run literal
 tetap **NOT RUN**.
+
+**Perbaikan navigasi bawah + kartu Pengaturan (26 Nov 2026, 07:5x WIB).** Permintaan pemilik:
+tombol "Keluar" tidak terlihat di Pengaturan dan bottom bar menimpa tombol/informasi di beberapa
+layar. Dua akar masalah: (1) `SettingsCard` memakai `Row` padahal section mengirim beberapa baris
+vertikal, sehingga kartu putih membengkak dan menutupi section lain termasuk CTA Keluar — kini
+`Column` + `Row` eksplisit untuk baris tunggal (Akun, Kategori, Widget, Hapus data); (2)
+`BottomNavBar` adalah overlay `Box` sementara layar menebak padding bawah (112 dp hanya di sebagian
+layar). Bar kini sibling layout di dalam `Column` pada `PamNavHost`: viewport konten otomatis
+berkurang setinggi bar terukur (termasuk inset nav dan pembesaran font), padding bawah hard-coded di
+Ringkasan/Transaksi/Pengaturan dihapus. Verifikasi Redmi 10 (`105397ba0507`, 393 dp): Pengaturan atas
+dan bawah ter-render, "Keluar" di y≈700 dp dengan divider nav y≈759 dp; font 200% "Keluar" tetap
+terlihat (y≈692 dp, nav y≈753 dp); Ringkasan/Transaksi/Analisis tidak tertimpa; FAB Transaksi tetap
+di atas bar. Gate: 640 tes/0 gagal, `assembleDebug` lulus, `lintDebug` 0 error/239 warning. Bukti
+`after_pengaturan_393dp_v2`, `after_pengaturan_bottom_393dp_v2`,
+`after_pengaturan_font200_top/_bottom` di evidence Stitch. Android Studio Run literal tetap **NOT
+RUN**.

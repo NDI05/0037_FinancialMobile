@@ -1,0 +1,21 @@
+  53.1 146.6  Pengaturan
+  93.5  24.0  AKUN GOOGLE
+ 135.7  92.1  Akun
+ 157.9  92.1  Profil, Google, dan Gmail
+ 214.0  24.0  KONEKSI GMAIL
+ 254.4  36.0  Notifikasi Livin' by Mandiri
+ 276.6  36.0  Baca-saja
+ 267.1 254.0  Belum terhubung
+ 320.9 148.8  Tautkan Gmail
+ 390.8  24.0  IZIN AI
+ 439.2  36.0  Kategorisasi AI
+ 461.4  36.0  Saran kategori otomatis
+ 520.7  36.0  Analisis AI
+ 542.9  36.0  Ringkasan pola di tab Analisis · Aktif
+ 602.2  68.0  Riwayat persetujuan
+ 624.4  68.0  Lihat setiap keputusan beserta versi pemberitahuan dan waktu
+ 704.9  24.0  NOTIFIKASI
+   0.0   0.0  Ringkasan
+   0.0   0.0  Transaksi
+   0.0   0.0  Analisis
+   0.0   0.0  Pengaturan

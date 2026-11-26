@@ -1,10 +1,11 @@
 package com.pam.recap.ui.navigation
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Home
@@ -17,7 +18,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -82,6 +82,7 @@ fun PamNavHost(
     val gate by gateViewModel.state.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
+    val showBottomBar = gate is GateState.Ready && destination.isTopLevel()
 
     LaunchedEffect(gate, destination) {
         gateRedirect(gate, destination)?.let(navController::replaceWith)
@@ -133,156 +134,173 @@ fun PamNavHost(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        NavHost(
-            navController = navController,
-            startDestination = PamDestination.Welcome,
-            modifier = Modifier.fillMaxSize(),
-            enterTransition = {
-                fadeIn(tween(durationMillis = 260)) +
-                    slideInVertically(tween(durationMillis = 260)) { height -> height / 40 }
-            },
-            exitTransition = { fadeOut(tween(durationMillis = 160)) },
-            popEnterTransition = {
-                fadeIn(tween(durationMillis = 200)) +
-                    slideInVertically(tween(durationMillis = 200)) { height -> -(height / 40) }
-            },
-            popExitTransition = { fadeOut(tween(durationMillis = 160)) },
-        ) {
-            composable<PamDestination.Welcome> {
-                val welcome: WelcomeViewModel = hiltViewModel()
-                WelcomeScreen(
-                    onSignIn = { navController.navigate(PamDestination.Account(AccountMode.SIGN_IN)) },
-                    onCreateAccount = { navController.navigate(PamDestination.Account(AccountMode.REGISTER)) },
-                    onOpenPrivacy = { navController.navigate(PamDestination.Consent) },
-                    showDemoNotice = welcome.showDemoNotice,
-                )
+        // The bar is a layout sibling of the graph, not a floating overlay. Screens then end
+        // above it automatically — at every font scale and with any navigation-bar inset — so no
+        // screen has to guess a bottom padding that a taller bar could outgrow.
+        Column(modifier = Modifier.fillMaxSize()) {
+            NavHost(
+                navController = navController,
+                startDestination = PamDestination.Welcome,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                enterTransition = {
+                    fadeIn(tween(durationMillis = 260)) +
+                        slideInVertically(tween(durationMillis = 260)) { height -> height / 40 }
+                },
+                exitTransition = { fadeOut(tween(durationMillis = 160)) },
+                popEnterTransition = {
+                    fadeIn(tween(durationMillis = 200)) +
+                        slideInVertically(tween(durationMillis = 200)) { height -> -(height / 40) }
+                },
+                popExitTransition = { fadeOut(tween(durationMillis = 160)) },
+            ) {
+                composable<PamDestination.Welcome> {
+                    val welcome: WelcomeViewModel = hiltViewModel()
+                    WelcomeScreen(
+                        onSignIn = { navController.navigate(PamDestination.Account(AccountMode.SIGN_IN)) },
+                        onCreateAccount = { navController.navigate(PamDestination.Account(AccountMode.REGISTER)) },
+                        onOpenPrivacy = { navController.navigate(PamDestination.Consent) },
+                        showDemoNotice = welcome.showDemoNotice,
+                    )
+                }
+
+                composable<PamDestination.Account> {
+                    AccountScreen(
+                        onBack = { if (!navController.popBackStack()) navController.replaceWith(PamDestination.Welcome) },
+                        onOpenGmailLink = { navController.navigate(PamDestination.GmailLink()) },
+                    )
+                }
+
+                // Signed-in account editor from Settings: same screen, no gate redirect because this
+                // route is not the pre-session entry point.
+                composable<PamDestination.AccountSettings> {
+                    AccountScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenGmailLink = { navController.navigate(PamDestination.GmailLink()) },
+                    )
+                }
+
+                composable<PamDestination.Consent> {
+                    ConsentScreen(
+                        onFinished = {
+                            if (!navController.popBackStack()) {
+                                navController.replaceWith(PamDestination.Overview())
+                            }
+                        },
+                    )
+                }
+
+                composable<PamDestination.GmailLink> { entry ->
+                    val args = entry.toRoute<PamDestination.GmailLink>()
+                    GmailLinkScreen(
+                        onBack = { navController.popBackStack() },
+                        statusArg = args.status,
+                        reasonArg = args.reason,
+                    )
+                }
+
+                composable<PamDestination.GmailConnect> {
+                    GmailConnectScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenConsent = { navController.navigate(PamDestination.Consent) },
+                    )
+                }
+
+                composable<PamDestination.Overview> {
+                    OverviewScreen(
+                        onOpenTransactions = { categoryCode, monthId, direction ->
+                            navController.navigate(
+                                PamDestination.Transactions(
+                                    categoryCode = categoryCode,
+                                    monthId = monthId,
+                                    direction = direction?.name,
+                                ),
+                            )
+                        },
+                        onOpenTransaction = { id ->
+                            navController.navigate(PamDestination.TransactionDetail(id))
+                        },
+                    )
+                }
+
+                composable<PamDestination.Transactions> { entry ->
+                    val args = entry.toRoute<PamDestination.Transactions>()
+                    // A tab tap lands on the bare route; a drill-down carries a filter, and only the
+                    // drill-down gets a back well (C2-2).
+                    val openedAsDrillDown = args.isDrillDown()
+                    // FR-26 follow-up: the manual form publishes the saved row's month on the way back.
+                    val savedMonthId by entry.savedStateHandle
+                        .getStateFlow<String?>(MANUAL_SAVE_MONTH_KEY, null)
+                        .collectAsStateWithLifecycle()
+                    TransactionsScreen(
+                        onOpenTransaction = { id ->
+                            navController.navigate(PamDestination.TransactionDetail(id))
+                        },
+                        onOpenManualEntry = { navController.navigate(PamDestination.ManualEntry()) },
+                        onBack = if (openedAsDrillDown) {
+                            { navController.popBackStack() }
+                        } else {
+                            null
+                        },
+                        savedMonthId = savedMonthId,
+                        onSavedMonthHandled = { entry.savedStateHandle.remove<String>(MANUAL_SAVE_MONTH_KEY) },
+                    )
+                }
+
+                composable<PamDestination.TransactionDetail> {
+                    TransactionDetailScreen(onBack = { navController.popBackStack() })
+                }
+
+                composable<PamDestination.ManualEntry> {
+                    ManualEntryScreen(
+                        onBack = { navController.popBackStack() },
+                        onSaved = { savedMonthId ->
+                            navController.publishManualSaveMonth(savedMonthId)
+                            navController.popBackStack()
+                        },
+                    )
+                }
+
+                composable<PamDestination.Analysis> {
+                    AnalysisScreen(
+                        onOpenConsent = { navController.navigate(PamDestination.Consent) },
+                    )
+                }
+
+                composable<PamDestination.Settings> {
+                    SettingsScreen(
+                        onOpenConsentHistory = { navController.navigate(PamDestination.ConsentHistory) },
+                        onOpenCategories = { navController.navigate(PamDestination.CategoryManagement) },
+                        onOpenDeletion = { navController.navigate(PamDestination.DataDeletion) },
+                        onOpenAccount = { navController.navigate(PamDestination.AccountSettings) },
+                        onSignedOut = { navController.replaceWith(PamDestination.Welcome) },
+                    )
+                }
+
+                composable<PamDestination.CategoryManagement> {
+                    CategoryManagementScreen(onBack = { navController.popBackStack() })
+                }
+
+                composable<PamDestination.ConsentHistory> {
+                    ConsentHistoryScreen(onBack = { navController.popBackStack() })
+                }
+
+                composable<PamDestination.DataDeletion> {
+                    DataDeletionScreen(
+                        onBack = { navController.popBackStack() },
+                        onDeleted = { navController.replaceWith(PamDestination.Welcome) },
+                    )
+                }
             }
 
-            composable<PamDestination.Account> {
-                AccountScreen(
-                    onBack = { if (!navController.popBackStack()) navController.replaceWith(PamDestination.Welcome) },
-                    onOpenGmailLink = { navController.navigate(PamDestination.GmailLink()) },
-                )
-            }
-
-            // Signed-in account editor from Settings: same screen, no gate redirect because this
-            // route is not the pre-session entry point.
-            composable<PamDestination.AccountSettings> {
-                AccountScreen(
-                    onBack = { navController.popBackStack() },
-                    onOpenGmailLink = { navController.navigate(PamDestination.GmailLink()) },
-                )
-            }
-
-            composable<PamDestination.Consent> {
-                ConsentScreen(
-                    onFinished = {
-                        if (!navController.popBackStack()) {
-                            navController.replaceWith(PamDestination.Overview())
-                        }
-                    },
-                )
-            }
-
-            composable<PamDestination.GmailLink> { entry ->
-                val args = entry.toRoute<PamDestination.GmailLink>()
-                GmailLinkScreen(
-                    onBack = { navController.popBackStack() },
-                    statusArg = args.status,
-                    reasonArg = args.reason,
-                )
-            }
-
-            composable<PamDestination.GmailConnect> {
-                GmailConnectScreen(
-                    onBack = { navController.popBackStack() },
-                    onOpenConsent = { navController.navigate(PamDestination.Consent) },
-                )
-            }
-
-            composable<PamDestination.Overview> {
-                OverviewScreen(
-                    onOpenTransactions = { categoryCode, monthId, direction ->
-                        navController.navigate(
-                            PamDestination.Transactions(
-                                categoryCode = categoryCode,
-                                monthId = monthId,
-                                direction = direction?.name,
-                            ),
-                        )
-                    },
-                    onOpenTransaction = { id ->
-                        navController.navigate(PamDestination.TransactionDetail(id))
-                    },
-                )
-            }
-
-            composable<PamDestination.Transactions> { entry ->
-                val args = entry.toRoute<PamDestination.Transactions>()
-                // A tab tap lands on the bare route; a drill-down carries a filter, and only the
-                // drill-down gets a back well (C2-2).
-                val openedAsDrillDown = args.isDrillDown()
-                // FR-26 follow-up: the manual form publishes the saved row's month on the way back.
-                val savedMonthId by entry.savedStateHandle
-                    .getStateFlow<String?>(MANUAL_SAVE_MONTH_KEY, null)
-                    .collectAsStateWithLifecycle()
-                TransactionsScreen(
-                    onOpenTransaction = { id ->
-                        navController.navigate(PamDestination.TransactionDetail(id))
-                    },
-                    onOpenManualEntry = { navController.navigate(PamDestination.ManualEntry()) },
-                    onBack = if (openedAsDrillDown) {
-                        { navController.popBackStack() }
-                    } else {
-                        null
-                    },
-                    savedMonthId = savedMonthId,
-                    onSavedMonthHandled = { entry.savedStateHandle.remove<String>(MANUAL_SAVE_MONTH_KEY) },
-                )
-            }
-
-            composable<PamDestination.TransactionDetail> {
-                TransactionDetailScreen(onBack = { navController.popBackStack() })
-            }
-
-            composable<PamDestination.ManualEntry> {
-                ManualEntryScreen(
-                    onBack = { navController.popBackStack() },
-                    onSaved = { savedMonthId ->
-                        navController.publishManualSaveMonth(savedMonthId)
-                        navController.popBackStack()
-                    },
-                )
-            }
-
-            composable<PamDestination.Analysis> {
-                AnalysisScreen(
-                    onOpenConsent = { navController.navigate(PamDestination.Consent) },
-                )
-            }
-
-            composable<PamDestination.Settings> {
-                SettingsScreen(
-                    onOpenConsentHistory = { navController.navigate(PamDestination.ConsentHistory) },
-                    onOpenCategories = { navController.navigate(PamDestination.CategoryManagement) },
-                    onOpenDeletion = { navController.navigate(PamDestination.DataDeletion) },
-                    onOpenAccount = { navController.navigate(PamDestination.AccountSettings) },
-                    onSignedOut = { navController.replaceWith(PamDestination.Welcome) },
-                )
-            }
-
-            composable<PamDestination.CategoryManagement> {
-                CategoryManagementScreen(onBack = { navController.popBackStack() })
-            }
-
-            composable<PamDestination.ConsentHistory> {
-                ConsentHistoryScreen(onBack = { navController.popBackStack() })
-            }
-
-            composable<PamDestination.DataDeletion> {
-                DataDeletionScreen(
-                    onBack = { navController.popBackStack() },
-                    onDeleted = { navController.replaceWith(PamDestination.Welcome) },
+            if (showBottomBar) {
+                BottomNavBar(
+                    items = bottomItems(destination),
+                    onSelect = { key -> navController.navigateTabFor(key) },
+                    modifier = Modifier.windowInsetsPadding(
+                        androidx.compose.foundation.layout.WindowInsets.navigationBars,
+                    ),
                 )
             }
         }
@@ -297,16 +315,6 @@ fun PamNavHost(
             )
         }
 
-        val showBottomBar = gate is GateState.Ready && destination.isTopLevel()
-        if (showBottomBar) {
-            BottomNavBar(
-                items = bottomItems(destination),
-                onSelect = { key -> navController.navigateTabFor(key) },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars),
-            )
-        }
     }
 }
 

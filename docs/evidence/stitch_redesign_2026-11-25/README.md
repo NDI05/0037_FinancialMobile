@@ -24,12 +24,12 @@ pada viewport **393×852, DPR 2**, font Manrope dan ikon Material Symbols termua
 | --- | --- | --- | --- | --- |
 | 1. Masuk/Daftar | `before/12_masuk_daftar_448dp_emulator.png` | `reference/1._masuk.png` | belum diambil ulang di sesi ini (state login) | top bar terpusat, kartu putih radius 24, CTA accent lebar penuh |
 | 2. Tautkan Gmail | — | `reference/2._tautkan_gmail.png` | `after/after_gmail_link_393dp_v1.png` | hero + chip status, kartu izin/retensi, CTA "Tautkan Gmail" |
-| 3. Ringkasan | `before/01_ringkasan_393dp.png` | `reference/3._ringkasan.png` | `after/after_ringkasan_393dp_v5.png` | kartu bank per bank (opsi B), hero pengeluaran, baris pemasukan, kartu kategori 6 track, daftar terbaru grouped card |
-| 4. Transaksi | `before/02_transaksi_393dp.png` | `reference/4._transaksi.png` | `after/after_transaksi_393dp_v3.png` (daftar); `after_transaksi_393dp_v5.png` (state sesi Gmail berakhir) | search 48 dp, chip filter 36 dp, grup tanggal, baris 84 dp, FAB lime 56 dp radius 24 |
+| 3. Ringkasan | `before/01_ringkasan_393dp.png` | `reference/3._ringkasan.png` | `after/after_ringkasan_393dp_v6.png` | kartu bank per bank (opsi B), hero pengeluaran, baris pemasukan, kartu kategori 6 track, daftar terbaru grouped card |
+| 4. Transaksi | `before/02_transaksi_393dp.png` | `reference/4._transaksi.png` | `after/after_transaksi_393dp_v6.png` (daftar); `after_transaksi_393dp_v5.png` (state sesi Gmail berakhir, sebelum perbaikan bar) | search 48 dp, chip filter 36 dp, grup tanggal, baris 84 dp, FAB lime 56 dp radius 24 |
 | 5. Detail transaksi | `before/07_detail_transaksi_393dp.png` | `reference/5._detail_transaksi.png` | `after/after_detail_393dp_v1.png` | hero 24 dp: chip sumber, nominal 32/700, judul, caption; kartu Tanggal/Kategori/Catatan |
 | 6. Tambah transaksi | `before/08_tambah_transaksi_393dp.png` | `reference/6._tambah_transaksi.png` | `after/after_manual_393dp_v2.png` | segmented 20 dp, kartu nominal (prefix Rp + pemisah ribuan), kartu field, CTA accent |
-| 7. Analisis | `before/05_analisis_393dp.png` | `reference/7._analisis.png` | `after/after_analisis_393dp_v1.png` | pill bulan, kartu insight lime, kartu kategori, temuan ringkas; banner kedaluwarsa dipertahankan |
-| 8. Pengaturan | `before/04_pengaturan_393dp.png` | `reference/8._pengaturan.png` | `after/after_pengaturan_393dp_v1.png` | section uppercase 12/600, kartu putih radius 24, badge Gmail, baris nyata untuk izin/notifikasi/kategori/widget |
+| 7. Analisis | `before/05_analisis_393dp.png` | `reference/7._analisis.png` | `after/after_analisis_393dp_v2.png` | pill bulan, kartu insight lime, kartu kategori, temuan ringkas; banner kedaluwarsa dipertahankan |
+| 8. Pengaturan | `before/04_pengaturan_393dp.png` | `reference/8._pengaturan.png` | `after/after_pengaturan_393dp_v2.png` (atas), `after_pengaturan_bottom_393dp_v2.png` (bawah), `after_pengaturan_font200_top.png` / `_bottom` | section uppercase 12/600, kartu putih radius 24, badge Gmail, baris nyata untuk izin/notifikasi/kategori/widget; kartu kembali vertikal sehingga CTA Keluar terlihat dan tidak tertimpa nav |
 | 9. Kelola kategori | `before/06_kelola_kategori_393dp.png` | `reference/9._kelola_kategori.png` | `after/after_kategori_393dp_v1.png` (state sesi berakhir) | judul + back, search 48 dp, grouped list radius 24, FAB accent |
 | Sheet status pembaruan | `before/03_sync_sheet_393dp.png` | `reference/keadaan_sinkronisasi_semua_state.png` | `after/after_status_sheet_393dp_v2.png`, `after_status_running_393dp.png`, `after_status_reopen_393dp.png`, `after_status_result_393dp.png` | header ringkas + "Terakhir", kartu status padat, aksi tunggal, hasil/progress di sheet yang sama |
 | 360 dp | `before/09_ringkasan_360dp.png` | `reference/pemeriksaan_360_dp_412_dp_font_200.png` | `after_ringkasan_360dp.png`, `after_transaksi_360dp.png` | margin 16 dp; tidak ada teks terpotong |
@@ -47,7 +47,7 @@ pada viewport **393×852, DPR 2**, font Manrope dan ikon Material Symbols termua
 | Transaksi: search | 353×48, radius 16 | 353×48, radius 12 (`PamRadius.sm`), touch 48; deviasi radius visual 4 dp |
 | Transaksi: baris | tinggi minimum 64 (padding 16) | ±74 (padding 48 total + konten), tetap > 48 |
 | Transaksi: FAB | 56, radius 24, x317 y716 | 56, radius 24, x317 y689–745 |
-| Nav bawah | konten 65 dp + 1 dp divider | konten 65 dp + divider; sistem nav ±49 dp |
+| Nav bawah | konten 65 dp + 1 dp divider, y787 | konten 65 dp + 1 dp divider; divider di y759,4 dp + 37,5 dp status bar; bar kini **sibling layout** (bukan overlay), tinggi terukur 114 dp termasuk inset sistem |
 | Kartu | putih, outline `#E2E3DB` 1 dp, tanpa shadow | sama |
 | Palet | canvas `#FAFAF7`, ink `#171915`, lime `#D9F449` | sama |
 
@@ -61,7 +61,10 @@ pada viewport **393×852, DPR 2**, font Manrope dan ikon Material Symbols termua
    prototipe tidak menggambarkan state ini.
 4. **Pengaturan**: tidak ada toggle AI palsu — baris menampilkan status consent nyata dan membuka
    riwayat consent; tautan pratinjau notifikasi diganti pengaturan sistem; widget memakai pin flow
-   nyata. Section "Data & privasi" dipertahankan.
+   nyata. Section "Data & privasi" dipertahankan. Iterasi 26 Nov: `SettingsCard` sebelumnya memakai
+   `Row` padahal section mengirim beberapa baris vertikal, sehingga kartu putih membengkak dan semua
+   section + CTA "Keluar" hilang. Kartu kini `Column`; baris tunggal (Akun, Kategori, Widget, Hapus
+   data) dibungkus `Row` eksplisit. Bukti v2 di atas.
 5. **Tambah transaksi**: keyboard sistem, bukan keypad in-app pada prototipe; hint bulan di atas CTA
    dipertahankan (copy fungsional). Nominal kini memakai prefix "Rp" dan pemisah ribuan.
 6. **Detail transaksi**: baris manual menampilkan caption sumber, bukan kalimat notifikasi Livin;
@@ -88,6 +91,12 @@ pada viewport **393×852, DPR 2**, font Manrope dan ikon Material Symbols termua
   menampilkan "Mengambil riwayat" + tombol "Sedang sinkron" (progres tetap terbaca), lalu selesai dan
   "Terakhir berhasil sinkron" berubah menjadi 3 menit lalu.
 - 360 dp, 412 dp, dan font 200%: tidak ada clipping teks horizontal; nav tetap 4 tab.
+- Nav bawah tidak lagi menimpa konten: `PamNavHost` menempatkan `BottomNavBar` sebagai sibling
+  layout di dalam `Column`, jadi tinggi bar (termasuk inset sistem dan pertumbuhan font 200%) otomatis
+  mengurangi viewport konten di keempat tab. Padding tetap 112 dp per layar dihapus; dump
+  `after_pengaturan_bottom_393dp_v2` menunjukkan teks "Keluar" berakhir di y≈700 dp sedangkan divider
+  nav di y≈759 dp, dan dump font 200% menunjukkan "Keluar" berakhir di y≈692 dp sedangkan nav mulai
+  y≈753 dp.
 
 ## Batas bukti
 
