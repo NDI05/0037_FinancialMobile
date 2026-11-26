@@ -766,3 +766,24 @@ di atas bar. Gate: 640 tes/0 gagal, `assembleDebug` lulus, `lintDebug` 0 error/2
 `after_pengaturan_393dp_v2`, `after_pengaturan_bottom_393dp_v2`,
 `after_pengaturan_font200_top/_bottom` di evidence Stitch. Android Studio Run literal tetap **NOT
 RUN**.
+
+**Tiga koreksi lanjutan dari pemilik (26 Nov 2026, 23:3x WIB).** (1) Opsi FAB “Kategorikan dengan
+AI”/“Tambah transaksi” sebelumnya putih di atas putih: `FabAction` memakai `PamSurface` dengan
+`contentColor = Ink`, padahal `Ink` adalah canvas near-white `#FAFAF7`. Pill kini berlatar `OnInk`
+dengan teks/ikon `Ink`; dump membuktikan label tetap di dalam layar pada 393/360/412 dp dan font
+200%. (2) Sweep kedua mengirim ulang baris `NEEDS_REVIEW` karena revision-nya tidak berubah.
+Ditambahkan ledger DataStore owner-scoped `ClassificationAttemptStore` berisi `id -> revision` yang
+sudah ditinjau; `scanEligible`/`enqueueOnly`/`classifyAll` melewatinya sampai edit/re-impor menaikkan
+revision. Baris `FAILED` tidak dicatat agar tetap bisa diulang; status UI kini `nothing_new`,
+`done_with_review`, `review_only`, atau `partial`, bukan klaim selesai palsu. (3) Analisis
+dikembalikan ke struktur Stitch: toggle Observasi/Saran, pager, dan daftar saran dihapus dari
+viewport pertama; body insight memakai `Rp… dari N transaksi pada bulan ini`; batasan FR-37 menjadi
+catatan rendah-kontras setelah disclosure. Bukti 393/360/412 dp + font 200%:
+`after_analisis_stitch_*`, `after_transaksi_fab_actions_dark_*`,
+`after_transaksi_classify_manual_dark_393dp` di evidence Stitch. Gate:
+`:app:testDebugUnitTest` **646 tes/0 gagal** (termasuk 3 tes baru ledger: sweep kedua tidak memanggil
+batch, revision bump membuka baris, enqueue mengecualikan baris ditinjau), `assembleDebug` lulus,
+`lintDebug` **0 error/264 warning/1 hint**. Batas: akun uji emulator hanya punya baris manual sehingga
+tap kedua pada baris server `NEEDS_REVIEW` tidak dapat direproduksi lewat UI; dibuktikan unit test +
+idempotensi backend. Android Studio Run literal tetap **NOT RUN**; backend tidak diubah; merge/deploy
+menunggu izin pemilik.

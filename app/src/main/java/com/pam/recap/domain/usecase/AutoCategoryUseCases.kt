@@ -10,6 +10,7 @@ import com.pam.recap.domain.model.CategoryQueuePhase
 import com.pam.recap.domain.model.CategoryQueueSnapshot
 import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.Transaction
+import com.pam.recap.domain.repository.ClassificationAttemptStore
 import com.pam.recap.domain.repository.ConsentRepository
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.TransactionRepository
@@ -81,6 +82,8 @@ class AutoCategoryUseCase @Inject constructor(
     private val consents: ConsentRepository? = null,
     /** Optional in legacy tests; production binds the local store used for per-import sweeps. */
     private val transactions: TransactionRepository? = null,
+    /** Optional in legacy tests; production binds the durable reviewed-row ledger. */
+    private val attempts: ClassificationAttemptStore? = null,
 ) {
     private val gate = Mutex()
     private val running = AtomicBoolean(false)
@@ -112,7 +115,7 @@ class AutoCategoryUseCase @Inject constructor(
                 // The contract caps one enqueue request at 50 ids; send every remaining candidate
                 // instead of silently leaving the tail of the month unqueued.
                 var queued = 0
-                for (chunk in candidates.chunked(ENQUEUE_BATCH)) {
+                for (chunk in candidates.map { it.id }.chunked(ENQUEUE_BATCH)) {
                     when (val enqueued = serverFinance.enqueueCategories(ownerId, chunk)) {
                         is Outcome.Failure -> return@withLock null
                         is Outcome.Success -> {
@@ -145,22 +148,23 @@ class AutoCategoryUseCase @Inject constructor(
             return Outcome.Failure(AppError.Validation("ai_category_consent_required"))
         }
         return gate.withLock {
-            val ids = when (val scan = scanEligible(ownerId, clock.now())) {
+            val rows = when (val scan = scanEligible(ownerId, clock.now())) {
                 is Outcome.Failure -> return@withLock Outcome.Failure(scan.error)
                 is Outcome.Success -> scan.value
             }
+            val rowsById = rows.associateBy { it.id }
             var processed = 0
             var classified = 0
             var needsReview = 0
             var failed = 0
             val reviewReasons = mutableListOf<String>()
-            onProgress(0, ids.size)
-            for (batch in ids.chunked(CLASSIFY_BATCH)) {
+            onProgress(0, rows.size)
+            for (batch in rows.map { it.id }.chunked(CLASSIFY_BATCH)) {
                 when (val result = serverFinance.classifyTransactions(ownerId, batch)) {
                     is Outcome.Failure -> {
                         return@withLock Outcome.Success(
                             CategorySweepResult(
-                                total = ids.size,
+                                total = rows.size,
                                 processed = processed,
                                 classified = classified,
                                 needsReview = needsReview,
@@ -172,22 +176,30 @@ class AutoCategoryUseCase @Inject constructor(
                     }
                     is Outcome.Success -> {
                         processed += batch.size
+                        val reviewedNow = mutableMapOf<String, Int>()
                         for (job in result.value) {
                             when (job.state) {
                                 "CLASSIFIED" -> classified++
-                                "NEEDS_REVIEW" -> needsReview++
+                                "NEEDS_REVIEW" -> {
+                                    needsReview++
+                                    // Remember the revision we sent. Future sweeps skip this row
+                                    // until an edit/re-import changes the revision, so a second tap
+                                    // cannot resend the same reviewed row.
+                                    rowsById[job.transactionId]?.let { reviewedNow[it.id] = it.revision }
+                                }
                                 "FAILED" -> failed++
                             }
                             job.reasonCode?.let { reviewReasons += it }
                         }
-                        onProgress(processed, ids.size)
+                        attempts?.recordReviewed(ownerId, reviewedNow)
+                        onProgress(processed, rows.size)
                     }
                 }
                 yield()
             }
             Outcome.Success(
                 CategorySweepResult(
-                    total = ids.size,
+                    total = rows.size,
                     processed = processed,
                     classified = classified,
                     needsReview = needsReview,
@@ -305,7 +317,7 @@ class AutoCategoryUseCase @Inject constructor(
      */
     suspend fun eligibleCandidates(ownerId: String, now: Instant): List<String> =
         when (val scan = scanEligible(ownerId, now)) {
-            is Outcome.Success -> scan.value
+            is Outcome.Success -> scan.value.map { it.id }
             is Outcome.Failure -> emptyList()
         }
 
@@ -317,9 +329,10 @@ class AutoCategoryUseCase @Inject constructor(
     private suspend fun scanEligible(
         ownerId: String,
         now: Instant,
-    ): Outcome<List<String>> {
+    ): Outcome<List<EligibleRow>> {
         val month = JakartaMonth.of(now)
-        val ids = LinkedHashSet<String>()
+        val rows = LinkedHashMap<String, EligibleRow>()
+        val reviewed = attempts?.reviewed(ownerId).orEmpty()
         for (offset in 0 until SCAN_MONTHS) {
             val target = month.minusMonths(offset)
             var page: String? = null
@@ -328,13 +341,19 @@ class AutoCategoryUseCase @Inject constructor(
                 if (result is Outcome.Failure) return Outcome.Failure(result.error)
                 val pageResult = result as Outcome.Success
                 for (tx in pageResult.value.items) {
-                    if (isEligible(tx)) ids += tx.id
+                    // Same revision already reached NEEDS_REVIEW: resending it cannot change the
+                    // verdict. An edit/re-import bumps the revision and reopens eligibility.
+                    if (isEligible(tx) && reviewed[tx.id] != tx.revision) {
+                        rows[tx.id] = EligibleRow(tx.id, tx.revision)
+                    }
                 }
                 page = pageResult.value.nextCursor
             } while (page != null)
         }
-        return Outcome.Success(ids.toList())
+        return Outcome.Success(rows.values.toList())
     }
+
+    private data class EligibleRow(val id: String, val revision: Int)
 
     private fun isEligible(tx: Transaction): Boolean {
         if (tx.categoryOrigin == CategoryOrigin.USER) return false

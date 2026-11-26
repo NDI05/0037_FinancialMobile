@@ -57,6 +57,7 @@
     <string name="manual_note_stitch_placeholder">Catatan opsional...</string>
 
     <string name="analysis_primary_insight">Insight utama</string>
+    <string name="analysis_primary_body">%1$s dari %2$d transaksi pada bulan ini.</string>
     <string name="analysis_spending_by_category">Pengeluaran per kategori</string>
     <string name="analysis_concise_findings">Temuan ringkas</string>
     <string name="analysis_consent_missing_title">Izin analisis AI belum aktif</string>

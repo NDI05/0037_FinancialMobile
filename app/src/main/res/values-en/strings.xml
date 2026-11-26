@@ -651,6 +651,9 @@
     <string name="transactions_classify_local_pending">This transaction is stored only on the device and is not known to the server yet. Sync Gmail first, then categorize again.</string>
     <string name="transactions_classify_partial">The sweep stopped at %1$d of %2$d transactions. The rest will be retried when you tap Categorize with AI.</string>
     <string name="transactions_classify_done">%1$d transactions processed by AI.</string>
+    <string name="transactions_classify_nothing_new">No new data to categorize. Remaining transactions were already processed by AI or are still awaiting upload — nothing was sent again.</string>
+    <string name="transactions_classify_done_with_review">%1$d transactions processed by AI. %2$d could not be decided and need a manual category; neither will be sent again automatically.</string>
+    <string name="transactions_classify_review_only">%1$d transactions need a manual category because AI could not decide. Nothing was sent again.</string>
     <string name="settings_section_access">App access</string>
     <string name="settings_access_notifications_body">Allow local notifications for new transactions.</string>
     <string name="settings_access_history_body">See the Gmail, analysis, and categorization consent ledger.</string>

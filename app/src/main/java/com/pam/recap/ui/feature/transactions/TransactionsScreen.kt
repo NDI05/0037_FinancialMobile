@@ -5,7 +5,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -69,7 +68,6 @@ import com.pam.recap.ui.theme.Ink
 import com.pam.recap.ui.theme.LabelM
 import com.pam.recap.ui.theme.OnInk
 import com.pam.recap.ui.theme.OnInkFaint
-import com.pam.recap.ui.theme.Surface as PamSurface
 import com.pam.recap.ui.theme.OnInkMuted
 import com.pam.recap.ui.theme.SurfaceContainer
 import com.pam.recap.ui.theme.OutlineVariant
@@ -195,6 +193,7 @@ fun TransactionsScreen(
                     error = state.classificationError,
                     consentRequired = state.classificationConsentRequired,
                     reviewReasons = state.classificationReviewReasons,
+                    reviewCount = state.classificationReviewCount,
                     onRetry = viewModel::classifyUncategorized,
                     onOpenSettings = onOpenSettings,
                 )
@@ -343,6 +342,7 @@ private fun ClassificationFeedback(
     error: com.pam.recap.core.result.AppError?,
     consentRequired: Boolean,
     reviewReasons: List<String>,
+    reviewCount: Int,
     onRetry: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
@@ -391,13 +391,22 @@ private fun ClassificationFeedback(
                     text = when (code) {
                         "no_eligible_transactions" -> stringResource(R.string.transactions_classify_none)
                         "none_manual_uncategorized" -> stringResource(R.string.transactions_classify_manual)
-                        "local_pending_upload" -> stringResource(R.string.transactions_classify_local_pending)
+                        "nothing_new" -> stringResource(R.string.transactions_classify_nothing_new)
                         "partial" -> stringResource(
                             R.string.transactions_classify_partial,
                             processed,
                             total,
                         )
                         "done" -> stringResource(R.string.transactions_classify_done, processed)
+                        "done_with_review" -> stringResource(
+                            R.string.transactions_classify_done_with_review,
+                            processed,
+                            reviewCount,
+                        )
+                        "review_only" -> stringResource(
+                            R.string.transactions_classify_review_only,
+                            reviewCount,
+                        )
                         else -> stringResource(R.string.transactions_classify_result, code)
                     },
                     tone = if (error != null) MoneyTone.Expense else MoneyTone.Neutral,
@@ -424,7 +433,7 @@ private fun ClassificationFeedback(
     }
 }
 
-/** White pill above the FAB: readable over any row, no shadow, 48 dp touch target. */
+/** Dark action pill above the lime FAB: readable over any row, no shadow, 48 dp touch target. */
 @Composable
 private fun FabAction(
     label: String,
@@ -432,10 +441,9 @@ private fun FabAction(
     onClick: () -> Unit,
 ) {
     Surface(
-        color = PamSurface,
+        color = OnInk,
         contentColor = Ink,
         shape = RoundedCornerShape(PamRadius.lg),
-        border = BorderStroke(1.dp, OutlineVariant),
         modifier = Modifier
             .height(48.dp)
             .clickable(role = Role.Button, onClick = onClick),

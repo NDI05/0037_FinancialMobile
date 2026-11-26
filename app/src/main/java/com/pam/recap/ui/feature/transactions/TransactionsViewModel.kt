@@ -74,6 +74,7 @@ data class TransactionsUiState(
      * maps each code to localized copy; the codes themselves are never shown to the owner.
      */
     val classificationReviewReasons: List<String> = emptyList(),
+    val classificationReviewCount: Int = 0,
     /** Progress of the owner-triggered sweep, so a long run never looks frozen. */
     val classificationProcessed: Int = 0,
     val classificationTotal: Int = 0,
@@ -217,6 +218,7 @@ class TransactionsViewModel @Inject constructor(
                         classificationStatus = classifier.status,
                         classificationError = classifier.error,
                         classificationReviewReasons = classifier.reviewReasons,
+                        classificationReviewCount = classifier.reviewCount,
                         classificationProcessed = classifier.processed,
                         classificationTotal = classifier.total,
                         classificationConsentRequired = classifier.consentRequired,
@@ -340,6 +342,7 @@ class TransactionsViewModel @Inject constructor(
             classificationStatus = classifier.status,
             classificationError = classifier.error,
             classificationReviewReasons = classifier.reviewReasons,
+            classificationReviewCount = classifier.reviewCount,
             classificationProcessed = classifier.processed,
             classificationTotal = classifier.total,
             classificationConsentRequired = classifier.consentRequired,
@@ -562,6 +565,7 @@ class TransactionsViewModel @Inject constructor(
             classificationStatus = classifier.status,
             classificationError = classifier.error,
             classificationReviewReasons = classifier.reviewReasons,
+            classificationReviewCount = classifier.reviewCount,
             classificationProcessed = classifier.processed,
             classificationTotal = classifier.total,
             classificationConsentRequired = classifier.consentRequired,
@@ -636,14 +640,19 @@ class TransactionsViewModel @Inject constructor(
             result.total == 0 && visibleUncategorized.all {
                 it.source == com.pam.recap.domain.model.TransactionSource.MANUAL
             } -> "none_manual_uncategorized"
-            result.total == 0 -> "local_pending_upload"
+            // Remaining rows are either already-reviewed by AI or still uploading; neither is new
+            // work, so never claim a fresh classification run happened.
+            result.total == 0 -> "nothing_new"
             result.stoppedError != null -> "partial"
+            result.needsReview > 0 && result.classified > 0 -> "done_with_review"
+            result.needsReview > 0 -> "review_only"
             else -> "done"
         }
         return ClassificationState(
             status = status,
             error = result.stoppedError,
             reviewReasons = result.reviewReasons,
+            reviewCount = result.needsReview,
             processed = result.processed,
             total = result.total,
         )
@@ -654,6 +663,7 @@ class TransactionsViewModel @Inject constructor(
         val status: String? = null,
         val error: AppError? = null,
         val reviewReasons: List<String> = emptyList(),
+        val reviewCount: Int = 0,
         val processed: Int = 0,
         val total: Int = 0,
         val consentRequired: Boolean = false,

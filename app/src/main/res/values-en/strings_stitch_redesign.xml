@@ -58,6 +58,7 @@
     <string name="manual_note_stitch_placeholder">Optional note...</string>
 
     <string name="analysis_primary_insight">Primary insight</string>
+    <string name="analysis_primary_body">%1$s from %2$d transactions this month.</string>
     <string name="analysis_spending_by_category">Spending by category</string>
     <string name="analysis_concise_findings">Concise findings</string>
     <string name="analysis_consent_missing_title">AI analysis permission is off</string>

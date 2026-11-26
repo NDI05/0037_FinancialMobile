@@ -87,3 +87,103 @@ Branch `feature/stitch-redesign` · APK debug `com.pam.recap.debug` · backend
   tinggi pandang berbeda beberapa dp dari perangkat fisik 393 dp.
 - Backend tidak diubah/di-deploy pada sesi ini; batas budget dan cache adalah perilaku server yang
   sudah terpasang. Merge/deploy aplikasi menunggu izin pemilik.
+
+## 7. Koreksi malam 26 November 2026 (tiga temuan pemilik)
+
+Tiga keluhan pemilik setelah build sebelumnya diverifikasi ulang pada APK debug yang dipasang dari
+`assembleDebug`. Semua perubahan ada di klien Android; backend dan batas biayanya tidak diubah.
+
+### 7.1 Opsi FAB tidak terlihat (putih di atas putih)
+
+Akar masalah: `FabAction` memakai `color = PamSurface` (putih) dengan `contentColor = Ink`. Di tema
+ini `Ink` adalah **canvas near-white `#FAFAF7`**, bukan tinta gelap; jadi label dan ikon putih
+duduk di atas permukaan putih. Ini persis jebakan penamaan token yang sudah dicatat di panduan
+desain: permukaan putih harus memakai `OnInk` (`#171915`).
+
+Perbaikan: latar pill memakai `OnInk` dan teks/ikon memakai `Ink`, border putih dihapus, target
+sentuh 48 dp dan radius `PamRadius.lg` dipertahankan. Opsi kini terbaca sebagai dua pill gelap di
+atas FAB lime.
+
+Bukti (emulator Android 17, `wm size` 1179×2627 @480 dpi):
+
+- `after/after_transaksi_fab_actions_dark_393dp.png` + `.xml` — “Kategorikan dengan AI”
+  `[674,1768][1071,1817]`, “Tambah transaksi” `[759,1948][1071,1997]`, keduanya di dalam layar.
+- `after/after_transaksi_fab_actions_dark_360dp.png`, `..._412dp.png` — tidak terpotong pada 360/412 dp.
+- `after/after_transaksi_fab_actions_dark_font200_393dp.png` — font 200%: label membesar dan mulai
+  di x=283 px, masih di dalam layar; tidak ada teks yang bertabrakan dengan FAB/nav.
+
+### 7.2 “Kategorikan AI” kedua memproses ulang baris yang sama
+
+Akar masalah: idempotensi backend bekerja pada kunci `(owner, transaction, expected_revision)`.
+Untuk baris yang hasilnya `NEEDS_REVIEW` (mis. classifier tidak yakin / kategori tidak valid),
+transaksi tetap `uncategorized` dan **revision tidak berubah**, sehingga sweep berikutnya memindai
+baris itu lagi sebagai kandidat. Backend masih menahan panggilan provider untuk revisi yang sama,
+tetapi klien tetap membuat job/request baru dan UI seolah mengerjakan ulang data — persis keluhan
+“kenapa data yang sama ikut terkategorikan lagi, boros token”.
+
+Perbaikan: ledger lokal `ClassificationAttemptStore` (DataStore, owner-scoped) mencatat
+`transactionId -> revision` yang sudah mencapai `NEEDS_REVIEW`. `scanEligible` melewati baris yang
+revision-nya sudah tercatat; `enqueueOnly` dan `classifyAll` memakai daftar yang sama. Baris
+`FAILED`/jaringan tidak dicatat sehingga tetap bisa dicoba lagi. Sunting atau impor ulang menaikkan
+revision, sehingga baris otomatis terbuka kembali tanpa reset manual. Ledger dibatasi 2.000 entri
+per owner; entri tertua dibuang dan server tetap menjadi pengaman idempotensi.
+
+Status UI juga dibuat jujur: `nothing_new`, `done_with_review` (menyebut jumlah perlu tinjauan),
+`review_only`, dan `partial`; tidak ada lagi klaim “semua selesai” ketika masih ada baris yang perlu
+ditinjau. Status lama “local_pending_upload” dihapus karena sudah tidak dipakai dan menyesatkan.
+
+Bukti otomatis (`AutoCategoryUseCaseTest`, 12 tes):
+
+- sweep kedua dengan baris `NEEDS_REVIEW` yang sama tidak memanggil batch klasifikasi lagi;
+- revision bump (mis. hasil edit) membuat baris kembali eligible;
+- `enqueueOnly` juga mengecualikan baris yang sudah ditinjau;
+- sweep pertama mengirim seluruh kandidat dalam chunk 5 (bukan berhenti di 5 baris).
+
+Batas bukti runtime: akun uji di emulator hanya memiliki baris **manual** “Belum berkategori” yang
+memang dikecualikan dari AI (status `none_manual_uncategorized`, terlihat di
+`after/after_transaksi_classify_manual_dark_393dp.png`), sehingga skenario “tap kedua pada baris
+NEEDS_REVIEW” tidak dapat diproduksi ulang lewat UI tanpa menanam data server sintetis. Perilaku
+tersebut dibuktikan unit test + idempotensi backend yang sudah terpasang; tidak ada data produksi
+yang diubah untuk memaksakan screenshot.
+
+### 7.3 Halaman Analisis belum mengikuti Stitch
+
+Akar masalah: state siap menampilkan kontrol yang tidak ada di prototipe (toggle “Observasi /
+Saran”, pager “1 dari 3”, daftar saran) dan kartu batasan yang mendorong kartu inti ke bawah,
+sementara body kartu insight memakai observasi generik (“Terdapat pengeluaran sebesar …”) alih-alih
+kalimat aritmetika bulan seperti prototipe.
+
+Perbaikan:
+
+- toggle, pager, dan daftar saran dihapus dari viewport pertama; urutan kini persis tiga kartu
+  Stitch: insight lime → pengeluaran per kategori (4 baris + track 12 dp) → temuan ringkas;
+- headline kartu insight tetap `Kategori (p%)`, body menjadi
+  `Rp… dari N transaksi pada bulan ini.` yang dihitung dari ringkasan bulan berjalan;
+- batasan FR-37 tetap tersedia, tetapi dipindah ke bawah `DisclosureFootnote` sebagai catatan
+  rendah-kontras, bukan kartu yang bersaing dengan tiga kartu utama;
+- tombol “Buat ulang analisis” dan disclosure tetap ada setelah kartu, dan nav bawah tidak menutupi
+  konten.
+
+Bukti struktur (dump `uiautomator`, 393 dp): kartu insight diikuti “Pengeluaran per kategori”,
+empat baris `Makanan/Utilitas/Transportasi/Belanja`, lalu “Temuan ringkas”; tidak ada node toggle
+maupun pager. Screenshot 393/360/412 dp dan font 200%:
+
+- `after/after_analisis_stitch_393dp.png` + `.xml`;
+- `after/after_analisis_stitch_360dp.png` + `.xml`;
+- `after/after_analisis_stitch_412dp.png` + `.xml`;
+- `after/after_analisis_stitch_font200_393dp.png` + `.xml` (tidak ada clipping horizontal; teks
+  membungkus ke bawah).
+
+Catatan data visual: empat transaksi manual berkategori (Makanan/Utilitas/Transportasi/Belanja)
+ditambahkan ke akun uji **sintetis** agar kartu kategori dapat dirender dan diukur; yang diuji adalah
+layout/struktur, bukan klasifikasi AI pada keempat baris tersebut. Ini tidak mengubah data pemilik.
+
+### 7.4 Gate ulang
+
+- `./scripts/build.sh :app:testDebugUnitTest :app:assembleDebug :app:lintDebug` —
+  **646 tes / 0 gagal**, `assembleDebug` lulus, lint **0 error / 264 warning / 1 hint**
+  (warning lama + string baru, tidak ada error).
+- APK hasil build dipasang ulang dengan `adb install -r`, lalu screenshot/dump diambil dari proses
+  yang sama.
+- Android Studio **Run literal tetap NOT RUN**; verifikasi memakai ADB. Merge/deploy aplikasi dan
+  backend tetap menunggu izin pemilik.

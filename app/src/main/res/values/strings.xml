@@ -674,6 +674,9 @@
     <string name="transactions_classify_local_pending">Transaksi ini baru tersimpan di perangkat dan belum diakui server. Sinkronkan Gmail dulu, lalu kategorikan lagi.</string>
     <string name="transactions_classify_partial">Sweep berhenti di %1$d dari %2$d transaksi. Sisa transaksi akan dicoba lagi saat Anda menekan Kategorikan AI.</string>
     <string name="transactions_classify_done">%1$d transaksi selesai diproses AI.</string>
+    <string name="transactions_classify_nothing_new">Tidak ada data baru untuk dikategorikan. Transaksi yang tersisa sudah pernah diproses AI atau masih menunggu unggahan — tidak ada yang dikirim ulang.</string>
+    <string name="transactions_classify_done_with_review">%1$d transaksi selesai diproses AI. %2$d transaksi belum bisa ditentukan dan perlu kategori manual; keduanya tidak akan dikirim ulang otomatis.</string>
+    <string name="transactions_classify_review_only">%1$d transaksi perlu kategori manual karena AI belum bisa menentukannya. Tidak ada data yang dikirim ulang.</string>
     <string name="settings_section_access">Akses aplikasi</string>
     <string name="settings_access_notifications_body">Izinkan notifikasi lokal untuk transaksi baru.</string>
     <string name="settings_access_history_body">Lihat catatan izin Gmail, analisis, dan kategorisasi.</string>

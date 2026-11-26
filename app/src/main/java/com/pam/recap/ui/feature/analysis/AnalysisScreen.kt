@@ -2,12 +2,9 @@ package com.pam.recap.ui.feature.analysis
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,7 +23,6 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Icon
@@ -42,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -68,7 +63,6 @@ import com.pam.recap.domain.model.SummaryFreshness
 import com.pam.recap.domain.model.displayStatus
 import com.pam.recap.domain.model.freshnessAgainst
 import com.pam.recap.ui.components.CircularIconWell
-import com.pam.recap.ui.components.CompactMoneyText
 import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassCard
 import com.pam.recap.ui.components.GlassTopBar
@@ -77,14 +71,11 @@ import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
 import com.pam.recap.ui.components.PillButton
 import com.pam.recap.ui.components.PillButtonStyle
-import com.pam.recap.ui.components.PillToggleGroup
-import com.pam.recap.ui.components.PillToggleOption
 import com.pam.recap.ui.components.StatusChip
 import com.pam.recap.ui.components.StatusChipKind
 import com.pam.recap.ui.theme.Accent
 import com.pam.recap.ui.theme.BodyM
 import com.pam.recap.ui.theme.BodyS
-import com.pam.recap.ui.theme.HeadlineM
 import com.pam.recap.ui.theme.LabelEyebrow
 import com.pam.recap.ui.theme.LabelM
 import com.pam.recap.ui.theme.OnAccent
@@ -100,11 +91,8 @@ import com.pam.recap.ui.theme.SurfaceContainer
 import com.pam.recap.ui.theme.SurfaceLow
 import com.pam.recap.ui.theme.TitleL
 import com.pam.recap.ui.theme.TitleM
-import com.pam.recap.ui.theme.TrackInset
-import com.pam.recap.ui.theme.Violet
 import com.pam.recap.ui.util.appErrorRes
 import com.pam.recap.ui.util.categoryLabelRes
-import com.pam.recap.ui.util.metricLabelRes
 
 /** Stitch Analisis: 13 px medium row label (the prototype's `label` tier between BodyS and LabelL). */
 private val CategoryRowLabel: TextStyle = BodyS.copy(fontWeight = FontWeight.Medium)
@@ -122,8 +110,8 @@ private val AnalysisCardPadding = PaddingValues(horizontal = PamSpacing.lg, vert
  *
  * The screens' earlier behaviour is preserved underneath the new visual language: the provider
  * disclosure is rendered before any request (FR-34), the consent gate never lets a request fire
- * without consent, stale/fresh data stays distinguishable (S2.5), observations still carry evidence
- * chips (FR-36) and limitations plus the unavailable fallback remain visible (FR-37).
+ * without consent, stale/fresh data stays distinguishable (S2.5), observations remain listed in
+ * "Temuan ringkas", and limitations plus the unavailable fallback remain visible (FR-37).
  */
 @Composable
 fun AnalysisScreen(
@@ -220,40 +208,6 @@ fun AnalysisScreen(
                             suggestions = analysis.suggestions,
                         )
 
-                        PillToggleGroup(
-                            options = listOf(
-                                PillToggleOption(
-                                    false,
-                                    stringResource(R.string.analysis_tab_observations),
-                                ),
-                                PillToggleOption(
-                                    true,
-                                    stringResource(R.string.analysis_tab_suggestions),
-                                ),
-                            ),
-                            selected = state.showSuggestions,
-                            onSelect = { suggestions ->
-                                if (suggestions) viewModel.showSuggestions()
-                                else viewModel.showObservations()
-                            },
-                        )
-                        if (state.showSuggestions) {
-                            SuggestionList(analysis.suggestions)
-                        } else {
-                            ObservationPager(
-                                observations = analysis.observations,
-                                selectedIndex = state.selectedObservation.coerceIn(
-                                    0,
-                                    (analysis.observations.size - 1).coerceAtLeast(0),
-                                ),
-                                onSelect = viewModel::selectObservation,
-                            )
-                        }
-
-                        if (analysis.limitations.isNotEmpty()) {
-                            LimitationsCard(analysis.limitations)
-                        }
-
                         if (state.error != null) {
                             NoticeBanner(text = stringResource(appErrorRes(requireNotNull(state.error))))
                         }
@@ -271,6 +225,12 @@ fun AnalysisScreen(
                         // already visible, so the "what leaves the device" fact is never one scroll
                         // away.
                         DisclosureFootnote(usesServerAnalysis = viewModel.usesServerAnalysis)
+
+                        // FR-37 remains visible, but below the fold as a footnote so the first
+                        // viewport keeps the prototype's three-card rhythm.
+                        if (analysis.limitations.isNotEmpty()) {
+                            LimitationsFootnote(analysis.limitations)
+                        }
                     }
                 }
             }
@@ -350,9 +310,9 @@ private fun MonthPill(label: String, partial: Boolean) {
 }
 
 /**
- * Stitch insight card: the month's top expense category as an 18/700 headline plus one real,
- * locally-generated observation as the 14/500 body. Nothing is composed from thin air: both values
- * come from the stored summary and the current analysis.
+ * Stitch insight card: the month's top expense category as an 18/700 headline plus the prototype's
+ * arithmetic sentence as the 14/500 body. Both numbers come from the stored summary; only when a
+ * month has no classified expense does the first real observation supply the body.
  */
 @Composable
 private fun InsightCard(summary: MonthlySummary?, analysis: Analysis) {
@@ -394,7 +354,15 @@ private fun InsightCard(summary: MonthlySummary?, analysis: Analysis) {
             Spacer(modifier = Modifier.height(PamSpacing.xs))
         }
         Text(
-            text = observationText ?: top?.let { fallbackInsightBody(it) }.orEmpty(),
+            // The prototype sentence is the month's own arithmetic: amount + transaction count.
+            // Only when no classified expense exists does the live observation become the body.
+            text = top?.let {
+                stringResource(
+                    R.string.analysis_primary_body,
+                    IdrFormatter.format(it.amount),
+                    it.transactionCount,
+                )
+            } ?: observationText.orEmpty(),
             style = BodyM,
             color = OnInkMuted,
             maxLines = 3,
@@ -402,16 +370,6 @@ private fun InsightCard(summary: MonthlySummary?, analysis: Analysis) {
         )
     }
 }
-
-/** Real, already-localized sentence when the analysis has no observation to feature yet. */
-@Composable
-private fun fallbackInsightBody(total: CategoryTotal): String =
-    "${IdrFormatter.format(total.amount)} · " +
-        pluralStringResource(
-            R.plurals.overview_transaction_count,
-            total.transactionCount,
-            total.transactionCount,
-        )
 
 /**
  * Stitch category card: four rows (`n. name` + `Rp… (p%)`) each followed by a 12 dp proportional
@@ -742,111 +700,15 @@ private fun AnalysisStatus.chipKind(): StatusChipKind = when (this) {
     AnalysisStatus.REJECTED -> StatusChipKind.Failed
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ObservationPager(
-    observations: List<Observation>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit,
-) {
-    if (observations.isEmpty()) return
-    val observation = observations[selectedIndex]
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(R.string.analysis_observation_of, selectedIndex + 1, observations.size),
-                style = LabelM,
-                color = OnInkFaint,
-                modifier = Modifier.weight(1f),
-            )
-            if (selectedIndex < observations.lastIndex) {
-                Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
-                    contentDescription = stringResource(R.string.action_next),
-                    tint = OnInkMuted,
-                    modifier = Modifier
-                        .padding(PamSpacing.xxs)
-                        .clickable { onSelect(selectedIndex + 1) },
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(PamSpacing.xs))
-        Text(
-            // A full sentence at DisplayM (26 sp bold) becomes a wall of text; the featured
-            // card keeps the size hierarchy in its progress row and evidence chips instead.
-            text = observation.text,
-            style = HeadlineM,
-            color = OnInk,
-        )
-        Spacer(modifier = Modifier.height(PamSpacing.sm))
-        EvidenceChips(metricKeys = observation.metricKeys)
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun EvidenceChips(metricKeys: List<String>) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
-        verticalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
-    ) {
-        metricKeys.forEach { key ->
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(PamRadius.pill))
-                    .background(TrackInset)
-                    .padding(horizontal = PamSpacing.xs, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(metricLabelRes(key)),
-                    style = LabelM,
-                    color = OnInkMuted,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SuggestionList(suggestions: List<Suggestion>) {
-    Column(verticalArrangement = Arrangement.spacedBy(PamSpacing.xs)) {
-        suggestions.forEach { suggestion ->
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Rounded.Lightbulb,
-                        contentDescription = null,
-                        tint = Violet,
-                        modifier = Modifier.padding(end = PamSpacing.xs),
-                    )
-                    Text(
-                        text = suggestion.text,
-                        style = TitleM,
-                        color = OnInk,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                if (suggestion.suggestedAmount != null) {
-                    Spacer(modifier = Modifier.height(PamSpacing.xs))
-                    CompactMoneyText(amount = suggestion.suggestedAmount)
-                }
-                Spacer(modifier = Modifier.height(PamSpacing.xs))
-                EvidenceChips(metricKeys = suggestion.metricKeys)
-            }
-        }
-    }
-}
-
-@Composable
-private fun LimitationsCard(limitations: List<String>) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+private fun LimitationsFootnote(limitations: List<String>) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = PamSpacing.xxs)) {
         EyebrowText(text = stringResource(R.string.analysis_limitations_eyebrow))
-        Spacer(modifier = Modifier.height(PamSpacing.xs))
+        Spacer(modifier = Modifier.height(PamSpacing.xxs))
         limitations.forEach { limitation ->
             Text(
                 text = limitation,
-                style = TitleM,
+                style = BodyS,
                 color = OnInkMuted,
                 modifier = Modifier.padding(vertical = 1.dp),
             )

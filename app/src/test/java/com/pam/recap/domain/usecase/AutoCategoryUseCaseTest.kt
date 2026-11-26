@@ -17,6 +17,7 @@ import com.pam.recap.domain.model.ParseStatus
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.CategoryDrainResult
+import com.pam.recap.domain.repository.ClassificationAttemptStore
 import com.pam.recap.domain.repository.CategoryEnqueueResult
 import com.pam.recap.domain.repository.ManualTransactionDraft
 import com.pam.recap.domain.repository.ServerCategory
@@ -70,6 +71,7 @@ class AutoCategoryUseCaseTest {
         var enqueuedIds: List<String> = emptyList()
         var gate: CompletableDeferred<Unit>? = null
         val drainStarted = CompletableDeferred<Unit>()
+        var classifyState = "CLASSIFIED"
 
         override suspend fun categories(ownerId: String): Outcome<List<ServerCategory>> =
             Outcome.Success(emptyList())
@@ -94,7 +96,7 @@ class AutoCategoryUseCaseTest {
             classifyBatches += transactionIds
             return Outcome.Success(
                 transactionIds.map { id ->
-                    ServerCategoryJob(id = "job_$id", transactionId = id, state = "CLASSIFIED")
+                    ServerCategoryJob(id = "job_$id", transactionId = id, state = classifyState)
                 },
             )
         }
@@ -133,12 +135,25 @@ class AutoCategoryUseCaseTest {
         override fun now(): Instant = at
     }
 
+    private class FakeAttemptStore(
+        private val initial: Map<String, Int> = emptyMap(),
+    ) : ClassificationAttemptStore {
+        val stored = initial.toMutableMap()
+
+        override suspend fun reviewed(ownerId: String): Map<String, Int> = stored.toMap()
+
+        override suspend fun recordReviewed(ownerId: String, attempts: Map<String, Int>) {
+            stored.putAll(attempts)
+        }
+    }
+
     private fun useCase(
         server: FakeServer,
         consents: FakeConsentRepository? = null,
+        attempts: ClassificationAttemptStore? = null,
     ): Pair<AutoCategoryUseCase, CategoryStatusHolder> {
         val holder = CategoryStatusHolder()
-        return AutoCategoryUseCase(server, holder, FixedClock(now), consents) to holder
+        return AutoCategoryUseCase(server, holder, FixedClock(now), consents, null, attempts) to holder
     }
 
     private fun grantedConsent(purpose: ConsentPurpose) = FakeConsentRepository(
@@ -170,6 +185,49 @@ class AutoCategoryUseCaseTest {
         // The backend contract caps one call at five ids; the tail must still be sent.
         assertEquals(listOf(5, 5, 2), server.classifyBatches.map { it.size })
         assertEquals(12, result.classified)
+    }
+
+    @Test
+    fun `a second sweep skips rows that already reached needs review`() = runTest {
+        val rows = (1..6).map { tx("tx_$it") }
+        val server = FakeServer(rows = rows).apply { classifyState = "NEEDS_REVIEW" }
+        val attempts = FakeAttemptStore()
+        val (useCase, _) = useCase(server, grantedConsent(ConsentPurpose.AI_CATEGORIZATION), attempts)
+
+        val first = (useCase.classifyAll("u_1") as Outcome.Success).value
+        assertEquals(6, first.total)
+        assertEquals(6, first.needsReview)
+        assertEquals(6, attempts.stored.size)
+
+        val second = (useCase.classifyAll("u_1") as Outcome.Success).value
+        assertEquals(0, second.total)
+        assertEquals(0, second.needsReview)
+        // No request at all on the repeat tap: no extra token-bearing job is created.
+        assertEquals(listOf(5, 1), server.classifyBatches.map { it.size })
+    }
+
+    @Test
+    fun `a revision bump reopens a previously reviewed row`() = runTest {
+        val row = tx("tx_1").copy(revision = 2)
+        val server = FakeServer(rows = listOf(row)).apply { classifyState = "NEEDS_REVIEW" }
+        val attempts = FakeAttemptStore(mapOf("tx_1" to 1))
+        val (useCase, _) = useCase(server, grantedConsent(ConsentPurpose.AI_CATEGORIZATION), attempts)
+
+        val outcome = (useCase.classifyAll("u_1") as Outcome.Success).value
+
+        assertEquals(1, outcome.total)
+        assertEquals(listOf(listOf("tx_1")), server.classifyBatches)
+    }
+
+    @Test
+    fun `enqueueOnly also excludes already reviewed rows`() = runTest {
+        val server = FakeServer(rows = listOf(tx("tx_1"), tx("tx_2")))
+        val attempts = FakeAttemptStore(mapOf("tx_1" to 1))
+        val (useCase, _) = useCase(server, attempts = attempts)
+
+        useCase.enqueueOnly("u_1")
+
+        assertEquals(listOf(listOf("tx_2")), server.enqueueBatches)
     }
 
     @Test

@@ -25,10 +25,10 @@ pada viewport **393×852, DPR 2**, font Manrope dan ikon Material Symbols termua
 | 1. Masuk/Daftar | `before/12_masuk_daftar_448dp_emulator.png` | `reference/1._masuk.png` | belum diambil ulang di sesi ini (state login) | top bar terpusat, kartu putih radius 24, CTA accent lebar penuh |
 | 2. Tautkan Gmail | — | `reference/2._tautkan_gmail.png` | `after/after_gmail_link_393dp_v1.png` | hero + chip status, kartu izin/retensi, CTA "Tautkan Gmail" |
 | 3. Ringkasan | `before/01_ringkasan_393dp.png` | `reference/3._ringkasan.png` | `after/after_ringkasan_393dp_v6.png` | kartu bank per bank (opsi B), hero pengeluaran, baris pemasukan, kartu kategori 6 track, daftar terbaru grouped card |
-| 4. Transaksi | `before/02_transaksi_393dp.png` | `reference/4._transaksi.png` | `after/after_transaksi_393dp_v6.png` (daftar); `after/after_transaksi_fab_actions_393dp.png` (FAB dua opsi, 26 Nov); `after/after_transaksi_classify_manual_393dp.png` (feedback sweep) | search 48 dp, chip filter 36 dp, grup tanggal, baris 84 dp, FAB lime 56 dp radius 24; opsi AI + tambah dalam satu FAB |
+| 4. Transaksi | `before/02_transaksi_393dp.png` | `reference/4._transaksi.png` | `after/after_transaksi_393dp_v6.png` (daftar); `after/after_transaksi_fab_actions_dark_393dp.png` (FAB dua opsi gelap, 26 Nov malam), `_360dp.png`, `_412dp.png`, `_font200_393dp.png`; riwayat `after_transaksi_fab_actions_393dp.png` (pill putih yang tak terbaca); `after/after_transaksi_classify_manual_393dp.png` | search 48 dp, chip filter 36 dp, grup tanggal, baris 84 dp, FAB lime 56 dp radius 24; opsi AI + tambah dalam satu FAB, kini kontras `OnInk` di atas `Ink` |
 | 5. Detail transaksi | `before/07_detail_transaksi_393dp.png` | `reference/5._detail_transaksi.png` | `after/after_detail_393dp_v1.png` | hero 24 dp: chip sumber, nominal 32/700, judul, caption; kartu Tanggal/Kategori/Catatan |
 | 6. Tambah transaksi | `before/08_tambah_transaksi_393dp.png` | `reference/6._tambah_transaksi.png` | `after/after_manual_393dp_v2.png` | segmented 20 dp, kartu nominal (prefix Rp + pemisah ribuan), kartu field, CTA accent |
-| 7. Analisis | `before/05_analisis_393dp.png` | `reference/7._analisis.png` | `after/after_analisis_393dp_v2.png`; `after/after_analisis_393dp_v3.png` (consent aktif, 26 Nov) | pill bulan, kartu insight lime, kartu kategori, temuan ringkas; banner kedaluwarsa dipertahankan; state tanpa data menjelaskan sync/tambah transaksi |
+| 7. Analisis | `before/05_analisis_393dp.png` | `reference/7._analisis.png` | `after/after_analisis_stitch_393dp.png` (26 Nov malam), `_360dp.png`, `_412dp.png`, `_font200_393dp.png`; riwayat `after_analisis_393dp_v2/v3.png` | pill bulan, kartu insight lime dengan body `Rp… dari N transaksi`, kartu kategori 4 baris, temuan ringkas; toggle/pager/saran dihapus dari viewport pertama; batasan dipindah ke catatan bawah |
 | 8. Pengaturan | `before/04_pengaturan_393dp.png` | `reference/8._pengaturan.png` | `after/after_pengaturan_akses_aplikasi_393dp.png` (26 Nov), `after/after_pengaturan_akses_360dp.png`, `after/after_pengaturan_akses_412dp.png`, `after/after_pengaturan_akses_font200_top.png` | section uppercase 12/600, kartu putih radius 24; section **AKSES APLIKASI** berisi switch notifikasi + Kategorisasi AI + Analisis AI + riwayat; section Gmail/AI terpisah dihapus |
 | 9. Kelola kategori | `before/06_kelola_kategori_393dp.png` | `reference/9._kelola_kategori.png` | `after/after_kategori_393dp_v1.png` (state sesi berakhir) | judul + back, search 48 dp, grouped list radius 24, FAB accent |
 | Sheet status pembaruan | `before/03_sync_sheet_393dp.png` | `reference/keadaan_sinkronisasi_semua_state.png` | `after/after_status_sheet_393dp_v2.png`, `after_status_running_393dp.png`, `after_status_reopen_393dp.png`, `after_status_result_393dp.png` | header ringkas + "Terakhir", kartu status padat, aksi tunggal, hasil/progress di sheet yang sama |
@@ -129,3 +129,24 @@ Perubahan yang diuji pada APK berjalan (emulator Android 17, override **393 dp**
 
 Rincian mekanisme sinkronisasi otomatis vs tombol, batas token provider, gate, dan batas bukti ada di
 [AI_CATEGORY_SYNC_UI_2026-11-26](../AI_CATEGORY_SYNC_UI_2026-11-26.md).
+
+## Iterasi 26 November 2026 malam — kontras FAB, anti-klasifikasi-ulang, Analisis Stitch
+
+APK berjalan (emulator Android 17, 393 dp override 1179×2627 @480 dpi; 360 dp 1080×2400; 412 dp
+1236×2748; font 200%) membuktikan tiga koreksi terakhir:
+
+- **Kontras FAB**: `after/after_transaksi_fab_actions_dark_393dp.png` dan varian 360/412/font 200%
+  menunjukkan kedua opsi terbaca gelap-di-atas-lime; akar masalahnya `PamSurface` putih + `Ink`
+  yang ternyata near-white, bukan tinta.
+- **Anti-klasifikasi-ulang**: ledger `ClassificationAttemptStore` menyimpan `id -> revision` yang
+  sudah `NEEDS_REVIEW` sehingga sweep kedua tidak mengirim ulang baris yang sama; revision bump
+  membukanya kembali. Bukti di unit test (12 tes) + `after/after_transaksi_classify_manual_dark_393dp.png`
+  untuk feedback jujur; data uji tidak bisa memproduksi baris server `NEEDS_REVIEW`.
+- **Analisis**: `after/after_analisis_stitch_393dp.png` (plus 360/412/font 200%) hanya memuat tiga
+  kartu Stitch — insight lime, kategori 4 baris, temuan ringkas — tanpa toggle/pager/saran; batasan
+  menjadi catatan setelah disclosure. Body insight memakai aritmetika bulan berjalan.
+
+Gate: `:app:testDebugUnitTest` **646 tes/0 gagal**, `assembleDebug` lulus, `lintDebug`
+**0 error/264 warning/1 hint**. Android Studio Run literal tetap **NOT RUN**; merge/deploy menunggu
+izin pemilik. Rincian ada di
+[AI_CATEGORY_SYNC_UI_2026-11-26](../AI_CATEGORY_SYNC_UI_2026-11-26.md#7-koreksi-malam-26-november-2026-tiga-temuan-pemilik).
