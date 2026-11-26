@@ -570,13 +570,12 @@
     <string name="category_manage_custom">Buatan sendiri</string>
     <string name="category_manage_count">%1$d kategori</string>
     <string name="category_edit_title">Ubah kategori</string>
-    <string name="category_new_title">Kategori baru</string>
     <string name="category_field_code">Kode</string>
-    <string name="category_field_label">Nama</string>
-    <string name="category_field_kind">Jenis</string>
+    <string name="category_name_placeholder">Nama kategori...</string>
+    <string name="category_advanced_options">Opsi lanjutan</string>
     <string name="category_kind_expense">Pengeluaran</string>
     <string name="category_kind_income">Pemasukan</string>
-    <string name="category_save">Simpan kategori</string>
+    <string name="category_save">Simpan</string>
     <string name="category_delete">Hapus kategori</string>
     <string name="category_delete_confirm">Hapus “%1$s”? Transaksi yang memakainya tetap ada, tetapi kehilangan kategori sampai dipindahkan.</string>
     <string name="category_delete_in_use">Kategori ini masih dipakai transaksi. Pilih kategori pengganti supaya transaksi dipindahkan sekaligus.</string>

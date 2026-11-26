@@ -1,7 +1,11 @@
 package com.pam.recap.ui.feature.category
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,13 +15,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,6 +43,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +52,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,27 +60,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pam.recap.R
 import com.pam.recap.domain.repository.ServerCategory
 import com.pam.recap.ui.components.DynamicFieldsEditor
-import com.pam.recap.ui.components.MoneyTone
 import com.pam.recap.ui.components.NoticeBanner
 import com.pam.recap.ui.components.PamScaffold
 import com.pam.recap.ui.components.PillButton
 import com.pam.recap.ui.components.PillButtonStyle
 import com.pam.recap.ui.theme.Accent
+import com.pam.recap.ui.theme.BodyM
 import com.pam.recap.ui.theme.BodyS
 import com.pam.recap.ui.theme.LabelEyebrow
-import com.pam.recap.ui.theme.LabelM
 import com.pam.recap.ui.theme.OnAccent
 import com.pam.recap.ui.theme.OnInk
 import com.pam.recap.ui.theme.OnInkMuted
@@ -89,8 +101,10 @@ import com.pam.recap.ui.util.appErrorRes
 
 /**
  * S3 category management in the Stitch "Kelola kategori" layout: centered title with back,
- * search field, one grouped white list and a floating add action. All server behaviour stays:
- * search (local + server), create, rename, attribute pairs and delete-with-reassignment.
+ * search field, one grouped white list and a floating add action. Create and rename open the
+ * Stitch modal (title, icon preview, name field, dark save) over the list; advanced contract
+ * fields sit behind the modal's tune action so no existing capability is lost. All server
+ * behaviour stays: search (local + server), attribute pairs and delete-with-reassignment.
  * Built-ins keep the protected state and never offer edit/delete.
  *
  * Deviation from the prototype: per-category transaction counts are not part of the server
@@ -110,44 +124,38 @@ fun CategoryManagementScreen(
         modifier = modifier,
         topBar = {
             CategoryHeader(
-                title = stringResource(
-                    when {
-                        editor == null -> R.string.category_manage_title
-                        editor.isNew -> R.string.category_new_title
-                        else -> R.string.category_edit_title
-                    },
-                ),
-                onBack = if (editor == null) onBack else viewModel::dismissEditor,
+                title = stringResource(R.string.category_manage_title),
+                onBack = onBack,
             )
         },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (editor != null) {
-                CategoryEditorPane(
-                    editor = editor,
-                    busy = state.busy,
-                    errorRes = state.error?.let { appErrorRes(it) },
-                    validationRule = state.validationRule,
-                    onChange = viewModel::onEditorChange,
-                    onSave = viewModel::save,
-                    onCancel = viewModel::dismissEditor,
-                )
-            } else {
-                CategoryList(
-                    state = state,
-                    onQueryChange = viewModel::onQueryChange,
-                    onEdit = viewModel::startEdit,
-                    onDelete = viewModel::requestDelete,
-                )
-                AddCategoryFab(
-                    enabled = state.serverEnabled,
-                    onClick = viewModel::startCreate,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(bottom = PamSpacing.xl),
-                )
-            }
+            CategoryList(
+                state = state,
+                onQueryChange = viewModel::onQueryChange,
+                onEdit = viewModel::startEdit,
+                onDelete = viewModel::requestDelete,
+            )
+            AddCategoryFab(
+                enabled = state.serverEnabled,
+                onClick = viewModel::startCreate,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = PamSpacing.xl),
+            )
         }
+    }
+
+    if (editor != null) {
+        CategoryEditorDialog(
+            editor = editor,
+            busy = state.busy,
+            errorRes = state.error?.let { appErrorRes(it) },
+            validationRule = state.validationRule,
+            onChange = viewModel::onEditorChange,
+            onSave = viewModel::save,
+            onDismiss = viewModel::dismissEditor,
+        )
     }
 
     val pending = state.pendingDelete
@@ -430,95 +438,241 @@ private fun AddCategoryFab(
     }
 }
 
-private fun categoryIcon(category: ServerCategory): ImageVector {
-    val key = "${category.code} ${category.label}".lowercase()
+private fun categoryIcon(category: ServerCategory): ImageVector =
+    categoryIcon("${category.code} ${category.label}")
+
+/** Shared by list rows and the add/edit dialog so the preview matches the saved row. */
+private fun categoryIcon(key: String): ImageVector {
+    val normalized = key.lowercase()
     return when {
-        key.contains("income") || key.contains("pemasukan") || key.contains("gaji") -> Icons.Rounded.Payments
-        key.contains("food") || key.contains("makan") || key.contains("minum") -> Icons.Rounded.Fastfood
-        key.contains("transport") -> Icons.Rounded.DirectionsCar
-        key.contains("housing") || key.contains("tinggal") || key.contains("sewa") -> Icons.Rounded.Home
-        key.contains("util") || key.contains("tagihan") -> Icons.Rounded.ReceiptLong
-        key.contains("shop") || key.contains("belanja") -> Icons.Rounded.ShoppingBag
-        key.contains("health") || key.contains("kesehatan") -> Icons.Rounded.MedicalServices
-        key.contains("edu") || key.contains("pendidikan") -> Icons.Rounded.School
-        key.contains("transfer") -> Icons.Rounded.SwapHoriz
+        normalized.contains("income") || normalized.contains("pemasukan") || normalized.contains("gaji") -> Icons.Rounded.Payments
+        normalized.contains("food") || normalized.contains("makan") || normalized.contains("minum") -> Icons.Rounded.Fastfood
+        normalized.contains("transport") -> Icons.Rounded.DirectionsCar
+        normalized.contains("housing") || normalized.contains("tinggal") || normalized.contains("sewa") -> Icons.Rounded.Home
+        normalized.contains("util") || normalized.contains("tagihan") -> Icons.Rounded.ReceiptLong
+        normalized.contains("shop") || normalized.contains("belanja") -> Icons.Rounded.ShoppingBag
+        normalized.contains("health") || normalized.contains("kesehatan") -> Icons.Rounded.MedicalServices
+        normalized.contains("edu") || normalized.contains("pendidikan") -> Icons.Rounded.School
+        normalized.contains("transfer") -> Icons.Rounded.SwapHoriz
         else -> Icons.Rounded.Label
     }
 }
 
+/**
+ * Stitch "Tambah / Ubah kategori" modal: title + close, a lime icon preview, a name field and one
+ * full-width dark save button. The advanced contract fields (kind, code, attributes) stay available
+ * behind the tune action instead of being dropped.
+ */
 @Composable
-private fun CategoryEditorPane(
+private fun CategoryEditorDialog(
     editor: CategoryEditor,
     busy: Boolean,
     errorRes: Int?,
     validationRule: String?,
     onChange: (CategoryEditor) -> Unit,
     onSave: () -> Unit,
-    onCancel: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(bottom = PamSpacing.xxl),
-        verticalArrangement = Arrangement.spacedBy(PamSpacing.sm),
+    var advanced by remember(editor.id) { mutableStateOf(false) }
+    val bannerRes = when {
+        validationRule == "conflict" -> R.string.category_conflict
+        errorRes != null -> errorRes
+        validationRule != null -> R.string.category_invalid
+        else -> null
+    }
+    val shape = RoundedCornerShape(PamRadius.xl)
+    Dialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        properties = DialogProperties(
+            dismissOnBackPress = !busy,
+            dismissOnClickOutside = !busy,
+            usePlatformDefaultWidth = false,
+        ),
     ) {
-        when (validationRule) {
-            "conflict" -> NoticeBanner(text = stringResource(R.string.category_conflict))
-            null -> Unit
-            else -> NoticeBanner(text = stringResource(R.string.category_invalid))
+        // LocalView must be read inside the dialog subcomposition so the parent is its DialogLayout.
+        val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+        DisposableEffect(dialogWindow) {
+            val applyDim = Runnable { dialogWindow?.setDimAmount(0.3f) }
+            dialogWindow?.decorView?.post(applyDim)
+            onDispose { dialogWindow?.decorView?.removeCallbacks(applyDim) }
         }
-        if (errorRes != null) NoticeBanner(text = stringResource(errorRes))
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = PamSpacing.md),
+            contentAlignment = Alignment.Center,
+        ) {
+            androidx.compose.material3.Surface(
+                modifier = Modifier
+                    .widthIn(max = 353.dp)
+                    .fillMaxWidth()
+                    .heightIn(max = 640.dp),
+                shape = shape,
+                color = Surface,
+                border = BorderStroke(1.dp, OutlineVariant),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(PamSpacing.lg),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().heightIn(min = PamSize.minTouch),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (editor.isNew) R.string.category_manage_add else R.string.category_edit_title,
+                            ),
+                            style = TitleL,
+                            color = OnInk,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = { advanced = !advanced }, enabled = !busy) {
+                            Icon(
+                                imageVector = Icons.Rounded.Tune,
+                                contentDescription = stringResource(R.string.category_advanced_options),
+                                tint = if (advanced) OnInk else OnInkMuted,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        IconButton(onClick = onDismiss, enabled = !busy) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.action_close),
+                                tint = OnInk,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
 
-        CategoryField(
-            value = editor.label,
-            onValueChange = { onChange(editor.copy(label = it)) },
-            label = stringResource(R.string.category_field_label),
-            enabled = !busy,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-        )
-        CategoryField(
-            value = editor.code,
-            onValueChange = { onChange(editor.copy(code = it.lowercase())) },
-            label = stringResource(R.string.category_field_code),
-            enabled = !busy && editor.isNew,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm)) {
-            PillButton(
-                text = stringResource(R.string.category_kind_expense),
-                onClick = { onChange(editor.copy(kind = CategoryEditor.KIND_EXPENSE)) },
-                style = if (editor.kind == CategoryEditor.KIND_EXPENSE) PillButtonStyle.Primary else PillButtonStyle.Secondary,
-                enabled = !busy,
-            )
-            PillButton(
-                text = stringResource(R.string.category_kind_income),
-                onClick = { onChange(editor.copy(kind = CategoryEditor.KIND_INCOME)) },
-                style = if (editor.kind == CategoryEditor.KIND_INCOME) PillButtonStyle.Primary else PillButtonStyle.Secondary,
-                enabled = !busy,
-            )
-        }
-        DynamicFieldsEditor(
-            fields = editor.fields,
-            onFieldsChange = { onChange(editor.copy(fields = it)) },
-            enabled = !busy,
-        )
-        Spacer(modifier = Modifier.height(PamSpacing.xs))
-        Row(horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm)) {
-            PillButton(
-                text = stringResource(R.string.category_save),
-                onClick = onSave,
-                loading = busy,
-                enabled = !busy,
-            )
-            PillButton(
-                text = stringResource(R.string.action_cancel),
-                onClick = onCancel,
-                style = PillButtonStyle.Secondary,
-                enabled = !busy,
-            )
+                    if (bannerRes != null) {
+                        Spacer(modifier = Modifier.height(PamSpacing.sm))
+                        NoticeBanner(text = stringResource(bannerRes))
+                    }
+
+                    Spacer(modifier = Modifier.height(PamSpacing.md))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(PamSize.minTouch)
+                                .clip(RoundedCornerShape(PamRadius.md))
+                                .background(Accent)
+                                .border(1.dp, OutlineVariant, RoundedCornerShape(PamRadius.md)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = categoryIcon("${editor.code} ${editor.label}"),
+                                contentDescription = null,
+                                tint = OnAccent,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                        CategoryNameField(
+                            value = editor.label,
+                            onValueChange = { onChange(editor.copy(label = it)) },
+                            enabled = !busy,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+
+                    if (advanced) {
+                        Spacer(modifier = Modifier.height(PamSpacing.md))
+                        Row(horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm)) {
+                            PillButton(
+                                text = stringResource(R.string.category_kind_expense),
+                                onClick = { onChange(editor.copy(kind = CategoryEditor.KIND_EXPENSE)) },
+                                style = if (editor.kind == CategoryEditor.KIND_EXPENSE) {
+                                    PillButtonStyle.Primary
+                                } else {
+                                    PillButtonStyle.Secondary
+                                },
+                                enabled = !busy,
+                            )
+                            PillButton(
+                                text = stringResource(R.string.category_kind_income),
+                                onClick = { onChange(editor.copy(kind = CategoryEditor.KIND_INCOME)) },
+                                style = if (editor.kind == CategoryEditor.KIND_INCOME) {
+                                    PillButtonStyle.Primary
+                                } else {
+                                    PillButtonStyle.Secondary
+                                },
+                                enabled = !busy,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(PamSpacing.sm))
+                        CategoryField(
+                            value = editor.code,
+                            onValueChange = { onChange(editor.copy(code = it.lowercase())) },
+                            label = stringResource(R.string.category_field_code),
+                            enabled = !busy && editor.isNew,
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
+                        )
+                        Spacer(modifier = Modifier.height(PamSpacing.sm))
+                        DynamicFieldsEditor(
+                            fields = editor.fields,
+                            onFieldsChange = { onChange(editor.copy(fields = it)) },
+                            enabled = !busy,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(PamSpacing.md))
+                    PillButton(
+                        text = stringResource(R.string.category_save),
+                        onClick = onSave,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(PamRadius.md),
+                        loading = busy,
+                        enabled = !busy,
+                    )
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun CategoryNameField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val shape = RoundedCornerShape(PamRadius.md)
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier
+            .heightIn(min = PamSize.minTouch)
+            .clip(shape)
+            .background(SurfaceLow)
+            .border(1.dp, if (focused) Primary else OutlineVariant, shape),
+        enabled = enabled,
+        singleLine = true,
+        textStyle = BodyM.copy(color = OnInk),
+        cursorBrush = SolidColor(Primary),
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+        interactionSource = interaction,
+        decorationBox = { innerTextField ->
+            Box(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = PamSpacing.sm),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                if (value.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.category_name_placeholder),
+                        style = BodyM,
+                        color = OnInkMuted,
+                    )
+                }
+                innerTextField()
+            }
+        },
+    )
 }
 
 @Composable

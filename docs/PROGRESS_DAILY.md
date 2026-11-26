@@ -803,3 +803,21 @@ crash atau ANR (`logcat -b crash` kosong). Gate tetap 646 tes/0 gagal, `assemble
 0 error/264 warning/1 hint. Bukti: `after/studio_run/` + `idea_log_run.txt`, rincian di
 [ANDROID_STUDIO_RUN_2026-11-27](evidence/ANDROID_STUDIO_RUN_2026-11-27.md). Ini menggantikan status
 “Run literal NOT RUN” pada entri sebelumnya; merge/deploy tetap menunggu persetujuan pemilik.
+
+**Bug UI kategori (27 Nov 2026, 01:0x WIB).** Pemilik melaporkan UI “tambah kategori” di Pengaturan
+masih belum sesuai Stitch. Sebelumnya FAB mengganti seluruh daftar dengan form halaman penuh
+(judul “Kategori baru”, `Nama`/`Kode`, pill jenis, `Kolom tambahan`, `Simpan kategori`). Sekarang
+`CategoryManagementScreen` membuka `Dialog` putih 353 dp di atas daftar: judul “Tambah kategori” +
+tutup, pratinjau ikon lime 48 dp radius 16, field nama 48 dp radius 16, CTA gelap “Simpan” selebar
+kartu, radius 24/padding 20/border `#E2E3DB`. Scrim disetel 30% lewat `DialogWindowProvider` (app
+sebelumnya memakai scrim platform 60%, terlalu gelap). Field lanjutan (jenis, kode, atribut) tetap
+ada lewat aksi “Opsi lanjutan”. Ukuran relatif elemen cocok dengan render Stitch: modal 351×214 vs
+353×216, ikon→atas 84 vs 85, Simpan→atas 147 vs 148, tinggi Simpan 48. Diuji dari **Android Studio
+Run** ke emulator Android 17/API 37: 393/360/412 dp, font 200% (advanced tetap bisa di-scroll sampai
+Simpan), tambah “Uji Modal” (11→12), buka ulang “Ubah kategori”, hapus (kembali 11), tanpa crash/ANR.
+Gate: **646 tes/0 gagal**, `assembleDebug` lulus, lint **0 error/265 warning/1 hint**. Bukti:
+`docs/evidence/stitch_redesign_2026-11-25/after/category_modal/`, banding langsung
+`category_modal_stitch_vs_android_393dp.png`; rincian
+[CATEGORY_MODAL_STITCH_2026-11-27](evidence/CATEGORY_MODAL_STITCH_2026-11-27.md). Batas: field ikon
+tidak ada di kontrak server sehingga pratinjau mengikuti kode/label; merge/deploy menunggu izin
+pemilik.

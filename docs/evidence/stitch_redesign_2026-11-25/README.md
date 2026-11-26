@@ -30,7 +30,7 @@ pada viewport **393×852, DPR 2**, font Manrope dan ikon Material Symbols termua
 | 6. Tambah transaksi | `before/08_tambah_transaksi_393dp.png` | `reference/6._tambah_transaksi.png` | `after/after_manual_393dp_v2.png` | segmented 20 dp, kartu nominal (prefix Rp + pemisah ribuan), kartu field, CTA accent |
 | 7. Analisis | `before/05_analisis_393dp.png` | `reference/7._analisis.png` | `after/after_analisis_stitch_393dp.png` (26 Nov malam), `_360dp.png`, `_412dp.png`, `_font200_393dp.png`; riwayat `after_analisis_393dp_v2/v3.png` | pill bulan, kartu insight lime dengan body `Rp… dari N transaksi`, kartu kategori 4 baris, temuan ringkas; toggle/pager/saran dihapus dari viewport pertama; batasan dipindah ke catatan bawah |
 | 8. Pengaturan | `before/04_pengaturan_393dp.png` | `reference/8._pengaturan.png` | `after/after_pengaturan_akses_aplikasi_393dp.png` (26 Nov), `after/after_pengaturan_akses_360dp.png`, `after/after_pengaturan_akses_412dp.png`, `after/after_pengaturan_akses_font200_top.png` | section uppercase 12/600, kartu putih radius 24; section **AKSES APLIKASI** berisi switch notifikasi + Kategorisasi AI + Analisis AI + riwayat; section Gmail/AI terpisah dihapus |
-| 9. Kelola kategori | `before/06_kelola_kategori_393dp.png` | `reference/9._kelola_kategori.png` | `after/after_kategori_393dp_v1.png` (state sesi berakhir) | judul + back, search 48 dp, grouped list radius 24, FAB accent |
+| 9. Kelola kategori | `before/06_kelola_kategori_393dp.png`; `before/studio_run_category/before_add_category_393dp.png` (form halaman penuh) | `reference/9._kelola_kategori.png`; `tmp-stitch/9._kelola_kategori_modal.png` (modal) | `after/after_kategori_393dp_v1.png` (state sesi berakhir); `after/category_modal/category_modal_393dp.png` (27 Nov, modal final) + varian 360/412/font 200/advanced | judul + back, search 48 dp, grouped list radius 24, FAB accent; tambah/ubah kategori berupa modal putih 353 dp di atas daftar, judul + tutup, pratinjau ikon lime, field nama 48 dp, CTA gelap `Simpan`; scrim 30% |
 | Sheet status pembaruan | `before/03_sync_sheet_393dp.png` | `reference/keadaan_sinkronisasi_semua_state.png` | `after/after_status_sheet_393dp_v2.png`, `after_status_running_393dp.png`, `after_status_reopen_393dp.png`, `after_status_result_393dp.png` | header ringkas + "Terakhir", kartu status padat, aksi tunggal, hasil/progress di sheet yang sama |
 | 360 dp | `before/09_ringkasan_360dp.png` | `reference/pemeriksaan_360_dp_412_dp_font_200.png` | `after_ringkasan_360dp.png`, `after_transaksi_360dp.png`, `after_pengaturan_akses_360dp.png` | margin 16 dp; tidak ada teks terpotong |
 | 412 dp | `before/10_ringkasan_412dp.png` | idem | `after_ringkasan_412dp.png`, `after_transaksi_412dp.png`, `after_pengaturan_akses_412dp.png` | "Transaksi terbaru" terlihat tepat di atas nav (785 dp), sama seperti referensi |
@@ -156,3 +156,20 @@ hasil Run. Screenshot Run ada di `after/studio_run/`; log IDE dan rincian di
 [ANDROID_STUDIO_RUN_2026-11-27](../ANDROID_STUDIO_RUN_2026-11-27.md). Merge/deploy menunggu izin
 pemilik. Rincian ada di
 [AI_CATEGORY_SYNC_UI_2026-11-26](../AI_CATEGORY_SYNC_UI_2026-11-26.md#7-koreksi-malam-26-november-2026-tiga-temuan-pemilik).
+
+## Iterasi 27 November 2026 — modal Tambah/Ubah kategori sesuai Stitch
+
+Laporan pemilik: UI menambah kategori di Pengaturan belum sesuai Stitch. Sebelumnya FAB mengganti
+seluruh daftar dengan form halaman penuh (`before/studio_run_category/before_add_category_393dp.png`).
+Kini editor tampil sebagai modal putih 353×±216 dp di tengah atas daftar, dengan judul
+“Tambah kategori”, aksi tutup, pratinjau ikon lime 48 dp, field nama 48 dp, dan CTA gelap “Simpan”
+selebar kartu. Scrim 30% disetel lewat window dialog; sebelumnya scrim platform 60% membuat latar
+terlalu gelap. Field lanjutan (jenis, kode, kolom tambahan) tetap tersedia lewat aksi
+“Opsi lanjutan” di header modal, jadi tidak ada kapabilitas yang hilang.
+
+Bukti APK berjalan (Android Studio Run, emulator Android 17/API 37):
+`after/category_modal/category_modal_393dp.png` (+360/412/font 200/advanced),
+`category_modal_stitch_vs_android_393dp.png` untuk banding langsung, dan dump XML pasangannya.
+Tambah → “Uji Modal” membuktikan daftar 11→12, buka ulang berjudul “Ubah kategori”, hapus
+mengembalikan 11. Gate: **646 tes/0 gagal**, `assembleDebug` lulus, lint **0 error/265 warning/1
+hint**. Rincian di [CATEGORY_MODAL_STITCH_2026-11-27](../CATEGORY_MODAL_STITCH_2026-11-27.md).

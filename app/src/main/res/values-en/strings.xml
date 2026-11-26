@@ -548,13 +548,12 @@
     <string name="category_manage_custom">Custom</string>
     <string name="category_manage_count">%1$d categories</string>
     <string name="category_edit_title">Edit category</string>
-    <string name="category_new_title">New category</string>
     <string name="category_field_code">Code</string>
-    <string name="category_field_label">Name</string>
-    <string name="category_field_kind">Kind</string>
+    <string name="category_name_placeholder">Category name...</string>
+    <string name="category_advanced_options">Advanced options</string>
     <string name="category_kind_expense">Expense</string>
     <string name="category_kind_income">Income</string>
-    <string name="category_save">Save category</string>
+    <string name="category_save">Save</string>
     <string name="category_delete">Delete category</string>
     <string name="category_delete_confirm">Delete “%1$s”? Transactions that use it stay, but lose the category until reassigned.</string>
     <string name="category_delete_in_use">This category is still used by transactions. Pick a replacement so they move at the same time.</string>
