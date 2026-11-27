@@ -38,3 +38,7 @@ backend/.dev-server.log
 # artefak build Go/binary
 bin/
 *.exe
+
+# Project-local Excalidraw skill and renderer downloaded by scripts/docs/setup-excalidraw-skill.sh.
+/.agents/skills/excalidraw-diagram/
+/.agents/skills/.excalidraw-install.*/

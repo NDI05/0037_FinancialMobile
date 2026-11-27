@@ -68,6 +68,18 @@ tetap menjadi riwayat keputusan gate dan tidak dibuka ulang tanpa bukti baru.
 - Tanggal historis yang direkonstruksi dari Git harus diberi label rekonstruksi.
   Pembaruan README/progres tidak mengubah SRS resmi atau mengotorisasi merge/deploy.
 
+## Diagram SRS dengan Excalidraw
+
+- Untuk membuat atau merevisi diagram SRS, gunakan skill proyek di
+  `.agents/skills/excalidraw-diagram/SKILL.md`. Jika belum terpasang, jalankan
+  `./scripts/docs/setup-excalidraw-skill.sh` dari root `pam-app`.
+- Baca skill sebelum menggambar. Simpan sumber editable `.excalidraw` dan PNG
+  hasil render. Periksa gambar sebelum dimasukkan ke dokumen.
+- Tempatkan Use Case (A1), ERD (A2), dan Activity (A3) dalam Appendix A.
+  A4 Kamus Data tetap tabel Word yang sama definisinya dengan ERD. Ikuti
+  [alur kerja diagram SRS](docs/specifications/SRS_DIAGRAM_WORKFLOW.md) untuk
+  setup, render, dan pemeriksaan salinan SRS.
+
 ## Kerapian dan penghentian implementasi lama
 
 Mulai 23 November 2026, setiap perubahan yang menggantikan implementasi harus menyertakan
