@@ -5,8 +5,8 @@ rekap arus kas bulanan. Pengguna dapat meninjau kategori, meminta bantuan katego
 Azure, dan mengakses analisis sesuai consent masing-masing. Perencanaan anggaran pensiun menurut CR-008.
 
 **Status:** dalam pengembangan · **Sprint aktif:** S2 / PARTIAL
-**Pembaruan dokumentasi:** 25 November 2026 · **Branch kerja:** `feat/c2-android`
-**SRS resmi:** v0.5 · **Release/merge/deploy:** belum dinyatakan selesai
+**Pembaruan dokumentasi:** 27 November 2026 · **Branch kerja:** `main`
+**SRS resmi:** v0.5 · **Merge UI Stitch ke `main`:** selesai 27 November 2026 (PR #1, `e1498ec`); deploy produksi Android belum tersedia
 
 > README ini adalah pintu masuk proyek. Riwayat pekerjaan, hasil tes, dan gate yang belum
 > lulus dibedakan; commit atau jumlah tes tidak otomatis membuktikan fitur selesai.

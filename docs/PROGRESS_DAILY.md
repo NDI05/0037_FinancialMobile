@@ -821,3 +821,13 @@ Gate: **646 tes/0 gagal**, `assembleDebug` lulus, lint **0 error/265 warning/1 h
 [CATEGORY_MODAL_STITCH_2026-11-27](evidence/CATEGORY_MODAL_STITCH_2026-11-27.md). Batas: field ikon
 tidak ada di kontrak server sehingga pratinjau mengikuti kode/label; merge/deploy menunggu izin
 pemilik.
+
+**Merge ke `main` dan deploy uji (27 Nov 2026, 13:18 WIB).** Pemilik memberi izin merge/deploy.
+PR [#1](https://github.com/NDI05/0037_FinancialMobile/pull/1) `feature/stitch-redesign` → `main`
+di-merge sebagai merge commit `e1498ec` (16 commit fitur dipertahankan, tanpa force-push), lalu
+branch fitur dihapus dari lokal dan `origin`. Gate tree yang di-merge: **646 tes/0 gagal**,
+`assembleDebug` PASS, lint **0 error/265 warning/1 hint**. APK debug dari `main` pasca-merge
+(50.901.935 B, sha256 `30638e10…`) dipasang ulang ke emulator Android 17/API 37; modal kategori
+dibuka dan scrim terukur 30% `(178,178,178)`, tanpa crash. Deploy Play Store **NOT RUN**: repo
+tidak punya signing release/Play Console/Firebase/CI distribusi. Backend tidak berubah dan tidak
+di-deploy ulang. Rincian: [MERGE_MAIN_CATEGORY_MODAL_2026-11-27](delivery/MERGE_MAIN_CATEGORY_MODAL_2026-11-27.md).
