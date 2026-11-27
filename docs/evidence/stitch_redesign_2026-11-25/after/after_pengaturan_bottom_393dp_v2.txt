@@ -1,0 +1,20 @@
+  53.1 146.6  Pengaturan
+ 137.5  24.0  NOTIFIKASI
+ 177.9  36.0  Notifikasi transaksi baru
+ 200.1  36.0  Beri tahu saya saat transaksi Livin baru tercatat.
+ 257.3  46.2  Aktif
+ 240.9 198.0  Buka pengaturan sistem
+ 316.9  24.0  KATEGORI
+ 357.3  70.2  Kategori
+ 379.5  70.2  Daftar &amp; ikon kategori
+ 433.8  24.0  WIDGET
+ 474.1  70.2  Widget layar utama
+ 496.3  70.2  Pratinjau widget 2×2 &amp; 4×2
+ 550.6  24.0  DATA &amp; PRIVASI
+ 591.0  70.2  Hapus semua data
+ 613.2  70.2  Hapus data lokal setelah verifikasi ulang.
+ 681.6 175.0  Keluar
+   0.0   0.0  Ringkasan
+   0.0   0.0  Transaksi
+   0.0   0.0  Analisis
+   0.0   0.0  Pengaturan

@@ -1,0 +1,5 @@
+$ adb logcat -d -b crash | grep -E "com.pam.recap|FATAL"
+(empty)
+
+$ adb shell pidof com.pam.recap.debug
+3759

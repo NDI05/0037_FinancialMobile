@@ -1,0 +1,23 @@
+  53.1  72.0  Detail transaksi
+ 125.5  50.2  Email Livin
+ 125.5 148.8  Perlu tinjauan
+ 157.9  40.0  Rp10.000
+ 214.0  40.0  Pembayaran Berhasil!
+ 242.7  40.0  Nominal &amp; tanggal dari notifikasi Livin'.
+ 316.9  36.0  Tanggal
+ 316.9 231.1  25 Nov 2026 00:00
+ 380.3  36.0  Kategori
+ 380.3 192.9  Belum berkategori
+ 443.2  36.0  Catatan
+ 587.7  36.0  Mode server: kategori dan detail transaksi disimpan ke serve
+ 706.3  36.0  ASAL DATA
+ 731.4  36.0  Sumber
+ 731.4 188.5  Email Livin
+ 758.0  36.0  Versi parser
+ 758.0 188.5  gmail-livin-v3
+ 784.5  36.0  Sidik jari (awalan)
+ 784.5 188.5  188fd70783
+   0.0   0.0  Waktu transaksi
+   0.0   0.0  25 Nov 2026 00:00
+   0.0   0.0  Asal kategori
+   0.0   0.0  Aturan otomatis

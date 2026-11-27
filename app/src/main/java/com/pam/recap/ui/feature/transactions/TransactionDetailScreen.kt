@@ -1,19 +1,30 @@
 package com.pam.recap.ui.feature.transactions
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,7 +34,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,15 +48,13 @@ import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.ui.components.CategoryChip
-import com.pam.recap.ui.components.CategoryGlyph
 import com.pam.recap.ui.components.ConfidenceBar
-import com.pam.recap.ui.components.amountLabel
-import com.pam.recap.ui.components.moneyToneColor
 import com.pam.recap.ui.components.ConsentSwitchRow
 import com.pam.recap.ui.components.DynamicFieldsEditor
 import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassCard
 import com.pam.recap.ui.components.GlassTopBar
+import com.pam.recap.ui.components.GroupedListCard
 import com.pam.recap.ui.components.KeyValueRow
 import com.pam.recap.ui.components.LabelledField
 import com.pam.recap.ui.components.LoadingShimmer
@@ -52,23 +66,36 @@ import com.pam.recap.ui.components.PillButtonStyle
 import com.pam.recap.ui.components.SheetScaffold
 import com.pam.recap.ui.components.StatusChip
 import com.pam.recap.ui.components.StatusChipKind
+import com.pam.recap.ui.components.amountLabel
 import com.pam.recap.ui.components.dynamicFieldRuleRes
 import com.pam.recap.ui.theme.BodyM
+import com.pam.recap.ui.theme.BodyS
 import com.pam.recap.ui.theme.DisplayL
+import com.pam.recap.ui.theme.LabelEyebrow
+import com.pam.recap.ui.theme.LabelL
 import com.pam.recap.ui.theme.LabelM
 import com.pam.recap.ui.theme.OnInk
+import com.pam.recap.ui.theme.OnInkFaint
 import com.pam.recap.ui.theme.OnInkMuted
+import com.pam.recap.ui.theme.OutlineVariant
+import com.pam.recap.ui.theme.PamRadius
 import com.pam.recap.ui.theme.PamSpacing
-import com.pam.recap.ui.theme.TitleM
+import com.pam.recap.ui.theme.Primary
+import com.pam.recap.ui.theme.SurfaceContainer
+import com.pam.recap.ui.theme.SurfaceLow
+import com.pam.recap.ui.theme.TitleL
+import com.pam.recap.ui.theme.TitleS
 import com.pam.recap.ui.util.PamDateFormat
 import com.pam.recap.ui.util.appErrorRes
 import com.pam.recap.ui.util.categoryLabelRes
-import com.pam.recap.ui.util.directionLabelRes
 
 /**
- * §8 Transaction detail: read-only amount hero and provenance (source, parser version, confidence,
- * opaque fingerprint, event vs received time) plus the only mutable fields — category, transfer
- * flag, refund link and private note (FR-17/FR-25).
+ * §8 Transaction detail, restyled to the Stitch reference (2026-11-25): a 32 dp amount hero card
+ * with the source chip above and the provenance caption below, then a grouped attribute card with
+ * Tanggal / Kategori (correction pill) / Catatan. The read-only imported fields stay untouched: the
+ * amount, direction and event time are never editable and the provenance/audit cards below still
+ * expose them. Only category, transfer, refund, note and — in server mode — description/merchant
+ * plus delete are mutable (FR-17/FR-25).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -85,6 +112,7 @@ fun TransactionDetailScreen(
         if (state.isDeleted) onBack()
     }
     var showRefundSheet by remember { mutableStateOf(false) }
+    var showCategorySheet by remember { mutableStateOf(false) }
 
     PamScaffold(
         modifier = modifier,
@@ -92,9 +120,6 @@ fun TransactionDetailScreen(
             GlassTopBar(
                 title = stringResource(R.string.detail_title),
                 onBack = onBack,
-                actions = {
-                    if (transaction?.isManual == true) StatusChip(kind = StatusChipKind.Manual)
-                },
             )
         },
     ) { padding ->
@@ -105,55 +130,49 @@ fun TransactionDetailScreen(
             return@PamScaffold
         }
 
+        val sourceLabel = if (transaction.isManual) {
+            stringResource(R.string.status_manual)
+        } else {
+            stringResource(R.string.detail_source_email)
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(PamSpacing.sm),
+                .verticalScroll(rememberScrollState())
+                .padding(top = PamSpacing.xs),
+            verticalArrangement = Arrangement.spacedBy(PamSpacing.lg),
         ) {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CategoryGlyph(category = transaction.category, size = 40.dp)
-                    Spacer(modifier = Modifier.padding(horizontal = PamSpacing.xxs))
-                    Column {
-                        Text(
-                            text = transaction.description,
-                            style = TitleM,
-                            color = OnInk,
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.detail_direction_and_time,
-                                stringResource(directionLabelRes(transaction.direction)),
-                                PamDateFormat.dateTime(transaction.eventAt),
-                            ),
-                            style = LabelM,
-                            color = OnInkMuted,
-                        )
+            AmountHeroCard(
+                sourceLabel = sourceLabel,
+                amount = amountLabel(transaction.amount, transaction.currency),
+                title = transaction.description,
+                provenance = if (transaction.isManual) {
+                    stringResource(R.string.transactions_source_chip, stringResource(R.string.status_manual))
+                } else {
+                    stringResource(R.string.detail_readonly_livin_note)
+                },
+                chips = {
+                    if (!transaction.isIdr) StatusChip(kind = StatusChipKind.Unavailable)
+                    if (transaction.hasUnconfirmedSuggestion) {
+                        StatusChip(kind = StatusChipKind.Suggestion)
                     }
-                }
-                Spacer(modifier = Modifier.height(PamSpacing.sm))
-                Text(
-                    text = amountLabel(transaction.amount, transaction.currency),
-                    style = DisplayL.copy(fontFeatureSettings = "tnum"),
-                    color = moneyToneColor(
-                        if (transaction.direction == Direction.CREDIT) MoneyTone.Income else MoneyTone.Expense,
-                    ),
-                    maxLines = 1,
-                )
-                if (!transaction.isIdr) {
-                    Spacer(modifier = Modifier.height(PamSpacing.xxs))
-                    StatusChip(kind = StatusChipKind.Unavailable)
-                }
-                if (transaction.hasUnconfirmedSuggestion) {
-                    Spacer(modifier = Modifier.height(PamSpacing.xs))
-                    StatusChip(kind = StatusChipKind.Suggestion)
-                }
-                if (transaction.isLowConfidence) {
-                    Spacer(modifier = Modifier.height(PamSpacing.xs))
-                    StatusChip(kind = StatusChipKind.LowConfidence)
-                }
+                    if (transaction.isLowConfidence) StatusChip(kind = StatusChipKind.LowConfidence)
+                },
+            )
+
+            AttributeCard(
+                dateValue = PamDateFormat.dateTime(transaction.eventAt),
+                categoryLabel = stringResource(categoryLabelRes(transaction.category)),
+                categoryEditable = state.categoryEditable,
+                onEditCategory = { showCategorySheet = true },
+                note = state.noteDraft,
+                onNoteChange = viewModel::setNote,
+            )
+
+            if (transaction.hasUnconfirmedSuggestion) {
+                NoticeBanner(text = stringResource(R.string.detail_suggestion_unconfirmed))
             }
 
             if (state.error != null && !state.conflict) {
@@ -169,7 +188,7 @@ fun TransactionDetailScreen(
                 NoticeBanner(text = stringResource(R.string.detail_actions_server_partial))
             }
 
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
+            GlassCard(modifier = Modifier.fillMaxWidth(), radius = PamRadius.xl) {
                 EyebrowText(text = stringResource(R.string.detail_provenance_eyebrow))
                 Spacer(modifier = Modifier.height(PamSpacing.xs))
                 KeyValueRow(
@@ -220,36 +239,6 @@ fun TransactionDetailScreen(
                 )
             }
 
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                EyebrowText(text = stringResource(R.string.detail_category_eyebrow))
-                Spacer(modifier = Modifier.height(PamSpacing.xs))
-                if (transaction.hasUnconfirmedSuggestion) {
-                    Text(
-                        text = stringResource(R.string.detail_suggestion_unconfirmed),
-                        style = BodyM,
-                        color = OnInkMuted,
-                    )
-                    Spacer(modifier = Modifier.height(PamSpacing.xs))
-                }
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(PamSpacing.xs),
-                    verticalArrangement = Arrangement.spacedBy(PamSpacing.xs),
-                ) {
-                    Category.entries.forEach { category ->
-                        CategoryChip(
-                            category = category,
-                            label = stringResource(categoryLabelRes(category)),
-                            selected = transaction.category == category,
-                            onClick = if (state.categoryEditable) {
-                                { viewModel.setCategory(category) }
-                            } else {
-                                null
-                            },
-                        )
-                    }
-                }
-            }
-
             ConsentSwitchRow(
                 title = stringResource(R.string.detail_transfer_title),
                 body = stringResource(R.string.detail_transfer_body),
@@ -258,7 +247,7 @@ fun TransactionDetailScreen(
             )
 
             if (transaction.direction == Direction.CREDIT) {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                GlassCard(modifier = Modifier.fillMaxWidth(), radius = PamRadius.xl) {
                     EyebrowText(text = stringResource(R.string.detail_refund_eyebrow))
                     Spacer(modifier = Modifier.height(PamSpacing.xs))
                     Text(
@@ -281,7 +270,7 @@ fun TransactionDetailScreen(
             }
 
             if (state.metadataEditable) {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                GlassCard(modifier = Modifier.fillMaxWidth(), radius = PamRadius.xl) {
                     EyebrowText(text = stringResource(R.string.detail_edit_eyebrow))
                     Spacer(modifier = Modifier.height(PamSpacing.xs))
                     LabelledField(
@@ -301,13 +290,6 @@ fun TransactionDetailScreen(
                         Spacer(modifier = Modifier.height(PamSpacing.xxs))
                         NoticeBanner(text = stringResource(R.string.detail_merchant_reference_notice))
                     }
-                    Spacer(modifier = Modifier.height(PamSpacing.xs))
-                    LabelledField(
-                        label = stringResource(R.string.detail_note_label),
-                        value = state.noteDraft,
-                        onValueChange = viewModel::setNote,
-                        placeholder = stringResource(R.string.detail_note_placeholder_edit),
-                    )
                     state.fieldError?.let { error ->
                         Spacer(modifier = Modifier.height(PamSpacing.xs))
                         NoticeBanner(text = stringResource(fieldErrorRes(error)))
@@ -347,7 +329,7 @@ fun TransactionDetailScreen(
                     }
                 }
 
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                GlassCard(modifier = Modifier.fillMaxWidth(), radius = PamRadius.xl) {
                     EyebrowText(text = stringResource(R.string.detail_delete_eyebrow))
                     Spacer(modifier = Modifier.height(PamSpacing.xs))
                     Text(
@@ -365,26 +347,16 @@ fun TransactionDetailScreen(
                 }
             } else {
                 // Offline mode: the Room note stays editable, the server-only edit form is not offered.
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    EyebrowText(text = stringResource(R.string.detail_note_eyebrow))
-                    Spacer(modifier = Modifier.height(PamSpacing.xs))
-                    LabelledField(
-                        label = stringResource(R.string.detail_note_label),
-                        value = state.noteDraft,
-                        onValueChange = viewModel::setNote,
-                        placeholder = stringResource(R.string.detail_note_placeholder),
-                    )
-                    Spacer(modifier = Modifier.height(PamSpacing.xs))
-                    PillButton(
-                        text = stringResource(R.string.action_save),
-                        onClick = viewModel::saveMetadata,
-                        style = PillButtonStyle.Secondary,
-                        loading = state.isBusy,
-                    )
-                }
+                PillButton(
+                    text = stringResource(R.string.action_save),
+                    onClick = viewModel::saveMetadata,
+                    style = PillButtonStyle.Secondary,
+                    loading = state.isBusy,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
+            GlassCard(modifier = Modifier.fillMaxWidth(), radius = PamRadius.xl) {
                 EyebrowText(text = stringResource(R.string.detail_audit_eyebrow))
                 Spacer(modifier = Modifier.height(PamSpacing.xs))
                 KeyValueRow(
@@ -405,7 +377,33 @@ fun TransactionDetailScreen(
                         ?: stringResource(R.string.detail_never_edited),
                 )
             }
+        }
+    }
 
+    if (showCategorySheet) {
+        SheetScaffold(onDismissRequest = { showCategorySheet = false }) {
+            Text(
+                text = stringResource(R.string.detail_choose_category),
+                style = com.pam.recap.ui.theme.HeadlineM,
+                color = OnInk,
+            )
+            Spacer(modifier = Modifier.height(PamSpacing.sm))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(PamSpacing.xs),
+                verticalArrangement = Arrangement.spacedBy(PamSpacing.xs),
+            ) {
+                Category.entries.forEach { category ->
+                    CategoryChip(
+                        category = category,
+                        label = stringResource(categoryLabelRes(category)),
+                        selected = transaction?.category == category,
+                        onClick = {
+                            viewModel.setCategory(category)
+                            showCategorySheet = false
+                        },
+                    )
+                }
+            }
         }
     }
 
@@ -473,6 +471,210 @@ fun TransactionDetailScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
+}
+
+/**
+ * Stitch amount hero: white 24 dp card, source chip, 32/700 tabular amount, 18/700 title and the
+ * small provenance caption. Extra status chips wrap under the source chip without moving the
+ * amount baseline.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AmountHeroCard(
+    sourceLabel: String,
+    amount: String,
+    title: String,
+    provenance: String,
+    chips: @Composable () -> Unit,
+) {
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        radius = PamRadius.xl,
+        contentPadding = PaddingValues(PamSpacing.lg),
+    ) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(PamSpacing.xs),
+            verticalArrangement = Arrangement.spacedBy(PamSpacing.xs),
+        ) {
+            SourceChip(text = sourceLabel)
+            chips()
+        }
+        Spacer(modifier = Modifier.height(PamSpacing.sm))
+        Text(
+            text = amount,
+            style = DisplayL,
+            color = OnInk,
+            maxLines = 1,
+        )
+        Spacer(modifier = Modifier.height(PamSpacing.sm))
+        Text(
+            text = title,
+            style = TitleL,
+            color = OnInk,
+        )
+        Spacer(modifier = Modifier.height(PamSpacing.xxs))
+        Text(
+            text = provenance,
+            style = BodyS,
+            color = OnInkMuted,
+        )
+    }
+}
+
+/** `#EEEEEB` 12 dp-radius source chip from the reference (`label-sm` 11/600). */
+@Composable
+private fun SourceChip(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(PamRadius.sm))
+            .background(SurfaceContainer)
+            .padding(horizontal = PamSpacing.xs + 2.dp, vertical = PamSpacing.xxs),
+    ) {
+        Text(text = text, style = LabelEyebrow, color = OnInkMuted)
+    }
+}
+
+/**
+ * Grouped attribute card: Tanggal is read-only, Kategori opens the picker sheet and Catatan stays
+ * an inline editor (the note is the only metadata every mode can write locally).
+ */
+@Composable
+private fun AttributeCard(
+    dateValue: String,
+    categoryLabel: String,
+    categoryEditable: Boolean,
+    onEditCategory: () -> Unit,
+    note: String,
+    onNoteChange: (String) -> Unit,
+) {
+    GroupedListCard(radius = PamRadius.xl) {
+        AttributeRow(label = stringResource(R.string.detail_date_row), value = dateValue)
+        HorizontalDivider(color = OutlineVariant)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(PamSpacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
+        ) {
+            Text(
+                text = stringResource(R.string.detail_category_row),
+                style = BodyM,
+                color = OnInkMuted,
+                modifier = Modifier.weight(1f),
+            )
+            CategoryPill(
+                label = categoryLabel,
+                enabled = categoryEditable,
+                onClick = onEditCategory,
+            )
+        }
+        HorizontalDivider(color = OutlineVariant)
+        Column(modifier = Modifier.padding(PamSpacing.md)) {
+            Text(
+                text = stringResource(R.string.detail_note_label),
+                style = BodyM,
+                color = OnInkMuted,
+            )
+            Spacer(modifier = Modifier.height(PamSpacing.xxs + 2.dp))
+            NoteField(
+                value = note,
+                onValueChange = onNoteChange,
+                placeholder = stringResource(R.string.detail_note_placeholder_edit),
+            )
+        }
+    }
+}
+
+/** One `p-4` label/value row of the attribute card (reference `body-md` label, `label-lg` value). */
+@Composable
+private fun AttributeRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(PamSpacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
+    ) {
+        Text(
+            text = label,
+            style = BodyM,
+            color = OnInkMuted,
+            modifier = Modifier.weight(1f),
+        )
+        Text(text = value, style = TitleS, color = OnInk)
+    }
+}
+
+/** `#F4F4F1` pill with a 16 dp radius and the edit glyph from the reference category row. */
+@Composable
+private fun CategoryPill(
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(PamRadius.md)
+    Row(
+        modifier = Modifier
+            .heightIn(min = 40.dp)
+            .clip(shape)
+            .background(SurfaceLow)
+            .then(
+                if (enabled) {
+                    Modifier.clickable(
+                        role = Role.Button,
+                        onClickLabel = stringResource(R.string.detail_choose_category),
+                        onClick = onClick,
+                    )
+                } else {
+                    Modifier
+                },
+            )
+            .padding(horizontal = PamSpacing.sm + PamSpacing.xxs, vertical = PamSpacing.xxs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs + 2.dp),
+    ) {
+        Text(text = label, style = LabelL, color = OnInk)
+        Icon(
+            imageVector = Icons.Rounded.Edit,
+            contentDescription = null,
+            tint = OnInkMuted,
+            modifier = Modifier.height(18.dp),
+        )
+    }
+}
+
+/** Inset `#F4F4F1` note textarea (16 dp radius, 12 dp padding) from the reference. */
+@Composable
+private fun NoteField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+) {
+    val shape = RoundedCornerShape(PamRadius.md)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 66.dp)
+            .clip(shape)
+            .background(SurfaceLow)
+            .border(1.dp, OutlineVariant, shape)
+            .padding(PamSpacing.sm),
+    ) {
+        if (value.isEmpty()) {
+            Text(text = placeholder, style = BodyM, color = OnInkFaint)
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            textStyle = BodyM.copy(color = OnInk),
+            cursorBrush = SolidColor(Primary),
+            minLines = 2,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = placeholder },
+        )
     }
 }
 

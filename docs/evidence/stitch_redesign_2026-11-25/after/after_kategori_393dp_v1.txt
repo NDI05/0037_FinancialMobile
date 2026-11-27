@@ -1,0 +1,5 @@
+  53.1 160.1  Kategori
+ 109.5  36.0  Sesi Google berakhir. Hubungkan ulang kotak masuk.
+ 202.0  72.0  Cari kategori...
+ 250.0  20.0  0 kategori
+ 296.9  36.0  Belum ada kategori yang cocok.

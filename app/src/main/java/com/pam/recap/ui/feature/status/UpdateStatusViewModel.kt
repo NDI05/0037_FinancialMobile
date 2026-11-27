@@ -96,8 +96,20 @@ class UpdateStatusViewModel @Inject constructor(
     /** The rolling one-year window the current period belongs to, evaluated on the owner's clock. */
     fun window(): RetentionWindow = RetentionWindow.of(clock)
 
-    /** Starts (or joins) the one manual sync flight. Idempotent while a run is active. */
+    /** Tracks the last accepted tap so a double-tap cannot enqueue two flights. */
+    private var lastManualRequestAt: kotlin.time.Instant? = null
+
+    /**
+     * Starts (or joins) the one manual sync flight. Idempotent while a run is active, and a second
+     * tap inside the same instant window is dropped before it reaches the coordinator; the sheet
+     * also disables the button as soon as a run is reported.
+     */
     fun syncNow() {
+        if (state.value.syncBusy) return
+        val now = clock.now()
+        val last = lastManualRequestAt
+        if (last != null && now - last < MANUAL_REQUEST_GAP) return
+        lastManualRequestAt = now
         coordinator.requestSync(month.value)
     }
 
@@ -288,5 +300,8 @@ class UpdateStatusViewModel @Inject constructor(
     companion object {
         /** How often the open sheet refreshes `GET /v1/gmail/status`; reads only, no side effects. */
         internal const val SERVER_POLL_INTERVAL_MS: Long = 5_000
+
+        /** A tap is accepted once per window; a reported run disables the button anyway. */
+        internal val MANUAL_REQUEST_GAP = 2.seconds
     }
 }

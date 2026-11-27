@@ -2,7 +2,10 @@ package com.pam.recap.ui.feature.gmail
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,12 +15,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LinkOff
+import androidx.compose.material.icons.rounded.Mail
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -25,9 +33,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -38,7 +48,6 @@ import com.pam.recap.R
 import com.pam.recap.domain.model.GmailLinkResult
 import com.pam.recap.domain.model.GmailLinkStatus
 import com.pam.recap.domain.model.GmailSyncState
-import com.pam.recap.ui.components.EyebrowText
 import com.pam.recap.ui.components.GlassCard
 import com.pam.recap.ui.components.GlassTopBar
 import com.pam.recap.ui.components.KeyValueRow
@@ -49,11 +58,17 @@ import com.pam.recap.ui.components.PillButton
 import com.pam.recap.ui.components.PillButtonStyle
 import com.pam.recap.ui.components.StatusChip
 import com.pam.recap.ui.components.StatusChipKind
+import com.pam.recap.ui.theme.Accent
 import com.pam.recap.ui.theme.BodyM
-import com.pam.recap.ui.theme.DisplayM
+import com.pam.recap.ui.theme.LabelM
+import com.pam.recap.ui.theme.OnAccent
 import com.pam.recap.ui.theme.OnInk
+import com.pam.recap.ui.theme.OnInkFaint
 import com.pam.recap.ui.theme.OnInkMuted
+import com.pam.recap.ui.theme.OutlineVariant
+import com.pam.recap.ui.theme.PamRadius
 import com.pam.recap.ui.theme.PamSpacing
+import com.pam.recap.ui.theme.TitleL
 import com.pam.recap.ui.theme.TitleM
 import com.pam.recap.ui.util.PamDateFormat
 import com.pam.recap.ui.util.appErrorRes
@@ -132,6 +147,7 @@ fun GmailLinkContent(
 ) {
     PamScaffold(
         modifier = modifier,
+        showAurora = false,
         topBar = {
             GlassTopBar(
                 title = stringResource(R.string.gmail_link_title),
@@ -143,16 +159,45 @@ fun GmailLinkContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = PamSpacing.gutter),
             verticalArrangement = Arrangement.spacedBy(PamSpacing.sm),
         ) {
-            EyebrowText(text = stringResource(R.string.gmail_link_eyebrow))
+            Spacer(modifier = Modifier.height(PamSpacing.lg))
+
+            // Large lime mail icon box — Stitch identity block
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(PamRadius.lg))
+                    .background(Accent),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Mail,
+                    contentDescription = null,
+                    tint = OnAccent,
+                    modifier = Modifier.size(32.dp),
+                )
+            }
+
             Text(
                 text = stringResource(R.string.gmail_link_headline),
-                style = DisplayM,
+                style = TitleL,
                 color = OnInk,
             )
 
+            // Feature list
+            GmailFeatureRow(
+                icon = Icons.Rounded.Visibility,
+                text = stringResource(R.string.gmail_link_feature_readonly),
+            )
+            GmailFeatureRow(
+                icon = Icons.Rounded.Tune,
+                text = stringResource(R.string.gmail_link_feature_ai_separate),
+            )
+
+            // Link result banners
             state.linkResult?.let { result ->
                 NoticeBanner(
                     text = if (result.success) {
@@ -170,79 +215,33 @@ fun GmailLinkContent(
                 )
             }
 
-            // A runtime-disabled backend is explained inside the card below, so it is not also
-            // shown as a generic failure banner (that would read like a retryable outage).
             if (state.error != null && !state.backendGmailDisabled) {
                 NoticeBanner(text = stringResource(appErrorRes(state.error)))
             }
 
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                if (state.loading) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(PamSpacing.lg),
-                            color = OnInk,
-                        )
-                        Spacer(modifier = Modifier.height(PamSpacing.xs))
-                        Text(
-                            text = stringResource(R.string.gmail_link_connecting),
-                            style = BodyM,
-                            color = OnInkMuted,
-                        )
-                    }
-                } else {
-                    GmailStatusBody(status = state.status)
-                }
-
-                Spacer(modifier = Modifier.height(PamSpacing.sm))
-
-                if (state.backendGmailDisabled) {
-                    // The server answered `503 gmail_disabled`: no connect/disconnect CTA at all.
-                    Text(
-                        text = stringResource(R.string.gmail_link_backend_disabled),
-                        style = BodyM,
-                        color = OnInkMuted,
-                    )
-                } else if (!state.enabled) {
-                    Text(
-                        text = stringResource(R.string.gmail_link_server_required),
-                        style = BodyM,
-                        color = OnInkMuted,
-                    )
-                } else {
-                    PillButton(
-                        text = stringResource(
-                            if (state.status?.connected == true) {
-                                R.string.gmail_link_reconnect
-                            } else {
-                                R.string.gmail_link_connect
-                            },
-                        ),
-                        onClick = onConnect,
-                        style = PillButtonStyle.Primary,
-                        enabled = !state.busy && state.signedIn,
-                        loading = state.busy,
-                        leadingIcon = Icons.Rounded.Link,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag(GmailLinkTestTags.CONNECT),
-                    )
-                    if (state.status?.connected == true) {
-                        Spacer(modifier = Modifier.height(PamSpacing.xs))
-                        PillButton(
-                            text = stringResource(R.string.gmail_link_disconnect),
-                            onClick = onRequestDisconnect,
-                            style = PillButtonStyle.Secondary,
-                            enabled = !state.busy,
-                            leadingIcon = Icons.Rounded.LinkOff,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag(GmailLinkTestTags.DISCONNECT),
-                        )
+            // Status card
+            if (state.status != null || state.loading) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    if (state.loading) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(PamSpacing.lg),
+                                color = OnInk,
+                            )
+                            Spacer(modifier = Modifier.height(PamSpacing.xs))
+                            Text(
+                                text = stringResource(R.string.gmail_link_connecting),
+                                style = BodyM,
+                                color = OnInkMuted,
+                            )
+                        }
+                    } else {
+                        GmailStatusBody(status = state.status)
                     }
                 }
             }
 
+            // Consent notice card (always shown)
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = stringResource(R.string.gmail_link_consent_title),
@@ -269,7 +268,56 @@ fun GmailLinkContent(
                 )
             }
 
+            Spacer(modifier = Modifier.height(PamSpacing.md))
+
+            // CTAs — primary lime "Tautkan Gmail", secondary "Lewati" or "Putuskan"
+            if (state.backendGmailDisabled) {
+                Text(
+                    text = stringResource(R.string.gmail_link_backend_disabled),
+                    style = BodyM,
+                    color = OnInkMuted,
+                )
+            } else if (!state.enabled) {
+                Text(
+                    text = stringResource(R.string.gmail_link_server_required),
+                    style = BodyM,
+                    color = OnInkMuted,
+                )
+            } else {
+                PillButton(
+                    text = stringResource(
+                        if (state.status?.connected == true) {
+                            R.string.gmail_link_reconnect
+                        } else {
+                            R.string.gmail_link_connect
+                        },
+                    ),
+                    onClick = onConnect,
+                    style = PillButtonStyle.Primary,
+                    enabled = !state.busy && state.signedIn,
+                    loading = state.busy,
+                    leadingIcon = Icons.Rounded.Link,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(GmailLinkTestTags.CONNECT),
+                )
+                if (state.status?.connected == true) {
+                    Spacer(modifier = Modifier.height(PamSpacing.xs))
+                    PillButton(
+                        text = stringResource(R.string.gmail_link_disconnect),
+                        onClick = onRequestDisconnect,
+                        style = PillButtonStyle.Secondary,
+                        enabled = !state.busy,
+                        leadingIcon = Icons.Rounded.LinkOff,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(GmailLinkTestTags.DISCONNECT),
+                    )
+                }
+            }
+
             if (state.error != null) {
+                Spacer(modifier = Modifier.height(PamSpacing.xs))
                 PillButton(
                     text = stringResource(R.string.action_retry),
                     onClick = onRetry,
@@ -279,6 +327,8 @@ fun GmailLinkContent(
                         .testTag(GmailLinkTestTags.RETRY),
                 )
             }
+
+            Spacer(modifier = Modifier.height(PamSpacing.xl))
         }
     }
 
@@ -298,6 +348,25 @@ fun GmailLinkContent(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun GmailFeatureRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = OnInkFaint,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(text = text, style = LabelM, color = OnInkMuted)
     }
 }
 

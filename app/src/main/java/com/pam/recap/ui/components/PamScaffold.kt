@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -23,7 +24,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -131,11 +133,15 @@ fun GlassTopBar(
     onBack: (() -> Unit)? = null,
     subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
+    // Dedicated top-right slot for the sync/update status control. Kept separate from [actions] so
+    // screens cannot accidentally move it, and additive so every existing caller keeps compiling.
+    status: (@Composable () -> Unit)? = null,
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = PamSpacing.md, vertical = PamSpacing.xs),
+            .heightIn(min = 56.dp)
+            .padding(horizontal = PamSpacing.md),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -149,7 +155,9 @@ fun GlassTopBar(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 56.dp),
             )
             if (subtitle != null) {
                 Text(
@@ -159,15 +167,18 @@ fun GlassTopBar(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 56.dp),
                 )
             }
         }
         if (onBack != null) {
             CircularIconWell(
-                icon = Icons.Rounded.ArrowBack,
+                icon = Icons.AutoMirrored.Rounded.ArrowBack,
                 contentDescription = stringResource(com.pam.recap.R.string.action_back),
                 onClick = onBack,
+                containerColor = Color.Transparent,
                 modifier = Modifier.align(Alignment.CenterStart),
             )
         }
@@ -175,17 +186,16 @@ fun GlassTopBar(
             modifier = Modifier.align(Alignment.CenterEnd),
             horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
             verticalAlignment = Alignment.CenterVertically,
-            content = actions,
-        )
+        ) {
+            status?.invoke()
+            actions()
+        }
     }
 }
 
 /**
- * 44 dp circular icon well. [contentDescription] is mandatory for icon-only controls (NFR-01);
- * pass `null` only when the icon is decorative next to a visible label.
- *
- * [enabled] keeps the control in the tree (and readable by TalkBack) while making it impossible to
- * activate: the touch target stays at the minimum interactive size even when disabled.
+ * 48 dp minimum interactive icon well. [contentDescription] is mandatory for icon-only controls
+ * (NFR-01); pass `null` only when the icon is decorative next to a visible label.
  */
 @Composable
 fun CircularIconWell(
@@ -193,19 +203,18 @@ fun CircularIconWell(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    size: Dp = PamSize.iconButton,
+    size: Dp = PamSize.minTouch,
     selected: Boolean = false,
     enabled: Boolean = true,
-    tint: androidx.compose.ui.graphics.Color = if (selected) Violet else OnInk.copy(alpha = 0.8f),
+    containerColor: Color = GlassFill,
+    tint: Color = if (selected) Violet else OnInk,
 ) {
     val wellModifier = modifier
         .minimumInteractiveComponentSize()
         .size(size)
         .clip(CircleShape)
-        .background(if (selected) Violet.copy(alpha = 0.16f) else GlassFill)
+        .background(if (selected) Violet.copy(alpha = 0.12f) else containerColor)
 
-    // The description sits on the control itself (not on the child icon) so TalkBack announces one
-    // node: name, role and disabled state together.
     val withClick = if (onClick != null) {
         wellModifier
             .semantics {
@@ -221,7 +230,7 @@ fun CircularIconWell(
             imageVector = icon,
             contentDescription = if (onClick != null) null else contentDescription,
             tint = tint.copy(alpha = if (enabled) tint.alpha else tint.alpha * 0.4f),
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(22.dp),
         )
     }
 }

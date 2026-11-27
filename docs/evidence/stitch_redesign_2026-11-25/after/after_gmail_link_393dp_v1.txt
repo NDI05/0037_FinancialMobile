@@ -1,0 +1,16 @@
+  53.1  72.0  Gmail
+ 201.6  40.0  Tautkan Gmail lewat izin browser
+ 239.4  70.2  Akses baca-saja untuk email notifikasi.
+ 269.6  70.2  Izin AI diatur terpisah di Pengaturan.
+ 314.8  56.0  Terhubung sebagai a***@gmail.com
+ 329.0 264.9  Terhubung
+ 367.2  56.0  Sinkronisasi menganggur
+ 397.4  56.0  Sinkron terakhir
+ 397.4 190.3  25 Nov 2026 23:50
+ 423.9  56.0  Pemantauan otomatis sampai
+ 423.9 190.3  belum pernah
+ 536.7  56.0  Izin dan retensi
+ 566.9  56.0  Email hanya diproses sementara di server untuk membaca notif
+ 635.0  56.0  Persetujuan Gmail, kategorisasi AI, dan Analisis AI terpisah
+ 703.0  56.0  Transaksi disimpan maksimal 1 tahun sejak dibuat, lalu dihap
+   0.0   0.0  Ganti akun Gmail

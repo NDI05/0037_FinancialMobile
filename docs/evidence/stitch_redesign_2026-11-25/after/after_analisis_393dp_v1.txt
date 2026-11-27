@@ -1,0 +1,22 @@
+  53.1  72.0  Analisis
+ 109.5 150.3  November 2026
+ 152.5  20.0  ANALISIS TERSIMPAN
+ 151.7 289.7  Kedaluwarsa
+ 204.1  36.0  Analisis ini dibuat dari data yang sejak itu sudah berubah (
+ 349.0  50.2  Insight utama
+ 375.9  40.0  Transportasi (66%)
+ 408.6  40.0  Pengeluaran bruto jauh melebihi pemasukan bruto bulan ini.
+ 504.7  40.0  Pengeluaran per kategori
+ 542.9  40.0  1. Transportasi
+ 542.9 231.8  Rp1.150.500 (66%)
+ 590.2  40.0  2. Makanan
+ 590.2 243.4  Rp545.000 (31%)
+ 637.5  40.0  3. Pendidikan
+ 637.5 259.5  Rp41.000 (2%)
+ 727.8  40.0  Temuan ringkas
+ 762.0  66.2  Pengeluaran bruto jauh melebihi pemasukan bruto bulan ini.
+   0.0   0.0  Banyak transaksi belum terklasifikasi (42 dari 78).
+   0.0   0.0  Ringkasan
+   0.0   0.0  Transaksi
+   0.0   0.0  Analisis
+   0.0   0.0  Pengaturan

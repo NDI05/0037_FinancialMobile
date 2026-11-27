@@ -1,0 +1,14 @@
+  53.1  72.0  Tambah transaksi
+ 117.5  66.6  Pengeluaran
+ 117.5 244.9  Pemasukan
+ 185.6  36.0  Nominal
+ 222.0  36.0  Rp
+ 210.3  66.6  125.000
+ 308.2  36.0  Deskripsi
+ 394.8  36.0  Tanggal
+ 431.6  88.1  26 Nov 2026
+ 481.4  36.0  Kategori
+ 518.2  50.2  Belum berkategori
+ 568.0  36.0  Catatan
+ 721.6  20.0  Setelah tersimpan, transaksi ini masuk ke ringkasan bulan No
+ 780.2 127.7  Simpan transaksi

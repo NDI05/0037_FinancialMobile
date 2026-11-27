@@ -36,6 +36,7 @@ private fun style(
     size: Int,
     line: Int,
     tracking: Double = 0.0,
+    tabular: Boolean = false,
 ) = TextStyle(
     fontFamily = PamFontFamily,
     fontWeight = weight,
@@ -43,20 +44,22 @@ private fun style(
     lineHeight = line.sp,
     letterSpacing = tracking.em,
     lineHeightStyle = Trim,
+    // Stitch requires tabular numerals for every amount, date and metric so columns scan cleanly.
+    fontFeatureSettings = if (tabular) "tnum" else null,
 )
 
-val DisplayXl = style(FontWeight.ExtraBold, 36, 44, -0.02)
-val DisplayL = style(FontWeight.ExtraBold, 32, 40, -0.02)
-val DisplayM = style(FontWeight.ExtraBold, 30, 38, -0.02)
-val HeadlineL = style(FontWeight.Bold, 26, 34, -0.015)
-val HeadlineM = style(FontWeight.Bold, 22, 28, -0.01)
-val TitleL = style(FontWeight.SemiBold, 18, 24)
-val TitleM = style(FontWeight.SemiBold, 16, 22)
-val TitleS = style(FontWeight.Medium, 14, 20, 0.01)
-val BodyL = style(FontWeight.Normal, 16, 24)
-val BodyM = style(FontWeight.Normal, 14, 20)
-val BodyS = style(FontWeight.Normal, 12, 16, 0.01)
-val LabelL = style(FontWeight.SemiBold, 14, 20, 0.01)
-val LabelM = style(FontWeight.SemiBold, 12, 16, 0.02)
-val LabelEyebrow = style(FontWeight.SemiBold, 11, 14, 0.06)
-val MoneyXl = DisplayL.copy(letterSpacing = (-0.02).em)
+val DisplayXl = style(FontWeight.Bold, 36, 44, -0.021, tabular = true)
+val DisplayL = style(FontWeight.Bold, 32, 38, -0.016, tabular = true)
+val DisplayM = style(FontWeight.Bold, 24, 30, -0.013, tabular = true)
+val HeadlineL = style(FontWeight.Bold, 22, 28, -0.012, tabular = true)
+val HeadlineM = style(FontWeight.Bold, 20, 26, -0.01, tabular = true)
+val TitleL = style(FontWeight.Bold, 18, 24, -0.011, tabular = true)
+val TitleM = style(FontWeight.SemiBold, 16, 22, -0.006, tabular = true)
+val TitleS = style(FontWeight.SemiBold, 14, 20, 0.0, tabular = true)
+val BodyL = style(FontWeight.Medium, 16, 24)
+val BodyM = style(FontWeight.Medium, 14, 20, tabular = true)
+val BodyS = style(FontWeight.Normal, 13, 18, tabular = true)
+val LabelL = style(FontWeight.SemiBold, 14, 20, 0.007, tabular = true)
+val LabelM = style(FontWeight.SemiBold, 12, 16, 0.013, tabular = true)
+val LabelEyebrow = style(FontWeight.SemiBold, 11, 14, 0.018, tabular = true)
+val MoneyXl = DisplayL.copy(letterSpacing = (-0.016).em, fontFeatureSettings = "tnum")

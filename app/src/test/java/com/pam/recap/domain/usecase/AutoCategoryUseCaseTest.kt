@@ -6,6 +6,9 @@ import com.pam.recap.core.result.Outcome
 import com.pam.recap.core.time.ClockProvider
 import com.pam.recap.core.time.JakartaMonth
 import com.pam.recap.domain.model.Category
+import com.pam.recap.domain.model.Consent
+import com.pam.recap.domain.model.ConsentDecision
+import com.pam.recap.domain.model.ConsentPurpose
 import com.pam.recap.domain.model.CategoryOrigin
 import com.pam.recap.domain.model.CategoryQueuePhase
 import com.pam.recap.domain.model.Direction
@@ -14,6 +17,7 @@ import com.pam.recap.domain.model.ParseStatus
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.CategoryDrainResult
+import com.pam.recap.domain.repository.ClassificationAttemptStore
 import com.pam.recap.domain.repository.CategoryEnqueueResult
 import com.pam.recap.domain.repository.ManualTransactionDraft
 import com.pam.recap.domain.repository.ServerCategory
@@ -23,6 +27,7 @@ import com.pam.recap.domain.repository.ServerImportCandidate
 import com.pam.recap.domain.repository.ServerImportCounts
 import com.pam.recap.domain.repository.ServerImportJob
 import com.pam.recap.domain.repository.ServerTransactionPage
+import com.pam.recap.testing.FakeConsentRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
@@ -61,9 +66,12 @@ class AutoCategoryUseCaseTest {
         override val isEnabled = true
         var enqueueCalls = 0
         var drainCalls = 0
+        val classifyBatches = mutableListOf<List<String>>()
+        val enqueueBatches = mutableListOf<List<String>>()
         var enqueuedIds: List<String> = emptyList()
         var gate: CompletableDeferred<Unit>? = null
         val drainStarted = CompletableDeferred<Unit>()
+        var classifyState = "CLASSIFIED"
 
         override suspend fun categories(ownerId: String): Outcome<List<ServerCategory>> =
             Outcome.Success(emptyList())
@@ -84,8 +92,14 @@ class AutoCategoryUseCaseTest {
         override suspend fun summary(ownerId: String, month: JakartaMonth) =
             Outcome.Failure(AppError.Configuration("unused"))
 
-        override suspend fun classifyTransactions(ownerId: String, transactionIds: List<String>) =
-            Outcome.Success(emptyList<ServerCategoryJob>())
+        override suspend fun classifyTransactions(ownerId: String, transactionIds: List<String>): Outcome<List<ServerCategoryJob>> {
+            classifyBatches += transactionIds
+            return Outcome.Success(
+                transactionIds.map { id ->
+                    ServerCategoryJob(id = "job_$id", transactionId = id, state = classifyState)
+                },
+            )
+        }
 
         override suspend fun enqueueCategories(
             ownerId: String,
@@ -93,6 +107,7 @@ class AutoCategoryUseCaseTest {
         ): Outcome<CategoryEnqueueResult> {
             enqueueCalls++
             enqueuedIds = transactionIds
+            enqueueBatches += transactionIds
             gate?.await()
             return enqueue
         }
@@ -120,9 +135,122 @@ class AutoCategoryUseCaseTest {
         override fun now(): Instant = at
     }
 
-    private fun useCase(server: FakeServer): Pair<AutoCategoryUseCase, CategoryStatusHolder> {
+    private class FakeAttemptStore(
+        private val initial: Map<String, Int> = emptyMap(),
+    ) : ClassificationAttemptStore {
+        val stored = initial.toMutableMap()
+
+        override suspend fun reviewed(ownerId: String): Map<String, Int> = stored.toMap()
+
+        override suspend fun recordReviewed(ownerId: String, attempts: Map<String, Int>) {
+            stored.putAll(attempts)
+        }
+    }
+
+    private fun useCase(
+        server: FakeServer,
+        consents: FakeConsentRepository? = null,
+        attempts: ClassificationAttemptStore? = null,
+    ): Pair<AutoCategoryUseCase, CategoryStatusHolder> {
         val holder = CategoryStatusHolder()
-        return AutoCategoryUseCase(server, holder, FixedClock(now)) to holder
+        return AutoCategoryUseCase(server, holder, FixedClock(now), consents, null, attempts) to holder
+    }
+
+    private fun grantedConsent(purpose: ConsentPurpose) = FakeConsentRepository(
+        listOf(
+            Consent(
+                id = "c-${purpose.name}",
+                ownerId = "u_1",
+                purpose = purpose,
+                noticeVersion = "notice-v2",
+                decision = ConsentDecision.GRANTED,
+                decidedAt = now,
+            ),
+        ),
+    )
+
+
+    @Test
+    fun `classifyAll sweeps every eligible row in batches of five`() = runTest {
+        val rows = (1..12).map { tx("tx_$it") }
+        val server = FakeServer(rows = rows)
+        val (useCase, _) = useCase(server, grantedConsent(ConsentPurpose.AI_CATEGORIZATION))
+
+        val outcome = useCase.classifyAll("u_1")
+
+        assertTrue(outcome is Outcome.Success)
+        val result = (outcome as Outcome.Success).value
+        assertEquals(12, result.total)
+        assertEquals(12, result.processed)
+        // The backend contract caps one call at five ids; the tail must still be sent.
+        assertEquals(listOf(5, 5, 2), server.classifyBatches.map { it.size })
+        assertEquals(12, result.classified)
+    }
+
+    @Test
+    fun `a second sweep skips rows that already reached needs review`() = runTest {
+        val rows = (1..6).map { tx("tx_$it") }
+        val server = FakeServer(rows = rows).apply { classifyState = "NEEDS_REVIEW" }
+        val attempts = FakeAttemptStore()
+        val (useCase, _) = useCase(server, grantedConsent(ConsentPurpose.AI_CATEGORIZATION), attempts)
+
+        val first = (useCase.classifyAll("u_1") as Outcome.Success).value
+        assertEquals(6, first.total)
+        assertEquals(6, first.needsReview)
+        assertEquals(6, attempts.stored.size)
+
+        val second = (useCase.classifyAll("u_1") as Outcome.Success).value
+        assertEquals(0, second.total)
+        assertEquals(0, second.needsReview)
+        // No request at all on the repeat tap: no extra token-bearing job is created.
+        assertEquals(listOf(5, 1), server.classifyBatches.map { it.size })
+    }
+
+    @Test
+    fun `a revision bump reopens a previously reviewed row`() = runTest {
+        val row = tx("tx_1").copy(revision = 2)
+        val server = FakeServer(rows = listOf(row)).apply { classifyState = "NEEDS_REVIEW" }
+        val attempts = FakeAttemptStore(mapOf("tx_1" to 1))
+        val (useCase, _) = useCase(server, grantedConsent(ConsentPurpose.AI_CATEGORIZATION), attempts)
+
+        val outcome = (useCase.classifyAll("u_1") as Outcome.Success).value
+
+        assertEquals(1, outcome.total)
+        assertEquals(listOf(listOf("tx_1")), server.classifyBatches)
+    }
+
+    @Test
+    fun `enqueueOnly also excludes already reviewed rows`() = runTest {
+        val server = FakeServer(rows = listOf(tx("tx_1"), tx("tx_2")))
+        val attempts = FakeAttemptStore(mapOf("tx_1" to 1))
+        val (useCase, _) = useCase(server, attempts = attempts)
+
+        useCase.enqueueOnly("u_1")
+
+        assertEquals(listOf(listOf("tx_2")), server.enqueueBatches)
+    }
+
+    @Test
+    fun `classifyAll refuses to run without the classifier consent`() = runTest {
+        val server = FakeServer(rows = listOf(tx("tx_1")))
+        val (useCase, _) = useCase(server, FakeConsentRepository())
+
+        val outcome = useCase.classifyAll("u_1")
+
+        assertTrue(outcome is Outcome.Failure)
+        assertEquals("ai_category_consent_required", ((outcome as Outcome.Failure).error as AppError.Validation).rule)
+        assertTrue(server.classifyBatches.isEmpty())
+    }
+
+    @Test
+    fun `enqueueOnly sends every candidate in batches of fifty`() = runTest {
+        val server = FakeServer(rows = (1..110).map { tx("tx_$it") })
+        val (useCase, _) = useCase(server)
+
+        useCase.enqueueOnly("u_1")
+
+        assertEquals(listOf(50, 50, 10), server.enqueueBatches.map { it.size })
+        assertEquals(3, server.enqueueCalls)
     }
 
     @Test
@@ -210,9 +338,11 @@ class AutoCategoryUseCaseTest {
         withTimeout(20_000) { server.drainStarted.await() }
         assertEquals(1, server.drainCalls)
         val second = async(kotlinx.coroutines.Dispatchers.Default) { useCase.runIfConnected("u_1") }
+        // The first caller holds the in-process gate while its drain is suspended, so the second
+        // must return the current snapshot immediately instead of queueing another drain.
+        second.await()
         gate.complete(Unit)
         first.await()
-        second.await()
         assertEquals(1, server.drainCalls)
     }
 }

@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.pam.recap.core.result.AppError
 import com.pam.recap.core.result.Outcome
 import com.pam.recap.domain.model.Consent
+import com.pam.recap.domain.model.ConsentDecision
 import com.pam.recap.domain.model.ConsentPurpose
+import com.pam.recap.domain.model.NoticeVersion
 import com.pam.recap.domain.model.DemoPurge
 import com.pam.recap.domain.model.GmailConnection
 import com.pam.recap.domain.repository.ConsentRepository
@@ -13,6 +15,7 @@ import com.pam.recap.domain.repository.DemoDataMaintenance
 import com.pam.recap.domain.repository.GmailConnectionRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.usecase.DisconnectGmailUseCase
+import com.pam.recap.domain.usecase.RecordConsentUseCase
 import com.pam.recap.domain.usecase.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,6 +35,10 @@ data class SettingsUiState(
     val connection: GmailConnection? = null,
     val gmailConsent: Consent? = null,
     val aiConsent: Consent? = null,
+    /** Classifier consent is separate from analysis consent (Purposes.AI_CATEGORIZATION). */
+    val categoryConsent: Consent? = null,
+    /** Which purpose is awaiting the backend acknowledgement; all switches disable meanwhile. */
+    val consentBusyPurpose: ConsentPurpose? = null,
     val isBusy: Boolean = false,
     val error: AppError? = null,
     val signedOut: Boolean = false,
@@ -57,6 +64,8 @@ class SettingsViewModel @Inject constructor(
     private val disconnectGmail: DisconnectGmailUseCase,
     private val signOut: SignOutUseCase,
     private val demoData: DemoDataMaintenance,
+    /** Optional so legacy preview/test constructions keep rendering without a ledger. */
+    private val recordConsent: RecordConsentUseCase? = null,
 ) : ViewModel() {
 
     private val actions = MutableStateFlow(ActionState())
@@ -75,23 +84,30 @@ class SettingsViewModel @Inject constructor(
         val error: AppError? = null,
         val signedOut: Boolean = false,
         val revokeFailed: Boolean = false,
+        val consentBusyPurpose: ConsentPurpose? = null,
     )
 
     val state: StateFlow<SettingsUiState> = sessions.observe()
         .filterNotNull()
         .flatMapLatest { session ->
             demo.update { it.copy(rowCount = runCatching { demoData.countDemoRows(session.ownerId) }.getOrDefault(0)) }
-            combine(
-                connections.observe(session.ownerId),
+            val consentFlow = combine(
                 consents.observeLatest(session.ownerId, ConsentPurpose.GMAIL_READ),
                 consents.observeLatest(session.ownerId, ConsentPurpose.AI_PROCESSING),
+                consents.observeLatest(session.ownerId, ConsentPurpose.AI_CATEGORIZATION),
+            ) { gmail, ai, category -> Triple(gmail, ai, category) }
+            combine(
+                connections.observe(session.ownerId),
+                consentFlow,
                 actions,
                 demo,
-            ) { connection, gmail, ai, action, demoState ->
+            ) { connection, consent, action, demoState ->
                 SettingsUiState(
                     connection = connection,
-                    gmailConsent = gmail,
-                    aiConsent = ai,
+                    gmailConsent = consent.first,
+                    aiConsent = consent.second,
+                    categoryConsent = consent.third,
+                    consentBusyPurpose = action.consentBusyPurpose,
                     isBusy = action.isBusy,
                     error = action.error,
                     signedOut = action.signedOut,
@@ -104,6 +120,37 @@ class SettingsViewModel @Inject constructor(
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
+
+
+    /**
+     * Records an explicit decision for one AI purpose. The switches are the real control surface now,
+     * so turning one off appends WITHDRAWN instead of silently leaving a stale GRANTED. A backend
+     * acknowledgement failure leaves the local ledger append visible and surfaces the error banner.
+     */
+    fun setConsent(purpose: ConsentPurpose, granted: Boolean) {
+        if (actions.value.isBusy || actions.value.consentBusyPurpose != null) return
+        actions.update { it.copy(consentBusyPurpose = purpose, error = null) }
+        viewModelScope.launch {
+            val recorder = recordConsent
+            val ownerId = sessions.current()?.ownerId
+            if (ownerId == null || recorder == null) {
+                actions.update { it.copy(consentBusyPurpose = null) }
+                return@launch
+            }
+            val result = recorder(
+                ownerId = ownerId,
+                purpose = purpose,
+                noticeVersion = NoticeVersion.CURRENT,
+                decision = if (granted) ConsentDecision.GRANTED else ConsentDecision.WITHDRAWN,
+            )
+            actions.update {
+                it.copy(
+                    consentBusyPurpose = null,
+                    error = (result as? Outcome.Failure)?.error,
+                )
+            }
+        }
+    }
 
     fun disconnect() {
         if (actions.value.isBusy) return

@@ -554,8 +554,10 @@ class IncrementalSyncUseCase @Inject constructor(
             runCatching { repair.runIfNeeded(ownerId, primaryMonth) }
         }
         if (job.importedCount > 0) {
-            // Best effort: a queue failure must not downgrade a successful financial sync, and the
-            // worker retries it on its own schedule.
+            // New rows should not wait for the two-hour backlog window: classify this run's snapshot
+            // immediately (consent-gated, five ids per request, server merchant cache fans duplicate
+            // labels out). Then offer everything still eligible to the durable queue.
+            runCatching { autoCategory?.classifyImportJob(ownerId, job.id) }
             runCatching { autoCategory?.enqueueOnly(ownerId) }
         }
         return SyncOutcome.Completed(job.importedCount, job.duplicateCount, job.state.name)

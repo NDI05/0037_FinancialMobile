@@ -13,11 +13,14 @@ import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Direction
 import com.pam.recap.domain.model.Transaction
 import com.pam.recap.domain.model.TransactionFilter
+import com.pam.recap.domain.model.TransactionSource
 import com.pam.recap.domain.repository.FinanceRefreshBus
 import com.pam.recap.domain.repository.ServerCategoryJob
 import com.pam.recap.domain.repository.ServerFinanceRepository
 import com.pam.recap.domain.repository.SessionRepository
 import com.pam.recap.domain.repository.TransactionRepository
+import com.pam.recap.domain.usecase.AutoCategoryUseCase
+import com.pam.recap.domain.usecase.CategorySweepResult
 import com.pam.recap.domain.usecase.ResolveInitialMonthUseCase
 import com.pam.recap.ui.components.DayStripCell
 import com.pam.recap.ui.selection.ActiveMonthStore
@@ -51,6 +54,12 @@ data class TransactionsUiState(
     val selectedDay: LocalDate? = null,
     val category: Category? = null,
     val direction: Direction? = null,
+    /**
+     * Manual vs Livin mail. Kept client-side because the paged search contract has no source
+     * predicate; the chip therefore narrows the rows already loaded and the paging footer stays the
+     * honest way to look for more (documented gap, see STITCH_IMPLEMENTATION_MAP).
+     */
+    val source: TransactionSource? = null,
     val query: String = "",
     val items: List<Transaction> = emptyList(),
     val monthTransactionCount: Int = 0,
@@ -65,6 +74,12 @@ data class TransactionsUiState(
      * maps each code to localized copy; the codes themselves are never shown to the owner.
      */
     val classificationReviewReasons: List<String> = emptyList(),
+    val classificationReviewCount: Int = 0,
+    /** Progress of the owner-triggered sweep, so a long run never looks frozen. */
+    val classificationProcessed: Int = 0,
+    val classificationTotal: Int = 0,
+    /** The classifier purpose itself is missing; the screen points at the Settings switch. */
+    val classificationConsentRequired: Boolean = false,
     /** Server mode pages the month instead of reading one local snapshot (S2.4). */
     val isServerMode: Boolean = false,
     val isLoadingMore: Boolean = false,
@@ -74,14 +89,23 @@ data class TransactionsUiState(
     val scanned: Int = 0,
     val truncated: Boolean = false,
 ) {
+    /**
+     * Rows that survive the source chip. The other predicates are already applied by the query
+     * (locally or by the server), so this is the only dimension filtered at render time.
+     */
+    val visibleItems: List<Transaction>
+        get() = if (source == null) items else items.filter { it.source == source }
+
     /** FR-20: "no data for the month" and "nothing matches the filter" are different states. */
     val isEmptyMonth: Boolean get() = !isLoading && monthTransactionCount == 0 && !hasMore && !isFiltered
 
-    val isNoMatch: Boolean get() = !isLoading && items.isEmpty() && (isFiltered || monthTransactionCount > 0)
+    val isNoMatch: Boolean
+        get() = !isLoading && visibleItems.isEmpty() && (isFiltered || monthTransactionCount > 0)
 
     /** True when any predicate other than the month narrows the result, locally or server-side. */
     val isFiltered: Boolean
-        get() = query.isNotBlank() || category != null || direction != null || selectedDay != null
+        get() = query.isNotBlank() || category != null || direction != null ||
+            selectedDay != null || source != null
 }
 
 /**
@@ -104,6 +128,7 @@ class TransactionsViewModel @Inject constructor(
     private val activeMonth: ActiveMonthStore = ActiveMonthStore(),
     private val clock: ClockProvider = SystemClockProvider(),
     private val server: ServerFinanceRepository? = null,
+    private val autoCategory: AutoCategoryUseCase? = null,
 ) : ViewModel() {
 
     private val month = MutableStateFlow<JakartaMonth?>(null)
@@ -114,12 +139,24 @@ class TransactionsViewModel @Inject constructor(
     private val direction = MutableStateFlow(
         savedStateHandle.get<String>("direction")?.let { runCatching { Direction.valueOf(it) }.getOrNull() },
     )
+    private val source = MutableStateFlow<TransactionSource?>(null)
     private val query = MutableStateFlow("")
     private val refreshTick = MutableStateFlow(0L)
     private val classification = MutableStateFlow(ClassificationState())
 
     private val _state = MutableStateFlow(TransactionsUiState())
     val state: StateFlow<TransactionsUiState> = _state.asStateFlow()
+
+    /**
+     * The filters this instance was *created* with, i.e. the ones a Ringkasan drill-down carried in
+     * its route. The screen uses them to decide that clearing the last one should leave through the
+     * existing back stack instead of leaving an unfiltered list under a filtered route.
+     */
+    val carriedFilters: Set<ActiveTransactionFilter> = buildSet {
+        if (category.value != null) add(ActiveTransactionFilter.CATEGORY)
+        if (direction.value != null) add(ActiveTransactionFilter.DIRECTION)
+        if (selectedDay.value != null) add(ActiveTransactionFilter.DAY)
+    }
 
     /** Bumped for every month/query/category/direction/day/owner change. */
     private val generation = AtomicLong(0)
@@ -181,9 +218,18 @@ class TransactionsViewModel @Inject constructor(
                         classificationStatus = classifier.status,
                         classificationError = classifier.error,
                         classificationReviewReasons = classifier.reviewReasons,
+                        classificationReviewCount = classifier.reviewCount,
+                        classificationProcessed = classifier.processed,
+                        classificationTotal = classifier.total,
+                        classificationConsentRequired = classifier.consentRequired,
                     )
                 }
             }
+        }
+        viewModelScope.launch {
+            // The source chip does not change the query (the contract has no source predicate), so
+            // it is published straight into the state and re-derived from the loaded rows.
+            source.collect { value -> _state.update { it.copy(source = value) } }
         }
         viewModelScope.launch {
             val filters = combine(
@@ -287,6 +333,7 @@ class TransactionsViewModel @Inject constructor(
             selectedDay = input.day,
             category = input.category,
             direction = input.direction,
+            source = source.value,
             query = input.query,
             items = filtered,
             monthTransactionCount = all.size,
@@ -295,6 +342,10 @@ class TransactionsViewModel @Inject constructor(
             classificationStatus = classifier.status,
             classificationError = classifier.error,
             classificationReviewReasons = classifier.reviewReasons,
+            classificationReviewCount = classifier.reviewCount,
+            classificationProcessed = classifier.processed,
+            classificationTotal = classifier.total,
+            classificationConsentRequired = classifier.consentRequired,
         )
     }
 
@@ -505,6 +556,7 @@ class TransactionsViewModel @Inject constructor(
             selectedDay = input.day,
             category = input.category,
             direction = input.direction,
+            source = source.value,
             query = input.query,
             items = visible,
             monthTransactionCount = allItems.size,
@@ -513,6 +565,10 @@ class TransactionsViewModel @Inject constructor(
             classificationStatus = classifier.status,
             classificationError = classifier.error,
             classificationReviewReasons = classifier.reviewReasons,
+            classificationReviewCount = classifier.reviewCount,
+            classificationProcessed = classifier.processed,
+            classificationTotal = classifier.total,
+            classificationConsentRequired = classifier.consentRequired,
             isServerMode = true,
             isLoadingMore = isLoadingMore,
             hasMore = hasMore,
@@ -540,37 +596,66 @@ class TransactionsViewModel @Inject constructor(
     }
 
     /** Requests Azure for at most five visible, eligible uncategorized rows. */
+    /**
+     * Sweeps every eligible uncategorized row in the rolling year, five ids per request. The previous
+     * implementation looked only at the loaded page and stopped after five rows, so the rest of the
+     * month silently stayed uncategorized. Progress is observable and the run can be retried.
+     */
     fun classifyUncategorized() {
-        if (classification.value.isRunning || server?.isEnabled != true) return
+        if (classification.value.isRunning) return
+        val sweep = autoCategory
+        if (sweep == null || server?.isEnabled != true) {
+            classification.value = ClassificationState(error = AppError.Configuration("backend_disabled"))
+            return
+        }
         viewModelScope.launch {
             val owner = sessions.current()?.ownerId ?: return@launch
-            val ids = state.value.items
-                .filter {
-                    it.category == Category.UNCATEGORIZED &&
-                        it.categoryOrigin != com.pam.recap.domain.model.CategoryOrigin.USER
-                }
-                .map { it.id }
-                .distinct()
-                .take(5)
-            if (ids.isEmpty()) {
-                classification.value = ClassificationState(status = "no_eligible_transactions")
-                return@launch
-            }
             classification.value = ClassificationState(isRunning = true)
-            classification.value = when (val result = server.classifyTransactions(owner, ids)) {
-                is Outcome.Failure -> ClassificationState(error = result.error)
-                is Outcome.Success -> {
-                    refreshTick.update { it + 1 }
-                    val needsReview = result.value.count { it.state == "NEEDS_REVIEW" }
-                    val failed = result.value.count { it.state == "FAILED" }
-                    val classified = result.value.count { it.state == "CLASSIFIED" }
-                    ClassificationState(
-                        status = "classified=$classified needsReview=$needsReview failed=$failed",
-                        reviewReasons = reviewReasonCodes(result.value),
+            when (val result = sweep.classifyAll(owner) { processed, total ->
+                classification.update { it.copy(processed = processed, total = total) }
+            }) {
+                is Outcome.Failure -> {
+                    val needsConsent = (result.error as? AppError.Validation)?.rule ==
+                        "ai_category_consent_required"
+                    classification.value = ClassificationState(
+                        error = if (needsConsent) null else result.error,
+                        consentRequired = needsConsent,
                     )
+                }
+                is Outcome.Success -> {
+                    val sweepResult = result.value
+                    refreshTick.update { it + 1 }
+                    classification.value = fromSweep(sweepResult)
                 }
             }
         }
+    }
+
+    private fun fromSweep(result: CategorySweepResult): ClassificationState {
+        val visibleUncategorized = state.value.items.filter { it.category == Category.UNCATEGORIZED }
+        val status = when {
+            result.total == 0 && visibleUncategorized.isEmpty() -> "no_eligible_transactions"
+            // A locally created uncategorized row is not server-known yet; an explicitly manual
+            // "uncategorized" decision is intentionally excluded from AI, so the copy differs.
+            result.total == 0 && visibleUncategorized.all {
+                it.source == com.pam.recap.domain.model.TransactionSource.MANUAL
+            } -> "none_manual_uncategorized"
+            // Remaining rows are either already-reviewed by AI or still uploading; neither is new
+            // work, so never claim a fresh classification run happened.
+            result.total == 0 -> "nothing_new"
+            result.stoppedError != null -> "partial"
+            result.needsReview > 0 && result.classified > 0 -> "done_with_review"
+            result.needsReview > 0 -> "review_only"
+            else -> "done"
+        }
+        return ClassificationState(
+            status = status,
+            error = result.stoppedError,
+            reviewReasons = result.reviewReasons,
+            reviewCount = result.needsReview,
+            processed = result.processed,
+            total = result.total,
+        )
     }
 
     private data class ClassificationState(
@@ -578,6 +663,10 @@ class TransactionsViewModel @Inject constructor(
         val status: String? = null,
         val error: AppError? = null,
         val reviewReasons: List<String> = emptyList(),
+        val reviewCount: Int = 0,
+        val processed: Int = 0,
+        val total: Int = 0,
+        val consentRequired: Boolean = false,
     )
 
     /** The rolling one-year window the arrows are bounded by (DRAFT-RET-01/02). */
@@ -613,6 +702,11 @@ class TransactionsViewModel @Inject constructor(
         this.direction.value = if (this.direction.value == direction) null else direction
     }
 
+    /** Cycles Semua → Manual → Email Livin → Semua; re-renders from the rows already loaded. */
+    fun selectSource(value: TransactionSource?) {
+        this.source.value = if (this.source.value == value) null else value
+    }
+
     fun setQuery(value: String) {
         query.value = value
     }
@@ -621,6 +715,7 @@ class TransactionsViewModel @Inject constructor(
         selectedDay.value = null
         category.value = null
         direction.value = null
+        source.value = null
         query.value = ""
     }
 

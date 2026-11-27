@@ -1,0 +1,13 @@
+  53.1 146.6  Pengaturan
+  93.5  24.0  AKUN GOOGLE
+ 135.7  92.1  Akun
+ 157.9  92.1  Profil, Google, dan Gmail
+ 214.0  24.0  KONEKSI GMAIL
+ 372.3  36.0  Notifikasi Livin' by Mandiri
+ 394.5  36.0  Baca-saja
+ 385.0 254.0  Belum terhubung
+ 566.6  24.0  IZIN AI
+   0.0   0.0  Ringkasan
+   0.0   0.0  Transaksi
+   0.0   0.0  Analisis
+   0.0   0.0  Pengaturan

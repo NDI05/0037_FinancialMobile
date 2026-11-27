@@ -1,0 +1,22 @@
+  44.8  72.0  Ringkasan
+  93.5  20.0  Transaksi terbaru
+  80.4 205.2  Lihat semua
+ 161.6  36.0  Uji sintetis redesign
+ 242.7  36.0  Belum berkategori
+ 281.6  36.0  ·
+ 284.2  55.7  Manual
+ 219.8 215.8  -Rp25.000
+ 349.7  36.0  Pembayaran Berhasil!
+ 430.8  36.0  Transportasi
+ 430.8 187.0  ·
+ 472.0  44.0  Email Livin
+ 407.9 215.8  -Rp10.000
+ 537.5  36.0  Pembayaran Berhasil!
+ 621.2  44.0  Saran AI
+ 618.6 147.0  ·
+ 659.7  44.0  Email Livin
+ 595.7 215.8  -Rp18.500
+ 785.6   8.0  Ringkasan
+ 785.6 103.0  Transaksi
+ 785.6 201.6  Analisis
+ 785.6 293.7  Pengaturan

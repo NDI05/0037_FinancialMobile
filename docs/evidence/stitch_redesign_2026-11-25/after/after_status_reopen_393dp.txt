@@ -1,0 +1,19 @@
+ 233.3  20.0  Status pembaruan
+ 260.2  20.0  Terakhir: 11 menit lalu
+ 309.3  36.0  Sinkron server Gmail
+ 328.6  36.0  Periode: November 2026
+ 353.3  36.0  Riwayat yang bisa diakses: November 2025 sampai November 202
+ 396.3  36.0  Bulan November 2025 hanya tercakup sebagian pada rentang set
+ 441.0  36.0  Mengambil riwayat
+ 481.8  36.0  Bulan selesai: 13 dari 13.
+ 506.5  36.0  Bulan berjalan: November 2026.
+ 531.3  36.0  Percobaan terakhir
+ 531.3 273.6  11 menit lalu
+ 557.8  36.0  Terakhir berhasil sinkron
+ 557.8 273.6  11 menit lalu
+ 584.4  36.0  Sinkron berikutnya sekitar 00:05.
+ 633.2 144.8  Sedang sinkron
+ 691.0  20.0  Kategori
+ 712.1  20.0  Tidak ada kategori tertunda.
+ 744.5  20.0  Perlu perhatian
+ 765.6  20.0  Tidak ada masalah yang perlu tindakan.

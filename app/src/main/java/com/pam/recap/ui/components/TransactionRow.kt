@@ -6,16 +6,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -31,27 +30,36 @@ import androidx.compose.ui.unit.dp
 import com.pam.recap.core.money.Money
 import com.pam.recap.domain.model.Category
 import com.pam.recap.domain.model.Direction
+import com.pam.recap.ui.theme.BodyS
 import com.pam.recap.ui.theme.GlassBorder
 import com.pam.recap.ui.theme.GlassFill
+import com.pam.recap.ui.theme.IncomeMint
+import com.pam.recap.ui.theme.LabelEyebrow
 import com.pam.recap.ui.theme.LabelM
 import com.pam.recap.ui.theme.OnInk
-import com.pam.recap.ui.theme.OnInkFaint
 import com.pam.recap.ui.theme.OnInkMuted
+import com.pam.recap.ui.theme.OnWarningContainer
+import com.pam.recap.ui.theme.OutlineVariant
 import com.pam.recap.ui.theme.PamRadius
 import com.pam.recap.ui.theme.PamSpacing
-import com.pam.recap.ui.theme.Violet
+import com.pam.recap.ui.theme.Surface
+import com.pam.recap.ui.theme.SurfaceContainer
 import com.pam.recap.ui.theme.TitleM
-import com.pam.recap.ui.theme.TitleS
 import com.pam.recap.ui.theme.WarningAmber
+import com.pam.recap.ui.theme.WarningContainer
+import com.pam.recap.ui.theme.Violet
 
 /**
- * One transaction row: circular category glyph, description, meta line, right-aligned amount and a
- * chevron. Direction is expressed by the amount tone *and* the visible "Masuk"/"Keluar" meta, and a
- * low-confidence row carries an explicit marker (FR-24) instead of a silent guess.
+ * Stitch transaction row: clean merchant/description title, category + source badge (`Email Livin`
+ * or `Manual`, plus `Saran AI` warm orange chip when unconfirmed) in a wrapping FlowRow, and a
+ * right-aligned signed tabular amount (`+Rp…` green for income, `-Rp…` ink for spending).
+ *
+ * Pass [showCardWrapper] = false when placed inside a [GroupedListCard] with dividers.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TransactionRow(
-    category: Category,
+    @Suppress("UNUSED_PARAMETER") category: Category,
     title: String,
     meta: String,
     amount: Money,
@@ -61,13 +69,24 @@ fun TransactionRow(
     hasUnconfirmedSuggestion: Boolean = false,
     isManual: Boolean = false,
     currency: String = "IDR",
+    showCardWrapper: Boolean = true,
     onClick: (() -> Unit)? = null,
 ) {
+    val isIncome = direction == Direction.CREDIT
+    val shape = RoundedCornerShape(PamRadius.md)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(PamRadius.md))
-            .background(GlassFill)
+            .then(
+                if (showCardWrapper) {
+                    Modifier
+                        .clip(shape)
+                        .background(Surface)
+                        .border(1.dp, OutlineVariant, shape)
+                } else {
+                    Modifier
+                },
+            )
             .then(
                 if (onClick != null) {
                     Modifier.clickable(onClick = onClick)
@@ -76,63 +95,64 @@ fun TransactionRow(
                 },
             )
             .minimumInteractiveComponentSize()
-            .padding(horizontal = PamSpacing.sm, vertical = PamSpacing.sm),
+            .padding(horizontal = PamSpacing.md, vertical = PamSpacing.md),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(PamSpacing.sm),
     ) {
-        CategoryGlyph(category = category, size = 40.dp)
-
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
             Text(
                 text = title,
-                style = TitleS,
+                style = TitleM,
                 color = OnInk,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(PamSpacing.xxs),
+            FlowRow(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
+                if (hasUnconfirmedSuggestion) {
+                    Text(
+                        text = stringResource(com.pam.recap.R.string.status_ai_suggestion),
+                        style = LabelEyebrow,
+                        color = OnWarningContainer,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(PamRadius.pill))
+                            .background(WarningContainer)
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                    )
+                } else if (meta.isNotBlank()) {
+                    Text(
+                        text = meta,
+                        style = BodyS,
+                        color = OnInkMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Text(
-                    text = meta,
-                    style = LabelM,
-                    color = OnInkFaint,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
+                    text = "·",
+                    style = BodyS,
+                    color = OnInkMuted,
                 )
+                SourceTag(isManual = isManual)
                 if (isLowConfidence) {
                     Icon(
                         imageVector = Icons.Rounded.WarningAmber,
-                        contentDescription = null,
+                        contentDescription = stringResource(com.pam.recap.R.string.status_low_confidence),
                         tint = WarningAmber,
-                        modifier = Modifier.size(12.dp),
-                    )
-                }
-                if (hasUnconfirmedSuggestion) {
-                    // A model-suggested category the user has not confirmed yet: a distinct label,
-                    // not the low-confidence warning (which is about data quality).
-                    Text(
-                        text = stringResource(com.pam.recap.R.string.status_ai_suggestion),
-                        style = LabelM,
-                        color = Violet,
-                        maxLines = 1,
-                    )
-                }
-                if (isManual) {
-                    // FR-26: a manual entry must be identifiable on every surface.
-                    Text(
-                        text = stringResource(com.pam.recap.R.string.status_manual),
-                        style = LabelM,
-                        color = Violet,
-                        maxLines = 1,
+                        modifier = Modifier.size(14.dp),
                     )
                 }
                 if (!com.pam.recap.core.money.IdrFormatter.isIdr(currency)) {
                     Text(
                         text = stringResource(com.pam.recap.R.string.non_idr_marker),
-                        style = LabelM,
+                        style = LabelEyebrow,
                         color = WarningAmber,
                         maxLines = 1,
                     )
@@ -141,23 +161,36 @@ fun TransactionRow(
         }
 
         Text(
-            text = amountLabel(amount, currency),
+            text = amountWithSign(amount, currency, isIncome),
             style = TitleM.copy(fontFeatureSettings = "tnum"),
-            color = moneyToneColor(
-                if (direction == Direction.CREDIT) MoneyTone.Income else MoneyTone.Expense,
-            ),
+            color = if (isIncome) IncomeMint else OnInk,
             maxLines = 1,
         )
-
-        if (onClick != null) {
-            Icon(
-                imageVector = Icons.Rounded.ChevronRight,
-                contentDescription = null,
-                tint = OnInkFaint,
-                modifier = Modifier.size(18.dp),
-            )
-        }
     }
+}
+
+/** `+Rp…` for income, `−Rp…` for spending; the sign is copy, the colour only reinforces it. */
+private fun amountWithSign(amount: Money, currency: String, isIncome: Boolean): String =
+    (if (isIncome) "+" else "-") + amountLabel(amount, currency)
+
+/**
+ * Where the row came from. Only Livin mail is ingested today, so the email source is named for the
+ * mailbox instead of a generic "Email"; manual entries stay labelled as such (FR-26).
+ */
+@Composable
+private fun SourceTag(isManual: Boolean) {
+    Text(
+        text = stringResource(
+            if (isManual) com.pam.recap.R.string.status_manual else com.pam.recap.R.string.detail_source_email,
+        ),
+        style = LabelEyebrow,
+        color = OnInkMuted,
+        maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(SurfaceContainer)
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+    )
 }
 
 /**
@@ -222,7 +255,6 @@ fun AvatarStack(
             ) {
                 Text(text = value, style = LabelM, color = OnInkMuted)
             }
-            Spacer(modifier = Modifier.width(0.dp))
         }
     }
 }

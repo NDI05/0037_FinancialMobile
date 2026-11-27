@@ -1,0 +1,21 @@
+  54.6  78.6  Ringkasan
+ 127.0 130.6  November 2026
+ 243.8  55.7  M
+ 234.0  96.1  Mandiri
+ 258.0  96.1  Livin' by Mandiri
+ 286.7  43.7  Pengeluaran tercatat
+ 323.9  43.7  Rp3.222.373
+ 367.2  43.7  77 transaksi
+ 431.6  43.7  Pemasukan tercatat
+ 426.8 292.6  Rp0
+ 546.2  39.3  Kategori utama
+ 532.4 294.0  Analisis
+ 588.8  43.7  66%
+ 588.8  99.7  31%
+ 588.8 159.0  2%
+   0.0   0.0  Transportasi
+   0.0   0.0  Rp1.150.500 · 66%
+   0.0   0.0  Ringkasan
+   0.0   0.0  Transaksi
+   0.0   0.0  Analisis
+   0.0   0.0  Pengaturan

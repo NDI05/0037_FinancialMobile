@@ -28,7 +28,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * FR-32: the "Masuk"/"Keluar" cards on Ringkasan must open the rows that actually form those
+ * FR-32: the "Pemasukan tercatat"/"Pengeluaran tercatat" cards on Ringkasan must open the rows that actually form those
  * totals, so the tap carries the direction (CREDIT/DEBIT) and the month — not an unfiltered list.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -87,10 +87,10 @@ class OverviewScreenTest {
     }
 
     @Test
-    fun `the Masuk card opens the credit rows of the displayed month`() {
+    fun `the Pemasukan card opens the credit rows of the displayed month`() {
         val opened = render()
 
-        composeRule.onNodeWithText("MASUK").performClick()
+        composeRule.onNodeWithText("Pemasukan tercatat").performClick()
         composeRule.waitForIdle()
 
         assertEquals(Direction.CREDIT, opened.direction)
@@ -99,10 +99,10 @@ class OverviewScreenTest {
     }
 
     @Test
-    fun `the Keluar card opens the debit rows of the displayed month`() {
+    fun `the Pengeluaran card opens the debit rows of the displayed month`() {
         val opened = render()
 
-        composeRule.onNodeWithText("KELUAR").performClick()
+        composeRule.onNodeWithText("Pengeluaran tercatat").performClick()
         composeRule.waitForIdle()
 
         assertEquals(Direction.DEBIT, opened.direction)

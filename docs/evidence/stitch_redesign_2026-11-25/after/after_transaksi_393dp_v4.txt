@@ -1,0 +1,41 @@
+  53.1  72.0  Transaksi
+ 171.8  76.4  November 2026
+ 171.8 246.0  Semua
+ 171.8 332.6  Pengeluaran
+ 217.6  24.0  Kamis, 26 Nov
+ 258.0  36.0  Uji sintetis redesign
+ 284.9  36.0  00:00 · Belum berkategori
+ 284.9 192.9  ·
+ 286.4 210.0  Manual
+ 269.6 276.6  -Rp25.000
+ 331.5  24.0  Rabu, 25 Nov
+ 371.9  36.0  Pembayaran Berhasil!
+ 398.8  36.0  00:00 · Transportasi
+ 398.8 160.1  ·
+ 400.3 177.2  Email Livin
+ 383.5 276.6  -Rp10.000
+ 445.4  24.0  Senin, 23 Nov
+ 485.8  36.0  Pembayaran Berhasil!
+ 514.2  44.0  Saran AI
+ 512.7 102.6  ·
+ 514.2 119.7  Email Livin
+ 497.4 276.6  -Rp18.500
+ 559.3  24.0  Minggu, 22 Nov
+ 599.7  36.0  Pembayaran Berhasil!
+ 628.1  44.0  Saran AI
+ 626.6 102.6  ·
+ 628.1 119.7  Email Livin
+ 611.3 276.6  -Rp18.000
+ 678.3  36.0  Pembayaran Berhasil!
+ 706.7  44.0  Saran AI
+ 705.2 102.6  ·
+ 706.7 119.7  Email Livin
+ 689.9 276.6  -Rp18.000
+ 756.9  36.0  Pembayaran Berhasil!
+ 783.8 102.6  ·
+ 768.5 289.7  -Rp16.000
+   0.0   0.0  Sabtu, 21 Nov
+   0.0   0.0  Ringkasan
+   0.0   0.0  Transaksi
+   0.0   0.0  Analisis
+   0.0   0.0  Pengaturan

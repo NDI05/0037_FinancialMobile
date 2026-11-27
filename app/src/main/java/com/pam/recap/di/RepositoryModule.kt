@@ -14,12 +14,14 @@ import com.pam.recap.data.account.LocalAccountSource
 import com.pam.recap.data.gmail.LivinQrisParser
 import com.pam.recap.data.gmail.LivinQueryBuilder
 import com.pam.recap.data.gmail.LivinTemplateRegistry
+import com.pam.recap.data.prefs.ClassificationAttemptStoreImpl
 import com.pam.recap.data.prefs.SessionRepositoryImpl
 import com.pam.recap.data.prefs.pamSessionDataStore
 import com.pam.recap.data.seed.DemoDataPurger
 import com.pam.recap.data.seed.DemoDataSeeder
 import com.pam.recap.domain.repository.AccountRepository
 import com.pam.recap.domain.repository.AiPayloadSource
+import com.pam.recap.domain.repository.ClassificationAttemptStore
 import com.pam.recap.domain.repository.DemoDataMaintenance
 import com.pam.recap.domain.repository.DemoDataPort
 import com.pam.recap.domain.repository.LivinNotificationParser
@@ -47,6 +49,11 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindSessionRepository(impl: SessionRepositoryImpl): SessionRepository
+
+    @Binds
+    abstract fun bindClassificationAttempts(
+        impl: ClassificationAttemptStoreImpl,
+    ): ClassificationAttemptStore
 
     @Binds
     abstract fun bindDemoData(impl: DemoDataSeeder): DemoDataPort

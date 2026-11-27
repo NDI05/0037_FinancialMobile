@@ -221,6 +221,8 @@ dependencies {
     "releaseImplementation"(libs.androidx.sqlite.ktx)
 
     implementation(libs.androidx.datastore.preferences)
+    // CR-010: home-screen summary widget (Glance). Snapshot data stays private.
+    implementation(libs.androidx.glance.appwidget)
     // Google SSO uses Credential Manager + the Google ID helper. The Play Services auth artifact
     // is a runtime/provider dependency of the former; both are stable releases.
     implementation(libs.androidx.credentials)

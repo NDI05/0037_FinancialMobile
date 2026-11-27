@@ -1,6 +1,6 @@
 # Progres harian PAM
 
-Pembaruan dokumentasi: **25 November 2026** · Zona waktu: **Asia/Jakarta (WIB)**.
+Pembaruan dokumentasi: **26 November 2026** · Zona waktu: **Asia/Jakarta (WIB)**.
 Branch kerja: `feat/c2-android` · Snapshot source: `3b8a038`; [review PM ce56d9c](reviews/PM_REVIEW_CE56D9C_SYNC_RECOVERY.md) menjadi dasar perbaikan P1 yang kini digabung (`f640f2e`, `329552b`) dan diuji ulang.
 
 [README utama](../README.md) · [Checkpoint detail](DELIVERY_S2_S4_CHECKPOINT.md) ·
@@ -25,6 +25,7 @@ Dokumen sebelum repository tidak direkonstruksi tanpa bukti.
 
 | Tanggal (WIB) | Hasil / perubahan | Bukti dan tingkat verifikasi | Gate tersisa / tindak lanjut | Referensi commit |
 |---|---|---|---|---|
+| **26 Nov 2026 (malam)** | Enam keluhan pemilik di branch `feature/stitch-redesign`: consent **Kategorisasi AI** terpisah dari Analisis AI kini punya switch di **AKSES APLIKASI** sehingga klasifikasi berjalan; sweep manual tidak lagi memotong 5 baris (seluruh kandidat 12 bulan, chunk 5, progress); baris hasil sync langsung diklasifikasi sebelum antrean 2 jam; “Kategorikan AI” digabung ke FAB “Tambah transaksi” (dua opsi); section Gmail/AI/notifikasi dihapus dan diganti satu section switch + riwayat; state gagal koneksi memakai judul/CTA center dan feedback tidak menutupi daftar/nav. | Gate fresh `:app:testDebugUnitTest` **643 tes/0 gagal**, `:app:assembleDebug` + `:app:lintDebug` lulus (0 error/253 warning); 3 tes baru (sweep `[5,5,2]`, consent gate, enqueue `[50,50,10]`) dan tes concurrency drain dibuat deterministik. Runtime emulator Android 17 (393/360/412 dp, font 200%): FAB dua opsi, switch consent aktif, feedback manual, Analisis berjalan, retry center saat airplane mode lalu pulih, tidak ada clipping. | Android Studio Run literal **NOT RUN** (GUI macOS diblokir; semua bukti via ADB); sweep pada data nyata ratusan baris + email Livin baru saat app tertutup **NOT RUN**; merge/deploy app & backend menunggu izin pemilik. | Bukti [AI_CATEGORY_SYNC_UI](evidence/AI_CATEGORY_SYNC_UI_2026-11-26.md); [manifest visual](evidence/stitch_redesign_2026-11-25/README.md) |
 | **25 Nov 2026 (malam, deploy Vercel)** | Permintaan pemilik: cek apakah backend Go bisa di-deploy ke Vercel gratisnya lalu lakukan. Vercel kini punya **Go Framework Preset (Beta)** yang menjalankan server `net/http` sebagai proses panjang, jadi `cmd/api/main.go` dipakai apa adanya. Project `pam-api-vercel` (Hobby, akun `ndi05`) + Turso baru `pam-vercel`; migrasi dijalankan di luar jalur request sebelum trafik karena percobaan pertama gagal oleh balapan migrasi antar-instance dingin; env produksi baru (JWT/refresh/kunci data), SSO Google aktif, Gmail & kategori AI nonaktif; proteksi deployment dimatikan agar API bisa dipanggil HP. APK debug khusus Vercel dibangun tetapi **belum dipasang** agar alur G36 lokal tidak terganggu. | Alias <https://pam-api-vercel.vercel.app>; `GET /healthz` 200, `/readyz` 200, `POST /v1/accounts` 201, `POST /v1/sessions` 201, `GET /v1/me` 200, `/v1/categories` 200, `POST /v1/transactions` 201 (4.500.000 IDR), list 200, `/v1/summaries/2026-11` 200, `GET /v1/auth/google/nonce` 200, SSO token palsu 401 `google_invalid_token`; hanya akun sintetis. APK Vercel sha256 `f95f8dea…` (48.837.129 B). | **G24 PARTIAL (demo Vercel; produksi NOT RUN):** Gmail otomatis tidak dijamin di Vercel Functions (goroutine polling bisa mati saat scale-to-zero; Cron Hobby 1×/hari; kuota Daemon 5 CPU-jam/420 GB-jam per bulan), Gmail nonaktif sampai redirect `https://pam-api-vercel.vercel.app/v1/gmail/connect/callback` didaftarkan di Google Cloud Console, dan APK Vercel belum dipasang. Sisa G36/G29/G37/OI-27 tetap seperti sebelumnya. | Bukti [VERCEL_DEPLOYMENT](evidence/VERCEL_DEPLOYMENT_2026-11-25.md); backend `.gitignore` Vercel `5789f54` |
 | **25 Nov 2026 (malam)** | Verifikasi ulang gate pada **build auth** (Android `0d8affa`/kode `8de8f75`, backend `1325d3d`/kode `6c941d9`): FR-67 runtime terisolasi fake Gmail+classifier stub (gerbang backfill 0 panggilan, setelah selesai 4 panggilan batch `[2,2,1,2]`, `FINAL_TX_COUNT 4`), NFR-15 (future 400, hari ini 201, retry 200 id sama, satu baris), G14 drill fixture DB terpisah **59/59 PASS** dengan kontrak registrasi terbuka, smoke API (registrasi 201, kategori 200/11, transaksi 201/list 200, rute pensiun `budget-plans`/`attachments`/`admin/*` **404**), serta pemeriksaan repo/CI (backend `6c941d9` + `1325d3d` success; Android tanpa workflow CI). Snapshot gate, dampak auth, dan aksi pemilik diperbarui di [recheck gate](delivery/GATE_RECHECK_2026-11-25.md). | Binary `/tmp/pam-api-head` dari HEAD sha256 `3878814b…`; log FR-67 `/tmp/pm25_fr67_e2e_authfix2.log`; laporan G14 `/tmp/G14_DRILL_AUTH_2026-11-25.md`; probe NFR-15 di DB sementara (bukan data pemilik); APK auth `fefd7041…` dipasang pada perangkat uji fisik saat itu (tidak terhubung lagi pada verifikasi akhir); APK fix `a0498c29…` dipasang di emulator-5556 + Redmi 10 `21061119AG`; UAT loopback aktif sha256 `cbd882ea…`. Smoke emulator APK fix (`8de8f75`): Welcome → "Buat akun" langsung mode daftar dua kali, "Masuk" tetap mode masuk, login sintetis 201, Ringkasan net Rp88.466,78 / masuk Rp123.456,78 / keluar Rp34.990, Transaksi 3 baris, Analisis consent-aware, 0 entri Anggaran/Lampiran/Administrasi, tanpa crash; temuan mode daftar ditemukan smoke putaran pertama lalu diperbaiki di `8de8f75` (tes regresi + verifikasi emulator); APK fix terpasang di emulator dan perangkat fisik Redmi 10 yang terhubung (tidak terkunci; app langsung membuka Ringkasan, data tidak ditelusuri); Pemilik mengonfirmasi HP-nya adalah Redmi 10 `21061119AG` (seri diredaksi) yang terhubung tersebut; catatan model `24069PC21G` sebelumnya keliru. Pemeriksaan kesiapan UAT read-only pada perangkat yang terhubung ±14:35 WIB **exit 0** (readyz, SSO nonce, rute Gmail, client ID di APK, Play Services, paket, adb reverse). Login Google live di HP pemilik ±14:37 WIB terverifikasi backend (logout 204 → nonce → POST SSO 200 1257 ms + `auth_session` baru); pemilik mengonfirmasi sudah menekan **Run** Android Studio ke Redmi 10; pemicuan kategori 14:42:39 pada APK baru tetap 503 config dan pesan UX baru menunggu pemicuan berikutnya; fix UX `503 category_unavailable` dipetakan ke pesan konfigurasi (`13b7a2a`, unit test lulus, APK `39f2cd6e…` terpasang 14:42). | | **G36 PARTIAL:** Run literal dikonfirmasi pemilik, login/logout/relogin Google terbukti backend; **sisa NOT RUN:** Lewati+Tautkan Gmail+consent pada akun uji dan email Livin alami saat app tertutup. G29/G37 (konsol pemilik), G14 pada data pemilik, dan deploy produksi tetap NOT RUN. OI-27 tetap OPEN. | Backend [6c941d9](https://github.com/NDI05/0037-Backend-Financial/commit/6c941d9), [1325d3d](https://github.com/NDI05/0037-Backend-Financial/commit/1325d3d); Android [a53f45e](https://github.com/NDI05/0037_FinancialMobile/commit/a53f45e), [651f807](https://github.com/NDI05/0037_FinancialMobile/commit/651f807) |
 | **25 Nov 2026 (malam, Azure penuh)** | Keputusan pemilik: semua fitur AI boleh memakai **Azure penuh** (kredit ±100 USD) asal token tidak boros. Runtime UAT lokal 18090 diaktifkan ke Azure untuk **Analisis** (`LLM_PROVIDER=azure`) dan **Kategorisasi** (`CATEGORY_LLM_ENABLED=true`) memakai deployment Foundry `pam-category-gptoss120b`; endpoint/key diambil dari profil privat mode 600, launcher lama di-backup. Smoke Azure nyata: analisis prompt 409/completion 156 token biaya **$0,00015495**, replay cache tidak memanggil provider kedua kali, ceiling harian 429 sebelum call; klasifikasi 5 merchant sintetis 200 (380/272 token). Pagar token: cache+idempotency+snapshot server, cap token/timeout, ceiling analisis $0,25/hari, ceiling classifier $0,10/hari & $2/bulan, batch 5 + maks 4 call/2 jam, dedupe/purge cache, filter tanpa-biaya. Demo Vercel sengaja tetap fake. | Bukti [AZURE_FULL_OPTIMIZATION](evidence/AZURE_FULL_OPTIMIZATION_2026-11-25.md), JSON `docs/evidence/assets/pm_go_2026-11-25/`; backend tetap `5789f54` (tanpa perubahan kode). | Biaya nyata per analisis ±Rp2,5 dan per batch klasifikasi ±$0,0002–0,0003; plafon harian/bulanan membatasi pemakaian jauh di bawah kredit. Rollback = kembalikan `start.py.bak-pre-azure-full-20261125` + restart (readyz 200). Azure **tidak** dipasang di demo Vercel publik. | Backend tetap `5789f54`; detail [AZURE_FULL_OPTIMIZATION](evidence/AZURE_FULL_OPTIMIZATION_2026-11-25.md) Host gratis alternatif Vercel disiapkan (`0b09664`: Dockerfile, Blueprint Render, bootstrap VM systemd/Caddy; CI `45574878205` success), deploy nyata NOT RUN menunggu akun/VM pemilik. |
@@ -692,3 +693,131 @@ login/logout/relogin tampak sudah dijalankan, tetapi **Tautkan Gmail + consent d
 alami belum terjadi**; G36 tetap PARTIAL. Bila pemilik belum menautkan Gmail pada akun uji, lanjutkan
 langkah 3–5 runbook.
 
+
+**Redesign Stitch PAM (25 Nov 2026, 20:30–21:10 WIB).** Implementasi native Compose dari 16
+prototipe Stitch di branch `feature/stitch-redesign`: token warna/Manrope/radius baru, Ringkasan
+opsi B dengan carousel kartu bank (Mandiri nyata lebih dulu; Jago/BRI pratinjau berlabel), satu
+layar Transaksi dengan filter arah/sumber/kategori/hari dan kembali ke Ringkasan, sheet Status
+pembaruan tunggal, serta CR-010 widget Glance + notifikasi transaksi lokal. Wiring lintas lane yang
+dikerjakan Lead: jumlah transaksi per bank dari baris bulan berjalan, `PamPendingNavigation` untuk
+tap widget/notifikasi (widget → Ringkasan, notifikasi → Detail/Transaksi dengan validasi sesi),
+judul Transaksi terpusat, dan penerjemahan string `en` agar lint tetap 0 error.
+Gate: `:app:testDebugUnitTest` **639 tes/0 gagal**, `:app:assembleDebug` lulus, `:app:lintDebug`
+**0 error/151 warning**; APK debug sha256 `69228b8d…`. Runtime di HP fisik: Ringkasan, Transaksi,
+sheet status, Pengaturan, Analisis, Kelola Kategori, Detail, Tambah, serta 360/393/412 dp dan font
+200% (dump) terverifikasi; screenshot di [evidence/stitch_2026-11-25](evidence/stitch_2026-11-25/README.md).
+Batas: Android Studio Run literal, instance widget di launcher, notifikasi single/group nyata, dan
+FCM live **NOT RUN/PARTIAL**; backend tetap tanpa dimensi bank sehingga Jago/BRI hanya pratinjau;
+tidak ada merge/deploy produksi.
+
+**Audit independen redesign + perbaikan P1 (25 Nov 21:10 WIB).** Audit read-only diff
+`ccbba22..5dad109` memberi verdict PASS WITH FOLLOW-UPS. Dua P1 ditutup: (1) deep link
+widget/notifikasi tidak lagi memakai `SharedFlow` yang bisa drop/replay — sekarang polling satu
+slot `PamPendingNavigation` dan dibersihkan saat gate tidak Ready, sehingga aman dari recreate
+maupun ganti akun; (2) hitungan kartu bank/arah di Ringkasan tidak lagi terpotong halaman 100
+baris karena `OverviewViewModel` memuat seluruh halaman bulan. P2 timestamp sama juga diperbaiki.
+Widget Glance dirender nyata lewat host debug-only 2×2 dan 4×2 (state signed-out); instance di
+launcher tetap belum ditambahkan. Gate ulang: **640 tes/0 gagal**, assembleDebug PASS,
+lintDebug **0 error/153 warning**, APK sha256 `af334072…`.
+
+**Bukti launcher widget dan notifikasi fixture (25 Nov 21:20 WIB).** Widget 2×2 dipasang nyata di
+home screen emulator lewat `requestPinAppWidget` + dialog launcher (“Add to home screen”) —
+screenshot `15_widget_2x2_launcher.png`; render 4×2 nyata dari host debug
+`13_widget_4x2_debug_host.png`. Notifikasi produksi diuji dengan kandidat sintetis: single dan
+group menampilkan copy generik tanpa nominal/merchant (`16`, `17`). Semua helper ini debug-only,
+tidak ikut release. Pengiriman notifikasi dari email Livin nyata serta Run Android Studio literal
+tetap NOT RUN dan dicatat di manifest bukti.
+
+**Rekaman ulang bukti pada build final (25 Nov 21:25 WIB).** Setelah perbaikan audit dan penambahan
+bukti widget/notifikasi, APK debug final (`d62ab519…`) dipasang ulang di HP fisik. Screenshot
+Ringkasan, Transaksi, sheet status, Pengaturan, 360/412 dp, dan font 200% diambil ulang dari build
+ini; back dari drill-down Transaksi ke Ringkasan terverifikasi. Tidak ada perubahan data pemilik.
+
+**Redesign Stitch iterasi struktur penuh (26 Nov 2026, 00:15 WIB).** Lead menyelesaikan integrasi
+visual seluruh layar utama di branch `feature/stitch-redesign`: Ringkasan dan Transaksi ditulis ulang
+mengikuti blok/proporsi render Stitch 393 dp (kartu bank opsi B, kartu kategori 6 track, search 48 dp,
+chip 36 dp, grup tanggal, FAB lime 56 dp radius 24 di atas nav), lalu Detail, Tambah, Analisis,
+Pengaturan, Kelola Kategori, Gmail, dan sheet status dirapikan oleh lane UI/QA/Android dan
+diintegrasikan Lead. Perbaikan lintas lane: label nominal "Rp" + pemisah ribuan pada Tambah, footer
+cakupan server pada Transaksi, label aksesibilitas field catatan Detail, dan hit target teks
+Pengeluaran/Pemasukan di Ringkasan. Sheet status dipadatkan (header "Terakhir", kartu radius 16,
+aksi tunggal) dan dibuktikan tetap menyimpan progres saat ditutup lalu dibuka kembali ketika sync
+berjalan. Gate: `:app:testDebugUnitTest` 640 tes/0 gagal, `assembleDebug` lulus, `lintDebug`
+0 error; satu kegagalan flaky `AutoCategoryUseCaseTest` sempat muncul pada gate pertama dan lulus
+3/3 saat dijalankan ulang terisolasi. Bukti visual per layar (sebelum/Stitch/sesudah, dump bounds,
+360/412 dp, font 200%) ada di
+[evidence/stitch_redesign_2026-11-25](evidence/stitch_redesign_2026-11-25/README.md). Batas jujur:
+sesi Gmail server berakhir saat sesi verifikasi sehingga layar Transaksi/Kategori hanya terekam
+sebagai state error pada capture terakhir; relink butuh OAuth pemilik. Android Studio Run literal
+tetap **NOT RUN**.
+
+**Perbaikan navigasi bawah + kartu Pengaturan (26 Nov 2026, 07:5x WIB).** Permintaan pemilik:
+tombol "Keluar" tidak terlihat di Pengaturan dan bottom bar menimpa tombol/informasi di beberapa
+layar. Dua akar masalah: (1) `SettingsCard` memakai `Row` padahal section mengirim beberapa baris
+vertikal, sehingga kartu putih membengkak dan menutupi section lain termasuk CTA Keluar — kini
+`Column` + `Row` eksplisit untuk baris tunggal (Akun, Kategori, Widget, Hapus data); (2)
+`BottomNavBar` adalah overlay `Box` sementara layar menebak padding bawah (112 dp hanya di sebagian
+layar). Bar kini sibling layout di dalam `Column` pada `PamNavHost`: viewport konten otomatis
+berkurang setinggi bar terukur (termasuk inset nav dan pembesaran font), padding bawah hard-coded di
+Ringkasan/Transaksi/Pengaturan dihapus. Verifikasi Redmi 10 (`105397ba0507`, 393 dp): Pengaturan atas
+dan bawah ter-render, "Keluar" di y≈700 dp dengan divider nav y≈759 dp; font 200% "Keluar" tetap
+terlihat (y≈692 dp, nav y≈753 dp); Ringkasan/Transaksi/Analisis tidak tertimpa; FAB Transaksi tetap
+di atas bar. Gate: 640 tes/0 gagal, `assembleDebug` lulus, `lintDebug` 0 error/239 warning. Bukti
+`after_pengaturan_393dp_v2`, `after_pengaturan_bottom_393dp_v2`,
+`after_pengaturan_font200_top/_bottom` di evidence Stitch. Android Studio Run literal tetap **NOT
+RUN**.
+
+**Tiga koreksi lanjutan dari pemilik (26 Nov 2026, 23:3x WIB).** (1) Opsi FAB “Kategorikan dengan
+AI”/“Tambah transaksi” sebelumnya putih di atas putih: `FabAction` memakai `PamSurface` dengan
+`contentColor = Ink`, padahal `Ink` adalah canvas near-white `#FAFAF7`. Pill kini berlatar `OnInk`
+dengan teks/ikon `Ink`; dump membuktikan label tetap di dalam layar pada 393/360/412 dp dan font
+200%. (2) Sweep kedua mengirim ulang baris `NEEDS_REVIEW` karena revision-nya tidak berubah.
+Ditambahkan ledger DataStore owner-scoped `ClassificationAttemptStore` berisi `id -> revision` yang
+sudah ditinjau; `scanEligible`/`enqueueOnly`/`classifyAll` melewatinya sampai edit/re-impor menaikkan
+revision. Baris `FAILED` tidak dicatat agar tetap bisa diulang; status UI kini `nothing_new`,
+`done_with_review`, `review_only`, atau `partial`, bukan klaim selesai palsu. (3) Analisis
+dikembalikan ke struktur Stitch: toggle Observasi/Saran, pager, dan daftar saran dihapus dari
+viewport pertama; body insight memakai `Rp… dari N transaksi pada bulan ini`; batasan FR-37 menjadi
+catatan rendah-kontras setelah disclosure. Bukti 393/360/412 dp + font 200%:
+`after_analisis_stitch_*`, `after_transaksi_fab_actions_dark_*`,
+`after_transaksi_classify_manual_dark_393dp` di evidence Stitch. Gate:
+`:app:testDebugUnitTest` **646 tes/0 gagal** (termasuk 3 tes baru ledger: sweep kedua tidak memanggil
+batch, revision bump membuka baris, enqueue mengecualikan baris ditinjau), `assembleDebug` lulus,
+`lintDebug` **0 error/264 warning/1 hint**. Batas: akun uji emulator hanya punya baris manual sehingga
+tap kedua pada baris server `NEEDS_REVIEW` tidak dapat direproduksi lewat UI; dibuktikan unit test +
+idempotensi backend. Android Studio Run literal tetap **NOT RUN**; backend tidak diubah; merge/deploy
+menunggu izin pemilik.
+
+**Verifikasi Android Studio Run literal (27 Nov 2026, 00:42–00:55 WIB).** Menindaklanjuti permintaan
+pemilik agar pengujian dilakukan langsung dari Android Studio dengan emulator, konfigurasi `app`
+dijalankan melalui menu **Run → Run 'app'** (bukan `adb install` manual) ke emulator
+Pixel_10_Pro_XL, Android 17/API 37. `idea.log` Android Studio mencatat “Launching on device
+Pixel_10_Pro_XL [emulator-5554]”, instalasi `com.pam.recap.debug`, dan `am start MainActivity`;
+proses aplikasi tetap hidup (pid 3759) dan fokus jendela Android berpindah ke `MainActivity`.
+Dari proses hasil Run tersebut diuji ulang: dua opsi FAB berlatar `OnInk` `#171915` dengan teks
+`Ink` dan label dalam layar; Analisis hanya memuat tiga kartu Stitch tanpa toggle/pager/saran pada
+393 dp, 360 dp, dan 412 dp; font 200% membungkus body tanpa tumpang-tindih label/nominal; tap
+“Kategorikan dengan AI” pada baris manual menampilkan pesan jujur dan tap kedua tidak memicu proses
+baru; navigasi Ringkasan/Transaksi/Analisis/Pengaturan (sampai “Keluar”)/Detail/Tambah berjalan tanpa
+crash atau ANR (`logcat -b crash` kosong). Gate tetap 646 tes/0 gagal, `assembleDebug` lulus, lint
+0 error/264 warning/1 hint. Bukti: `after/studio_run/` + `idea_log_run.txt`, rincian di
+[ANDROID_STUDIO_RUN_2026-11-27](evidence/ANDROID_STUDIO_RUN_2026-11-27.md). Ini menggantikan status
+“Run literal NOT RUN” pada entri sebelumnya; merge/deploy tetap menunggu persetujuan pemilik.
+
+**Bug UI kategori (27 Nov 2026, 01:0x WIB).** Pemilik melaporkan UI “tambah kategori” di Pengaturan
+masih belum sesuai Stitch. Sebelumnya FAB mengganti seluruh daftar dengan form halaman penuh
+(judul “Kategori baru”, `Nama`/`Kode`, pill jenis, `Kolom tambahan`, `Simpan kategori`). Sekarang
+`CategoryManagementScreen` membuka `Dialog` putih 353 dp di atas daftar: judul “Tambah kategori” +
+tutup, pratinjau ikon lime 48 dp radius 16, field nama 48 dp radius 16, CTA gelap “Simpan” selebar
+kartu, radius 24/padding 20/border `#E2E3DB`. Scrim disetel 30% lewat `DialogWindowProvider` (app
+sebelumnya memakai scrim platform 60%, terlalu gelap). Field lanjutan (jenis, kode, atribut) tetap
+ada lewat aksi “Opsi lanjutan”. Ukuran relatif elemen cocok dengan render Stitch: modal 351×214 vs
+353×216, ikon→atas 84 vs 85, Simpan→atas 147 vs 148, tinggi Simpan 48. Diuji dari **Android Studio
+Run** ke emulator Android 17/API 37: 393/360/412 dp, font 200% (advanced tetap bisa di-scroll sampai
+Simpan), tambah “Uji Modal” (11→12), buka ulang “Ubah kategori”, hapus (kembali 11), tanpa crash/ANR.
+Gate: **646 tes/0 gagal**, `assembleDebug` lulus, lint **0 error/265 warning/1 hint**. Bukti:
+`docs/evidence/stitch_redesign_2026-11-25/after/category_modal/`, banding langsung
+`category_modal_stitch_vs_android_393dp.png`; rincian
+[CATEGORY_MODAL_STITCH_2026-11-27](evidence/CATEGORY_MODAL_STITCH_2026-11-27.md). Batas: field ikon
+tidak ada di kontrak server sehingga pratinjau mengikuti kode/label; merge/deploy menunggu izin
+pemilik.
